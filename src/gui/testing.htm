@@ -1,0 +1,42 @@
+<html>
+    <head>
+        <title>Hello world</title>
+    </head>
+    <body>
+        <script src="codemirror/lib/codemirror.js"></script>
+        <link rel="stylesheet" href="codemirror/lib/codemirror.css">
+        <link rel="stylesheet" href="seashell.css">
+        <script src="codemirror/mode/clike/clike.js"></script>
+
+        <h1>Seashell, the C Shell</h1>
+        <div id="top">
+            <span class="filename">foobar.c</span>
+            <div class="buttons right">
+                <button type="button">Undo</button>
+                <button type="button">Save</button>
+                <button type="button">Open File...</button>
+            </div>
+            <div id="codeArea">
+                <textarea id="seashell">hai</textarea>
+            </div>
+        </div>
+        <div id="bottom">
+            <div>
+                <button type="button">Check Syntax</button>
+                <button type="button">Compile</button>
+                <button type="button">Run</button>
+                <button type="button">With Input</button>
+            </div>
+            <textarea id="prompt">prompt.</textarea>
+
+        </div>
+
+        <script type="application/javascript">
+            var seashellEditor = document.getElementById('seashell');
+            var txt = document.createTextNode("woohoo");
+            //seashellEditor.appendChild(txt);
+            var foo = CodeMirror.fromTextArea(seashellEditor);
+        </script>
+
+    </body>
+</html>
