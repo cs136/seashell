@@ -1,0 +1,11 @@
+1. Put stuff you want to get served in the htdocs/ directory. For example:
+  echo 'foo' > htdocs/asdf.html
+
+2. Start the server:
+  racket seashell.rkt
+
+3:
+  $wget -O - -q http://localhost:9876/asdf.html
+  foo
+  $
+
