@@ -1,7 +1,8 @@
 (module seashell-api racket
   (require web-server/servlet
            web-server/servlet-env
-           "common.rkt")
+           "common.rkt"
+           "database.rkt")
   (provide start-api)
 
   (define (do-save req)
