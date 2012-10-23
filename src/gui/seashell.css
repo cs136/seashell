@@ -11,6 +11,7 @@ body {
     width: 80%;
     background-color: #eee;
     clear: both;
+    position: relative;
 /*
     max-width: 80em;
  *    */
@@ -20,15 +21,19 @@ body {
     background: #fff;
 }
 .buttons {
+    /*
     display: inline;
+    margin-left: 3em;
+    */
 }
 .right {
     float: right;
 }
 .left {
-    float: left;
 }
 .filename {
     background: #fff;
     vertical-align: bottom;
+    display: block;
+    width: 10em;
 }
