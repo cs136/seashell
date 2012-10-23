@@ -1,39 +1,58 @@
 body {
+    /*
     background: #c0ffee;
+    */
     margin: 0;
     padding: 0;
 }
 
+#container {
+    width: 80%;
+    max-width: 60em;
+    margin: 0 auto;
+}
 
 #top,#bottom {
-    border: 2px solid black;
-    margin: 1em auto;
-    width: 80%;
     background-color: #eee;
-    clear: both;
-    position: relative;
-/*
-    max-width: 80em;
- *    */
+    border: 1px solid #aaa;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+
+    margin-bottom: 0.5em;
+    padding: 0.5em;
+    padding-top: 0.25em;
 }
+
 #codeArea {
-    clear: both;
     background: #fff;
+    border: 1px solid #ccc;
+    clear: both;
 }
-.buttons {
-    /*
-    display: inline;
-    margin-left: 3em;
-    */
-}
+.buttons button{margin-left: 0; margin-right: 4px;}
+.left { }
 .right {
     float: right;
 }
-.left {
+.right button{margin-left: 4px; margin-right: 0;}
+.userid {
+    font-weight: bold;
 }
 .filename {
-    background: #fff;
-    vertical-align: bottom;
     display: block;
-    width: 10em;
+    vertical-align: bottom;
+    width: 8em;
+}
+
+#prompt {
+    background-color: #333;
+    color: #eee;
+    -webkit-box-shadow: inset 1px 1px 0px 0px #222;
+    box-shadow: inset 1px 1px 0px 0px #222;
+    font-family: monospace;
+
+    margin-top: 0.25em;
+    padding: 0.25em;
+    line-height: 1em;
+    min-height: 6em;
 }

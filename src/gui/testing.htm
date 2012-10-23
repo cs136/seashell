@@ -5,54 +5,62 @@
     <body>
         <script src="codemirror/lib/codemirror.js"></script>
         <script src="codemirror/lib/util/formatting.js"></script>
+        <script src="codemirror/lib/util/dialog.js"></script>
         <link rel="stylesheet" href="codemirror/lib/codemirror.css">
+        <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
         <link rel="stylesheet" href="seashell.css">
         <script src="codemirror/mode/clike/clike.js"></script>
 
-        <span class="right">Logged in as ctdalek - <a href="">Logout</a></span>
 
+    <div id="container">
+        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
         <div id="top">
             <span class="buttons left">
                 <button type="button" id="undo">Undo</button>
                 <button type="button" id="redo">Redo</button>
                 <button type="button" id="save">Save</button>
-                <button type="button" id="open-file">Open File...</button>
+                <button type="button" id="open-file">Open...</button>
+                <button type="button" id="new-file">New...</button>
             </span>
             <span class="buttons right">
-                <button type="button" id="check-syntax">Check Syntax</button>
                 <!--
                 <button type="button" id="indent">Indent</button>
                 <button type="button" id="unindent">Unindent</button>
                 -->
-                <button type="button" id="autoindent">Autoindent</button>
+                <button type="button" id="autoindent">Indent</button>
                 <button type="button" id="comment">Comment</button>
                 <button type="button" id="uncomment">Uncomment</button>
+                <button type="button" id="goto-line">Goto...</button>
             </span>
 
             <span class="filename">foobar.c</span>
+
             <div id="codeArea">
                 <textarea id="seashell">
 #include <stdio>
 int main() {
     printf("hello world");
     return(0);
-}
-                </textarea>
+}</textarea>
             </div>
         </div>
         <div id="bottom">
-            <div>
+            <span class="buttons">
+                <button type="button" id="check-syntax">Check Syntax</button>
                 <button type="button">Compile</button>
                 <button type="button">Run</button>
                 <button type="button">Run with input...</button>
                 <button type="button">Test with RunC</button>
-                <button type="button">Submit</button>
 
-            </div>
-            <textarea id="prompt">prompt.</textarea>
+            </span>
+            <span class="buttons right">
+                <button type="button">Submit to Marmoset</button>
+            </span>
+            <div id="prompt">&gt; ls</div>
 
         </div>
+    </div> <!-- container -->
 
         <script type="application/javascript">
             function giveAction(elid,act) {
@@ -74,12 +82,19 @@ int main() {
                 editor.autoFormatRange(from, to);
             }
 
+            function gotoHandler() {
+                var gotoPrompt = 'Line: <input type="text" style="width: 3em"/>';
+                editor.openDialog(gotoPrompt, function(query) {
+                        editor.setCursor(query-1, 0); });
+            }
+
             giveAction("undo", function() {editor.undo();});
             giveAction("redo", function() {editor.redo();});
                     
             giveAction("comment", function() {toggleCommentHandler(true);});
             giveAction("uncomment", function() {toggleCommentHandler(false);});
             giveAction("autoindent", autoIndentHandler);
+            giveAction("goto-line", gotoHandler);
         </script>
 
     </body>
