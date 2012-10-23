@@ -1,0 +1,34 @@
+body {
+    background: #c0ffee;
+    margin: 0;
+    padding: 0;
+}
+
+
+#top,#bottom {
+    border: 2px solid black;
+    margin: 1em auto;
+    width: 80%;
+    background-color: #eee;
+    clear: both;
+/*
+    max-width: 80em;
+ *    */
+}
+#codeArea {
+    clear: both;
+    background: #fff;
+}
+.buttons {
+    display: inline;
+}
+.right {
+    float: right;
+}
+.left {
+    float: left;
+}
+.filename {
+    background: #fff;
+    vertical-align: bottom;
+}
