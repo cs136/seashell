@@ -1,9 +1,20 @@
 (module seashell-api racket
   (require web-server/servlet
            web-server/servlet-env
+           net/base64
            "common.rkt"
+           "config.rkt"
            "database.rkt")
   (provide start-api)
+
+  (define db (db-connect seashell-db-host seashell-db-port))
+
+  (define (generate-session-key)
+    (base64-encode
+      (list->bytes
+        (map (lambda(u) (random 255))
+          (build-list 32 identity)))
+      #""))
 
   (define (handle-login req)
     ;; More login logic goes here.
@@ -25,8 +36,40 @@
     ;; In this case, the client must present the session key again in hopes of receiving
     ;; a new continuation table. If no table is provided, then the session is considered
     ;; terminated by the server.
+    (let
+       ((key (bytes->string/utf-8 (generate-session-key)))
+        (user "ctdalek"))
+      (db-set db 'session key `((user . ,user) (login_time . ,(current-seconds))))
+      (response/json
+        `((session-key . ,key)))))
+
+  ;; Generate the client's continuation table.
+  (define (gen-continuation-table embed/url)
+    `((save . ,(embed/url do-save))
+      (open . ,(embed/url do-open))
+      (run  . ,(embed/url do-run))))
+
+  ;; Exchange a valid session key for a continuation table.
+  (define (handle-exchange req)
+    ;; If the session key exists in the database, provide the continuation table
+    ;; with no further checks.
+    (let
+       ((bdg-skey (bindings-assq #"key"
+                   (force (request-bindings/raw-promise req)))))
+      (if (and bdg-skey
+               (hash? (db-get db 'session (bytes->string/utf-8
+                                           (binding:form-value bdg-skey)))))
+          ;; Valid session.
+          (send/suspend/dispatch
+            (lambda(embed/url)
+              (response/json (gen-continuation-table embed/url))))
+          ;; No valid session.
+          (send/back
+            ;; TODO standardize error messages?
+            (response/json '((status . #f)))))))
 
   ;; Some examples.
+  ;;;;;;;;;;;;;;;;;
   (define (do-save req)
     ;; save the document here.
     (printf "do-save~n")
@@ -54,17 +97,11 @@
       (lambda(url)
         (response/json
           `((run . ,url))))))
-
-  ;; Start a new document.
-  (define (new-handler req)
-    (send/suspend/dispatch
-      (lambda(embed/url)
-        (response/json
-          `((save . ,(embed/url do-save))
-            (open . ,(embed/url do-open))
-            (run  . ,(embed/url do-run)))))))
+  ;;;;;;;;;;;;;;;
 
   (define (start-api req)
     (match (request-path-string req)
-      [(regexp #rx"^/api/new.*$")
-       (new-handler req)])))
+      [(regexp #rx"^/api/login.*$")
+       (handle-login req)]
+      [(regexp #rx"^/api/k.*$")
+       (handle-exchange req)])))
