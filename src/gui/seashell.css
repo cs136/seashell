@@ -4,12 +4,14 @@ body {
     */
     margin: 0;
     padding: 0;
+    text-align: center;
 }
 
 #container {
     width: 80%;
     max-width: 60em;
     margin: 0 auto;
+    text-align: left;
 }
 
 #top,#bottom {
@@ -29,8 +31,9 @@ body {
     border: 1px solid #ccc;
     clear: both;
 }
+.buttons {margin-bottom: 0.25em;}
 .buttons button{margin-left: 0; margin-right: 4px;}
-.left { }
+.left {float: left;}
 .right {
     float: right;
 }
@@ -42,6 +45,8 @@ body {
     display: block;
     vertical-align: bottom;
     width: 8em;
+    clear: both;
+    color: #f00;
 }
 
 #prompt {
@@ -55,4 +60,5 @@ body {
     padding: 0.25em;
     line-height: 1em;
     min-height: 6em;
+    clear: both;
 }

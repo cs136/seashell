@@ -1,15 +1,14 @@
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
     <head>
+        <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
+        <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
+        <link type="text/css" rel="stylesheet" href="seashell.css"/>
+        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
         <title>Hello world</title>
     </head>
     <body>
-        <script src="codemirror/lib/codemirror.js"></script>
-        <script src="codemirror/lib/util/formatting.js"></script>
-        <script src="codemirror/lib/util/dialog.js"></script>
-        <link rel="stylesheet" href="codemirror/lib/codemirror.css">
-        <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
-        <link rel="stylesheet" href="seashell.css">
-        <script src="codemirror/mode/clike/clike.js"></script>
 
 
     <div id="container">
@@ -38,64 +37,36 @@
 
             <div id="codeArea">
                 <textarea id="seashell">
-#include <stdio>
+#include &lt;stdio.h&gt;
 int main() {
-    printf("hello world");
+    int i;
+    for (i = 0; i &lt;3; i++) {
+        printf("She sells C shells by the sea shore");
+    }
     return(0);
 }</textarea>
             </div>
         </div>
         <div id="bottom">
-            <span class="buttons">
+            <div class="buttons left">
                 <button type="button" id="check-syntax">Check Syntax</button>
-                <button type="button">Compile</button>
-                <button type="button">Run</button>
-                <button type="button">Run with input...</button>
-                <button type="button">Test with RunC</button>
+                <button type="button" id="compile">Compile</button>
+                <button type="button" id="run">Run</button>
+                <button type="button" id="run-input">Run with input...</button>
+                <button type="button" id="test-runc">Test with RunC</button>
 
-            </span>
-            <span class="buttons right">
-                <button type="button">Submit to Marmoset</button>
-            </span>
+            </div>
+            <div class="buttons right">
+                <button type="button" id="submit-assignment">Submit to Marmoset</button>
+            </div>
             <div id="prompt">&gt; ls</div>
 
         </div>
     </div> <!-- container -->
+        <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
+        <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
+        <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
 
-        <script type="application/javascript">
-            function giveAction(elid,act) {
-                document.getElementById(elid).onclick=act;
-            }
-            var seashellEditor = document.getElementById('seashell');
-            //var txt = document.createTextNode("woohoo");
-            //seashellEditor.appendChild(txt);
-            var editor = CodeMirror.fromTextArea(seashellEditor, {lineNumbers: true});
-
-            function toggleCommentHandler(isC) {
-                //var from = editor.getCursor(true);
-                //var to = editor.getCursor(false);
-                editor.commentRange(isC, editor.getCursor(true), editor.getCursor(false));
-            }
-            function autoIndentHandler() {
-                var from = editor.getCursor(true);
-                var to = editor.getCursor(false);
-                editor.autoFormatRange(from, to);
-            }
-
-            function gotoHandler() {
-                var gotoPrompt = 'Line: <input type="text" style="width: 3em"/>';
-                editor.openDialog(gotoPrompt, function(query) {
-                        editor.setCursor(query-1, 0); });
-            }
-
-            giveAction("undo", function() {editor.undo();});
-            giveAction("redo", function() {editor.redo();});
-                    
-            giveAction("comment", function() {toggleCommentHandler(true);});
-            giveAction("uncomment", function() {toggleCommentHandler(false);});
-            giveAction("autoindent", autoIndentHandler);
-            giveAction("goto-line", gotoHandler);
-        </script>
-
+        <script type="text/javascript" src="seashell.js"></script>
     </body>
 </html>
