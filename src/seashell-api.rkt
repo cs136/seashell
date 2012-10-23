@@ -2,6 +2,7 @@
   (require web-server/servlet
            web-server/servlet-env
            net/base64
+           json
            "common.rkt"
            "config.rkt"
            "database.rkt")
@@ -67,6 +68,26 @@
           (send/back
             ;; TODO standardize error messages?
             (response/json '((status . #f)))))))
+
+  ;; Bind an API call to an initial continuation and recur.
+  (define (call/bind name proc embed)
+    (define (convert req)
+      (with-handlers
+        ([exn:fail? (lambda(e) (make-hash))])
+        (bytes->jsexpr (request-post-data/raw req))))
+    (define (rebind result)
+      (clear-continuation-table!)
+      (rebind
+        (proc
+          (convert
+            (send/suspend
+              (lambda(url)
+                (response/json
+                  `((k . ,(make-hash `((,name ,url)))) ,@result))))))))
+    `(,name ,(embed
+              (lambda(request)
+                (rebind
+                  (proc (convert request)))))))
 
   ;; Some examples.
   ;;;;;;;;;;;;;;;;;
