@@ -9,6 +9,7 @@
          web-server/private/xexpr
          net/url
          "config.rkt"
+         "database.rkt"
          "log.rkt"
          "format-trace.rkt"
          "common.rkt"
@@ -112,6 +113,12 @@
   (thread (thunk (start-seashell-webserver
                   seashell-webserver-host
                   seashell-webserver-port))))
+
+(define db-thread
+  (thread (thunk (start-database-server
+                   seashell-db-file
+                   seashell-db-host
+                   seashell-db-port))))
 
 (logf 'info "Seashell started.")
 
