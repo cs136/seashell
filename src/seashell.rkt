@@ -30,7 +30,7 @@
 
 ;; Session expiration handler. Take users back to the application root.
 (define (session-exp-handler req)
-  (redirect-to "/"))
+  (restart-session req))
 
 (define (seashell-pretty-exception-response url exn)
   (response/xexpr

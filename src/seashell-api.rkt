@@ -6,7 +6,7 @@
            "common.rkt"
            "config.rkt"
            "database.rkt")
-  (provide start-api)
+  (provide start-api restart-session)
 
   (define db (db-connect seashell-db-host seashell-db-port))
 
@@ -43,6 +43,11 @@
       (db-set db 'session key `((user . ,user) (login_time . ,(current-seconds))))
       (response/json
         `((session-key . ,key)))))
+
+  ;; Notify the client that the session must be restarted.
+  (define (restart-session req)
+    (response/json
+      `((k . "restart"))))
 
   ;; Generate the client's continuation table.
   (define (gen-continuation-table embed/url)
@@ -83,7 +88,7 @@
             (send/suspend
               (lambda(url)
                 (response/json
-                  `((k . ,(make-hash `((,name ,url)))) ,@result))))))))
+                  `((k . ,(make-hash `((,name ,url)))) (val . ,result)))))))))
     `(,name ,(embed
               (lambda(request)
                 (rebind
