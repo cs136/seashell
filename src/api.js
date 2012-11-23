@@ -2,40 +2,56 @@
 
 var seashell_server_prefix = "";
 
-function seashell_k(ss, method, text, callback) {
+function s_k(api, method, args, callback) {
   $.ajax({
-    url:      ss.k[method],
+    url:      api.k[method],
     type:     'POST',
-    data:     text,
-    dataType: 'json',
+    data:     $.toJSON({ key : api['__key__'], args : args }),
+    dataType: "json",
     success:  function(data, textStatus, jqXHR) {
-      if(typeof(data['k']) === "object") {
-        console.log("Updating continuation store after call to " + method);
-        seashell_update(ss, data.k);
-      } else if(data['k'] === "restart") {
-        console.log("Exchanging key after call to " + method);
-        badnews = function() {
-          alert("Something went wrong. Please try refreshing the page.");
+      if(typeof(data) !== "object" || data['status'] !== true) {
+        if(data['access'] === false) {
+          console.log("Access denied for method " + method);
+          return;
         }
         seashell_new(
-          ss['_key_'],
-          function(new_ss) {
-            for(k in new_ss) {
-              ss[k] = new_ss[k];
+          function(new_api) {
+            if(api['__retry__'] === undefined) {
+              api['__retry__'] = 
+                (function(method, args, callback) {
+                  return function() {
+                    delete api['__retry__'];
+                    s_k(api, method, args, callback);
+                  }
+                 })(method, args, callback);
+            } else {
+              api['__key__'] = new_api['__key__'];
             }
-            return seashell_k(ss, method, text, callback);
+            for(c in new_api['k']) {
+              api['k'][c] = new_api['k'][c];
+            }
+            api.isValidSession(function(){api.__retry__()});
           },
-          function(error_text) {
-            badnews();
-          });
+          function(error) {
+            console.log(error);
+            alert("There has been an error processing your request. Please refresh the page.");
+        });
+      } else {
+        callback(data['result']);
       }
-      console.log("Call to method " + method + " with args " + text + " returned " + data['val']);
-      callback(data['val']);
-    }
+    },
+    error:  (function(api, method, args, callback){
+      return function(data, textStatus, jqXHR) {
+        if(textStatus == "timeout") {
+          s_k(api, method, args, callback);
+        } else {
+          console.log("Error during method " + method + " invocation: " + textStatus);
+        }
+      }})(api, method, args, callback)
   });
 }
 
-function seashell_update(ss, k) {
+function s_update(api, data) {
   function make_caller(method) {
     return function() {
       var args = Array.prototype.slice.call(arguments);
@@ -44,52 +60,36 @@ function seashell_update(ss, k) {
         console.log("API method called without a callback.");
         return;
       }
-      seashell_k(this, method, $.toJSON(args), callback);
+      s_k(this, method, args, callback);
     };
   }
-  for(c in k) {
-    ss.k[c] = seashell_server_prefix + k[c];
+  if(typeof(data['key']) !== "string") {
+    return false;
   }
-  for(x in k) {
-    ss[x] = make_caller(x).bind(ss);
+  for(c in data['k']) {
+    api.k[c] = seashell_server_prefix + data['k'][c];
+    api[c] = make_caller(c).bind(api);
   }
+  api['__key__'] = data['key'];
+  return true;
 }
 
-function seashell_new(ss_key, ss_success, ss_error) {
+function seashell_new(success_call, error_call) {
   var req = $.ajax({
-    url:      seashell_server_prefix + "/api/k",
-    type:     'POST',
-    data:     {key : ss_key},
-    dataType: 'json',
+    url:      seashell_server_prefix + "/api/init",
+    dataType: "json",
     success:  function(data, textStatus, jqXHR) {
-      var ss = new Object();
-      ss.k = new Object();
-      ss._key_ = ss_key;
-      seashell_update(ss, data);
-      ss_success(ss);
-    },
-    error:    function(jqXHR, textStatus, errorThrown) {
-      ss_error(errorThrown);
-    }
-  });
-}
-
-function seashell_login(ss_success, ss_error, user, passwd) {
-  var req = $.ajax({
-    url:      seashell_server_prefix + "/api/login",
-    type:     'POST',
-    data:     $.toJSON({user: user, passwd: passwd}),
-    dataType: 'json',
-    success:  function(data, textStatus, jqXHR) {
-      if(typeof(data['session-key']) !== "string") {
-        ss_error("Couldn't authenticate.");
+      var api = new Object();
+      api.k = new Object();
+      if(!s_update(api, data)) {
+        error_call("Could not initialize session.");
       }
-      seashell_new(data['session-key'], ss_success, ss_error);
+      success_call(api);
     },
     error:    function(jqXHR, textStatus, errorThrown) {
-      ss_error(errorThrown);
+      console.log(textStatus);
+      error_call(textStatus);
     }
   });
 }
-
 

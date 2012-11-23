@@ -14,3 +14,5 @@
 ;; Base path for file resources to serve during API calls.
 (define res-root "http://seashell.convextech.ca/")
 
+;; API session timeout in seconds.
+(define api-session-timeout 3600)
