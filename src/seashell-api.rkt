@@ -12,15 +12,8 @@
   (provide start-api)
 
   (define db (db-connect seashell-db-host seashell-db-port))
-
-  (define (generate-session-key)
-    (bytes->string/utf-8
-     (base64-encode
-      (list->bytes
-       (map (lambda(u) (random 255))
-            (build-list 32 identity)))
-      #"")))
   
+  ;; Returns true iff. all symbols in req-creds are in cred-list.
   (define (has-credentials? req-creds cred-list)
     (and
      (andmap
@@ -29,61 +22,14 @@
       req-creds)
      #t))
   
-  ;; API call which authenticates a user.
-  (define (do-api-authenticate args uid)
-    (define (api-authenticate-user user pass)
-      (let* ((users
-              (db-get-every-keys db 'api_user '(id name passwd cred_list)))
-             (user
-              (findf (lambda(u) (equal? (hash-ref u 'name "noname") user)) users)))
-        (if
-         (and (hash? user)
-              (equal?
-               (with-input-from-string
-                pass
-                (thunk (sha1-bytes (current-input-port))))
-               (hash-ref user 'passwd #"")))
-         (values (hash-ref user 'id)
-                 (hash-ref user 'cred_list empty))
-         (values #f #f))))
-    (match args
-      [(hash-table ('key (? string? key))
-                   (args `(,user ,pass)))
-       (let*-values
-           (((session-entry) (db-get db 'session key))
-            ((session)
-             (if (and (hash? session-entry)
-                      (< (current-seconds)
-                         (+ api-session-timeout
-                            (hash-ref session-entry 'time_opened 0))))
-                 session-entry #f))
-            ((auth-uid auth-cred-list) (api-authenticate-user user pass)))
-         (if (and session
-                  auth-uid)
-             (begin
-               (db-set-keys db 'session key
-                            `((time_opened . ,(current-seconds))
-                              (cred_list . ,auth-cred-list)
-                              (user . ,auth-uid)))
-               (logf 'info "API user ~a (uid=~a) successfully authenticated." user auth-uid)
-               `((status . #t)
-                 (result . #t)))
-             (begin
-               (logf 'info "Invalid API credentials presented for user ~a." user)
-               `((status . #t)
-                 (result . #f)))))]
-      [else `((status . #t) (result . #f))]))
-  
-  ;; Destroy a user session.
-  (define (destroy-session args uid)
-    (match args
-      [(hash-table ('key (? string? key)) _ ...)
-       (db-remove db 'session key)
-       (clear-continuation-table!)
-       `((status . #t)
-         (result . #t))]
-      [else `((status . #t)
-              (result . #f))]))
+  ;; Generate a random 32-byte session key.
+  (define (generate-session-key)
+    (bytes->string/utf-8
+     (base64-encode
+      (list->bytes
+       (map (lambda(u) (random 255))
+            (build-list 32 identity)))
+      #"")))
   
   ;; Bind an API call to a continuation.
   (define (call/bind name proc required-creds direct embed)
@@ -153,15 +99,64 @@
           `((key . ,session-key)
             (k . ,(make-hash (gen-continuation-table embed/url)))))))))
   
-  (define (get-api-user-name args uid)
-    (if uid
-        (hash-ref (db-get-keys db 'api_user uid '(full_name)) 'full_name "")
-        ""))
+  ;; API call which authenticates a user.
+  (define (do-api-authenticate args uid)
+    (define (api-authenticate-user user pass)
+      (let* ((users
+              (db-get-every-keys db 'api_user '(id name passwd cred_list)))
+             (user
+              (findf (lambda(u) (equal? (hash-ref u 'name "noname") user)) users)))
+        (if
+         (and (hash? user)
+              (equal?
+               (with-input-from-string
+                pass
+                (thunk (sha1-bytes (current-input-port))))
+               (hash-ref user 'passwd #"")))
+         (values (hash-ref user 'id)
+                 (hash-ref user 'cred_list empty))
+         (values #f #f))))
+    (match args
+      [(hash-table ('key (? string? key))
+                   (args `(,user ,pass)))
+       (let*-values
+           (((session-entry) (db-get db 'session key))
+            ((session)
+             (if (and (hash? session-entry)
+                      (< (current-seconds)
+                         (+ api-session-timeout
+                            (hash-ref session-entry 'time_opened 0))))
+                 session-entry #f))
+            ((auth-uid auth-cred-list) (api-authenticate-user user pass)))
+         (if (and session
+                  auth-uid)
+             (begin
+               (db-set-keys db 'session key
+                            `((time_opened . ,(current-seconds))
+                              (cred_list . ,auth-cred-list)
+                              (user . ,auth-uid)))
+               (logf 'info "API user ~a (uid=~a) successfully authenticated." user auth-uid)
+               `((status . #t)
+                 (result . #t)))
+             (begin
+               (logf 'info "Invalid API credentials presented for user ~a." user)
+               `((status . #t)
+                 (result . #f)))))]
+      [else `((status . #t) (result . #f))]))
   
-  ;; Hash table of log tailers. TODO collect these.
-  (define session-log-table (make-hash))
+  ;; Destroy a user session.
+  (define (destroy-session args uid)
+    (match args
+      [(hash-table ('key (? string? key)) _ ...)
+       (db-remove db 'session key)
+       (clear-continuation-table!)
+       `((status . #t)
+         (result . #t))]
+      [else `((status . #t)
+              (result . #f))]))
   
   ;; Block on reading a log and return one entry.
+  (define session-log-table (make-hash))
   (define (tail-log log args uid)
     (match args
       [(hash-table ('key (? string? key)) _ ...)
@@ -194,12 +189,11 @@
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
     ;; List of available API calls and associated functions.
-    `(,(call/bind 'isValidSession  (lambda(x u) #t)                     '()    #f embed/url)
-      ,(call/bind 'destroySession  destroy-session                      '()    #t embed/url)
-      ,(call/bind 'tailLogs        ((curry tail-log) "^.*$")            '(adm) #t embed/url)
-      ,(call/bind 'authenticate    do-api-authenticate                  '()    #t embed/url)
-      ,(call/bind 'getUserName     get-api-user-name                    '()    #f embed/url)))
-
+    `(,(call/bind 'isValidSession   (lambda(x u) #t)                     '()    #f embed/url)
+      ,(call/bind 'destroySession   destroy-session                      '()    #t embed/url)
+      ,(call/bind 'tailLogs         ((curry tail-log) "^.*$")            '(adm) #t embed/url)
+      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)))
+  
   (define (start-api req)
     (match (request-path-string req)
       [(regexp #rx"^/api/init.*$")
