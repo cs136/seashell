@@ -1,6 +1,5 @@
 (module seashell-api racket
   (require web-server/servlet
-           web-server/servlet-env
            net/base64
            openssl/sha1
            racket/sandbox
@@ -8,7 +7,8 @@
            "log.rkt"
            "common.rkt"
            "config.rkt"
-           "database.rkt")
+           "database.rkt"
+           "seashell-run.rkt")
   (provide start-api)
 
   (define db (db-connect seashell-db-host seashell-db-port))
@@ -205,28 +205,6 @@
              (hash-ref maybe-data name)
              #f))]
       [else #f]))
-  
-  ;; Information associated with a running program.
-  (struct pgrm (stdin stdout stderr))
-  
-  ;; Table of session -> pgrm
-  (define pgrm-table (make-hash))
-  
-  ;; filename -> bool
-  (define (run-file args uid)
-    #f)
-  
-  ;; -> bool
-  (define (kill-current-pgrm args uid)
-    #f)
-  
-  ;; string -> bool
-  (define (accept-user-input args uid)
-    #f)
-  
-  ;; -> (union string false)
-  (define (get-pgrm-output args uid)
-    #f)
   
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
