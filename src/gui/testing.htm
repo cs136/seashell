@@ -1,17 +1,29 @@
 <html>
     <head>
         <title>Hello world</title>
-    </head>
-    <body>
         <script src="codemirror/lib/codemirror.js"></script>
         <script src="codemirror/lib/util/formatting.js"></script>
         <script src="codemirror/lib/util/dialog.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	<script src="/jquery.json-2.3.min.js"></script>
+	<script src="/api.js"></script>
         <link rel="stylesheet" href="codemirror/lib/codemirror.css">
         <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
         <link rel="stylesheet" href="seashell.css">
         <script src="codemirror/mode/clike/clike.js"></script>
-
-
+	<script>
+		function init() {
+			seashell_new(
+				function(ss) {
+					window.ss = ss;
+				},
+				function(err) {
+					alert("Error initializing API: " + err);
+				});
+		}
+	</script>
+    </head>
+    <body onload="init()">
     <div id="container">
         <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>

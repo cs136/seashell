@@ -186,13 +186,61 @@
                                 (result . ,(channel-get logger)))))))]
       [else `((status . #t) (result . #f))]))
   
+  ;; filename data -> bool
+  (define (save-file args uid)
+    (match args
+      [`(,(? string? name)
+         ,(? string? data))
+       (db-set-keys db 'files uid `((,name . ,data)))
+       #t]
+      [else #f]))
+  
+  ;; filename -> (union string false)
+  (define (load-file args uid)
+    (match args
+      [`(,(? string? name))
+       (let ((maybe-data (db-get-keys db 'files uid `(,name))))
+         (if (and (hash? maybe-data)
+                  (hash-has-key? maybe-data name))
+             (hash-ref maybe-data name)
+             #f))]
+      [else #f]))
+  
+  ;; Information associated with a running program.
+  (struct pgrm (stdin stdout stderr))
+  
+  ;; Table of session -> pgrm
+  (define pgrm-table (make-hash))
+  
+  ;; filename -> bool
+  (define (run-file args uid)
+    #f)
+  
+  ;; -> bool
+  (define (kill-current-pgrm args uid)
+    #f)
+  
+  ;; string -> bool
+  (define (accept-user-input args uid)
+    #f)
+  
+  ;; -> (union string false)
+  (define (get-pgrm-output args uid)
+    #f)
+  
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
     ;; List of available API calls and associated functions.
     `(,(call/bind 'isValidSession   (lambda(x u) #t)                     '()    #f embed/url)
       ,(call/bind 'destroySession   destroy-session                      '()    #t embed/url)
       ,(call/bind 'tailLogs         ((curry tail-log) "^.*$")            '(adm) #t embed/url)
-      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)))
+      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)
+      ,(call/bind 'saveFile         save-file                            '(usr) #f embed/url)
+      ,(call/bind 'loadFile         load-file                            '(usr) #f embed/url)
+      ,(call/bind 'runFile          run-file                             '(usr) #f embed/url)
+      ,(call/bind 'killProgram      kill-current-pgrm                    '(usr) #f embed/url)
+      ,(call/bind 'acceptUserInput  accept-user-input                    '(usr) #f embed/url)
+      ,(call/bind 'getProgramOutput get-pgrm-output                      '(usr) #f embed/url)))
   
   (define (start-api req)
     (match (request-path-string req)
