@@ -206,19 +206,30 @@
              #f))]
       [else #f]))
   
+  ;; Destroy a user session.
+  (define (wrap-session-proc proc)
+    (lambda(args uid)
+      (match args
+        [(hash-table ('key (? string? key))
+                     ('args (? list? args)) _ ...)
+         `((status . #t)
+           (result . ,(proc key args uid)))]
+        [else `((status . #t)
+                (result . #f))])))
+  
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
     ;; List of available API calls and associated functions.
-    `(,(call/bind 'isValidSession   (lambda(x u) #t)                     '()    #f embed/url)
-      ,(call/bind 'destroySession   destroy-session                      '()    #t embed/url)
-      ,(call/bind 'tailLogs         ((curry tail-log) "^.*$")            '(adm) #t embed/url)
-      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)
-      ,(call/bind 'saveFile         save-file                            '(usr) #f embed/url)
-      ,(call/bind 'loadFile         load-file                            '(usr) #f embed/url)
-      ,(call/bind 'runFile          run-file                             '(usr) #f embed/url)
-      ,(call/bind 'killProgram      kill-current-pgrm                    '(usr) #f embed/url)
-      ,(call/bind 'acceptUserInput  accept-user-input                    '(usr) #f embed/url)
-      ,(call/bind 'getProgramOutput get-pgrm-output                      '(usr) #f embed/url)))
+    `(,(call/bind 'isValidSession   (lambda(x u) #t)                      '()    #f embed/url)
+      ,(call/bind 'destroySession   destroy-session                       '()    #t embed/url)
+      ,(call/bind 'tailLogs         ((curry tail-log) "^.*$")             '(adm) #t embed/url)
+      ,(call/bind 'authenticate     do-api-authenticate                   '()    #t embed/url)
+      ,(call/bind 'saveFile         save-file                             '(usr) #f embed/url)
+      ,(call/bind 'loadFile         load-file                             '(usr) #f embed/url)
+      ,(call/bind 'runFile          (wrap-session-proc run-file)          '(usr) #f embed/url)
+      ,(call/bind 'killProgram      (wrap-session-proc kill-current-pgrm) '(usr) #f embed/url)
+      ,(call/bind 'acceptUserInput  (wrap-session-proc accept-user-input) '(usr) #f embed/url)
+      ,(call/bind 'getProgramOutput (wrap-session-proc get-pgrm-output)   '(usr) #f embed/url)))
   
   (define (start-api req)
     (match (request-path-string req)

@@ -16,3 +16,9 @@
 
 ;; API session timeout in seconds.
 (define api-session-timeout 3600)
+
+;; Program idle timeout in seconds.
+(define pgrm-idle-timeout 120)
+
+;; Path of compile/execute helper binary.
+(define ce-helper-binary "/opt/seashell/ss_env")
