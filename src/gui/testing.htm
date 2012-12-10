@@ -18,9 +18,9 @@
             <span class="buttons left">
                 <button type="button" id="undo">Undo</button>
                 <button type="button" id="redo">Redo</button>
-                <button type="button" id="save">Save</button>
-                <button type="button" id="open-file">Open...</button>
-                <button type="button" id="new-file">New...</button>
+                <button type="button" id="save-file">Save</button>
+                <button type="button" id="open-file">Open&hellip;</button>
+                <button type="button" id="new-file">New&hellip;</button>
             </span>
             <span class="buttons right">
                 <!--
@@ -30,13 +30,16 @@
                 <button type="button" id="autoindent">Indent</button>
                 <button type="button" id="comment">Comment</button>
                 <button type="button" id="uncomment">Uncomment</button>
-                <button type="button" id="goto-line">Goto...</button>
+                <button type="button" id="goto-line">Goto&hellip;</button>
             </span>
 
             <span class="filename">foobar.c</span>
 
             <div id="codeArea">
-                <textarea id="seashell">
+                <textarea id="seashell" rows=19 cols=93>
+Please enable JavaScript.
+                </textarea>
+                <!--
 #include &lt;stdio.h&gt;
 int main() {
     int i;
@@ -45,6 +48,7 @@ int main() {
     }
     return(0);
 }</textarea>
+-->
             </div>
         </div>
         <div id="bottom">
@@ -52,7 +56,7 @@ int main() {
                 <button type="button" id="check-syntax">Check Syntax</button>
                 <button type="button" id="compile">Compile</button>
                 <button type="button" id="run">Run</button>
-                <button type="button" id="run-input">Run with input...</button>
+                <button type="button" id="run-input">Run with input&hellip;</button>
                 <button type="button" id="test-runc">Test with RunC</button>
 
             </div>

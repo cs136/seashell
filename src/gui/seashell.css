@@ -27,26 +27,29 @@ body {
 }
 
 #codeArea {
-    background: #fff;
+    background-color: #fff;
     border: 1px solid #ccc;
     clear: both;
+}
+#codeArea textarea {
+    border: none;
+    font-family: monospace;
+    line-height: 1em;
+    padding: 0.4em;
 }
 .buttons {margin-bottom: 0.25em;}
 .buttons button{margin-left: 0; margin-right: 4px;}
 .left {float: left;}
-.right {
-    float: right;
-}
+.right { float: right; }
 .right button{margin-left: 4px; margin-right: 0;}
-.userid {
-    font-weight: bold;
-}
+.userid { font-weight: bold; }
 .filename {
+    color: #f00;
+
     display: block;
     vertical-align: bottom;
-    width: 8em;
     clear: both;
-    color: #f00;
+    width: 8em;
 }
 
 #prompt {
@@ -56,7 +59,9 @@ body {
     box-shadow: inset 1px 1px 0px 0px #222;
     font-family: monospace;
 
+/*
     margin-top: 0.25em;
+*/
     padding: 0.25em;
     line-height: 1em;
     min-height: 6em;
