@@ -52,12 +52,13 @@ body {
     width: 8em;
 }
 
-#prompt {
+#termPrompt {
     background-color: #333;
     color: #eee;
     -webkit-box-shadow: inset 1px 1px 0px 0px #222;
     box-shadow: inset 1px 1px 0px 0px #222;
     font-family: monospace;
+position: relative;
 
 /*
     margin-top: 0.25em;
