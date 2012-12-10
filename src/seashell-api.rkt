@@ -1,6 +1,5 @@
 (module seashell-api racket
   (require web-server/servlet
-           web-server/servlet-env
            net/base64
            openssl/sha1
            racket/sandbox
@@ -8,7 +7,8 @@
            "log.rkt"
            "common.rkt"
            "config.rkt"
-           "database.rkt")
+           "database.rkt"
+           "seashell-run.rkt")
   (provide start-api)
 
   (define db (db-connect seashell-db-host seashell-db-port))
@@ -103,14 +103,14 @@
   (define (do-api-authenticate args uid)
     (define (api-authenticate-user user pass)
       (let* ((users
-              (db-get-every-keys db 'api_user '(id name passwd cred_list)))
+              (db-get-every-keys db 'api_user '(id name passwd salt cred_list)))
              (user
               (findf (lambda(u) (equal? (hash-ref u 'name "noname") user)) users)))
         (if
          (and (hash? user)
               (equal?
                (with-input-from-string
-                pass
+                (string-append pass (hash-ref user 'salt))
                 (thunk (sha1-bytes (current-input-port))))
                (hash-ref user 'passwd #"")))
          (values (hash-ref user 'id)
@@ -186,13 +186,39 @@
                                 (result . ,(channel-get logger)))))))]
       [else `((status . #t) (result . #f))]))
   
+  ;; filename data -> bool
+  (define (save-file args uid)
+    (match args
+      [`(,(? string? name)
+         ,(? string? data))
+       (db-set-keys db 'files uid `((,name . ,data)))
+       #t]
+      [else #f]))
+  
+  ;; filename -> (union string false)
+  (define (load-file args uid)
+    (match args
+      [`(,(? string? name))
+       (let ((maybe-data (db-get-keys db 'files uid `(,name))))
+         (if (and (hash? maybe-data)
+                  (hash-has-key? maybe-data name))
+             (hash-ref maybe-data name)
+             #f))]
+      [else #f]))
+  
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
     ;; List of available API calls and associated functions.
     `(,(call/bind 'isValidSession   (lambda(x u) #t)                     '()    #f embed/url)
       ,(call/bind 'destroySession   destroy-session                      '()    #t embed/url)
       ,(call/bind 'tailLogs         ((curry tail-log) "^.*$")            '(adm) #t embed/url)
-      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)))
+      ,(call/bind 'authenticate     do-api-authenticate                  '()    #t embed/url)
+      ,(call/bind 'saveFile         save-file                            '(usr) #f embed/url)
+      ,(call/bind 'loadFile         load-file                            '(usr) #f embed/url)
+      ,(call/bind 'runFile          run-file                             '(usr) #f embed/url)
+      ,(call/bind 'killProgram      kill-current-pgrm                    '(usr) #f embed/url)
+      ,(call/bind 'acceptUserInput  accept-user-input                    '(usr) #f embed/url)
+      ,(call/bind 'getProgramOutput get-pgrm-output                      '(usr) #f embed/url)))
   
   (define (start-api req)
     (match (request-path-string req)
