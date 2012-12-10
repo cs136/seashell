@@ -46,6 +46,7 @@ function s_k(api, method, args, callback) {
           s_k(api, method, args, callback);
         } else {
           console.log("Error during method " + method + " invocation: " + textStatus);
+          throw new Array(method, textStatus);
         }
       }})(api, method, args, callback)
   });
