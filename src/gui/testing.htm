@@ -16,6 +16,13 @@
 			seashell_new(
 				function(ss) {
 					window.ss = ss;
+					ss.authenticate(
+						function(res) {
+							if(!res) {
+								console.log("Couldn't authenticate as ctdalek!");
+							}
+						},
+						"ctdalek", "exterminate");
 				},
 				function(err) {
 					alert("Error initializing API: " + err);

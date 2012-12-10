@@ -103,14 +103,14 @@
   (define (do-api-authenticate args uid)
     (define (api-authenticate-user user pass)
       (let* ((users
-              (db-get-every-keys db 'api_user '(id name passwd cred_list)))
+              (db-get-every-keys db 'api_user '(id name passwd salt cred_list)))
              (user
               (findf (lambda(u) (equal? (hash-ref u 'name "noname") user)) users)))
         (if
          (and (hash? user)
               (equal?
                (with-input-from-string
-                pass
+                (string-append pass (hash-ref user 'salt))
                 (thunk (sha1-bytes (current-input-port))))
                (hash-ref user 'passwd #"")))
          (values (hash-ref user 'id)
