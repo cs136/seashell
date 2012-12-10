@@ -2,22 +2,15 @@
        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
+        <?xml version="1.0" encoding="ISO-8859-1"?>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
         <link type="text/css" rel="stylesheet" href="seashell.css"/>
-        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
         <title>Hello world</title>
 
-        <script src="codemirror/lib/codemirror.js"></script>
-        <script src="codemirror/lib/util/formatting.js"></script>
-        <script src="codemirror/lib/util/dialog.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-	<script src="/jquery.json-2.3.min.js"></script>
-	<script src="/api.js"></script>
         <link rel="stylesheet" href="codemirror/lib/codemirror.css">
         <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
         <link rel="stylesheet" href="seashell.css">
-        <script src="codemirror/mode/clike/clike.js"></script>
 	<script>
 		function init() {
 			seashell_new(
@@ -80,7 +73,7 @@ int main() {
         </div>
         <div id="bottom">
             <div class="buttons left">
-                <button type="button" id="check-syntax">Check Syntax</button>
+                <button type="button" id="clear-console">Clear</button>
                 <button type="button" id="compile">Compile</button>
                 <button type="button" id="run">Run</button>
                 <button type="button" id="run-input">Run with input&hellip;</button>
@@ -90,14 +83,21 @@ int main() {
             <div class="buttons right">
                 <button type="button" id="submit-assignment">Submit to Marmoset</button>
             </div>
-            <div id="prompt">&gt; ls</div>
-
+            <!--Messages and program output will appear here.-->
+            <div id="console" class="dark-on-light"></div>
         </div>
     </div> <!-- container -->
+<!--
+        <script type="text/javascript" src="termlib/termlib.js"></script>
+-->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
+        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
 
         <script type="text/javascript" src="seashell.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	<script src="jquery.json-2.3.min.js"></script>
+	<script src="api.js"></script>
     </body>
 </html>
