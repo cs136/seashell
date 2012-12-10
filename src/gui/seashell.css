@@ -52,14 +52,10 @@ body {
     width: 8em;
 }
 
-#termPrompt {
-    background-color: #333;
-    color: #eee;
+#console {
     -webkit-box-shadow: inset 1px 1px 0px 0px #222;
     box-shadow: inset 1px 1px 0px 0px #222;
     font-family: monospace;
-position: relative;
-
 /*
     margin-top: 0.25em;
 */
@@ -67,4 +63,9 @@ position: relative;
     line-height: 1em;
     min-height: 6em;
     clear: both;
+}
+
+.dark-on-light {
+    background-color: #333;
+    color: #eee;
 }

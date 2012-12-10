@@ -73,7 +73,7 @@ int main() {
         </div>
         <div id="bottom">
             <div class="buttons left">
-                <button type="button" id="check-syntax">Check Syntax</button>
+                <button type="button" id="clear-console">Clear</button>
                 <button type="button" id="compile">Compile</button>
                 <button type="button" id="run">Run</button>
                 <button type="button" id="run-input">Run with input&hellip;</button>
@@ -83,11 +83,13 @@ int main() {
             <div class="buttons right">
                 <button type="button" id="submit-assignment">Submit to Marmoset</button>
             </div>
-            <div id="termPrompt"></div>
-
+            <!--Messages and program output will appear here.-->
+            <div id="console" class="dark-on-light"></div>
         </div>
     </div> <!-- container -->
+<!--
         <script type="text/javascript" src="termlib/termlib.js"></script>
+-->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
