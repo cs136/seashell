@@ -192,15 +192,21 @@ int main(int argc, char * argv[])
 				n -= m;
 			}
 		}
+    if(n == -1) {
+      perrorstr("Error reading binary: %s.\n");
+      exit(1);
+    }
 		close(fd);
 		close(ofd);
 
 		/* Binary is in the chroot jail. Enter jail, drop privileges, and run. */
 		if(chdir(CHROOT_PATH) != 0) {
 			perrorstrf("Could not chdir to jail: %s.\n");
+      exit(1);
 		}
 		if(chroot(CHROOT_PATH) != 0) {
 			perrorstrf("Could not chroot to jail: %s.\n");
+      exit(1);
 		}
 
 		/* Start runner process. */
