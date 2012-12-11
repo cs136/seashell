@@ -9,7 +9,7 @@
            wait-pgrm)
   
   ;; Information associated with a running program.
-  (define-struct pgrm (stdin stdout stderr ts handle reaped) #:mutable)
+  (define-struct pgrm (stdin stdout stderr ts handle reaped) #:mutable #:transparent)
   
   ;; Table of (session key -> pgrm) and associated semaphore.
   (define pgrm-table (make-hash))
@@ -20,13 +20,13 @@
     (thread
      (thunk
       (let loop ()
-        (sync (alarm-evt 1000))
-        (semaphore-wait pgrm-sema)
+        (sync (alarm-evt (+ (current-inexact-milliseconds) 1000)))
         (with-handlers
             ([exn? (lambda(e)
-                     (semaphore-post pgrm-sema)
+                     (logf 'info "Exception in reaper: ~a" e)
                      (loop))])
           (hash-map
+           pgrm-table
            (lambda(k v)
              (when (and (not (pgrm-reaped v))
                         (or
@@ -38,19 +38,20 @@
                (set-pgrm-reaped! v #t)
                (thread
                 (thunk
+                 (logf 'info "Process for session=~a finished or timed out." k)
                  (when (equal? ((pgrm-handle v) 'status)
                                'running)
                    (pgrm-kill v))
                  ((pgrm-handle v) 'wait)
                  (sync/timeout 60 (eof-evt (pgrm-stdout v)))
                  (sync/timeout 60 (eof-evt (pgrm-stderr v)))
+                 (semaphore-post pgrm-sema)
                  (hash-remove! pgrm-table k)
+                 (semaphore-wait pgrm-sema)
                  (close-input-port (pgrm-stdout v))
                  (close-input-port (pgrm-stderr v))
                  (close-output-port (pgrm-stdin v))
-                 (logf 'info "Reaped process for session=~a" k)))))
-           pgrm-table)
-          (semaphore-post pgrm-sema))
+                 (logf 'info "Reaped process for session=~a" k)))))))
         (loop)))))
                 
   ;; Functions for starting/stopping programs.
@@ -168,11 +169,16 @@
   
   ;; -> (union string false)
   (define (get-pgrm-output key args uid)
-    (let ((pg (hash-ref pgrm-table key #f)))
-      (if (pgrm? pg)
-          (sync/timeout 120
-                        (read-string-evt 1 (pgrm-stdout pg))
-                        (read-string-evt 1 (pgrm-stderr pg)))
+    (let ((pg (hash-ref pgrm-table key #f))
+          (b (make-bytes 256 0)))
+      (if (and
+           (pgrm? pg)
+           (port?
+            (sync/timeout 120 (pgrm-stdout pg))))
+          (let ((rb (read-bytes-avail! b (pgrm-stdout pg))))
+            (if (eof-object? rb)
+                #f
+                (bytes->string/utf-8 (subbytes b 0 rb))))
           #f)))
   
   ;; -> bool
@@ -181,6 +187,9 @@
       (if (pgrm? pg)
           (begin
             ((pgrm-handle pg) 'wait)
-            #t)
+            (and
+             (sync/timeout 60 (eof-evt (pgrm-stdout pg)))
+             (sync/timeout 60 (eof-evt (pgrm-stderr pg)))
+             #t))
           #f))))
   

@@ -4,18 +4,51 @@ function saveFile() {
     var nameTag = document.getElementById('active_filename');
     nameTag.className="filename";
 
-    // TODO save the file named currentFileName.
+    ss.saveFile(
+      function(res) {
+        if(!res) {
+          alert("Could not save file. Please try again.");
+        }
+      },
+      nameTag.innerHTML,
+      contents);
 }
 
-// returns the contents of currentFileName as a \n-delimited string 
-function getFile() {
-    // TODO
-    return exampleCode;
+// applies k to the contents of currentFileName as a \n-delimited string 
+function getFile(k) {
+    ss.loadFile(k, currentFileName);
 }
 
 // I'm not sure what this should look like. It should certainly be asynchronous.
 // Maybe it should console_write(str) as it gets lines?
 function runProgram() {
+  ss.runFile(
+    function(res) {
+      if(res) {
+        window.ss_pipe_k = function() {
+          ss.getProgramOutput(function(bytes) {
+            if(bytes) {
+              console_write_noeol(bytes);
+              window.ss_pipe_k();
+            } else {
+              /* do not poll too quickly. */
+              window.setTimeout(window.ss_pipe_k, 500);
+            }
+          });
+        }
+        window.ss_term_k = function() {
+          ss.waitProgram(function(res) {
+            if(res) {
+              /* Program terminated. */
+              window.ss_pipe_k = function(){};
+            } else {
+              window.ss_term_k();
+            }
+          });
+        }
+        window.ss_term_k();
+        window.ss_pipe_k();
+    }}, editor.getValue());
 }
 
 // eventually: parse clang output. Codemirror will let you jump around to arbitrary lines/positions
@@ -27,6 +60,7 @@ function setFileName(name) {
     var nameTag = document.getElementById('active_filename');
     nameTag.innerHTML=name;
     nameTag.className="filename";
+    currentFileName=name;
 }
 var seashellEditor = document.getElementById('seashell');
 //var txt = document.createTextNode("woohoo");
@@ -43,12 +77,12 @@ var exampleCode = ['#include &lt;stdio.h&gt;',
 seashellEditor.innerHTML = exampleCode;
 
 var editor = CodeMirror.fromTextArea(seashellEditor, {lineNumbers: true});
-var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.';
+var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.\n';
 var currentFileName = 'foobar.c';
-var console = CodeMirror(document.getElementById('console'), 
-                            {value: welcomeMessage, 
-                            readOnly: true, 
-                            theme: 'dark-on-light'});
+var ss_console = CodeMirror(document.getElementById('console'), 
+                               {value: welcomeMessage, 
+                               readOnly: true, 
+                               theme: 'dark-on-light'});
 var compiled = false;
 editor.on("change", mark_changed);
 
@@ -59,10 +93,17 @@ function mark_changed(instance, chobj) {
 }
 
 function console_write(str) {
-    console.setOption('readOnly', false);
-    var newText = console.getValue() + '\n' + str;
-    console.setValue(newText);
-    console.setOption('readOnly', true);
+    ss_console.setOption('readOnly', false);
+    var newText = ss_console.getValue() + str + '\n';
+    ss_console.setValue(newText);
+    ss_console.setOption('readOnly', true);
+}
+
+function console_write_noeol(str) {
+    ss_console.setOption('readOnly', false);
+    var newText = ss_console.getValue() + str;
+    ss_console.setValue(newText);
+    ss_console.setOption('readOnly', true);
 }
 
 /** handlers for buttons that only affect the client-side **/
@@ -96,21 +137,22 @@ function submitHandler() {
 
 function compileHandler() {
     saveFile();
-    if (!compiled) {
+    /*if (!compiled) {
         // TODO compile file
         compiled = true;
         console_write('Done compiling.');
     } else {
         console_write('Already compiled.');
-    }
+    }*/
 }
 
 function runHandler() {
-    if (!compiled) {
+    /*if (!compiled) {
         console_write('The source file was modified since the last compile. Compiling first...');
         compileHandler();
-    }
+    }*/
     // TODO run
+    runProgram();
 }
 
 function runInputHandler() {
@@ -148,12 +190,13 @@ function openFileHandler() {
 //                            if (successful) {
                                 console_write('Opened file ' + query + '.');
                                 setFileName(query);
-                                editor.setValue(getFile());
-                                setFileName(query); // this is a kludge to stop filename from turning red
-                                
-//                            else {
-//                                console_write('Failed to open the file ' + query + '.');
-//                            }
+                                getFile(function(val) {
+                                  if(val) {
+                                    editor.setValue(val);
+                                    setFileName(query); // this is a kludge to stop filename from turning red
+                                  } else {
+                                    console_write('Failed to open the file ' + query + '.');
+                                  }});
                         });
 }
 
@@ -176,6 +219,22 @@ function newFileHandler() {
                         });
 }
 
+/** initialize api. **/
+seashell_new(
+  function(ss) {
+    window.ss = ss;
+    ss.authenticate(
+      function(res) {
+        if(!res) {
+          alert("Couldn't authenticate as ctdalek!");
+        }
+      },
+      "ctdalek", "exterminate");
+  },
+  function(err) {
+    alert("Error initializing API: " + err);
+  });
+
 /** attach actions to all the buttons. **/
 function giveAction(elid,act) {
     document.getElementById(elid).onclick=act;
@@ -190,7 +249,7 @@ giveAction("autoindent", autoIndentHandler);
 giveAction("goto-line", gotoHandler);
 giveAction("submit-assignment", submitHandler);
 
-giveAction("clear-console", function() {console.setValue('')});
+giveAction("clear-console", function() {ss_console.setValue('')});
 giveAction("compile", compileHandler);
 giveAction("run", runHandler);
 giveAction("run-input", runInputHandler);

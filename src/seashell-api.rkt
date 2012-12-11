@@ -150,10 +150,13 @@
       [(hash-table ('key (? string? key)) _ ...)
        (db-remove db 'session key)
        (clear-continuation-table!)
-       `((status . #t)
-         (result . #t))]
-      [else `((status . #t)
-              (result . #f))]))
+       (response/json
+        `((status . #t)
+          (result . #t)))]
+      [else
+       (response/json
+        `((status . #t)
+          (result . #f)))]))
   
   ;; Block on reading a log and return one entry.
   (define session-log-table (make-hash))
@@ -226,11 +229,11 @@
       ,(call/bind 'authenticate     do-api-authenticate                   '()    #t embed/url)
       ,(call/bind 'saveFile         save-file                             '(usr) #f embed/url)
       ,(call/bind 'loadFile         load-file                             '(usr) #f embed/url)
-      ,(call/bind 'runFile          (wrap-session-proc run-file)          '(usr) #f embed/url)
-      ,(call/bind 'killProgram      (wrap-session-proc kill-current-pgrm) '(usr) #f embed/url)
-      ,(call/bind 'waitProgram      (wrap-session-proc wait-pgrm)         '(usr) #f embed/url)
-      ,(call/bind 'acceptUserInput  (wrap-session-proc accept-user-input) '(usr) #f embed/url)
-      ,(call/bind 'getProgramOutput (wrap-session-proc get-pgrm-output)   '(usr) #f embed/url)))
+      ,(call/bind 'runFile          (wrap-session-proc run-file)          '(usr) #t embed/url)
+      ,(call/bind 'killProgram      (wrap-session-proc kill-current-pgrm) '(usr) #t embed/url)
+      ,(call/bind 'waitProgram      (wrap-session-proc wait-pgrm)         '(usr) #t embed/url)
+      ,(call/bind 'acceptUserInput  (wrap-session-proc accept-user-input) '(usr) #t embed/url)
+      ,(call/bind 'getProgramOutput (wrap-session-proc get-pgrm-output)   '(usr) #t embed/url)))
   
   (define (start-api req)
     (match (request-path-string req)
