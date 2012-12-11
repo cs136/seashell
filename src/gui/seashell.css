@@ -44,15 +44,19 @@ body {
 .right button{margin-left: 4px; margin-right: 0;}
 .userid { font-weight: bold; }
 .filename {
-    color: #f00;
+    color: #000;
 
     display: block;
     vertical-align: bottom;
     clear: both;
     width: 8em;
 }
+.status_edited {
+    color: #f00;
+}
 
 #console {
+    background-color: #333;
     -webkit-box-shadow: inset 1px 1px 0px 0px #222;
     box-shadow: inset 1px 1px 0px 0px #222;
     font-family: monospace;
@@ -64,8 +68,6 @@ body {
     min-height: 6em;
     clear: both;
 }
-
 .dark-on-light {
-    background-color: #333;
     color: #eee;
 }

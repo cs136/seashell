@@ -1,3 +1,13 @@
+function saveFile() {
+// TODO stub
+    var nameTag = document.getElementById('active_filename');
+    nameTag.className="filename";
+}
+    
+function setFileName(name) {
+    var nameTag = document.getElementById('active_filename');
+    nameTag.innerHTML=name;
+}
 var seashellEditor = document.getElementById('seashell');
 //var txt = document.createTextNode("woohoo");
 //seashellEditor.appendChild(txt);
@@ -12,6 +22,7 @@ seashellEditor.innerHTML = ['#include &lt;stdio.h&gt;',
 
 var editor = CodeMirror.fromTextArea(seashellEditor, {lineNumbers: true});
 var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.';
+var currentFileName = 'foobar.c';
 var console = CodeMirror(document.getElementById('console'), 
                             {value: welcomeMessage, 
                             readOnly: true, 
@@ -21,6 +32,8 @@ editor.on("change", mark_changed);
 
 function mark_changed(instance, chobj) {
     compiled = false;
+    var nameTag = document.getElementById('active_filename');
+    nameTag.className = "filename status_edited"; 
 }
 
 function console_write(str) {
@@ -52,13 +65,16 @@ function gotoHandler() {
 
 function submitHandler() {
     var submitPrompt = 'Assignment ID: <input type="text" style="width: 3em"/>';
-    editor.openDialog(submitPrompt, function(query) {
-            editor.setCursor(query-1, 0); });
+    editor.openDialog(submitPrompt,
+                        function(query) {
+                            // TODO
+                            console_write('Submitted file ' + currentFileName + '.');
+                        });
 }
 
 function compileHandler() {
     if (!compiled) {
-        // TODO save file
+        saveFile();
         // TODO compile file
         compiled = true;
         console_write('Done compiling.');
@@ -87,7 +103,14 @@ function saveHandler() {
     var filePrompt = 'Save as: <input type="text" style="width: 3em"/>';
     editor.openDialog(filePrompt, 
                         function(query) {
-                            console_write('Your file has been saved as ' + query + '.');
+                            saveFile();
+                            // TODO problem with nullstring checking...
+                            if (!query) {
+                                console_write('Your file has been saved as ' + activeFileName + '.');
+                            } else {
+                                console_write('Your file has been saved as ' + query + '.');
+                                setFileName(query);
+                            }
                         });
 }
 
@@ -98,6 +121,7 @@ function openFileHandler() {
 // TODO
 //                            if (successful) {
                                 console_write('Opened file ' + query + '.');
+                                setFileName(query);
 //                            else {
 //                                console_write('Failed to open the file ' + query + '.');
 //                            }
@@ -111,6 +135,7 @@ function newFileHandler() {
 // TODO
 //                            if (successful) {
                                 console_write('Creating file ' + query + '.');
+                                setFileName(query);
 //                            else {
 //                                console_write('Failed to create the file ' + query + '.');
 //                            }
@@ -184,4 +209,6 @@ document.getElementById('bottom').onmouseout=disable_console();
 
 //console_write("foo");
 //console_write("bar");
+
+setFileName(currentFileName);
 editor.focus();
