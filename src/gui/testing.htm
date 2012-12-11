@@ -6,7 +6,7 @@
         <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
         <link type="text/css" rel="stylesheet" href="seashell.css"/>
-        <title>Hello world</title>
+        <title>Seashell</title>
 
         <link rel="stylesheet" href="codemirror/lib/codemirror.css">
         <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
@@ -50,10 +50,10 @@
                 <button type="button" id="autoindent">Indent</button>
                 <button type="button" id="comment">Comment</button>
                 <button type="button" id="uncomment">Uncomment</button>
-                <button type="button" id="goto-line">Goto&hellip;</button>
+                <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
             </span>
 
-            <span class="filename">foobar.c</span>
+            <span id="active_filename" class="filename"></span>
 
             <div id="codeArea">
                 <textarea id="seashell" rows=19 cols=93>
@@ -73,7 +73,7 @@ int main() {
         </div>
         <div id="bottom">
             <div class="buttons left">
-                <button type="button" id="clear-console">Clear</button>
+                <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
                 <button type="button" id="compile">Compile</button>
                 <button type="button" id="run">Run</button>
                 <button type="button" id="run-input">Run with input&hellip;</button>
@@ -87,9 +87,6 @@ int main() {
             <div id="console" class="dark-on-light"></div>
         </div>
     </div> <!-- container -->
-<!--
-        <script type="text/javascript" src="termlib/termlib.js"></script>
--->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
