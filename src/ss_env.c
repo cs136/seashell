@@ -9,22 +9,23 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <pwd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 /* Drop to nobody. */
-#define DROP_UID 99
-#define DROP_GID 99
+#define DROP_USER "nobody"
+#define DROP_GROUP "nobody"
 
 /* Chroot jail path. */
 #define CHROOT_PATH "/home/marc/seashell/src/chroot"
 
 /* Compile utility. */
-#define COMPILER_PATH "/home/marc/seashell/src/asdf.sh"
+#define COMPILER_PATH "/home/marc/seashell/src/compile.sh"
 
 /* Run utility, relative to the chroot jail. */
-#define RUNNER_PATH "/asdf.sh"
+#define RUNNER_PATH "/bin/run.sh"
 
 /* File copy buffer size. */
 #define BUFSZ 512
@@ -41,18 +42,18 @@
 #define die(...) do { perrorf(__VA_ARGS__); exit(1); } while(0)
 
 /* Drop privileges. */
-int drop_priv() {
+int drop_priv(int drop_uid, int drop_gid) {
 	/* Empty the supplementary groups list. */
 	if(setgroups(0, NULL) != 0) {
 		perrorstrf("Error emptying the supplementary groups list: %s.\n");
 		return -1;
 	}
-	if(setgid(DROP_GID) != 0) {
-		perrorstrf("Error on setgid(DROP_GID): %s.\n");
+	if(setgid(drop_gid) != 0) {
+		perrorstrf("Error on setgid(drop_gid): %s.\n");
 		return -1;
 	}
-	if(setuid(DROP_UID) != 0) {
-		perrorstrf("Error on setuid(DROP_UID): %s.\n");
+	if(setuid(drop_uid) != 0) {
+		perrorstrf("Error on setuid(drop_uid): %s.\n");
 		return -1;
 	}
 	if(chdir("/") != 0) {
@@ -70,7 +71,7 @@ char ** environ;
 int main(int argc, char * argv[])
 {
 	pid_t pid;
-	int status, rv, i;
+	int status, rv, i, drop_uid, drop_gid;
 
 	/* Sanity checks. */
 	if(geteuid() != 0) {
@@ -97,6 +98,35 @@ int main(int argc, char * argv[])
 		setsid();
 	}
 
+  /* Get UID and GID under which to run processes. */
+  {
+    char buf[256];
+    struct passwd pws, *pw;
+    struct group grs, *gr;
+    if(0 != getpwnam_r(DROP_USER, &pws, buf, 256, &pw)) {
+      perrorstrf("Error on getpwnam_r: %s.\n");
+      exit(1);
+    }
+    if(!pw) {
+      die("getpwnam(%s) failed.\n", DROP_USER);
+    }
+    drop_uid = pw->pw_uid;
+
+    if(0 != getgrnam_r(DROP_GROUP, &grs, buf, 256, &gr)) {
+      perrorstrf("Error on getgrnam_r: %s.\n");
+      exit(1);
+    }
+    if(!gr) {
+      die("getgrnam(%s) failed.\n", DROP_GROUP);
+    }
+    drop_gid = gr->gr_gid;
+
+    if((drop_uid == 0) || (drop_gid == 0)) {
+      die("Neither DROP_USER nor DROP_GROUP may be root.\n");
+    }
+  }
+
+
 	/* Start compiler process. */
 	pid = fork();
 	if(pid) {
@@ -112,7 +142,7 @@ int main(int argc, char * argv[])
 		}
 		/* Parent continues execution after the following block. */
 	} else {
-		if(drop_priv() != 0) {
+		if(drop_priv(drop_uid, drop_gid) != 0) {
 			die("Could not drop privileges.\n");
 		}
 		/* No longer running as root. Execute the compile. */
@@ -146,7 +176,7 @@ int main(int argc, char * argv[])
 		}
 
 		/* 2. Is the binary executable and
-		 * owned by DROP_UID:DROP_GID? */
+		 * owned by drop_uid:drop_gid? */
 		if((fd = open(rpath, O_RDONLY|O_NOCTTY)) < 0) {
 			perrorstrf("Error opening compiler output: %s.\n");
 			exit(1);
@@ -158,11 +188,11 @@ int main(int argc, char * argv[])
 		if(!(st.st_mode & S_IXUSR)) {
 			die("Compiler output is not executable.\n");
 		}
-		if(st.st_uid != DROP_UID) {
-			die("Compiler output owner does not match DROP_UID.\n");
+		if(st.st_uid != drop_uid) {
+			die("Compiler output owner does not match drop_uid.\n");
 		}
-		if(st.st_gid != DROP_GID) {
-			die("Compiler output group does not match DROP_GID.\n");
+		if(st.st_gid != drop_gid) {
+			die("Compiler output group does not match drop_gid.\n");
 		}
 
 		/* Output is sane. Copy it to the chroot jail. */
@@ -174,7 +204,7 @@ int main(int argc, char * argv[])
 			perrorstrf("Could not open output binary in chroot jail: %s.\n");
 			exit(1);
 		}
-		if(fchown(ofd, DROP_UID, DROP_GID) != 0) {
+		if(fchown(ofd, drop_uid, drop_gid) != 0) {
 			perrorstrf("Could not set output binary owner and group: %s.\n");
 			exit(1);
 		}
@@ -222,7 +252,7 @@ int main(int argc, char * argv[])
 			}
 			/* The parent is now dead. */
 		} else {
-			if(drop_priv() != 0) {
+			if(drop_priv(drop_uid, drop_gid) != 0) {
 				die("Could not drop privileges.\n");
 			}
 			/* No longer running as root. Execute the run. */
