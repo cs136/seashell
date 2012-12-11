@@ -18,13 +18,13 @@
 #define DROP_GID 99
 
 /* Chroot jail path. */
-#define CHROOT_PATH "" 
+#define CHROOT_PATH "/home/marc/seashell/src/chroot"
 
 /* Compile utility. */
-#define COMPILER_PATH ""
+#define COMPILER_PATH "/home/marc/seashell/src/asdf.sh"
 
 /* Run utility, relative to the chroot jail. */
-#define RUNNER_PATH ""
+#define RUNNER_PATH "/asdf.sh"
 
 /* File copy buffer size. */
 #define BUFSZ 512
@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
 	if(pid) {
 		status = 0;
 		while((rv = waitpid(pid, &status, 0)) == -1 && errno == EAGAIN);
-		if(rv != 0) {
+		if(rv < 0) {
 			perrorstrf("Error waiting on initial child: %s\n");
 			exit(1);
 		} else {
@@ -102,7 +102,7 @@ int main(int argc, char * argv[])
 	if(pid) {
 		status = 0;
 		while((rv = waitpid(pid, &status, 0)) == -1 && errno == EAGAIN);
-		if(rv != 0) {
+		if(rv < 0) {
 			perrorstrf("Error waiting on compile child: %s\n");
 			exit(1);
 		} else {
@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
 			}
 		}
     if(n == -1) {
-      perrorstr("Error reading binary: %s.\n");
+      perrorstrf("Error reading binary: %s.\n");
       exit(1);
     }
 		close(fd);
@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
 		if(pid) {
 			status = 0;
 			while((rv = waitpid(pid, &status, 0)) == -1 && errno == EAGAIN);
-			if(rv != 0) {
+			if(rv < 0) {
 				perrorstrf("Error waiting on compile child: %s\n");
 				exit(1);
 			} else {
