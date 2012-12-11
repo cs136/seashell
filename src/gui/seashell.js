@@ -1,17 +1,37 @@
 function saveFile() {
-// TODO stub
+    // contents is a \n-delimited string containing the text currently in the editor
+    var contents = editor.getValue();
     var nameTag = document.getElementById('active_filename');
     nameTag.className="filename";
+
+    // TODO save the file named currentFileName.
+}
+
+// returns the contents of currentFileName as a \n-delimited string 
+function getFile() {
+    // TODO
+    return exampleCode;
+}
+
+// I'm not sure what this should look like. It should certainly be asynchronous.
+// Maybe it should console_write(str) as it gets lines?
+function runProgram() {
+}
+
+// eventually: parse clang output. Codemirror will let you jump around to arbitrary lines/positions
+// and hilight bits of code. Should also probably be asynchronous.
+function compileProgram() {
 }
     
 function setFileName(name) {
     var nameTag = document.getElementById('active_filename');
     nameTag.innerHTML=name;
+    nameTag.className="filename";
 }
 var seashellEditor = document.getElementById('seashell');
 //var txt = document.createTextNode("woohoo");
 //seashellEditor.appendChild(txt);
-seashellEditor.innerHTML = ['#include &lt;stdio.h&gt;',
+var exampleCode = ['#include &lt;stdio.h&gt;',
 'int main() {',
 '    int i;',
 '    for (i = 0; i &lt;3; i++) {',
@@ -19,6 +39,8 @@ seashellEditor.innerHTML = ['#include &lt;stdio.h&gt;',
 '    }',
 '    return(0);',
 '}'].join('\n');
+
+seashellEditor.innerHTML = exampleCode;
 
 var editor = CodeMirror.fromTextArea(seashellEditor, {lineNumbers: true});
 var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.';
@@ -73,8 +95,8 @@ function submitHandler() {
 }
 
 function compileHandler() {
+    saveFile();
     if (!compiled) {
-        saveFile();
         // TODO compile file
         compiled = true;
         console_write('Done compiling.');
@@ -103,7 +125,6 @@ function saveHandler() {
     var filePrompt = 'Save as: <input type="text" style="width: 3em"/>';
     editor.openDialog(filePrompt, 
                         function(query) {
-                            saveFile();
                             // TODO problem with nullstring checking...
                             if (!query) {
                                 console_write('Your file has been saved as ' + activeFileName + '.');
@@ -111,6 +132,7 @@ function saveHandler() {
                                 console_write('Your file has been saved as ' + query + '.');
                                 setFileName(query);
                             }
+                            saveFile();
                         });
 }
 
@@ -118,10 +140,17 @@ function openFileHandler() {
     var filePrompt = 'File name: <input type="text" style="width: 3em"/>';
     editor.openDialog(filePrompt, 
                         function(query) {
+                            // skip if no filename is specified. TODO figure out how to handle nullstrings
+                            if (!query) {
+                                return;
+                            }
 // TODO
 //                            if (successful) {
                                 console_write('Opened file ' + query + '.');
                                 setFileName(query);
+                                editor.setValue(getFile());
+                                setFileName(query); // this is a kludge to stop filename from turning red
+                                
 //                            else {
 //                                console_write('Failed to open the file ' + query + '.');
 //                            }
@@ -132,10 +161,15 @@ function newFileHandler() {
     var filePrompt = 'Name of new file: <input type="text" style="width: 3em"/>';
     editor.openDialog(filePrompt, 
                         function(query) {
+                            // skip if no filename is specified. TODO figure out how to handle nullstrings
+                            if (!query) {
+                                return;
+                            }
 // TODO
 //                            if (successful) {
                                 console_write('Creating file ' + query + '.');
                                 setFileName(query);
+                                editor.setValue('');
 //                            else {
 //                                console_write('Failed to create the file ' + query + '.');
 //                            }
@@ -163,52 +197,6 @@ giveAction("run-input", runInputHandler);
 giveAction("save-file", saveHandler);
 giveAction("open-file", openFileHandler);
 giveAction("new-file", newFileHandler);
-
-/*
-var termConf= {
-x: 0,
-y: 0,
-frameWidth: 0,
-crsrBlinkMode: true,
-termDiv: 'termPrompt',
-closeOnESC: false,
-handler: termHandler,
-ps: '>',
-greeting: 'Messages and program output will appear here.',
-cols: 93,
-rows: 10
-}
-
-function termHandler() {
-        //this.cursorOn();
-        var line = this.lineBuffer;
-        this.newLine();
-        if (line == "help") {
-          this.write(helpPage)
-        }
-        else if (line == "exit") {
-          this.close();
-          return;
-        }
-        else if (line != "") {
-          this.write("You typed: "+line);
-        }
-        this.prompt();
-}
-
-var term = new Terminal(termConf);
-function enable_console() { TermGlobals.keylock = false; term.cursorOn(); }
-function disable_console() { TermGlobals.keylock = true; term.cursorOff();}
-
-term.open();
-disable_console();
-document.getElementById('bottom').onmouseover=enable_console();
-document.getElementById('bottom').onmouseout=disable_console();
-
-*/
-
-//console_write("foo");
-//console_write("bar");
 
 setFileName(currentFileName);
 editor.focus();
