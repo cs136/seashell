@@ -21,4 +21,4 @@
 (define pgrm-idle-timeout 120)
 
 ;; Path of compile/execute helper binary.
-(define ce-helper-binary "./ss_env")
+(define ce-helper-binary "/ss_env")

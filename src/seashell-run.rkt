@@ -5,12 +5,13 @@
   (provide run-file
            kill-current-pgrm
            accept-user-input
-           get-pgrm-output)
+           get-pgrm-output
+           wait-pgrm)
   
   ;; Information associated with a running program.
-  (struct pgrm (stdin stdout stderr ts handle))
+  (define-struct pgrm (stdin stdout stderr ts handle reaped) #:mutable)
   
-  ;; Table of session key -> pgrm and associated semaphore.
+  ;; Table of (session key -> pgrm) and associated semaphore.
   (define pgrm-table (make-hash))
   (define pgrm-sema (make-semaphore 1))
   
@@ -27,11 +28,27 @@
                      (loop))])
           (hash-map
            (lambda(k v)
-             (when (> (- (current-seconds)
-                         (pgrm-ts v))
-                      pgrm-idle-timeout)
-               (pgrm-kill v)
-               (hash-remove! pgrm-table k)))
+             (when (and (not (pgrm-reaped v))
+                        (or
+                         (> (- (current-seconds)
+                               (pgrm-ts v))
+                            pgrm-idle-timeout)
+                         (not (equal? ((pgrm-handle v) 'status)
+                                      'running))))
+               (set-pgrm-reaped! v #t)
+               (thread
+                (thunk
+                 (when (equal? ((pgrm-handle v) 'status)
+                               'running)
+                   (pgrm-kill v))
+                 ((pgrm-handle v) 'wait)
+                 (sync/timeout 60 (eof-evt (pgrm-stdout v)))
+                 (sync/timeout 60 (eof-evt (pgrm-stderr v)))
+                 (hash-remove! pgrm-table k)
+                 (close-input-port (pgrm-stdout v))
+                 (close-input-port (pgrm-stderr v))
+                 (close-output-port (pgrm-stdin v))
+                 (logf 'info "Reaped process for session=~a" k)))))
            pgrm-table)
           (semaphore-post pgrm-sema))
         (loop)))))
@@ -44,10 +61,15 @@
       (make-temporary-file
        "seashell~a"
        'directory
-       (find-system-path 'temp-dir)))
+       "/tmp"))
     ;; Get output binary name.
     (define binary-name
-      (make-temporary-file "exe~a" #f workdir))
+      (let ((f (make-temporary-file
+                "exe~a"
+                #f
+                "/tmp")))
+        (delete-file f)
+        f))
     ;; Copy all sources to a working directory and
     ;; return a list of sources in the working directory.
     (define src-list
@@ -66,37 +88,99 @@
                dest-file))
            c-sources)))
     ;; Invoke test environment.
-    (let-values
-        (((stdout stdin pid stderr handle)
+    (let
+        ((proc
           (apply process*
                  `(,ce-helper-binary
-                   ,ce-helper-binary
                    ,binary-name
                    ,@src-list))))
       ;; Create a thread to clean up the working files
       ;; once the child process has returned.
       (thread
        (thunk
-        (handle 'wait)
+        ((fifth proc) 'wait)
         (delete-directory/files workdir)))
-      (pgrm stdin stdout stderr (current-seconds) handle)))
-  
+      (pgrm (second proc)
+            (first proc)
+            (fourth proc)
+            (current-seconds)
+            (fifth proc)
+            #f)))
+
   (define (pgrm-kill pg)
     ((pgrm-handle pg) 'kill))
   
+  ;; session key -> bool
+  ;; True iff. session has a running program.
+  (define (session-has-pgrm? key)
+    (hash-has-key? pgrm-table key))
+  
+  ;; session key -> pgrm
+  (define (get-session-pgrm key)
+    (hash-ref pgrm-table key #f))
+  
+  ;; session key pgrm ->
+  (define (set-session-pgrm key pg)
+    (hash-set! pgrm-table key pg)
+    (void))
+  
   ;; filename -> bool
   (define (run-file key args uid)
-    #f)
+    (match args
+      [`(,(? string? src))
+         ;; If a program is running, kill it.
+         (semaphore-wait pgrm-sema)
+         (when (session-has-pgrm? key)
+           (pgrm-kill (get-session-pgrm key)))
+         (semaphore-post pgrm-sema)
+         ;; Start the new program. Currently, the exported run-file
+         ;; routine accepts exactly one argument which is the source
+         ;; of the program to run.
+         (let ((new-pgrm (pgrm-start src)))
+           (semaphore-wait pgrm-sema)
+           (set-session-pgrm key new-pgrm)
+           (semaphore-post pgrm-sema))
+         #t]
+      [else #f]))
   
   ;; -> bool
   (define (kill-current-pgrm key args uid)
-    #f)
+    ;; If a program is running, kill it.
+    (semaphore-wait pgrm-sema)
+    (begin0
+      (if (session-has-pgrm? key)
+          (begin (pgrm-kill (get-session-pgrm key))
+                 #t)
+          #f)
+      (semaphore-post pgrm-sema)))
   
   ;; string -> bool
   (define (accept-user-input key args uid)
-    #f)
+    (match args
+      [`(,(? string? inp))
+       (let ((pg (hash-ref pgrm-table key #f)))
+         (if (pgrm? pg)
+             (begin
+               (display inp (pgrm-stdin pg))
+               #t)
+             #f))]
+      [else #f]))
   
   ;; -> (union string false)
   (define (get-pgrm-output key args uid)
-    #f))
+    (let ((pg (hash-ref pgrm-table key #f)))
+      (if (pgrm? pg)
+          (sync/timeout 120
+                        (read-string-evt 1 (pgrm-stdout pg))
+                        (read-string-evt 1 (pgrm-stderr pg)))
+          #f)))
+  
+  ;; -> bool
+  (define (wait-pgrm key args uid)
+    (let ((pg (hash-ref pgrm-table key #f)))
+      (if (pgrm? pg)
+          (begin
+            ((pgrm-handle pg) 'wait)
+            #t)
+          #f))))
   

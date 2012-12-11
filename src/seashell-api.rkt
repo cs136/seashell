@@ -228,6 +228,7 @@
       ,(call/bind 'loadFile         load-file                             '(usr) #f embed/url)
       ,(call/bind 'runFile          (wrap-session-proc run-file)          '(usr) #f embed/url)
       ,(call/bind 'killProgram      (wrap-session-proc kill-current-pgrm) '(usr) #f embed/url)
+      ,(call/bind 'waitProgram      (wrap-session-proc wait-pgrm)         '(usr) #f embed/url)
       ,(call/bind 'acceptUserInput  (wrap-session-proc accept-user-input) '(usr) #f embed/url)
       ,(call/bind 'getProgramOutput (wrap-session-proc get-pgrm-output)   '(usr) #f embed/url)))
   
