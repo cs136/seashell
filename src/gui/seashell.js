@@ -1,24 +1,3 @@
-function saveFile() {
-    // contents is a \n-delimited string containing the text currently in the editor
-    var contents = editor.getValue();
-    var nameTag = document.getElementById('active_filename');
-    nameTag.className="filename";
-
-    ss.saveFile(
-      function(res) {
-        if(!res) {
-          alert("Could not save file. Please try again.");
-        }
-      },
-      nameTag.innerHTML,
-      contents);
-}
-
-// applies k to the contents of currentFileName as a \n-delimited string 
-function getFile(k) {
-    ss.loadFile(k, currentFileName);
-}
-
 // I'm not sure what this should look like. It should certainly be asynchronous.
 // Maybe it should console_write(str) as it gets lines?
 function runProgram() {
@@ -57,29 +36,27 @@ function compileProgram() {
 }
     
 function setFileName(name) {
-    var nameTag = document.getElementById('active_filename');
-    nameTag.innerHTML=name;
-    nameTag.className="filename";
+    mark_unchanged();
+    $("#active_filename").text(name);
     currentFileName=name;
 }
-var seashellEditor = document.getElementById('seashell');
 //var txt = document.createTextNode("woohoo");
 //seashellEditor.appendChild(txt);
-var exampleCode = ['#include &lt;stdio.h&gt;',
+var exampleCode = ['#include <stdio.h>',
 'int main() {',
 '    int i;',
-'    for (i = 0; i &lt;3; i++) {',
+'    for (i = 0; i <3; i++) {',
 '        printf("She sells C shells by the sea shore");',
 '    }',
 '    return(0);',
 '}'].join('\n');
 
-seashellEditor.innerHTML = exampleCode;
+$("#seashell").text(exampleCode);
 
-var editor = CodeMirror.fromTextArea(seashellEditor, {lineNumbers: true});
+var editor = CodeMirror.fromTextArea($("#seashell")[0], {lineNumbers: true});
 var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.\n';
 var currentFileName = 'foobar.c';
-var ss_console = CodeMirror(document.getElementById('console'), 
+var ss_console = CodeMirror($('#console')[0],
                                {value: welcomeMessage, 
                                readOnly: true, 
                                theme: 'dark-on-light'});
@@ -88,8 +65,11 @@ editor.on("change", mark_changed);
 
 function mark_changed(instance, chobj) {
     compiled = false;
-    var nameTag = document.getElementById('active_filename');
-    nameTag.className = "filename status_edited"; 
+    $("#active_filename").addClass("status_edited");
+}
+
+function mark_unchanged() {
+    $("#active_filename").removeClass("status_edited");
 }
 
 function console_write(str) {
@@ -106,6 +86,14 @@ function console_write_noeol(str) {
     ss_console.setOption('readOnly', true);
 }
 
+function makePrompt(str) {
+    return str + ': <input type="text" style="width: 3em"/>';
+}
+
+function makeFilePrompt(str) {
+    return str + ': <input type="text" style="width: 12em"/>';
+}
+
 /** handlers for buttons that only affect the client-side **/
 function toggleCommentHandler(isC) {
     var from = editor.getCursor(true);
@@ -119,16 +107,84 @@ function autoIndentHandler() {
 }
 
 function gotoHandler() {
-    var gotoPrompt = 'Line: <input type="text" style="width: 3em"/>';
-    editor.openDialog(gotoPrompt, function(query) {
+    editor.openDialog(makePrompt('Line'), function(query) {
             editor.setCursor(query-1, 0); });
 }
 
 /** handlers for buttons that need to interact with the back-end **/
 
+function saveFile() {
+    // editor.getValue() is a \n-delimited string containing the text currently in the editor
+
+    ss.saveFile(
+      function(res) {
+        if(!res) {
+          alert("Could not save file. Please try again.");
+        } else {
+            mark_unchanged();
+            console_write('Your file has been saved as ' + currentFileName + '.');
+        }
+      },
+      currentFileName,
+      editor.getValue());
+}
+
+function saveHandler() {
+    editor.openDialog(makeFilePrompt('Save as'), 
+                        function(query) {
+                            // TODO problem with nullstring checking...
+                            if (query) {
+                                setFileName(query);
+                            }
+                            saveFile();
+                        });
+}
+
+// applies k to the contents of currentFileName as a \n-delimited string 
+function getFile(k) {
+    ss.loadFile(k, currentFileName);
+}
+
+function openFileHandler() {
+    editor.openDialog(makeFilePrompt('File name'), 
+                        function(query) {
+                            // skip if no filename is specified. TODO figure out how to handle nullstrings
+                            if (!query) {
+                                return;
+                            }
+
+                            getFile(function(val) {
+                              if(val) {
+                                editor.setValue(val);
+                                console_write('Opened file ' + query + '.');
+                                setFileName(query);
+                                mark_unchanged();
+                              } else {
+                                console_write('Failed to open the file ' + query + '.');
+                              }});
+                        });
+}
+
+function newFileHandler() {
+    editor.openDialog(makeFilePrompt('Name of new file'), 
+                        function(query) {
+                            // skip if no filename is specified. TODO figure out how to handle nullstrings
+                            if (!query) {
+                                return;
+                            }
+// TODO
+//                            if (successful) {
+                                console_write('Creating file ' + query + '.');
+                                setFileName(query);
+                                editor.setValue('');
+//                            else {
+//                                console_write('Failed to create the file ' + query + '.');
+//                            }
+                        });
+}
+
 function submitHandler() {
-    var submitPrompt = 'Assignment ID: <input type="text" style="width: 3em"/>';
-    editor.openDialog(submitPrompt,
+    editor.openDialog(makePrompt('Assignment ID'),
                         function(query) {
                             // TODO
                             console_write('Submitted file ' + currentFileName + '.');
@@ -156,66 +212,9 @@ function runHandler() {
 }
 
 function runInputHandler() {
-    var filePrompt = 'Name of input file: <input type="text" style="width: 3em"/>';
-    editor.openDialog(filePrompt, 
+    editor.openDialog(makeFilePrompt('Name of input file'), 
                         function(query) {
                             // TODO run
-                        });
-}
-
-function saveHandler() {
-    var filePrompt = 'Save as: <input type="text" style="width: 3em"/>';
-    editor.openDialog(filePrompt, 
-                        function(query) {
-                            // TODO problem with nullstring checking...
-                            if (!query) {
-                                console_write('Your file has been saved as ' + activeFileName + '.');
-                            } else {
-                                console_write('Your file has been saved as ' + query + '.');
-                                setFileName(query);
-                            }
-                            saveFile();
-                        });
-}
-
-function openFileHandler() {
-    var filePrompt = 'File name: <input type="text" style="width: 3em"/>';
-    editor.openDialog(filePrompt, 
-                        function(query) {
-                            // skip if no filename is specified. TODO figure out how to handle nullstrings
-                            if (!query) {
-                                return;
-                            }
-// TODO
-//                            if (successful) {
-                                console_write('Opened file ' + query + '.');
-                                setFileName(query);
-                                getFile(function(val) {
-                                  if(val) {
-                                    editor.setValue(val);
-                                    setFileName(query); // this is a kludge to stop filename from turning red
-                                  } else {
-                                    console_write('Failed to open the file ' + query + '.');
-                                  }});
-                        });
-}
-
-function newFileHandler() {
-    var filePrompt = 'Name of new file: <input type="text" style="width: 3em"/>';
-    editor.openDialog(filePrompt, 
-                        function(query) {
-                            // skip if no filename is specified. TODO figure out how to handle nullstrings
-                            if (!query) {
-                                return;
-                            }
-// TODO
-//                            if (successful) {
-                                console_write('Creating file ' + query + '.');
-                                setFileName(query);
-                                editor.setValue('');
-//                            else {
-//                                console_write('Failed to create the file ' + query + '.');
-//                            }
                         });
 }
 
@@ -236,26 +235,23 @@ seashell_new(
   });
 
 /** attach actions to all the buttons. **/
-function giveAction(elid,act) {
-    document.getElementById(elid).onclick=act;
-}
 
-giveAction("undo", function() {editor.undo();});
-giveAction("redo", function() {editor.redo();});
+$("#undo").click(function() {editor.undo();});
+$("#redo").click(function() {editor.redo();});
         
-giveAction("comment", function() {toggleCommentHandler(true);});
-giveAction("uncomment", function() {toggleCommentHandler(false);});
-giveAction("autoindent", autoIndentHandler);
-giveAction("goto-line", gotoHandler);
-giveAction("submit-assignment", submitHandler);
+$("#comment").click(function() {toggleCommentHandler(true);});
+$("#uncomment").click(function() {toggleCommentHandler(false);});
+$("#autoindent").click(autoIndentHandler);
+$("#goto-line").click(gotoHandler);
+$("#submit-assignment").click(submitHandler);
 
-giveAction("clear-console", function() {ss_console.setValue('')});
-giveAction("compile", compileHandler);
-giveAction("run", runHandler);
-giveAction("run-input", runInputHandler);
-giveAction("save-file", saveHandler);
-giveAction("open-file", openFileHandler);
-giveAction("new-file", newFileHandler);
+$("#clear-console").click(function() {ss_console.setValue('')});
+$("#compile").click(compileHandler);
+$("#run").click(runHandler);
+$("#run-input").click(runInputHandler);
+$("#save-file").click(saveHandler);
+$("#open-file").click(openFileHandler);
+$("#new-file").click(newFileHandler);
 
 setFileName(currentFileName);
 editor.focus();
