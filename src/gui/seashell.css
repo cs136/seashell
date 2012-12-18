@@ -43,13 +43,23 @@ body {
 .right { float: right; }
 .right button{margin-left: 4px; margin-right: 0;}
 .userid { font-weight: bold; }
-.filename {
+#filelist {
+    list-style-type: none;
+    padding: 0;
+    clear: left;
+    background-color: #a00;
+}
+#filelist li {
     color: #000;
 
-    display: block;
+    display: inline;
+    float: left;
     vertical-align: bottom;
-    clear: both;
     width: 8em;
+    margin: 0;
+}
+.status_active {
+    background-color: #c0ffee;
 }
 .status_edited {
     color: #f00;
@@ -70,4 +80,16 @@ body {
 }
 .dark-on-light {
     color: #eee;
+}
+
+#config fieldset ul {
+    padding: 0;
+}
+#config fieldset li {
+    list-style-type: none;
+    list-style-position: inside;
+}
+
+#time-saved {
+    min-width: 3em;
 }

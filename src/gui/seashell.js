@@ -37,7 +37,7 @@ function compileProgram() {
     
 function setFileName(name) {
     mark_unchanged();
-    $("#active_filename").text(name);
+    $(".status_active").text(name);
     currentFileName=name;
 }
 //var txt = document.createTextNode("woohoo");
@@ -65,11 +65,11 @@ editor.on("change", mark_changed);
 
 function mark_changed(instance, chobj) {
     compiled = false;
-    $("#active_filename").addClass("status_edited");
+    $(".status_active").addClass("status_edited");
 }
 
 function mark_unchanged() {
-    $("#active_filename").removeClass("status_edited");
+    $(".status_active").removeClass("status_edited");
 }
 
 function console_write(str) {

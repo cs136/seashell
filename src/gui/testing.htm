@@ -1,16 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
-        <?xml version="1.0" encoding="ISO-8859-1"?>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
         <link type="text/css" rel="stylesheet" href="seashell.css"/>
         <title>Seashell</title>
-
-        <link rel="stylesheet" href="codemirror/lib/codemirror.css">
-        <link rel="stylesheet" href="codemirror/lib/util/dialog.css">
-        <link rel="stylesheet" href="seashell.css">
     </head>
     <body>
     <div id="container">
@@ -20,7 +16,9 @@
             <span class="buttons left">
                 <button type="button" id="undo">Undo</button>
                 <button type="button" id="redo">Redo</button>
+                <!--
                 <button type="button" id="save-file">Save</button>
+                -->
                 <button type="button" id="open-file">Open&hellip;</button>
                 <button type="button" id="new-file">New&hellip;</button>
             </span>
@@ -35,10 +33,13 @@
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
             </span>
 
-            <span id="active_filename" class="filename"></span>
+            <ul id="filelist">
+                <li class="filename status_active">foobar.c</li>
+            </ul>
+            <span id="save-status" class="right">Last saved <span id="time-saved">never</span></span>
 
             <div id="codeArea">
-                <textarea id="seashell" rows=19 cols=93>
+                <textarea id="seashell" rows="19" cols="93">
 Please enable JavaScript.
                 </textarea>
                 <!--
@@ -58,8 +59,10 @@ int main() {
                 <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
                 <!--<button type="button" id="compile">Compile</button>-->
                 <button type="button" id="run">Run</button>
+                <!--
                 <button type="button" id="run-input">Run with input&hellip;</button>
                 <button type="button" id="test-runc">Test with RunC</button>
+                -->
 
             </div>
             <div class="buttons right">
@@ -68,11 +71,39 @@ int main() {
             <!--Messages and program output will appear here.-->
             <div id="console" class="dark-on-light"></div>
         </div>
-        <div id="config"> <form>
-            <input type="radio" name="editor-mode" value="Default">
-            <input type="radio" name="editor-mode" value="Vim-style">
-            <input type="radio" name="editor-mode" value="Emacs-style">
-        </form> </div>
+        <div id="config"> 
+            <form action="">
+            <fieldset>
+                <legend>Editor keybinding mode</legend>
+                <ul>
+                <li>
+                <input type="radio" name="editor-mode" id="standard" />
+                <label for="standard">Standard</label></li>
+                <li>
+                <input type="radio" name="editor-mode" id="vim" />
+                <label for="vim">Vim-style</label></li>
+                <li>
+                <input type="radio" name="editor-mode" id="emacs"/>
+                <label for="emacs">Emacs-style</label></li>
+            </ul>
+            </fieldset>
+            <fieldset>
+                <legend>Tabs</legend>
+                <ul> <li>
+                <select id="tab-width" size="1">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+                <label for="tab-width">Tab-width</label>
+                </li> <li>
+                <input type="checkbox" name="use-spaces" id="use-spaces" />
+                <label for="use-spaces">Use spaces instead of actual tabs</label>
+                </li></ul>
+            </fieldset>
+            </form> 
+        </div>
     </div> <!-- container -->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
