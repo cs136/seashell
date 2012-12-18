@@ -30,8 +30,8 @@
                 <button type="button" id="unindent">Unindent</button>
                 -->
                 <button type="button" id="autoindent">Indent</button>
-                <button type="button" id="comment">Comment</button>
-                <button type="button" id="uncomment">Uncomment</button>
+                <button type="button" id="comment" title="Comment the hilighted text">+#</button>
+                <button type="button" id="uncomment" title="Uncomment the hilighted text">-#</button>
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
             </span>
 
@@ -56,7 +56,7 @@ int main() {
         <div id="bottom">
             <div class="buttons left">
                 <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
-                <button type="button" id="compile">Compile</button>
+                <!--<button type="button" id="compile">Compile</button>-->
                 <button type="button" id="run">Run</button>
                 <button type="button" id="run-input">Run with input&hellip;</button>
                 <button type="button" id="test-runc">Test with RunC</button>
@@ -68,6 +68,11 @@ int main() {
             <!--Messages and program output will appear here.-->
             <div id="console" class="dark-on-light"></div>
         </div>
+        <div id="config"> <form>
+            <input type="radio" name="editor-mode" value="Default">
+            <input type="radio" name="editor-mode" value="Vim-style">
+            <input type="radio" name="editor-mode" value="Emacs-style">
+        </form> </div>
     </div> <!-- container -->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
