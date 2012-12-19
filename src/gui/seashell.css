@@ -50,19 +50,27 @@ body {
     background-color: #a00;
 }
 #filelist li {
-    color: #000;
-
+    background-color: #ddd;
     display: inline;
     float: left;
     vertical-align: bottom;
+    /*
     width: 8em;
+    */
     margin: 0;
+    margin-right: 0.3em;
+    padding-left: 0.25em;
+    padding-right: 0.4em;
+    border: 1px solid #ccc;
+    border-bottom: none;
 }
-.status_active {
-    background-color: #c0ffee;
+#filelist .status_active {
+    background-color: #268BD2;
+    border: 1px solid #268BD2;
+    border-bottom: none;
 }
-.status_edited {
-    color: #f00;
+#filelist .status_edited {
+    font-style: italic;
 }
 
 #console {
@@ -90,6 +98,9 @@ body {
     list-style-position: inside;
 }
 
+#save-status {
+    color: #aaa;
+}
 #time-saved {
     min-width: 3em;
 }

@@ -16,9 +16,7 @@
             <span class="buttons left">
                 <button type="button" id="undo">Undo</button>
                 <button type="button" id="redo">Redo</button>
-                <!--
                 <button type="button" id="save-file">Save</button>
-                -->
                 <button type="button" id="open-file">Open&hellip;</button>
                 <button type="button" id="new-file">New&hellip;</button>
             </span>
@@ -28,13 +26,15 @@
                 <button type="button" id="unindent">Unindent</button>
                 -->
                 <button type="button" id="autoindent">Indent</button>
-                <button type="button" id="comment" title="Comment the hilighted text">+#</button>
-                <button type="button" id="uncomment" title="Uncomment the hilighted text">-#</button>
+                <button type="button" id="comment" title="Comment the hilighted text">+//</button>
+                <button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
             </span>
 
             <ul id="filelist">
-                <li class="filename status_active">foobar.c</li>
+                <!--
+                <li class="filename status_active"></li>
+                -->
             </ul>
             <span id="save-status" class="right">Last saved <span id="time-saved">never</span></span>
 
@@ -72,18 +72,19 @@ int main() {
             <div id="console" class="dark-on-light"></div>
         </div>
         <div id="config"> 
+            Configuration
             <form action="">
             <fieldset>
                 <legend>Editor keybinding mode</legend>
-                <ul>
+                <ul id="editor_mode">
                 <li>
-                <input type="radio" name="editor-mode" id="standard" />
+                <input type="radio" name="editor_mode" id="standard" checked="checked" value="default" />
                 <label for="standard">Standard</label></li>
                 <li>
-                <input type="radio" name="editor-mode" id="vim" />
+                <input type="radio" name="editor_mode" id="vim" value="vim" />
                 <label for="vim">Vim-style</label></li>
                 <li>
-                <input type="radio" name="editor-mode" id="emacs"/>
+                <input type="radio" name="editor_mode" id="emacs" value="emacs" />
                 <label for="emacs">Emacs-style</label></li>
             </ul>
             </fieldset>
@@ -92,13 +93,13 @@ int main() {
                 <ul> <li>
                 <select id="tab-width" size="1">
                     <option value="1">1</option>
-                    <option value="2">2</option>
+                    <option value="2" selected="selected">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                 </select>
                 <label for="tab-width">Tab-width</label>
                 </li> <li>
-                <input type="checkbox" name="use-spaces" id="use-spaces" />
+                <input type="checkbox" name="use-spaces" id="use-spaces" checked="checked" />
                 <label for="use-spaces">Use spaces instead of actual tabs</label>
                 </li></ul>
             </fieldset>
@@ -107,8 +108,13 @@ int main() {
     </div> <!-- container -->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
-        <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
         <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
+        <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
+        <script type="text/javascript" src="codemirror/lib/util/searchcursor.js"></script>
+        <script type="text/javascript" src="codemirror/lib/util/search.js"></script>
+        <script type="text/javascript" src="codemirror/keymap/vim.js"></script>
+        <script type="text/javascript" src="codemirror/keymap/emacs.js"></script>
+
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
         <script type="text/javascript" src="api.js"></script>
