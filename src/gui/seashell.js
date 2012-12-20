@@ -1,10 +1,12 @@
 var editor;
 var ss_console;
-var defaultFileName = "foobar.c";
 var currentFile;
 var fileList = []; // array of ssFiles open in the current session
 var numberOfFiles = 0;
 var compiled = false;
+
+var defaultFileName = "foobar.c";
+var defaultTabSize = 2;
 
 // creates a new ssFile that fileList will be aware of
 function ssFile(name, content) {
@@ -132,16 +134,17 @@ function saveFile() {
       currentFile.content);
 }
 
+/** may decide to save file under a different name. **/
 function saveHandler() {
     editor.openDialog(makeFilePrompt('Save as'), 
-                        function(query) {
-                            // TODO problem with nullstring checking...
-                            if (query) {
-                                currentFile.name = query;
-                                currentFile.tab.text(query);
-                            }
-                            saveFile();
-                        });
+            function(query) {
+                // TODO problem with nullstring checking...
+                if (query) {
+                    currentFile.name = query;
+                    currentFile.tab.text(query);
+                }
+                saveFile();
+            });
 }
 
 // applies k to the contents of name as a \n-delimited string 
@@ -178,17 +181,38 @@ function openFileHandler() {
             });
 }
 
+function newFileHandler() {
+    editor.openDialog(
+            makeFilePrompt('Name of new file'), 
+            function(query) {
+                // skip if no filename is specified. TODO figure out how to handle nullstrings
+                if (!query) return;
+// TODO
+//                          if (successful) {
+                    console_write('Creating file ' + query + '.');
+                    var file = new ssFile(query, "");
+                    makeNewTab(file);
+                    setTab(file);
+//                          else {
+//                              console_write('Failed to create the file ' + query + '.');
+//                          }
+            });
+}
+
 function makeNewTab(file) {
     if (numberOfFiles == 1) {
         file.tab.addClass("status_active");
-        editor.setValue(file.content);
-        currentFile = file;
-        $('#time-saved').text(currentFile.lastSaved);
-        mark_unchanged();
     }
 
     $("#filelist").append(file.tab);
     file.tab.click(function() { setTab(file); });
+}
+
+function setFirstTab(file) {
+    editor.setValue(file.content);
+    currentFile = file;
+    $('#time-saved').text(currentFile.lastSaved);
+    mark_unchanged();
 }
 
 function setTab(file) {
@@ -208,29 +232,12 @@ function setTab(file) {
     mark_unchanged();
 }
 
-function newFileHandler() {
-    editor.openDialog(makeFilePrompt('Name of new file'), 
-                        function(query) {
-                            // skip if no filename is specified. TODO figure out how to handle nullstrings
-                            if (!query) return;
-// TODO
-//                          if (successful) {
-                                console_write('Creating file ' + query + '.');
-                                var file = new ssFile(query, "");
-                                makeNewTab(file);
-                                setTab(file);
-//                          else {
-//                              console_write('Failed to create the file ' + query + '.');
-//                          }
-                        });
-}
-
 function submitHandler() {
-    editor.openDialog(makePrompt('Assignment ID'),
-                        function(query) {
-                            // TODO
-                            console_write('Submitted file ' + currentFile.name + '.');
-                        });
+    editor.openDialog(makePrompt('Assignment ID'), 
+            function(query) {
+                // TODO
+                console_write('Submitted file ' + currentFile.name + '.');
+            });
 }
 
 function compileHandler() {
@@ -251,9 +258,9 @@ function runHandler() {
 
 function runInputHandler() {
     editor.openDialog(makeFilePrompt('Name of input file'), 
-                        function(query) {
-                            // TODO run
-                        });
+            function(query) {
+                // TODO run
+            });
 }
 
 // reads off the form in div#config.
@@ -271,6 +278,7 @@ function configureEditor() {
     editor.setOption('indentWithTabs', use_tabs);
 }
 
+/** diagnostic utility functions **/
 function printConfig() {
     console_write("Using editor " + editor.getOption('keyMap'));
     console_write("Using tab-width " + editor.getOption('tabSize'));
@@ -292,6 +300,7 @@ function hoboFile(name) {
     '}'].join('\n');
     return new ssFile(name, exampleCode);
 }
+/** end diagnostic utility functions **/
 
 function setUpUI() {
     /** create editor and console **/
@@ -299,13 +308,14 @@ function setUpUI() {
     editor = CodeMirror.fromTextArea($("#seashell")[0], 
                 {//value: currentFile.content,
                 lineNumbers: true,
-                tabSize: 2});
+                tabSize: defaultTabSize});
 
     // openFile("foobar.c") without a setTab(file)
     getFile(function(data) {
       if(data) {
         var file = new ssFile(defaultFileName, data);
         makeNewTab(file);
+        setFirstTab(file);
         console_write('Opened file ' + defaultFileName + '.');
       } else {
         console_write('Failed to open the file ' + defaultFileName + '.');
@@ -317,6 +327,7 @@ function setUpUI() {
                                    {value: welcomeMessage, 
                                    readOnly: true, 
                                    theme: 'dark-on-light'});
+    editor.focus();
 
     /** attach actions to all the buttons. **/
 
@@ -337,11 +348,11 @@ function setUpUI() {
     $("#open-file").click(openFileHandler);
     $("#new-file").click(newFileHandler);
 
+    /** settings glue **/
     $("#overlay").hide();
     $("#config").hide();
     $("#settings").click(showConfig);
     $("#config form").change(configureEditor);
-    editor.focus();
 }
 
 function showConfig() {
@@ -364,7 +375,7 @@ seashell_new(
       function(res) {
         if(!res) {
           alert("Couldn't authenticate as ctdalek!");
-
+          // TODO maybe make failure pretty? Haha.
         }
         setUpUI();
       },
