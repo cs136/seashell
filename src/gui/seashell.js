@@ -163,11 +163,14 @@ function openFileHandler() {
                 // if file is already open, don't open it twice
                 for (var i=0; i<numberOfFiles; i++) {
                     if (fileList[i].name == name) {
-                        setTab(fileList[i]);
                         getFile(function(data) {
-                                editor.setValue(data);
-                                currentFile.content = data;
-                                });
+                                if (fileList[i].name == currentFile.name) {
+                                    editor.setValue(data);
+                                } else {
+                                    fileList[i].content = data;
+                                }
+                                setTab(fileList[i]);
+                            }, name);
 
                         return;
                     }
