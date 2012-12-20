@@ -164,6 +164,11 @@ function openFileHandler() {
                 for (var i=0; i<numberOfFiles; i++) {
                     if (fileList[i].name == name) {
                         setTab(fileList[i]);
+                        getFile(function(data) {
+                                editor.setValue(data);
+                                currentFile.content = data;
+                                });
+
                         return;
                     }
                 }
@@ -215,6 +220,7 @@ function setFirstTab(file) {
     mark_unchanged();
 }
 
+/** will update currentFile as well **/
 function setTab(file) {
     // save previously open tab before opening new one
     saveFile(); 
