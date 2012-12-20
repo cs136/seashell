@@ -100,6 +100,7 @@ function autoIndentHandler() {
     var from = editor.getCursor(true);
     var to = editor.getCursor(false);
     editor.autoFormatRange(from, to);
+    editor.autoIndentRange(from, to);
 }
 
 function gotoHandler() {
@@ -331,9 +332,25 @@ function setUpUI() {
     $("#open-file").click(openFileHandler);
     $("#new-file").click(newFileHandler);
 
-    $("#config").change(configureEditor);
+    $("#overlay").hide();
+    $("#config").hide();
+    $("#settings").click(showConfig);
+    $("#config form").change(configureEditor);
     editor.focus();
 }
+
+function showConfig() {
+    $("#overlay").show();
+    $("#config").show();
+    $("#overlay").click(hideConfig);
+}
+
+function hideConfig() {
+    $("#overlay").hide()
+    $("#config").hide();
+    editor.focus();
+}
+
 
 function makeNewTab(file) {
     if (numberOfFiles == 1) {

@@ -3,29 +3,31 @@
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
+        <link rel="icon" type="image/png" href="seashell.png" />
         <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
         <link type="text/css" rel="stylesheet" href="seashell.css"/>
         <title>Seashell</title>
     </head>
     <body>
+    <div id="overlay"></div>
     <div id="container">
-        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="">Logout</a></div>
+        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settings">Settings</a> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
         <div id="top">
             <span class="buttons left">
-                <button type="button" id="undo">Undo</button>
-                <button type="button" id="redo">Redo</button>
-                <button type="button" id="save-file">Save</button>
-                <button type="button" id="open-file">Open&hellip;</button>
-                <button type="button" id="new-file">New&hellip;</button>
+                <button type="button" id="undo" title="Undo last change to file">Undo</button>
+                <button type="button" id="redo" title="Redo last change to file">Redo</button>
+                <button type="button" id="save-file" title="Save the file in the current tab">Save</button>
+                <button type="button" id="open-file" title="Open an existing file">Open&hellip;</button>
+                <button type="button" id="new-file" title="Create a new file">New&hellip;</button>
             </span>
             <span class="buttons right">
                 <!--
                 <button type="button" id="indent">Indent</button>
                 <button type="button" id="unindent">Unindent</button>
                 -->
-                <button type="button" id="autoindent">Indent</button>
+                <button type="button" id="autoindent" title="Automatically indent/format the hilighted text">Indent</button>
                 <button type="button" id="comment" title="Comment the hilighted text">+//</button>
                 <button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
@@ -58,9 +60,9 @@ int main() {
             <div class="buttons left">
                 <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
                 <!--<button type="button" id="compile">Compile</button>-->
-                <button type="button" id="run">Run</button>
+                <button type="button" id="run" title="Execute this program">Run</button>
+                <button type="button" id="run-input">Set input files&hellip;</button>
                 <!--
-                <button type="button" id="run-input">Run with input&hellip;</button>
                 <button type="button" id="test-runc">Test with RunC</button>
                 -->
 
@@ -71,9 +73,32 @@ int main() {
             <!--Messages and program output will appear here.-->
             <div id="console" class="dark-on-light"></div>
         </div>
+        <a href="#" class="help">Need help?</a>
+        <div class="help">
+            Default mode:
+            These are shortcuts that will work when the editor window is focused
+            (the cursor will be blinking if the window is focused).
+            <dl>
+                <dt>Ctrl f</dt><dd>Start new search</dd>
+                <dt>Ctrl g</dt><dd>Search/Go to next match</dd>
+                <dt>Ctrl G</dt><dd>Search/Go to previous match</dd>
+                <dt>Ctrl z</dt><dd>Undo(not done)</dd>
+                <dt>Ctrl y</dt><dd>Redo(not done)</dd>
+                <dt>Ctrl s</dt><dd>Save(not done)</dd>
+                <dt>Ctrl o</dt><dd>Open(not done)</dd>
+                <dt>Ctrl n</dt><dd>New(not done)</dd>
+                <dt>Ctrl i</dt><dd>Indent selection(not done)</dd>
+                <dt>Ctrl j</dt><dd>Goto line...(not done)</dd>
+
+                <dt>Ctrl Left</dt><dd>Switch to tab on the left(not done)</dd>
+                <dt>Ctrl Right</dt><dd>Switch to tab on the right(not done)</dd>
+
+                <dt>Ctrl r</dt><dd>Run(not done)</dd>
+            </dl>
+        </div>
         <div id="config"> 
-            Configuration
             <form action="">
+            Settings
             <fieldset>
                 <legend>Editor keybinding mode</legend>
                 <ul id="editor_mode">

@@ -12,6 +12,7 @@ body {
     max-width: 60em;
     margin: 0 auto;
     text-align: left;
+    position: relative;
 }
 
 #top,#bottom {
@@ -83,15 +84,59 @@ body {
 */
     padding: 0.25em;
     line-height: 1em;
-    min-height: 6em;
+    height: 10em;
+    overflow: auto;
     clear: both;
 }
 .dark-on-light {
     color: #eee;
 }
 
+#overlay {
+    background: transparent;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 99;
+}
+#config form {
+    background-color: #fff;
+    background-color: #268BD2;
+    opacity: 0.9;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+
+    position: absolute;
+    top: 2em;
+    right: 0;
+    width: 60%;
+    padding: 0.5em;
+    padding-top: 0.25em;
+    z-index: 100;
+}
+
+/*
+#config legend {
+    background-color: #268BD2;
+    -webkit-border-radius: 0.1em;
+    -moz-border-radius: 0.1em;
+    border-radius: 0.1em;
+}
+    */
+#config fieldset {
+    border: none;
+/*
+    border-radius: 0.1em;
+    border: 0.2em solid #268BD2;
+    */
+}
 #config fieldset ul {
     padding: 0;
+    margin-top: 0.25em;
 }
 #config fieldset li {
     list-style-type: none;
