@@ -27,7 +27,7 @@
                 <button type="button" id="indent">Indent</button>
                 <button type="button" id="unindent">Unindent</button>
                 -->
-                <button type="button" id="autoindent" title="Automatically indent/format the hilighted text">Indent</button>
+                <button type="button" id="autoindent" title="Reindent/format the hilighted text">Indent</button>
                 <button type="button" id="comment" title="Comment the hilighted text">+//</button>
                 <button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
@@ -73,27 +73,27 @@ int main() {
             <!--Messages and program output will appear here.-->
             <div id="console" class="dark-on-light"></div>
         </div>
-        <a href="#" class="help">Need help?</a>
-        <div class="help">
+        <a href="#" id="helpToggle">Need help?</a>
+        <div id="help">
             Default mode:
             These are shortcuts that will work when the editor window is focused
             (the cursor will be blinking if the window is focused).
-            <dl>
+            <dl id="help_default">
                 <dt>Ctrl f</dt><dd>Start new search</dd>
                 <dt>Ctrl g</dt><dd>Search/Go to next match</dd>
                 <dt>Ctrl G</dt><dd>Search/Go to previous match</dd>
-                <dt>Ctrl z</dt><dd>Undo(not done)</dd>
-                <dt>Ctrl y</dt><dd>Redo(not done)</dd>
-                <dt>Ctrl s</dt><dd>Save(not done)</dd>
-                <dt>Ctrl o</dt><dd>Open(not done)</dd>
-                <dt>Ctrl n</dt><dd>New(not done)</dd>
-                <dt>Ctrl i</dt><dd>Indent selection(not done)</dd>
-                <dt>Ctrl j</dt><dd>Goto line...(not done)</dd>
+                <dt>Ctrl z</dt><dd>Undo</dd>
+                <dt>Ctrl y</dt><dd>Redo</dd>
+                <dt>Ctrl s</dt><dd>Save</dd>
+                <dt>Ctrl o</dt><dd>Open</dd>
+                <dt>Ctrl n</dt><dd>New</dd>
+                <dt>Ctrl i</dt><dd>Indent selection</dd>
+                <dt>Ctrl j</dt><dd>Goto line...</dd>
+
+                <dt>Ctrl Enter</dt><dd>Run</dd>
 
                 <dt>Ctrl Left</dt><dd>Switch to tab on the left(not done)</dd>
                 <dt>Ctrl Right</dt><dd>Switch to tab on the right(not done)</dd>
-
-                <dt>Ctrl r</dt><dd>Run(not done)</dd>
             </dl>
         </div>
         <div id="config"> 

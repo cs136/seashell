@@ -314,10 +314,20 @@ function hoboFile(name) {
 function setUpUI() {
     /** create editor and console **/
 
+    CodeMirror.commands.save = saveFile;
     editor = CodeMirror.fromTextArea($("#seashell")[0], 
                 {//value: currentFile.content,
                 lineNumbers: true,
                 tabSize: defaultTabSize});
+    editor.setOption('extraKeys', 
+            {"Ctrl-O": function(cm) {openFileHandler();},
+             "Ctrl-N": function(cm) {newFileHandler();},
+             "Ctrl-I": function(cm) {autoIndentHandler()},
+             "Ctrl-J": function(cm) {gotoHandler();},
+             "Ctrl-Enter": function(cm) {runHandler();},
+             "Ctrl-Left": false, // TODO
+             "Ctrl-Right": false // TODO
+             });
 
     // openFile("foobar.c") without a setTab(file)
     getFile(function(data) {
@@ -362,6 +372,9 @@ function setUpUI() {
     $("#config").hide();
     $("#settings").click(showConfig);
     $("#config form").change(configureEditor);
+
+    $("#help").hide();
+    $("#helpToggle").toggle(function() {$("#help").show();}, function() {$("#help").hide();});
 }
 
 function showConfig() {
