@@ -1,5 +1,6 @@
 var editor;
 var ss_console;
+var defaultFileName = "foobar.c";
 var currentFile;
 var fileList = []; // array of ssFiles open in the current session
 var numberOfFiles = 0;
@@ -103,6 +104,7 @@ function autoIndentHandler() {
     editor.autoIndentRange(from, to);
 }
 
+// codemirror lines are 0-indexed. This box takes lines as shown in the gutters
 function gotoHandler() {
     editor.openDialog(makePrompt('Line'), function(query) {
             editor.setCursor(query-1, 0); });
@@ -142,36 +144,51 @@ function saveHandler() {
                         });
 }
 
-// applies k to the contents of currentFileName as a \n-delimited string 
-function getFile(k) {
-    ss.loadFile(k, currentFileName);
+// applies k to the contents of name as a \n-delimited string 
+function getFile(k, name) {
+    ss.loadFile(k, name);
 }
 
 function openFileHandler() {
-    editor.openDialog(makeFilePrompt('File name'), 
-                        function(query) {
-                            // skip if no filename is specified. TODO figure out how to handle nullstrings
-                            if (!query) {
-                                return;
-                            }
-                            // if file is already open, don't open it twice
-                            for (var i=0; i<numberOfFiles; i++) {
-                                if (fileList[i].name == query) {
-                                    setTab(fileList[i]);
-                                    return;
-                                }
-                            }
+    editor.openDialog(
+            makeFilePrompt('File name'), 
+            function(name) {
+                // skip if no filename is specified. TODO figure out how to handle nullstrings
+                if (!name) {
+                    return;
+                }
+                // if file is already open, don't open it twice
+                for (var i=0; i<numberOfFiles; i++) {
+                    if (fileList[i].name == name) {
+                        setTab(fileList[i]);
+                        return;
+                    }
+                }
 
-                            getFile(function(val) {
-                              if(val) {
-                                var file = new ssFile(name, val);
-                                makeNewTab(file);
-                                setTab(file);
-                                console_write('Opened file ' + query + '.');
-                              } else {
-                                console_write('Failed to open the file ' + query + '.');
-                              }});
-                        });
+                getFile(function(data) {
+                  if(data) {
+                    var file = new ssFile(name, data);
+                    makeNewTab(file);
+                    setTab(file);
+                    console_write('Opened file ' + name + '.');
+                  } else {
+                    console_write('Failed to open the file ' + name + '.');
+                  }}, name);
+
+            });
+}
+
+function makeNewTab(file) {
+    if (numberOfFiles == 1) {
+        file.tab.addClass("status_active");
+        editor.setValue(file.content);
+        currentFile = file;
+        $('#time-saved').text(currentFile.lastSaved);
+        mark_unchanged();
+    }
+
+    $("#filelist").append(file.tab);
+    file.tab.click(function() { setTab(file); });
 }
 
 function setTab(file) {
@@ -190,6 +207,7 @@ function setTab(file) {
     $('#time-saved').text(currentFile.lastSaved);
     mark_unchanged();
 }
+
 function newFileHandler() {
     editor.openDialog(makeFilePrompt('Name of new file'), 
                         function(query) {
@@ -211,7 +229,7 @@ function submitHandler() {
     editor.openDialog(makePrompt('Assignment ID'),
                         function(query) {
                             // TODO
-                            console_write('Submitted file ' + currentFileName + '.');
+                            console_write('Submitted file ' + currentFile.name + '.');
                         });
 }
 
@@ -237,22 +255,6 @@ function runInputHandler() {
                             // TODO run
                         });
 }
-
-/** initialize api. **/
-seashell_new(
-  function(ss) {
-    window.ss = ss;
-    ss.authenticate(
-      function(res) {
-        if(!res) {
-          alert("Couldn't authenticate as ctdalek!");
-        }
-      },
-      "ctdalek", "exterminate");
-  },
-  function(err) {
-    alert("Error initializing API: " + err);
-  });
 
 // reads off the form in div#config.
 function configureEditor() {
@@ -294,24 +296,27 @@ function hoboFile(name) {
 function setUpUI() {
     /** create editor and console **/
 
-    //$("#seashell").text(exampleCode);
-    //makeNewTab(currentFileName);
-    currentFile = hoboFile("foobar.c");
-
     editor = CodeMirror.fromTextArea($("#seashell")[0], 
                 {//value: currentFile.content,
                 lineNumbers: true,
                 tabSize: 2});
-    makeNewTab(currentFile);
-    editor.setValue(currentFile.content); // hack
-    mark_unchanged();
+
+    // openFile("foobar.c") without a setTab(file)
+    getFile(function(data) {
+      if(data) {
+        var file = new ssFile(defaultFileName, data);
+        makeNewTab(file);
+        console_write('Opened file ' + defaultFileName + '.');
+      } else {
+        console_write('Failed to open the file ' + defaultFileName + '.');
+      }}, defaultFileName);
+    //
 
     var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.\n';
     ss_console = CodeMirror($('#console')[0],
                                    {value: welcomeMessage, 
                                    readOnly: true, 
                                    theme: 'dark-on-light'});
-    editor.on("change", mark_changed);
 
     /** attach actions to all the buttons. **/
 
@@ -351,16 +356,20 @@ function hideConfig() {
     editor.focus();
 }
 
+/** initialize api. **/
+seashell_new(
+  function(ss) {
+    window.ss = ss;
+    ss.authenticate(
+      function(res) {
+        if(!res) {
+          alert("Couldn't authenticate as ctdalek!");
 
-function makeNewTab(file) {
-    if (numberOfFiles == 1) {
-        file.tab.addClass("status_active");
-    }
-
-    $("#filelist").append(file.tab);
-    file.tab.click(function() { setTab(file); });
-}
-
-setUpUI();
-makeNewTab(hoboFile("moocows.c"));
-makeNewTab(hoboFile("bob.C"));
+        }
+        setUpUI();
+      },
+      "ctdalek", "exterminate");
+  },
+  function(err) {
+    alert("Error initializing API: " + err);
+  });
