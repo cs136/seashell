@@ -45,10 +45,12 @@ body {
 .right button{margin-left: 4px; margin-right: 0;}
 .userid { font-weight: bold; }
 #filelist {
-    list-style-type: none;
-    padding: 0;
-    clear: left;
     background-color: #a00;
+    list-style-type: none;
+
+    margin-top: 2em; /* for chrome */
+    padding: 0;
+    clear: both;
 }
 #filelist li {
     background-color: #ddd;
