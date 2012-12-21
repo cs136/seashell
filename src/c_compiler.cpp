@@ -10,7 +10,6 @@
 #include <llvm/Support/Program.h>
 #include <llvm/Support/raw_ostream.h>
 #include <vector>
-#include <ostream>
 
 //int compile_one_file(const char* fileName, const char* binaryDestination="/tmp/a.out") {
 int compile_one_file(const char* fileName, const char* binaryDestination) {
