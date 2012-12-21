@@ -104,6 +104,9 @@ body {
     overflow: hidden;
     z-index: 99;
 }
+#help {
+    display: none;
+}
 #settings {
     background-color: #fff;
     background-color: #268BD2;
