@@ -8,6 +8,9 @@ var compiled = false;
 var defaultFileName = "foobar.c";
 var defaultTabSize = 2;
 
+var vimBindingsLoaded = false;
+var emacsBindingsLoaded = false;
+
 // creates a new ssFile that fileList will be aware of
 function ssFile(name, content) {
     this.name = name;
@@ -275,9 +278,25 @@ function runInputHandler() {
 // reads off the form in div#config.
 function configureEditor() {
     var editor_mode = $('#editor_mode input').filter(':checked').val();
-    console_write("Setting editor mode to " + editor_mode);
-    editor.setOption('keyMap', editor_mode);
-
+    if (editor_mode == "vim" && !vimBindingsLoaded) {
+        jQuery.getScript("codemirror/keymap/vim.js", 
+                function(script, textStatus, jqXHR) {
+                    console_write("Setting editor mode to " + editor_mode);
+                    editor.setOption('keyMap', editor_mode);
+                    vimBindingsLoaded = true;
+                });
+    } else if (editor_mode == "emacs" && !emacsBindingsLoaded) {
+        jQuery.getScript("codemirror/keymap/emacs.js", 
+                function(script, textStatus, jqXHR) {
+                    console_write("Setting editor mode to " + editor_mode);
+                    editor.setOption('keyMap', editor_mode);
+                    emacsBindingsLoaded = true;
+                });
+    } else {
+        console_write("Setting editor mode to " + editor_mode);
+        editor.setOption('keyMap', editor_mode);
+    }
+                    
     var tab_width = $('#tab-width option').filter(':selected').val();
     console_write("Tab-width changed to " + tab_width);
     editor.setOption('tabSize', tab_width);
