@@ -275,7 +275,7 @@ function runInputHandler() {
             });
 }
 
-// reads off the form in div#config.
+// reads off the form in #settings.
 function configureEditor() {
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
@@ -307,7 +307,7 @@ function configureEditor() {
 }
 
 /** diagnostic utility functions **/
-function printConfig() {
+function printSettings() {
     console_write("Using editor " + editor.getOption('keyMap'));
     console_write("Using tab-width " + editor.getOption('tabSize'));
     if (editor.getOption('indentWithTabs')) {
@@ -388,23 +388,23 @@ function setUpUI() {
 
     /** settings glue **/
     $("#overlay").hide();
-    $("#config").hide();
-    $("#settings").click(showConfig);
-    $("#config form").change(configureEditor);
+    $("#settings").hide();
+    $("#settings").change(configureEditor);
+    $("#settingsToggle").click(showSettings);
 
     $("#help").hide();
     $("#helpToggle").toggle(function() {$("#help").show();}, function() {$("#help").hide();});
 }
 
-function showConfig() {
+function showSettings() {
     $("#overlay").show();
-    $("#config").show();
-    $("#overlay").click(hideConfig);
+    $("#settings").show();
+    $("#overlay").click(hideSettings);
 }
 
-function hideConfig() {
+function hideSettings() {
     $("#overlay").hide()
-    $("#config").hide();
+    $("#settings").hide();
     editor.focus();
 }
 

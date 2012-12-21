@@ -12,7 +12,7 @@
     <body>
     <div id="overlay"></div>
     <div id="container">
-        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settings">Settings</a> - <a href="">Logout</a></div>
+        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settingsToggle">Settings</a> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
         <div id="top">
             <span class="buttons left">
@@ -96,8 +96,7 @@ int main() {
                 <dt>Ctrl Right</dt><dd>Switch to tab on the right(not done)</dd>
             </dl>
         </div>
-        <div id="config"> 
-            <form action="">
+        <form id="settings" action="">
             Settings
             <fieldset>
                 <legend>Editor keybinding mode</legend>
@@ -128,8 +127,7 @@ int main() {
                 <label for="use-spaces">Use spaces instead of actual tabs</label>
                 </li></ul>
             </fieldset>
-            </form> 
-        </div>
+        </form> 
     </div> <!-- container -->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>

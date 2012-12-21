@@ -104,7 +104,7 @@ body {
     overflow: hidden;
     z-index: 99;
 }
-#config form {
+#settings {
     background-color: #fff;
     background-color: #268BD2;
     opacity: 0.9;
@@ -119,28 +119,29 @@ body {
     padding: 0.5em;
     padding-top: 0.25em;
     z-index: 100;
+    display: none;
 }
 
 /*
-#config legend {
+#settings legend {
     background-color: #268BD2;
     -webkit-border-radius: 0.1em;
     -moz-border-radius: 0.1em;
     border-radius: 0.1em;
 }
     */
-#config fieldset {
+#settings fieldset {
     border: none;
 /*
     border-radius: 0.1em;
     border: 0.2em solid #268BD2;
     */
 }
-#config fieldset ul {
+#settings fieldset ul {
     padding: 0;
     margin-top: 0.25em;
 }
-#config fieldset li {
+#settings fieldset li {
     list-style-type: none;
     list-style-position: inside;
 }
