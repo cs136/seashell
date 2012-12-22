@@ -141,10 +141,11 @@ function saveFile() {
 function saveHandler() {
     editor.openDialog(makeFilePrompt('Save as'), 
             function(query) {
-                // TODO problem with nullstring checking...
-                if (query) {
+                if (query != "") {
                     currentFile.name = query;
                     currentFile.tab.text(query);
+                } else {
+                    console_write("Blank filename! Saving with old name.");
                 }
                 saveFile();
             });
@@ -159,10 +160,8 @@ function openFileHandler() {
     editor.openDialog(
             makeFilePrompt('File name'), 
             function(name) {
-                // skip if no filename is specified. TODO figure out how to handle nullstrings
-                if (!name) {
-                    return;
-                }
+                if (name == "") return;
+
                 // if file is already open, don't open it twice
                 for (var i=0; i<numberOfFiles; i++) {
                     if (fileList[i].name == name) {
@@ -196,17 +195,16 @@ function newFileHandler() {
     editor.openDialog(
             makeFilePrompt('Name of new file'), 
             function(query) {
-                // skip if no filename is specified. TODO figure out how to handle nullstrings
-                if (!query) return;
-// TODO
-//                          if (successful) {
-                    console_write('Creating file ' + query + '.');
-                    var file = new ssFile(query, "");
-                    makeNewTab(file);
-                    setTab(file);
-//                          else {
-//                              console_write('Failed to create the file ' + query + '.');
-//                          }
+                if (query == "") return;
+                    var successful = true; // TODO
+                    if (successful) {
+                        console_write('Creating file ' + query + '.');
+                        var file = new ssFile(query, "");
+                        makeNewTab(file);
+                        setTab(file);
+                    } else {
+                        console_write('Failed to create the file ' + query + '.');
+                    }
             });
 }
 
