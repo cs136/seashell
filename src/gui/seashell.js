@@ -275,6 +275,10 @@ function runInputHandler() {
 
 // reads off the form in #settings.
 function configureEditor() {
+    var new_height = parseInt($('#editor_height').val());
+    if (!isNaN(new_height)) {
+        editor.setSize(null, new_height * (editor.defaultTextHeight()+1));
+    }
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
         jQuery.getScript("codemirror/keymap/vim.js", 
@@ -389,6 +393,10 @@ function setUpUI() {
     $("#settings").hide();
     $("#settings").change(configureEditor);
     $("#settingsToggle").click(showSettings);
+
+    var editor_height = parseInt($("#codeArea").css("height"));
+    var height_in_lines = Math.round(editor_height / editor.defaultTextHeight() - 1) - 1;
+    $("#editor_height").val(String(height_in_lines));
 
     $("#help").hide();
     $("#helpToggle").toggle(function() {$("#help").show();}, function() {$("#help").hide();});
