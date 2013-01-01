@@ -16,24 +16,26 @@
         <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settingsToggle">Settings</a> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
         <div id="top">
+            <!-- newlines have semantic meaning. -->
             <div class="buttons left">
-                <button type="button" id="undo" title="Undo last change to file">Undo</button>
-                <button type="button" id="redo" title="Redo last change to file">Redo</button>
-                <button type="button" id="save-file" title="Take a snapshot of the file in the current tab">Snapshot</button>
-                <button type="button" id="open-file" title="Open an existing file">Open&hellip;</button>
-                <button type="button" id="new-file" title="Create a new file">New&hellip;</button>
+                <button type="button" id="undo" title="Undo last change to file">Undo</button><!--
+             --><button type="button" id="redo" title="Redo last change to file">Redo</button>
+            </div>
+            <div class="buttons left">
+                <button type="button" id="open-file" title="Open an existing file">Open&hellip;</button><!--
+             --><button type="button" id="save-file" title="Take a snapshot of the file in the current tab">Snapshot</button><!--
+             --><button type="button" id="new-file" title="Create a new file">New&hellip;</button>
             </div>
             <div class="buttons right">
-                <!--
-                <button type="button" id="indent">Indent</button>
-                <button type="button" id="unindent">Unindent</button>
-                -->
+                <button type="button" id="comment" title="Comment the hilighted text">+//</button><!--
+             --><button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
+            </div>
+            <div class="buttons right">
                 <button type="button" id="autoindent" title="Reindent/format the hilighted text">Indent</button>
-                <button type="button" id="comment" title="Comment the hilighted text">+//</button>
-                <button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
+            </div>
+            <div class="buttons right">
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
             </div>
-
             <ul id="filelist">
                 <!--
                 <li class="filename status_active"></li>
@@ -60,11 +62,15 @@ int main() {
         <div id="bottom">
             <div class="buttons left">
                 <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
+            </div>
+            <div class="buttons left">
                 <!--<button type="button" id="compile">Compile</button>-->
-                <button type="button" id="run" title="Execute this program">Run</button>
-                <button type="button" id="run-input">Set input files&hellip;</button>
-                <button type="button" id="prev-error" disabled="disabled">Prev error</button>
-                <button type="button" id="next-error" disabled="disabled">Next error</button>
+                <button type="button" id="run" title="Execute this program">Run</button><!--
+             --><button type="button" id="run-input">Set input files&hellip;</button>
+            </div>
+            <div class="buttons left">
+                <button type="button" id="prev-error" disabled="disabled">Prev error</button><!--
+             --><button type="button" id="next-error" disabled="disabled">Next error</button>
                 <!--
                 <button type="button" id="test-runc">Test with RunC</button>
                 -->

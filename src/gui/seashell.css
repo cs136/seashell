@@ -38,11 +38,23 @@ body {
     line-height: 1em;
     padding: 0.4em;
 }
-.buttons {margin-bottom: 0.25em;}
-.buttons button{margin-left: 0; margin-right: 4px;}
-.left {float: left;}
+.buttons {margin-bottom: 0.25em; }
+.buttons button{
+    margin-left: 0; 
+/*
+    background-color: #fff;
+    border: 1px solid #aaa;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+*/
+}
+.left {float: left; }
 .right { float: right; }
-.right button{margin-left: 4px; margin-right: 0;}
+.buttons.left { margin-right: 0.25em; } /* margin-right == spacing - 0.25em */
+.buttons.left button {margin-right: 0.25em; }
+.buttons.right { margin-left: 0.25em; }
+.buttons.right button{margin-left: 0.25em; margin-right: 0;}
 .userid { font-weight: bold; }
 #filelist {
     background-color: #a00;
