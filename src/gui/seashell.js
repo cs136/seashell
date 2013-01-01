@@ -276,9 +276,15 @@ function runInputHandler() {
 // reads off the form in #settings.
 function configureEditor() {
     var new_height = parseInt($('#editor_height').val());
+    //var new_width = parseInt($('#editor_width').val());
     if (!isNaN(new_height)) {
         editor.setSize(null, new_height * (editor.defaultTextHeight()+1));
     }
+    /*
+    if (!isNaN(new_width)) {
+        editor.setSize(new_width * (editor.defaultTextHeight()+1), null);
+    }
+    */
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
         jQuery.getScript("codemirror/keymap/vim.js", 

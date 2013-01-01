@@ -116,14 +116,20 @@ int main() {
             Settings
             <fieldset>
                 <legend>Size</legend>
-                <label for="editor_width">Width</label>
-                <input type="text" name="editor_width" id="editor_width" />
-                <label for="editor_height">Height</label>
-                <input type="text" name="editor_height" id="editor_height" />
-                <label for="editor_font">Font</label>
-                <input type="text" name="editor_font" id="editor_font" />pt
-                <button type="button" id="font_bigger" title="Make the editor font bigger">+</button>
-                <button type="button" id="font_smaller" title="Make the editor font smaller">-</button>
+                <ul id="settings_size">
+                <li>
+                    <label for="editor_width">Width</label>
+                    <input type="text" name="editor_width" id="editor_width" size="2" /> characters
+                </li><li>
+                    <label for="editor_height">Height</label>
+                    <input type="text" name="editor_height" id="editor_height" size="2" /> lines
+                </li><li>
+                    <label for="editor_font">Font</label>
+                    <input type="text" name="editor_font" id="editor_font" size="2" />pt
+                    <button type="button" id="font_bigger" title="Make the editor font bigger">+</button>
+                    <button type="button" id="font_smaller" title="Make the editor font smaller">-</button>
+                </li>
+                </ul>
             </fieldset>
 
             <fieldset>
