@@ -3,6 +3,7 @@
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
         <link rel="icon" type="image/png" href="seashell.png" />
         <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
         <link type="text/css" rel="stylesheet" href="codemirror/lib/util/dialog.css"/>
@@ -15,14 +16,14 @@
         <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settingsToggle">Settings</a> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
         <div id="top">
-            <span class="buttons left">
+            <div class="buttons left">
                 <button type="button" id="undo" title="Undo last change to file">Undo</button>
                 <button type="button" id="redo" title="Redo last change to file">Redo</button>
-                <button type="button" id="save-file" title="Save the file in the current tab">Save</button>
+                <button type="button" id="save-file" title="Take a snapshot of the file in the current tab">Snapshot</button>
                 <button type="button" id="open-file" title="Open an existing file">Open&hellip;</button>
                 <button type="button" id="new-file" title="Create a new file">New&hellip;</button>
-            </span>
-            <span class="buttons right">
+            </div>
+            <div class="buttons right">
                 <!--
                 <button type="button" id="indent">Indent</button>
                 <button type="button" id="unindent">Unindent</button>
@@ -31,7 +32,7 @@
                 <button type="button" id="comment" title="Comment the hilighted text">+//</button>
                 <button type="button" id="uncomment" title="Uncomment the hilighted text">-//</button>
                 <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
-            </span>
+            </div>
 
             <ul id="filelist">
                 <!--
@@ -62,19 +63,28 @@ int main() {
                 <!--<button type="button" id="compile">Compile</button>-->
                 <button type="button" id="run" title="Execute this program">Run</button>
                 <button type="button" id="run-input">Set input files&hellip;</button>
+                <button type="button" id="prev-error" disabled="disabled">Prev error</button>
+                <button type="button" id="next-error" disabled="disabled">Next error</button>
                 <!--
                 <button type="button" id="test-runc">Test with RunC</button>
                 -->
 
             </div>
             <div class="buttons right">
-                <button type="button" id="submit-assignment">Submit to Marmoset</button>
+                <button type="button" id="submit-assignment" disabled="disabled">Submit to Marmoset</button>
             </div>
             <!--Messages and program output will appear here.-->
             <div id="console" class="dark-on-light"></div>
         </div>
         <a href="#" id="helpToggle">Need help?</a>
         <div id="help">
+            <dl><dt>What's a snapshot?</dt>
+                <dd>The text in the editor is saved to your account on the school machines
+                once every ten seconds or so. Snapshots are a way to make "checkpoints"
+                for your files that you can move back and forth between. For example, you
+                may wish to take a snapshot before you make potentially code-breaking changes
+                to a function.  </dd>
+            </dl>
             Default mode:
             These are shortcuts that will work when the editor window is focused
             (the cursor will be blinking if the window is focused).
@@ -99,6 +109,18 @@ int main() {
         <form id="settings" action="">
             Settings
             <fieldset>
+                <legend>Size</legend>
+                <label for="editor_width">Width</label>
+                <input type="text" name="editor_width" id="editor_width" />
+                <label for="editor_height">Height</label>
+                <input type="text" name="editor_height" id="editor_height" />
+                <label for="editor_font">Font</label>
+                <input type="text" name="editor_font" id="editor_font" />pt
+                <button type="button" id="font_bigger" title="Make the editor font bigger">+</button>
+                <button type="button" id="font_smaller" title="Make the editor font smaller">-</button>
+            </fieldset>
+
+            <fieldset>
                 <legend>Editor keybinding mode</legend>
                 <ul id="editor_mode">
                 <li>
@@ -115,13 +137,13 @@ int main() {
             <fieldset>
                 <legend>Tabs</legend>
                 <ul> <li>
+                <label for="tab-width">Tab-width</label>
                 <select id="tab-width" size="1">
                     <option value="1">1</option>
                     <option value="2" selected="selected">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                 </select>
-                <label for="tab-width">Tab-width</label>
                 </li> <li>
                 <input type="checkbox" name="use-spaces" id="use-spaces" checked="checked" />
                 <label for="use-spaces">Use spaces instead of actual tabs</label>
