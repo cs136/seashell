@@ -16,7 +16,7 @@ function ssFile(name, content) {
     this.name = name;
     this.index = numberOfFiles;
     this.content = content;
-    this.tab = $('<li class="filename">' + name + '</li>');
+    this.tab = $('<li class="filename" id="tab' + this.index + '">' + name + '<span class="tabclose">x</span></li>');
     this.history = null;
     this.lastSaved = 'never';
 
@@ -164,7 +164,7 @@ function openFileHandler() {
 
                 // if file is already open, don't open it twice
                 for (var i=0; i<numberOfFiles; i++) {
-                    if (fileList[i].name == name) {
+                    if (fileList[i] != null && fileList[i].name == name) {
                         getFile(function(data) {
                                 if (fileList[i].name == currentFile.name) {
                                     editor.setValue(data);
@@ -191,6 +191,31 @@ function openFileHandler() {
             });
 }
 
+/* fi is the index of some file in fileList. */
+function closeFile(i) {
+    var j;
+
+    if (fileList[i].name == currentFile.name) {
+
+        for(j=0; j<numberOfFiles-1; j++) {
+            var offset = i-1-j;
+            if (offset < 0) offset += numberOfFiles;
+            if (fileList[offset] != null) {
+                currentFile.tab.hide();
+                console_write('new file index should be ' + offset);
+                setTab(fileList[offset]);
+                fileList[i] = null;
+                return;
+            }
+        }
+    } else {
+        console_write('closing index ' + i);
+        fileList[i].tab.hide();
+        fileList[i] = null;
+        return;
+    }
+}
+
 function newFileHandler() {
     editor.openDialog(
             makeFilePrompt('Name of new file'), 
@@ -215,6 +240,10 @@ function makeNewTab(file) {
 
     $("#filelist").append(file.tab);
     file.tab.click(function() { setTab(file); });
+    $("#tab" + file.index + " .tabclose").click( 
+            function(event) { 
+                event.stopPropagation(); 
+                closeFile(file.index); });
 }
 
 function setFirstTab(file) {
