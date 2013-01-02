@@ -373,6 +373,8 @@ function setUpUI() {
                                    {value: welcomeMessage, 
                                    readOnly: true, 
                                    theme: 'dark-on-light'});
+    // 10 cols high by default
+    ss_console.setSize(null, ss_console.defaultTextHeight() * 10);
     editor.focus();
 
     /** attach actions to all the buttons. **/
