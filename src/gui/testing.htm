@@ -22,8 +22,8 @@
              --><button type="button" id="redo" title="Redo last change to file">Redo</button>
             </div>
             <div class="buttons left">
-                <button type="button" id="open-file" title="Open an existing file">Open&hellip;</button><!--
-             --><button type="button" id="save-file" title="Take a snapshot of the file in the current tab">Snapshot</button><!--
+                <button type="button" id="save-file" title="Commit the file in the current tab">Commit</button><!--
+             --><button type="button" id="open-file" title="Open an existing file">Open&hellip;</button><!--
              --><button type="button" id="new-file" title="Create a new file">New&hellip;</button>
             </div>
             <div class="buttons right">
@@ -84,12 +84,12 @@ int main() {
         </div>
         <a href="#" id="helpToggle">Need help?</a>
         <div id="help">
-            <dl><dt>What's a snapshot?</dt>
+            <dl><dt>What's a commit?</dt>
                 <dd>The text in the editor is saved to your account on the school machines
-                once every ten seconds or so. Snapshots are a way to make "checkpoints"
-                for your files that you can move back and forth between. For example, you
-                may wish to take a snapshot before you make potentially code-breaking changes
-                to a function.  </dd>
+                once every ten seconds or so. Commits are a way to make "snapshots"
+                of your files that you can move back and forth between. For example, you
+                may wish to commit before you make potentially code-breaking changes
+                to a function.</dd>
             </dl>
             Default mode:
             These are shortcuts that will work when the editor window is focused
