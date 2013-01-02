@@ -164,7 +164,7 @@ function openFileHandler() {
 
                 // if file is already open, don't open it twice
                 for (var i=0; i<numberOfFiles; i++) {
-                    if (fileList[i].name == name) {
+                    if (fileList[i] != null && fileList[i].name == name) {
                         getFile(function(data) {
                                 if (fileList[i].name == currentFile.name) {
                                     editor.setValue(data);
@@ -190,6 +190,32 @@ function openFileHandler() {
 
             });
 }
+
+function closeFile() {
+    var i, j;
+    for (i=0; i<numberOfFiles; i++) { 
+        if (fileList[i] != null && fileList[i].name == currentFile.name) { 
+            console_write('Current file index is ' + i); 
+            break; 
+        } 
+    }
+    for(j=0; j<numberOfFiles-1; j--) {
+        var offset = i-1-j;
+        if (offset < 0) offset += numberOfFiles;
+        if (fileList[offset] != null) {
+            console_write('new file index should be ' + offset);
+            // this is the offending line. If you comment it out, everything is good.
+            // setTab is currently peppered with console_writes. Inexplicably, firefox
+            // doesn't even get to the first one before firefox locks up.
+            // ???
+            setTab(fileList[offset]);
+        }
+    }
+   // TODO
+   //fileList[i] = null;
+}
+
+
 
 function newFileHandler() {
     editor.openDialog(
@@ -226,13 +252,17 @@ function setFirstTab(file) {
 
 /** will update currentFile as well **/
 function setTab(file) {
+    console_write("attempting to setTab.");
     // save previously open tab before opening new one
     saveFile(); 
+    console_write("saved file");
     editor.clearHistory();
+    console_write("cleared history");
     
     // set active tab
     $(".status_active").removeClass("status_active");
     file.tab.addClass("status_active");
+    console_write("toggled active class");
     editor.setValue(file.content);
     if (file.history != null) {
         editor.setHistory(file.history);
@@ -391,7 +421,7 @@ function setUpUI() {
     $("#clear-console").click(function() {ss_console.setValue('')});
     $("#compile").click(compileHandler);
     $("#run").click(runHandler);
-    $("#run-input").click(runInputHandler);
+    $("#run-input").click(closeFile);
     $("#save-file").click(saveHandler);
     $("#open-file").click(openFileHandler);
     $("#new-file").click(newFileHandler);
