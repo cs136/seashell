@@ -248,6 +248,7 @@ function makeNewTab(file) {
 
 function setFirstTab(file) {
     editor.setValue(file.content);
+    editor.clearHistory();
     currentFile = file;
     $('#time-saved').text(currentFile.lastSaved);
     mark_unchanged();
