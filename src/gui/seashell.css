@@ -102,16 +102,16 @@ body {
 }
 
 #filelist .status_active span.tabclose {
-    color: #fff;
+    color: #eee;
     text-shadow: #333 0px -1px 0px;
 }
 #filelist span.tabclose:hover {
-    color: #E18728;
+    color: #C9B151;
     cursor: default;
 }
 /*
 #filelist .status_active span.tabclose:hover {
-    color: #ff0;
+    color: #C9B151;
 }
 */
 #filelist span.tabclose:active {
