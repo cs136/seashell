@@ -16,7 +16,7 @@ function ssFile(name, content) {
     this.name = name;
     this.index = numberOfFiles;
     this.content = content;
-    this.tab = $('<li class="filename">' + name + '</li>');
+    this.tab = $('<li class="filename" id="tab' + this.index + '">' + name + '<span class="tabclose">x</span></li>');
     this.history = null;
     this.lastSaved = 'never';
 
@@ -191,31 +191,30 @@ function openFileHandler() {
             });
 }
 
-function closeFile() {
-    var i, j;
-    for (i=0; i<numberOfFiles; i++) { 
-        if (fileList[i] != null && fileList[i].name == currentFile.name) { 
-            console_write('Current file index is ' + i); 
-            break; 
-        } 
-    }
-    for(j=0; j<numberOfFiles-1; j--) {
-        var offset = i-1-j;
-        if (offset < 0) offset += numberOfFiles;
-        if (fileList[offset] != null) {
-            console_write('new file index should be ' + offset);
-            // this is the offending line. If you comment it out, everything is good.
-            // setTab is currently peppered with console_writes. Inexplicably, firefox
-            // doesn't even get to the first one before firefox locks up.
-            // ???
-            setTab(fileList[offset]);
+/* fi is the index of some file in fileList. */
+function closeFile(i) {
+    var j;
+
+    if (fileList[i].name == currentFile.name) {
+
+        for(j=0; j<numberOfFiles-1; j++) {
+            var offset = i-1-j;
+            if (offset < 0) offset += numberOfFiles;
+            if (fileList[offset] != null) {
+                currentFile.tab.hide();
+                console_write('new file index should be ' + offset);
+                setTab(fileList[offset]);
+                fileList[i] = null;
+                return;
+            }
         }
+    } else {
+        console_write('closing index ' + i);
+        fileList[i].tab.hide();
+        fileList[i] = null;
+        return;
     }
-   // TODO
-   //fileList[i] = null;
 }
-
-
 
 function newFileHandler() {
     editor.openDialog(
@@ -241,10 +240,15 @@ function makeNewTab(file) {
 
     $("#filelist").append(file.tab);
     file.tab.click(function() { setTab(file); });
+    $("#tab" + file.index + " .tabclose").click( 
+            function(event) { 
+                event.stopPropagation(); 
+                closeFile(file.index); });
 }
 
 function setFirstTab(file) {
     editor.setValue(file.content);
+    editor.clearHistory();
     currentFile = file;
     $('#time-saved').text(currentFile.lastSaved);
     mark_unchanged();

@@ -93,6 +93,31 @@ body {
     font-style: italic;
 }
 
+#filelist .tabclose {
+    font-weight: bold;
+    margin-left: 0.5em;
+    font-family: sans-serif;
+    color: #aaa;
+    text-shadow: #555 0px -1px 0px;
+}
+
+#filelist .status_active span.tabclose {
+    color: #eee;
+    text-shadow: #333 0px -1px 0px;
+}
+#filelist span.tabclose:hover {
+    color: #C9B151;
+    cursor: default;
+}
+/*
+#filelist .status_active span.tabclose:hover {
+    color: #C9B151;
+}
+*/
+#filelist span.tabclose:active {
+    color: #E18728;
+}
+
 #console {
     background-color: #333;
     -webkit-box-shadow: inset 1px 1px 0px 0px #222;
