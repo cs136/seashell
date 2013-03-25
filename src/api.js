@@ -1,6 +1,6 @@
 /* Requires jQuery. */
 
-var seashell_server_prefix = "";
+var seashell_server_prefix = "./";
 
 function s_k(api, method, args, callback) {
   $.ajax({

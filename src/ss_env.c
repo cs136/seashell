@@ -19,10 +19,10 @@
 #define DROP_GROUP "nobody"
 
 /* Chroot jail path. */
-#define CHROOT_PATH "/home/marc/seashell/src/chroot"
+#define CHROOT_PATH "/opt/seashell/chroot"
 
 /* Compile utility. */
-#define COMPILER_PATH "/home/marc/seashell/src/compile.sh"
+#define COMPILER_PATH "/opt/seashell/compile.sh"
 
 /* Run utility, relative to the chroot jail. */
 #define RUNNER_PATH "/bin/run.sh"
