@@ -2,6 +2,7 @@ var editor;
 var ss_console;
 var currentFile;
 var fileList = []; // array of ssFiles open in the current session
+var dir_listing = [];
 var numberOfFiles = 0;
 var compiled = false;
 
@@ -61,7 +62,7 @@ function runProgram() {
 // and hilight bits of code. Should also probably be asynchronous.
 function compileProgram() {
 }
-    
+
 function mark_changed(instance, chobj) {
     compiled = false;
     $(".status_active").addClass("status_edited");
@@ -93,7 +94,11 @@ function makeFilePrompt(str) {
     return str + ': <input type="text" style="width: 12em"/>';
 }
 
-/** as a general rule, the *Handler functions try to touch only 
+function makeFilePrompt2(str, val) {
+    return str + ': <input type="text" value="' + val + '" style="width: 12em"/>';
+}
+
+/** as a general rule, the *Handler functions try to touch only
  * currentFile and the UI. **/
 
 /** handlers for buttons that only affect the client-side **/
@@ -139,7 +144,7 @@ function saveFile() {
 
 /** may decide to save file under a different name. **/
 function saveHandler() {
-    editor.openDialog(makeFilePrompt('Save as'), 
+    editor.openDialog(makeFilePrompt2('Save as', currentFile.name),
             function(query) {
                 if (query != "") {
                     currentFile.name = query;
@@ -151,50 +156,96 @@ function saveHandler() {
             });
 }
 
-// applies k to the contents of name as a \n-delimited string 
+// applies k to the contents of name as a \n-delimited string
 function getFile(k, name) {
     ss.loadFile(k, name);
 }
 
-function openFileHandler() {
-    editor.openDialog(
-            makeFilePrompt('File name'), 
-            function(name) {
-                if (name == "") return;
+// javascript scoping is lots of "fun".
+// http://stackoverflow.com/questions/4506240/understanding-the-concept-of-javascript-callbacks-with-node-js-especially-in-lo
+function MakeFileCallbackA(i, flist) {
+    return function(event) {
+        event.stopPropagation();
+        openFile(flist[i][1], FileListToHTML);
+        var e = Event("keydown");
+        e.keyCode = 27;
+        $('.CodeMirror-dialog').remove();
+    };
+}
+function MakeFileCallbackB(i, flist) {
+    return function(event) {
+        console_write('Changing directory to '+flist[i][1]);
+        event.stopPropagation();
+        ss.getDirListing(flist[i][1], FileListToHTML); };
+}
+function FileListToHTML(flist) {
+    // not sure dir_listing needs to be kept around.
+    dir_listing = flist;
+    $('#file-list').html('');
 
-                // if file is already open, don't open it twice
-                for (var i=0; i<numberOfFiles; i++) {
-                    if (fileList[i] != null && fileList[i].name == name) {
-                        getFile(function(data) {
-                                if (fileList[i].name == currentFile.name) {
-                                    editor.setValue(data);
-                                } else {
-                                    fileList[i].content = data;
-                                }
-                                setTab(fileList[i]);
-                            }, name);
+    n_files = flist.length;
+    for (var j=0; j<n_files; j++) {
+        if (dir_listing[j][0] == "f") {
+            $('#file-list').append($('<li class="file">' + flist[j][1] + '</li>').click(
+                        MakeFileCallbackA(j, flist)
+                    ));
+        } else { // directory
+            $('#file-list').append($('<li class="dir">' + flist[j][1] + '</li>').click(
+                        MakeFileCallbackB(j, flist)
+                        ));
+        }
+    }
+}
 
-                        return;
+function openFile(name) {
+    if (name == "") return;
+
+    // if file is already open, don't open it twice
+    for (var i=0; i<numberOfFiles; i++) {
+        if (fileList[i] != null && fileList[i].name == name) {
+            getFile(function(data) {
+                    if (fileList[i].name == currentFile.name) {
+                        editor.setValue(data);
+                    } else {
+                        fileList[i].content = data;
                     }
-                }
+                    setTab(fileList[i]);
+                }, name);
 
-                getFile(function(data) {
-                  if(data) {
-                    var file = new ssFile(name, data);
-                    makeNewTab(file);
-                    setTab(file);
-                    console_write('Opened file ' + name + '.');
-                  } else {
-                    console_write('Failed to open the file ' + name + '.');
-                  }}, name);
+            return;
+        }
+    }
 
-            });
+    getFile(function(data) {
+      if(data) {
+        var file = new ssFile(name, data);
+        makeNewTab(file);
+        setTab(file);
+        console_write('Opened file ' + name + '.');
+      } else {
+        console_write('Failed to open the file ' + name + '.');
+      }}, name);
+}
+
+function openFileHandler() {
+    if ($('.CodeMirror-dialog').length) {
+        $('.CodeMirror-dialog').remove();
+    } else {
+        editor.openDialog(
+                "<ul id='file-list'></ul>" + makeFilePrompt('File name'),
+                openFile);
+
+        ss.getDirListing('/', FileListToHTML);
+    }
 }
 
 /* fi is the index of some file in fileList. */
 function closeFile(i) {
-    var j;
 
+    //TODO callback not being called. Investigate.
+//    editor.openDialog('Are you sure? <button>No, don\'t close file</button> <input type="button">Yes, close file</input>',
+//            function(foo) {
+    var j;
     if (fileList[i].name == currentFile.name) {
 
         for(j=0; j<numberOfFiles-1; j++) {
@@ -212,13 +263,15 @@ function closeFile(i) {
         console_write('closing index ' + i);
         fileList[i].tab.hide();
         fileList[i] = null;
+        editor.focus();
         return;
     }
+//            });
 }
 
 function newFileHandler() {
     editor.openDialog(
-            makeFilePrompt('Name of new file'), 
+            makeFilePrompt('Name of new file'),
             function(query) {
                 if (query == "") return;
                     var successful = true; // TODO
@@ -240,9 +293,9 @@ function makeNewTab(file) {
 
     $("#filelist").append(file.tab);
     file.tab.click(function() { setTab(file); });
-    $("#tab" + file.index + " .tabclose").click( 
-            function(event) { 
-                event.stopPropagation(); 
+    $("#tab" + file.index + " .tabclose").click(
+            function(event) {
+                event.stopPropagation();
                 closeFile(file.index); });
 }
 
@@ -256,17 +309,14 @@ function setFirstTab(file) {
 
 /** will update currentFile as well **/
 function setTab(file) {
-    console_write("attempting to setTab.");
     // save previously open tab before opening new one
-    saveFile(); 
-    console_write("saved file");
+    saveFile();
     editor.clearHistory();
-    console_write("cleared history");
-    
+
     // set active tab
     $(".status_active").removeClass("status_active");
     file.tab.addClass("status_active");
-    console_write("toggled active class");
+    editor.focus();
     editor.setValue(file.content);
     if (file.history != null) {
         editor.setHistory(file.history);
@@ -276,8 +326,26 @@ function setTab(file) {
     mark_unchanged();
 }
 
+function switchTabHandler(forwards) {
+    i = currentFile.index;
+    a = 1;
+    if (!forwards) a = -1;
+
+        for(j=0; j<numberOfFiles-1; j++) {
+            var offset = (i + a) + a*j;
+            if (offset < 0) offset += numberOfFiles;
+            if (offset >= numberOfFiles) offset -= numberOfFiles;
+            if (fileList[offset] != null) {
+                console_write('new file index should be ' + offset);
+                setTab(fileList[offset]);
+                return;
+            }
+        }
+
+}
+
 function submitHandler() {
-    editor.openDialog(makePrompt('Assignment ID'), 
+    editor.openDialog(makePrompt('Assignment ID'),
             function(query) {
                 // TODO
                 console_write('Submitted file ' + currentFile.name + '.');
@@ -301,7 +369,7 @@ function runHandler() {
 }
 
 function runInputHandler() {
-    editor.openDialog(makeFilePrompt('Name of input file'), 
+    editor.openDialog(makeFilePrompt('Name of input file'),
             function(query) {
                 // TODO run
             });
@@ -321,14 +389,14 @@ function configureEditor() {
     */
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
-        jQuery.getScript("codemirror/keymap/vim.js", 
+        jQuery.getScript("codemirror/keymap/vim.js",
                 function(script, textStatus, jqXHR) {
                     console_write("Setting editor mode to " + editor_mode);
                     editor.setOption('keyMap', editor_mode);
                     vimBindingsLoaded = true;
                 });
     } else if (editor_mode == "emacs" && !emacsBindingsLoaded) {
-        jQuery.getScript("codemirror/keymap/emacs.js", 
+        jQuery.getScript("codemirror/keymap/emacs.js",
                 function(script, textStatus, jqXHR) {
                     console_write("Setting editor mode to " + editor_mode);
                     editor.setOption('keyMap', editor_mode);
@@ -338,7 +406,7 @@ function configureEditor() {
         console_write("Setting editor mode to " + editor_mode);
         editor.setOption('keyMap', editor_mode);
     }
-                    
+
     var tab_width = $('#tab-width option').filter(':selected').val();
     console_write("Tab-width changed to " + tab_width);
     editor.setOption('tabSize', tab_width);
@@ -376,18 +444,18 @@ function setUpUI() {
     /** create editor and console **/
 
     CodeMirror.commands.save = saveFile;
-    editor = CodeMirror.fromTextArea($("#seashell")[0], 
+    editor = CodeMirror.fromTextArea($("#seashell")[0],
                 {//value: currentFile.content,
                 lineNumbers: true,
                 tabSize: defaultTabSize});
-    editor.setOption('extraKeys', 
+    editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {openFileHandler();},
              "Ctrl-N": function(cm) {newFileHandler();},
              "Ctrl-I": function(cm) {autoIndentHandler()},
              "Ctrl-J": function(cm) {gotoHandler();},
              "Ctrl-Enter": function(cm) {runHandler();},
-             "Ctrl-Left": false, // TODO
-             "Ctrl-Right": false // TODO
+             "Ctrl-Left": function() {switchTabHandler(false);}, // TODO
+             "Ctrl-Right": function() {switchTabHandler(true);},  // TODO
              });
 
     // openFile("foobar.c") without a setTab(file)
@@ -404,8 +472,8 @@ function setUpUI() {
 
     var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.\n';
     ss_console = CodeMirror($('#console')[0],
-                                   {value: welcomeMessage, 
-                                   readOnly: true, 
+                                   {value: welcomeMessage,
+                                   readOnly: true,
                                    theme: 'dark-on-light'});
     // 10 cols high by default
     ss_console.setSize(null, ss_console.defaultTextHeight() * 10);
@@ -415,7 +483,7 @@ function setUpUI() {
 
     $("#undo").click(function() {editor.undo();});
     $("#redo").click(function() {editor.redo();});
-            
+
     $("#comment").click(function() {toggleCommentHandler(true);});
     $("#uncomment").click(function() {toggleCommentHandler(false);});
     $("#autoindent").click(autoIndentHandler);
@@ -425,7 +493,7 @@ function setUpUI() {
     $("#clear-console").click(function() {ss_console.setValue('')});
     $("#compile").click(compileHandler);
     $("#run").click(runHandler);
-    $("#run-input").click(closeFile);
+    $("#run-input").click(runInputHandler);
     $("#save-file").click(saveHandler);
     $("#open-file").click(openFileHandler);
     $("#new-file").click(newFileHandler);
@@ -459,6 +527,15 @@ function hideSettings() {
 /** initialize api. **/
 seashell_new(
   function(ss) {
+      // temporary!
+      ss.getDirListing = function(rootdir, callback) {
+              if (rootdir == "/") {
+                  return callback([["d", "a"], ["f", "b.c"], ["f", "c.c"], ["f", "d.c"], ["d", "aa"]]);
+              } else {
+                  return callback([["f", "foobar.c"]]);
+              }
+          };
+      // marc please take the above ss.getDirListing when you have a real ss.getDirListing implemented
     window.ss = ss;
     ss.authenticate(
       function(res) {
