@@ -94,6 +94,10 @@ function makeFilePrompt(str) {
     return str + ': <input type="text" style="width: 12em"/>';
 }
 
+function makeFilePrompt2(str, val) {
+    return str + ': <input type="text" value="' + val + '" style="width: 12em"/>';
+}
+
 /** as a general rule, the *Handler functions try to touch only 
  * currentFile and the UI. **/
 
@@ -140,7 +144,7 @@ function saveFile() {
 
 /** may decide to save file under a different name. **/
 function saveHandler() {
-    editor.openDialog(makeFilePrompt('Save as'), 
+    editor.openDialog(makeFilePrompt2('Save as', currentFile.name),
             function(query) {
                 if (query != "") {
                     currentFile.name = query;
