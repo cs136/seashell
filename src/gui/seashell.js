@@ -212,6 +212,7 @@ function closeFile(i) {
         console_write('closing index ' + i);
         fileList[i].tab.hide();
         fileList[i] = null;
+        editor.focus();
         return;
     }
 }
@@ -270,6 +271,24 @@ function setTab(file) {
     currentFile = file;
     $('#time-saved').text(currentFile.lastSaved);
     mark_unchanged();
+}
+
+function switchTabHandler(forwards) {
+    i = currentFile.index;
+    a = 1;
+    if (!forwards) a = -1;
+
+        for(j=0; j<numberOfFiles-1; j++) {
+            var offset = (i + a) + a*j;
+            if (offset < 0) offset += numberOfFiles;
+            if (offset >= numberOfFiles) offset -= numberOfFiles;
+            if (fileList[offset] != null) {
+                console_write('new file index should be ' + offset);
+                setTab(fileList[offset]);
+                return;
+            }
+        }
+
 }
 
 function submitHandler() {
@@ -382,8 +401,8 @@ function setUpUI() {
              "Ctrl-I": function(cm) {autoIndentHandler()},
              "Ctrl-J": function(cm) {gotoHandler();},
              "Ctrl-Enter": function(cm) {runHandler();},
-             "Ctrl-Left": false, // TODO
-             "Ctrl-Right": false // TODO
+             "Ctrl-Left": function() {switchTabHandler(false);}, // TODO
+             "Ctrl-Right": function() {switchTabHandler(true);},  // TODO
              });
 
     // openFile("foobar.c") without a setTab(file)
