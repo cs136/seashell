@@ -1,3 +1,8 @@
+/*--------------------------------------------------------------------
+Racket append-only database, I/O components.
+Copyright (C) 2012-2013 Marc Burns
+---------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>

@@ -1,3 +1,5 @@
+;; Racket append-only database, FFI to I/O components.
+;; Copyright (C) 2012-2013 Marc Burns
 (module database racket
   (require "aodb.rkt"
            "log.rkt")
@@ -13,23 +15,9 @@
            db-insert
            db-show-types
            db-collect-garbage)
-  ;; Log-based database. For extensibility, and because I don't
-  ;; trust Racket not to destroy an output file, the reader and
-  ;; writer are implemented in a separate C module.
-  
-  ;; The database itself associates symbols (types) to maps
-  ;; between primary keys (arbitrary type) and values (hash tables).
-  ;; Each table is a map between keys and values of arbitrary type.
-  ;; Thus, each type of object stored in the database will have one
-  ;; primary key, and each instance of any object is really an
-  ;; arbitrary dictionary. This format should be flexible enough
-  ;; for what Wildcard needs to implement, yet restrictive enough
-  ;; to prevent a messy database design. The use of an arbitrary
-  ;; dictionary as storage allows for data to be extended trivially.
-  
   ;; Type metadata.
   (define default-meta-data (make-immutable-hash '((counter . 1))))
-  
+
   ;; Database instance.
   (require racket/serialize)
   (define (db-instance file)
@@ -369,7 +357,7 @@
     (define db (db-loader (make-immutable-hash) ctx))
     (logf 'info "Database loaded.")
     (db-loop db ctx))
-  
+
   ;; Database server.
   ;; This thread becomes an RPC server. Requests received here
   ;; are forwarded to the db-loop routine thru a thread mailbox.
@@ -384,60 +372,60 @@
     (start-server hostname port
                   (lambda(req)
                     (database-serve-request req db-thread))))
-  
+
   ;; Client functions.
   (define-struct db-info (host port))
   (define (db-connect host port)
     (make-db-info host port)) ;; This could keep the connection open.
-  
+
   ;; db-get: db-info type id -> hash-map or #f
   ;; Returns object of key id and type type, or #f if
   ;; no such object exists.
   (define (db-get db type id)
     (remote-call (db-info-host db) (db-info-port db)
                  `(get ,type ,id)))
-  
+
   ;; db-get-keys: db-info type id assocs -> hash-map or #f
   ;; Returns object of key id and type type filtered to include
   ;; only keys keys, or #f if no such object exists.
   (define (db-get-keys db type id keys)
     (remote-call (db-info-host db) (db-info-port db)
                  `(get-keys ,type ,id ,keys)))
-  
+
   ;; db-get-every: db-info type -> list of hash-map
   ;; Returns all objects of type type.
   (define (db-get-every db type)
     (remote-call (db-info-host db) (db-info-port db)
                  `(get-every ,type)))
-  
+
   ;; db-get-every-keys: db-info type assocs -> list of hash-map
   ;; Returns all objects of type type, each object filtered to
   ;; include only keys keys.
   (define (db-get-every-keys db type keys)
     (remote-call (db-info-host db) (db-info-port db)
                  `(get-every-keys ,type ,keys)))
-  
+
   ;; db-set: db-info type id assocs -> void
   ;; Create or replace the object of type type and id id with
   ;; one containing exactly data.
   (define (db-set db type id data)
     (remote-call (db-info-host db) (db-info-port db)
                  `(set ,type ,id ,data)))
-  
+
   ;; db-set-keys: db type id assocs -> void
   ;; Create or update the object of type type and id id s.t.
   ;; all keys, values in data are associated in the object.
   (define (db-set-keys db type id data)
     (remote-call (db-info-host db) (db-info-port db)
                  `(set-keys ,type ,id ,data)))
-  
-  
+
+
   ;; db-remove: db type id -> void
   ;; If an object with type type and id id exists, remove it.
   (define (db-remove db type id)
     (remote-call (db-info-host db) (db-info-port db)
                  `(remove ,type ,id)))
-  
+
   ;; db-insert: db type assocs -> void
   ;; Generate an arbitrary unique numeric key for type type, and
   ;; create an object with this key associating the keys -> values
@@ -447,13 +435,13 @@
   (define (db-insert db type data)
     (remote-call (db-info-host db) (db-info-port db)
                  `(insert ,type ,data)))
-  
+
   ;; db-show-types: db -> list of symbols
   ;; Return a list of all non-empty symbols in database.
   (define (db-show-types db)
     (remote-call (db-info-host db) (db-info-port db)
                  `(show-types)))
-  
+
   ;; db-cached-lookup: db type (cons k v) -> id
   ;; Finds object of given type containing association (k . v).
   ;; Returns the object key. If more than one such object exists,

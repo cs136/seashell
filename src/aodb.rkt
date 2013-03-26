@@ -1,5 +1,6 @@
+;; Racket append-only database, FFI to I/O components.
+;; Copyright (C) 2012-2013 Marc Burns
 (module aodb racket
-  ;; FFI module for aodb.c
   (require ffi/unsafe
            ffi/unsafe/define
            ffi/unsafe/alloc)
@@ -10,9 +11,9 @@
            db_close
            record-data
            record-timestamp)
-  
+
   (define-ffi-definer define-aodb (ffi-lib "./aodb.so"))
-  
+
   ;; Wrap structures declared in aodb.c
   (define-cstruct _db_context
     ([fd_read _int]
@@ -24,7 +25,7 @@
      [length _int]
      [data_ptr _pointer])
     #:alignment 1)
-  
+
   (define-struct record (timestamp data ptr))
   (define-aodb db_init (_fun (o : (_ptr o _db_context))
                              _string/utf-8

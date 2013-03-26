@@ -1,6 +1,25 @@
-/* Seashell (C) 2012 Jenny Wong, Marc Burns.
- * Source compile/execute wrapper. This file must be compiled
- * and installed setuid root. */
+/*--------------------------------------------------------------------
+Seashell
+Copyright (C) 2012-2013 Jennifer Wong, Marc Burns
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Authors: Jennifer Wong, Marc Burns
+---------------------------------------------------------------------*/
+
 #include <sys/unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -80,7 +99,7 @@ int main(int argc, char * argv[])
 	if(argc < 3) {
 		die("This program must be run with at least two arguments.\n");
 	}
-		
+
 	/*** THIS CODE RUNS AS EUID 0 ***/
 	/* Create a new session and process group. */
 	pid = fork();

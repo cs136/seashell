@@ -1,3 +1,5 @@
+;; Multiplex log framework for Racket
+;; Copyright (C) 2012-2013 Marc Burns
 (module seashell-log racket
   (require "multiplex.rkt"
            racket/date)
@@ -19,7 +21,7 @@
        (pad-left 2 (date-second dt))
        (string-append (number->string (quotient (date-time-zone-offset dt) 3600))
                       (pad-left 2 (remainder (date-time-zone-offset dt) 3600))))))
-  
+
   ;; logf: category format args... -> void
   (define logf
     (lambda(cat fmt . args)
@@ -32,7 +34,7 @@
                                ,@(log-ts-args)
                                ,cat
                                ,@args))))))))
-  
+
   ;; make-log-reader: type-regexp -> (func: -> message)
   (define (make-log-reader type-regexp)
     (define chan (mt-subscribe log-mtx))
@@ -44,7 +46,7 @@
         [(cons (regexp type-regexp) (var msg)) msg]
         [else (next-message)]))
     next-message)
-  
+
   ;; make-fs-logger: type-regexp file -> thread
   (define (make-fs-logger type-regexp file)
     (define reader (make-log-reader type-regexp))

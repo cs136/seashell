@@ -1,3 +1,22 @@
+;; Seashell
+;; Copyright (C) 2012-2013 Jennifer Wong, Marc Burns
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;
+;; Authors: Jennifer Wong, Marc Burns
 (module seashell-api racket
   (require web-server/servlet
            net/base64
@@ -12,7 +31,7 @@
   (provide start-api)
 
   (define db (db-connect seashell-db-host seashell-db-port))
-  
+
   ;; Returns true iff. all symbols in req-creds are in cred-list.
   (define (has-credentials? req-creds cred-list)
     (and
@@ -21,7 +40,7 @@
         (findf (lambda(x) (equal? x cred)) cred-list))
       req-creds)
      #t))
-  
+
   ;; Generate a random 32-byte session key.
   (define (generate-session-key)
     (bytes->string/utf-8
@@ -30,7 +49,7 @@
        (map (lambda(u) (random 255))
             (build-list 32 identity)))
       #"")))
-  
+
   ;; Bind an API call to a continuation.
   (define (call/bind name proc required-creds direct embed)
     (define (convert req)
@@ -85,7 +104,7 @@
                          auth-status
                          `((status . #f))
                          `((status . #f) (access . #f)))))))))))
-  
+
   ;; Return initial continuation table for API calls.
   (define (new-api-entry req)
     (let
@@ -98,7 +117,7 @@
          (response/json
           `((key . ,session-key)
             (k . ,(make-hash (gen-continuation-table embed/url)))))))))
-  
+
   ;; API call which authenticates a user.
   (define (do-api-authenticate args uid)
     (define (api-authenticate-user user pass)
@@ -143,7 +162,7 @@
                `((status . #t)
                  (result . #f)))))]
       [else `((status . #t) (result . #f))]))
-  
+
   ;; Destroy a user session.
   (define (destroy-session args uid)
     (match args
@@ -157,7 +176,7 @@
        (response/json
         `((status . #t)
           (result . #f)))]))
-  
+
   ;; Block on reading a log and return one entry.
   (define session-log-table (make-hash))
   (define (tail-log log args uid)
@@ -188,7 +207,7 @@
                               `((status . #t)
                                 (result . ,(channel-get logger)))))))]
       [else `((status . #t) (result . #f))]))
-  
+
   ;; filename data -> bool
   (define (save-file args uid)
     (match args
@@ -197,7 +216,7 @@
        (db-set-keys db 'files uid `((,name . ,data)))
        #t]
       [else #f]))
-  
+
   ;; filename -> (union string false)
   (define (load-file args uid)
     (match args
@@ -208,7 +227,7 @@
              (hash-ref maybe-data name)
              #f))]
       [else #f]))
-  
+
   ;; Destroy a user session.
   (define (wrap-session-proc proc)
     (lambda(args uid)
@@ -219,7 +238,7 @@
            (result . ,(proc key args uid)))]
         [else `((status . #t)
                 (result . #f))])))
-  
+
   ;; Generate the client's continuation table for anonymous calls.
   (define (gen-continuation-table embed/url)
     ;; List of available API calls and associated functions.
@@ -234,7 +253,7 @@
       ,(call/bind 'waitProgram      (wrap-session-proc wait-pgrm)         '(usr) #t embed/url)
       ,(call/bind 'acceptUserInput  (wrap-session-proc accept-user-input) '(usr) #t embed/url)
       ,(call/bind 'getProgramOutput (wrap-session-proc get-pgrm-output)   '(usr) #t embed/url)))
-  
+
   (define (start-api req)
     (match (request-path-string req)
       [(regexp #rx"^/api/init.*$")
