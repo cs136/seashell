@@ -2,6 +2,7 @@ var editor;
 var ss_console;
 var currentFile;
 var fileList = []; // array of ssFiles open in the current session
+var dir_listing = [];
 var numberOfFiles = 0;
 var compiled = false;
 
@@ -156,45 +157,87 @@ function getFile(k, name) {
     ss.loadFile(k, name);
 }
 
+// javascript scoping is lots of "fun".
+// http://stackoverflow.com/questions/4506240/understanding-the-concept-of-javascript-callbacks-with-node-js-especially-in-lo
+function MakeFileCallbackA(i, flist) {
+    return function(event) {
+        event.stopPropagation();
+        openFile(flist[i][1], FileListToHTML);
+        var e = Event("keydown");
+        e.keyCode = 27;
+        $('.CodeMirror-dialog').remove();
+    };
+}
+function MakeFileCallbackB(i, flist) {
+    return function(event) { 
+        console_write('Changing directory to '+flist[i][1]);
+        event.stopPropagation(); 
+        ss.getDirListing(flist[i][1], FileListToHTML); };
+}
+function FileListToHTML(flist) {
+    // not sure dir_listing needs to be kept around.
+    dir_listing = flist;
+    $('#file-list').html('');
+
+    n_files = flist.length;
+    for (var j=0; j<n_files; j++) {
+        if (dir_listing[j][0] == "f") {
+            $('#file-list').append($('<li class="file">' + flist[j][1] + '</li>').click(
+                        MakeFileCallbackA(j, flist)
+                    ));
+        } else { // directory
+            $('#file-list').append($('<li class="dir">' + flist[j][1] + '</li>').click(
+                        MakeFileCallbackB(j, flist)
+                        ));
+        }
+    }
+}
+
+function openFile(name) {
+    if (name == "") return;
+
+    // if file is already open, don't open it twice
+    for (var i=0; i<numberOfFiles; i++) {
+        if (fileList[i] != null && fileList[i].name == name) {
+            getFile(function(data) {
+                    if (fileList[i].name == currentFile.name) {
+                        editor.setValue(data);
+                    } else {
+                        fileList[i].content = data;
+                    }
+                    setTab(fileList[i]);
+                }, name);
+
+            return;
+        }
+    }
+
+    getFile(function(data) {
+      if(data) {
+        var file = new ssFile(name, data);
+        makeNewTab(file);
+        setTab(file);
+        console_write('Opened file ' + name + '.');
+      } else {
+        console_write('Failed to open the file ' + name + '.');
+      }}, name);
+}
+
 function openFileHandler() {
     editor.openDialog(
-            makeFilePrompt('File name'), 
-            function(name) {
-                if (name == "") return;
+            "<ul id='file-list'></ul>" + makeFilePrompt('File name'), 
+            openFile);
 
-                // if file is already open, don't open it twice
-                for (var i=0; i<numberOfFiles; i++) {
-                    if (fileList[i] != null && fileList[i].name == name) {
-                        getFile(function(data) {
-                                if (fileList[i].name == currentFile.name) {
-                                    editor.setValue(data);
-                                } else {
-                                    fileList[i].content = data;
-                                }
-                                setTab(fileList[i]);
-                            }, name);
-
-                        return;
-                    }
-                }
-
-                getFile(function(data) {
-                  if(data) {
-                    var file = new ssFile(name, data);
-                    makeNewTab(file);
-                    setTab(file);
-                    console_write('Opened file ' + name + '.');
-                  } else {
-                    console_write('Failed to open the file ' + name + '.');
-                  }}, name);
-
-            });
+    ss.getDirListing('/', FileListToHTML);
 }
 
 /* fi is the index of some file in fileList. */
 function closeFile(i) {
-    var j;
 
+    //TODO callback not being called. Investigate.
+//    editor.openDialog('Are you sure? <button>No, don\'t close file</button> <input type="button">Yes, close file</input>',
+//            function(foo) {
+    var j;
     if (fileList[i].name == currentFile.name) {
 
         for(j=0; j<numberOfFiles-1; j++) {
@@ -215,6 +258,7 @@ function closeFile(i) {
         editor.focus();
         return;
     }
+//            });
 }
 
 function newFileHandler() {
@@ -264,6 +308,7 @@ function setTab(file) {
     // set active tab
     $(".status_active").removeClass("status_active");
     file.tab.addClass("status_active");
+    editor.focus();
     editor.setValue(file.content);
     if (file.history != null) {
         editor.setHistory(file.history);
@@ -474,6 +519,15 @@ function hideSettings() {
 /** initialize api. **/
 seashell_new(
   function(ss) {
+      // temporary!
+      ss.getDirListing = function(rootdir, callback) { 
+              if (rootdir == "/") {
+                  return callback([["d", "a"], ["f", "b.c"], ["f", "c.c"], ["f", "d.c"], ["d", "aa"]]); 
+              } else {
+                  return callback([["f", "foobar.c"]]);
+              }
+          };
+      // marc please take the above ss.getDirListing when you have a real ss.getDirListing implemented
     window.ss = ss;
     ss.authenticate(
       function(res) {
