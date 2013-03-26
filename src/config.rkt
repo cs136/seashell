@@ -3,7 +3,7 @@
 (provide (all-defined-out))
 
 ;; Host and port for web server.
-(define seashell-webserver-host "129.97.134.72")
+(define seashell-webserver-host "129.97.134.17")
 (define seashell-webserver-port 9876)
 
 ;; Database configuration.
