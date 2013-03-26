@@ -1,6 +1,6 @@
 /* Requires jQuery. */
 
-var seashell_server_prefix = "./";
+var seashell_server_prefix = "";
 
 function s_k(api, method, args, callback) {
   $.ajax({
@@ -17,7 +17,7 @@ function s_k(api, method, args, callback) {
         seashell_new(
           function(new_api) {
             if(api['__retry__'] === undefined) {
-              api['__retry__'] = 
+              api['__retry__'] =
                 (function(method, args, callback) {
                   return function() {
                     delete api['__retry__'];
