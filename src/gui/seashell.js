@@ -224,11 +224,15 @@ function openFile(name) {
 }
 
 function openFileHandler() {
-    editor.openDialog(
-            "<ul id='file-list'></ul>" + makeFilePrompt('File name'), 
-            openFile);
+    if ($('.CodeMirror-dialog').length) {
+        $('.CodeMirror-dialog').remove();
+    } else {
+        editor.openDialog(
+                "<ul id='file-list'></ul>" + makeFilePrompt('File name'), 
+                openFile);
 
-    ss.getDirListing('/', FileListToHTML);
+        ss.getDirListing('/', FileListToHTML);
+    }
 }
 
 /* fi is the index of some file in fileList. */
