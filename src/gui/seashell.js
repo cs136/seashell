@@ -17,7 +17,7 @@ function ssFile(name, content) {
     this.name = name;
     this.index = numberOfFiles;
     this.content = content;
-    this.tab = $('<li class="filename" id="tab' + this.index + '">' + name + '<span class="tabclose">x</span></li>');
+    this.tab = $('<li class="filename" id="tab' + this.index + '"><span class="filename-text">' + name + '</span><span class="tabclose">x</span></li>');
     this.history = null;
     this.lastSaved = 'never';
 
@@ -149,7 +149,7 @@ function saveHandler() {
             function(query) {
                 if (query != "") {
                     currentFile.name = query;
-                    currentFile.tab.text(query);
+                    currentFile.tab.children(".filename-text")[0].innerHTML = query;
                 } else {
                     console_write("Blank filename! Saving with old name.");
                 }
