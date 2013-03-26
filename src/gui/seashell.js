@@ -77,6 +77,7 @@ function console_write(str) {
     var newText = ss_console.getValue() + str + '\n';
     ss_console.setValue(newText);
     ss_console.setOption('readOnly', true);
+    ss_console.scrollIntoView({line : ss_console.lineCount()-1, ch: 0});
 }
 
 function console_write_noeol(str) {
@@ -167,7 +168,7 @@ function MakeFileCallbackA(i, flist) {
     return function(event) {
         event.stopPropagation();
         openFile(flist[i][1], FileListToHTML);
-        var e = Event("keydown");
+        var e = new Event("keydown");
         e.keyCode = 27;
         $('.CodeMirror-dialog').remove();
     };
