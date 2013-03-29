@@ -16,5 +16,8 @@ foreach(p LIB BIN)
   endif()
 endforeach()
 
+configure_file("${PROJECT_SOURCE_DIR}/config.h.in"
+               "${PROJECT_BINARY_DIR}/config.h")
+
 add_subdirectory(user)
 add_subdirectory(compiler)

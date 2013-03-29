@@ -1,0 +1,6 @@
+#ifndef _SEASHELL_H_
+#define _SEASHELL_H_
+
+#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+
+#endif
