@@ -477,8 +477,8 @@ function setUpUI() {
              "Ctrl-I": function(cm) {autoIndentHandler()},
              "Ctrl-J": function(cm) {gotoHandler();},
              "Ctrl-Enter": function(cm) {runHandler();},
-             "Ctrl-Left": function() {switchTabHandler(false);}, // TODO
-             "Ctrl-Right": function() {switchTabHandler(true);},  // TODO
+             "Ctrl-Left": function() {switchTabHandler(false);},
+             "Ctrl-Right": function() {switchTabHandler(true);},
              });
 
     // openFile("foobar.c") without a setTab(file)
@@ -558,7 +558,7 @@ seashell_new(
                   return callback([["f", "foobar.c"]]);
               }
           };
-      // marc please take the above ss.getDirListing when you have a real ss.getDirListing implemented
+      // TODO marc please take out the above ss.getDirListing when you have a real ss.getDirListing implemented. -JW
     window.ss = ss;
     ss.authenticate(
       function(res) {
