@@ -1,6 +1,4 @@
 *.log
 *.db
 *.so
-ss_env
-chroot
-c_compiler
+build
