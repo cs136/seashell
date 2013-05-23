@@ -1,3 +1,25 @@
+/*--------------------------------------------------------------------
+Seashell
+Copyright (C) 2012-2013 Jennifer Wong, Marc Burns
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Authors: Jennifer Wong, Marc Burns
+---------------------------------------------------------------------*/
+
 var editor;
 var ss_console;
 var currentFile;
@@ -17,7 +39,7 @@ function ssFile(name, content) {
     this.name = name;
     this.index = numberOfFiles;
     this.content = content;
-    this.tab = $('<li class="filename" id="tab' + this.index + '">' + name + '<span class="tabclose">x</span></li>');
+    this.tab = $('<li class="filename" id="tab' + this.index + '"><span class="filename-text">' + name + '</span><span class="tabclose">x</span></li>');
     this.history = null;
     this.lastSaved = 'never';
 
@@ -62,7 +84,7 @@ function runProgram() {
 // and hilight bits of code. Should also probably be asynchronous.
 function compileProgram() {
 }
-    
+
 function mark_changed(instance, chobj) {
     compiled = false;
     $(".status_active").addClass("status_edited");
@@ -77,6 +99,7 @@ function console_write(str) {
     var newText = ss_console.getValue() + str + '\n';
     ss_console.setValue(newText);
     ss_console.setOption('readOnly', true);
+    ss_console.scrollIntoView({line : ss_console.lineCount()-1, ch: 0});
 }
 
 function console_write_noeol(str) {
@@ -98,7 +121,7 @@ function makeFilePrompt2(str, val) {
     return str + ': <input type="text" value="' + val + '" style="width: 12em"/>';
 }
 
-/** as a general rule, the *Handler functions try to touch only 
+/** as a general rule, the *Handler functions try to touch only
  * currentFile and the UI. **/
 
 /** handlers for buttons that only affect the client-side **/
@@ -148,7 +171,7 @@ function saveHandler() {
             function(query) {
                 if (query != "") {
                     currentFile.name = query;
-                    currentFile.tab.text(query);
+                    currentFile.tab.children(".filename-text")[0].innerHTML = query;
                 } else {
                     console_write("Blank filename! Saving with old name.");
                 }
@@ -156,7 +179,7 @@ function saveHandler() {
             });
 }
 
-// applies k to the contents of name as a \n-delimited string 
+// applies k to the contents of name as a \n-delimited string
 function getFile(k, name) {
     ss.loadFile(k, name);
 }
@@ -167,15 +190,15 @@ function MakeFileCallbackA(i, flist) {
     return function(event) {
         event.stopPropagation();
         openFile(flist[i][1], FileListToHTML);
-        var e = Event("keydown");
+        var e = new Event("keydown");
         e.keyCode = 27;
         $('.CodeMirror-dialog').remove();
     };
 }
 function MakeFileCallbackB(i, flist) {
-    return function(event) { 
+    return function(event) {
         console_write('Changing directory to '+flist[i][1]);
-        event.stopPropagation(); 
+        event.stopPropagation();
         ss.getDirListing(flist[i][1], FileListToHTML); };
 }
 function FileListToHTML(flist) {
@@ -232,7 +255,7 @@ function openFileHandler() {
         $('.CodeMirror-dialog').remove();
     } else {
         editor.openDialog(
-                "<ul id='file-list'></ul>" + makeFilePrompt('File name'), 
+                "<ul id='file-list'></ul>" + makeFilePrompt('File name'),
                 openFile);
 
         ss.getDirListing('/', FileListToHTML);
@@ -271,7 +294,7 @@ function closeFile(i) {
 
 function newFileHandler() {
     editor.openDialog(
-            makeFilePrompt('Name of new file'), 
+            makeFilePrompt('Name of new file'),
             function(query) {
                 if (query == "") return;
                     var successful = true; // TODO
@@ -293,9 +316,9 @@ function makeNewTab(file) {
 
     $("#filelist").append(file.tab);
     file.tab.click(function() { setTab(file); });
-    $("#tab" + file.index + " .tabclose").click( 
-            function(event) { 
-                event.stopPropagation(); 
+    $("#tab" + file.index + " .tabclose").click(
+            function(event) {
+                event.stopPropagation();
                 closeFile(file.index); });
 }
 
@@ -310,9 +333,9 @@ function setFirstTab(file) {
 /** will update currentFile as well **/
 function setTab(file) {
     // save previously open tab before opening new one
-    saveFile(); 
+    saveFile();
     editor.clearHistory();
-    
+
     // set active tab
     $(".status_active").removeClass("status_active");
     file.tab.addClass("status_active");
@@ -345,7 +368,7 @@ function switchTabHandler(forwards) {
 }
 
 function submitHandler() {
-    editor.openDialog(makePrompt('Assignment ID'), 
+    editor.openDialog(makePrompt('Assignment ID'),
             function(query) {
                 // TODO
                 console_write('Submitted file ' + currentFile.name + '.');
@@ -369,7 +392,7 @@ function runHandler() {
 }
 
 function runInputHandler() {
-    editor.openDialog(makeFilePrompt('Name of input file'), 
+    editor.openDialog(makeFilePrompt('Name of input file'),
             function(query) {
                 // TODO run
             });
@@ -389,14 +412,14 @@ function configureEditor() {
     */
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
-        jQuery.getScript("codemirror/keymap/vim.js", 
+        jQuery.getScript("codemirror/keymap/vim.js",
                 function(script, textStatus, jqXHR) {
                     console_write("Setting editor mode to " + editor_mode);
                     editor.setOption('keyMap', editor_mode);
                     vimBindingsLoaded = true;
                 });
     } else if (editor_mode == "emacs" && !emacsBindingsLoaded) {
-        jQuery.getScript("codemirror/keymap/emacs.js", 
+        jQuery.getScript("codemirror/keymap/emacs.js",
                 function(script, textStatus, jqXHR) {
                     console_write("Setting editor mode to " + editor_mode);
                     editor.setOption('keyMap', editor_mode);
@@ -406,7 +429,7 @@ function configureEditor() {
         console_write("Setting editor mode to " + editor_mode);
         editor.setOption('keyMap', editor_mode);
     }
-                    
+
     var tab_width = $('#tab-width option').filter(':selected').val();
     console_write("Tab-width changed to " + tab_width);
     editor.setOption('tabSize', tab_width);
@@ -444,18 +467,18 @@ function setUpUI() {
     /** create editor and console **/
 
     CodeMirror.commands.save = saveFile;
-    editor = CodeMirror.fromTextArea($("#seashell")[0], 
+    editor = CodeMirror.fromTextArea($("#seashell")[0],
                 {//value: currentFile.content,
                 lineNumbers: true,
                 tabSize: defaultTabSize});
-    editor.setOption('extraKeys', 
+    editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {openFileHandler();},
              "Ctrl-N": function(cm) {newFileHandler();},
              "Ctrl-I": function(cm) {autoIndentHandler()},
              "Ctrl-J": function(cm) {gotoHandler();},
              "Ctrl-Enter": function(cm) {runHandler();},
-             "Ctrl-Left": function() {switchTabHandler(false);}, // TODO
-             "Ctrl-Right": function() {switchTabHandler(true);},  // TODO
+             "Ctrl-Left": function() {switchTabHandler(false);},
+             "Ctrl-Right": function() {switchTabHandler(true);},
              });
 
     // openFile("foobar.c") without a setTab(file)
@@ -472,8 +495,8 @@ function setUpUI() {
 
     var welcomeMessage = 'Welcome to Seashell! Messages and program output will appear here.\n';
     ss_console = CodeMirror($('#console')[0],
-                                   {value: welcomeMessage, 
-                                   readOnly: true, 
+                                   {value: welcomeMessage,
+                                   readOnly: true,
                                    theme: 'dark-on-light'});
     // 10 cols high by default
     ss_console.setSize(null, ss_console.defaultTextHeight() * 10);
@@ -483,7 +506,7 @@ function setUpUI() {
 
     $("#undo").click(function() {editor.undo();});
     $("#redo").click(function() {editor.redo();});
-            
+
     $("#comment").click(function() {toggleCommentHandler(true);});
     $("#uncomment").click(function() {toggleCommentHandler(false);});
     $("#autoindent").click(autoIndentHandler);
@@ -528,14 +551,14 @@ function hideSettings() {
 seashell_new(
   function(ss) {
       // temporary!
-      ss.getDirListing = function(rootdir, callback) { 
+      ss.getDirListing = function(rootdir, callback) {
               if (rootdir == "/") {
-                  return callback([["d", "a"], ["f", "b.c"], ["f", "c.c"], ["f", "d.c"], ["d", "aa"]]); 
+                  return callback([["d", "a"], ["f", "b.c"], ["f", "c.c"], ["f", "d.c"], ["d", "aa"]]);
               } else {
                   return callback([["f", "foobar.c"]]);
               }
           };
-      // marc please take the above ss.getDirListing when you have a real ss.getDirListing implemented
+      // TODO marc please take out the above ss.getDirListing when you have a real ss.getDirListing implemented. -JW
     window.ss = ss;
     ss.authenticate(
       function(res) {
