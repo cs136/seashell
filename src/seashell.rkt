@@ -8,29 +8,11 @@
            web-server/servlet-env
            web-server/private/xexpr
            net/url
-           "cas.rkt"
            "config.rkt"
-           "database.rkt"
            "log.rkt"
            "format-trace.rkt"
            "common.rkt"
            "seashell-api.rkt")
-
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-  (define (test-cas)
-    (define init-r
-      (initiate-cas-auth "https://csclub.uwaterloo.ca"
-                         "https://cas-dev.uwaterloo.ca/cas"))
-    (if init-r
-      (begin
-        (pretty-print
-          (validate-cas-token/proxyfw "https://csclub.uwaterloo.ca"
-                                      "https://cas-dev.uwaterloo.ca/cas"
-                                      (car init-r)
-                                      (cdr init-r)))
-        (response/xexpr "Done!"))
-      (response/xexpr "CAS server gave no token.")))
 
   ;; Entry point for every new request.
   (define (start req)

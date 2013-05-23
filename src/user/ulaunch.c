@@ -30,6 +30,7 @@ Authors: Jennifer Wong, Marc Burns
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <krb5.h>
 //#include "config.h"
 
 /* Current environment. */
@@ -37,6 +38,62 @@ extern char * const environ[];
 
 int main(int argc, char * argv[])
 {
+#define PRINT_KERR printf("Kerberos error: %s\n", krb5_get_error_message(krb, rv))
+  krb5_context krb;
+
+  krb5_error_code rv;
+  rv = krb5_init_context(&krb);
+  if(0 != rv) {
+    PRINT_KERR;
+    exit(1);
+  }
+
+  krb5_ccache orig_cache, new_cache;
+  rv = krb5_cc_default(krb, &orig_cache);
+  if(0 != rv) {
+    PRINT_KERR;
+    exit(1);
+  }
+
+    krb5_principal princ = NULL;
+
+    rv = krb5_cc_new_unique(krb, "FILE", NULL, &new_cache);
+    if(rv) {
+      PRINT_KERR;
+      exit(1);
+    }
+
+    rv = krb5_cc_get_principal(krb, orig_cache, &princ);
+    if (!rv) {
+        rv = krb5_cc_initialize(krb, new_cache, princ);
+    }
+    if (rv) {
+        PRINT_KERR;
+        exit(1);
+    }
+
+    rv = krb5_cc_copy_creds(krb, orig_cache, new_cache);
+
+    if (!rv) {
+        rv = krb5_cc_destroy(krb, orig_cache);
+    } else {
+      PRINT_KERR;
+    }
+    if (princ) {
+        krb5_free_principal(krb, princ);
+        princ = NULL;
+    }
+
+  const char * newcc_name = krb5_cc_get_name(krb, new_cache);
+  if(newcc_name) {
+    printf("Name of new ccache: %s\n", newcc_name);
+  }
+
+  krb5_cc_close(krb, new_cache);
+
+  krb5_free_context(krb);
+  exit(0);
+
   /* Start child process. */
   {
     int childpid = fork();
