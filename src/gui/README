@@ -1,0 +1,14 @@
+the structure of the editor is in testing.htm
+the appearance of seashell can be changed in seashell.cs
+the buttons (identified by id in testing.htm) are attached to callback functions in setUpUI() of seashell.js
+
+seashell.js:
+the flow starts at seashell_new, which deals with authentication.
+the UI (actual editor) is set up in ss.authenticate's callback (with a call to setUpUI())
+
+setUpUI():
+* sets up extra keyboard shortcuts
+* sets up console
+* attaches handlers to buttons
+
+
