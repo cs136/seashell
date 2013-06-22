@@ -125,16 +125,16 @@ function makeFilePrompt2(str, val) {
  * currentFile and the UI. **/
 
 /** handlers for buttons that only affect the client-side **/
-function toggleCommentHandler(isC) {
-    var from = editor.getCursor(true);
-    var to = editor.getCursor(false);
-    editor.commentRange(isC, from, to);
+function toggleCommentLineHandler() {
+    Format.commentLines();
 }
+
+function toggleCommentSelectionHandler() {
+    Format.commentSelection();
+}
+
 function autoIndentHandler() {
-    var from = editor.getCursor(true);
-    var to = editor.getCursor(false);
-    editor.autoFormatRange(from, to);
-    editor.autoIndentRange(from, to);
+    Format.formattedCode();
 }
 
 // codemirror lines are 0-indexed. This box takes lines as shown in the gutters
@@ -146,6 +146,9 @@ function gotoHandler() {
 /** handlers for buttons that need to interact with the back-end **/
 
 function saveFile() {
+    if (! currentFile)
+	return;
+
     // editor.getValue() is a \n-delimited string containing the text currently in the editor
     currentFile.content = editor.getValue();
     currentFile.history = editor.getHistory();
@@ -507,8 +510,8 @@ function setUpUI() {
     $("#undo").click(function() {editor.undo();});
     $("#redo").click(function() {editor.redo();});
 
-    $("#comment").click(function() {toggleCommentHandler(true);});
-    $("#uncomment").click(function() {toggleCommentHandler(false);});
+    $("#commentLine").click(function() {toggleCommentLineHandler();});
+    $("#commentSelection").click(function() {toggleCommentSelectionHandler();});
     $("#autoindent").click(autoIndentHandler);
     $("#goto-line").click(gotoHandler);
     $("#submit-assignment").click(submitHandler);
@@ -573,3 +576,4 @@ seashell_new(
   function(err) {
     alert("Error initializing API: " + err);
   });
+
