@@ -40,7 +40,7 @@
                 <!--
                 <li class="filename status_active"></li>
                 -->
-            </ul> 
+            </ul>
             <div id="save-status" class="right">Last saved <span id="time-saved">never</span></div>
 
             <div id="codeArea">
@@ -117,7 +117,7 @@ int main() {
         <h3>Welcome, testers!</h3>
         <p>Here is a rough preview of Seashell, an in-browser editing environment. Seashell should work in
         web browsers that support WebSockets and <a href="www.codemirror.org">CodeMirror</a>. If you're
-        having issues with a browser that you think should work, send us an email with the name and 
+        having issues with a browser that you think should work, send us an email with the name and
         version of your browser as well as what the issue is and how to reproduce it.</p>
 
         <p>The user interface (especially the left side of the bottom panel) is not set in stone. If you
@@ -181,7 +181,7 @@ int main() {
                 <label for="use-spaces">Use spaces instead of actual tabs</label>
                 </li></ul>
             </fieldset>
-        </form> 
+        </form>
     </div> <!-- container -->
         <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
@@ -189,10 +189,23 @@ int main() {
         <script type="text/javascript" src="codemirror/lib/util/dialog.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/searchcursor.js"></script>
         <script type="text/javascript" src="codemirror/lib/util/search.js"></script>
+        <script type="text/javascript" src="codemirror/addon/edit/matchbrackets.js"></script>
+        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
+
+        <script type="text/javascript" src="codemirror/addon/selection/active-line.js"></script>
+        <link rel="stylesheet" href="codemirror/addon/lint/lint.css">
+        <script type="text/javascript" src="codemirror/addon/lint/lint.js"></script>
+        <script type="text/javascript" src="codemirror/addon/lint/javascript-lint.js"></script>
+        <script type="text/javascript" src="cm-validator-remote.js"></script>
+        <!--<style type="text/css">-->
+          <!--.CodeMirror {border-top: 1px solid black; border-bottom: 1px solid black;}-->
+          <!--.CodeMirror-empty { outline: 1px solid #c22; }-->
+        <!--</style>-->
 
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
         <script type="text/javascript" src="api.js"></script>
+        <script type="text/javascript" src="clangMessages.js"></script>
         <script type="text/javascript" src="format.js"></script>
         <script type="text/javascript" src="seashell.js"></script>
     </body>

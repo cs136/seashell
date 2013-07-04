@@ -392,6 +392,7 @@ function compileHandler() {
 function runHandler() {
     saveFile();
     runProgram();
+    ClangMessages.highlightErrors();
 }
 
 function runInputHandler() {
@@ -473,7 +474,15 @@ function setUpUI() {
     editor = CodeMirror.fromTextArea($("#seashell")[0],
                 {//value: currentFile.content,
                 lineNumbers: true,
-                tabSize: defaultTabSize});
+                tabSize: defaultTabSize,
+                mode: "text/x-csrc",
+                tabMode: "shift", // todo uncomment?
+                gutters: ["CodeMirror-lint-markers"],
+                lintWith: {
+                    "getAnnotations": CodeMirror.remoteValidator,
+                    "async": true,
+                    "check_cb": check_syntax
+                }});
     editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {openFileHandler();},
              "Ctrl-N": function(cm) {newFileHandler();},
@@ -481,7 +490,7 @@ function setUpUI() {
              "Ctrl-J": function(cm) {gotoHandler();},
              "Ctrl-Enter": function(cm) {runHandler();},
              "Ctrl-Left": function() {switchTabHandler(false);},
-             "Ctrl-Right": function() {switchTabHandler(true);},
+             "Ctrl-Right": function() {switchTabHandler(true);}
              });
 
     // openFile("foobar.c") without a setTab(file)
