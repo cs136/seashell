@@ -40,13 +40,12 @@ var Format = (function () {
 
         commentSelection: function() {
             // todo: if selection or cursor is inside a /* */ comment, remove that comment
-//            if (!editor.hasFocus()) // commented out because always false on button press
-//                return;
             if (editor.somethingSelected()) {
                 var selection = editor.getSelection();
                 var trimmedSelection = selection.trim();
                 var trimmedLength = trimmedSelection.length;
-                var shouldUncomment = trimmedSelection.substring(0, 2) == "/*"
+                var shouldUncomment =
+                        trimmedSelection.substring(0, 2) == "/*"
                         && trimmedSelection.substring(trimmedLength - 2, trimmedLength) == "*/";
                 if (shouldUncomment) {
                     var replace = selection.replace(/\/\*/, "").replace(/\*\/([ \n\r]*)$/, "$1");
