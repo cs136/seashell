@@ -146,6 +146,11 @@ function gotoHandler() {
     });
 }
 
+function saveAndCompile() {
+    saveFile();
+    compileProgram();
+}
+
 /** handlers for buttons that need to interact with the back-end **/
 
 function saveFile() {
@@ -498,7 +503,7 @@ function setUpUI() {
                 }});
     editor.on('change', function() {
           clearTimeout(delay);
-          delay = setTimeout(saveFile, delayTime);
+          delay = setTimeout(saveAndCompile, delayTime);
         });
     editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {
