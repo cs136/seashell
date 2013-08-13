@@ -177,7 +177,7 @@ function saveFile() {
 }
 
 /** may decide to save file under a different name. **/
-function saveHandler() {
+function saveAsHandler() {
     editor.openDialog(makeFilePrompt2('Save as', currentFile.name),
             function(query) {
                 if (query != "") {
@@ -387,7 +387,7 @@ function submitHandler() {
     editor.openDialog(makePrompt('Assignment ID'),
             function(query) {
                 // TODO
-                console_write('Submitted file ' + currentFile.name + '.');
+                console_write('Submitted file ' + currentFile.name + ', ' + (new Date()).toLocaleTimeString() + '.');
             });
 }
 
@@ -576,7 +576,7 @@ function setUpUI() {
     $("#compile").click(compileHandler);
     $("#run").click(runHandler);
     $("#run-input").click(runInputHandler);
-    $("#save-file").click(saveHandler);
+    $("#saveas-file").click(saveAsHandler);
     $("#open-file").click(openFileHandler);
     $("#new-file").click(newFileHandler);
 
