@@ -1,3 +1,9 @@
 [submodule "lib/codemirror"]
 	path = lib/codemirror
 	url = https://github.com/marijnh/CodeMirror.git
+[submodule "lib/llvm"]
+	path = lib/llvm
+	url = http://llvm.org/git/llvm.git
+[submodule "lib/clang"]
+	path = lib/clang
+	url = http://llvm.org/git/clang.git
