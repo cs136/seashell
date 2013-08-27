@@ -7,3 +7,6 @@
 [submodule "lib/clang"]
 	path = lib/clang
 	url = http://llvm.org/git/clang.git
+[submodule "lib/compiler-rt"]
+	path = lib/compiler-rt
+	url = http://llvm.org/git/compiler-rt.git
