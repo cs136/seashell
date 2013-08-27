@@ -3,7 +3,7 @@
 (provide (all-defined-out))
 
 ;; Host and port for web server.
-(define seashell-webserver-host "129.97.134.17")
+(define seashell-webserver-host "129.97.134.34")
 (define seashell-webserver-port 9876)
 
 ;; Database configuration.
@@ -12,7 +12,7 @@
 (define seashell-db-port 11234)
 
 ;; Base path for file resources to serve during API calls.
-(define res-root "http://csclub.uwaterloo.ca/~m4burns/seashell")
+(define res-root "")
 
 ;; API session timeout in seconds.
 (define api-session-timeout 3600)
