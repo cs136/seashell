@@ -26,6 +26,24 @@ add_subdirectory(llvm)
 add_subdirectory(libgit2)
 
 # Set include paths.
-set(LLVM_INCLUDE_DIRS
+set(LLVM_SOURCE_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include
+    PARENT_SCOPE)
+set(LLVM_BINARY_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/llvm/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include)
+    PARENT_SCOPE)
+set(CLANG_SOURCE_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/clang/include
+    PARENT_SCOPE)
+set(CLANG_BINARY_INCLUDE_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm/tools/clang/include
+    PARENT_SCOPE)
+set(LIBGIT2_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/libgit2/include
+    PARENT_SCOPE)
+set(LIBGIT2_LINK_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/libgit2
+    PARENT_SCOPE)
+set(LIBGIT2_LIBRARIES
+    git2 z crypt
+    PARENT_SCOPE)
