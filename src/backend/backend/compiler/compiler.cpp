@@ -1,6 +1,22 @@
-/* Seashell (C) 2012 Jenny Wong, Marc Burns. */
-
-#include "compiler.h"
+/**
+ * Seashell's LLVM and Clang interface.
+ * Copyright (C) 2013 The Seashell Maintainers.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ */
 
 #include <clang/Driver/Driver.h>
 #include <clang/Driver/Compilation.h>
@@ -11,7 +27,79 @@
 #include <llvm/Support/raw_ostream.h>
 #include <vector>
 
-//int compile_one_file(const char* fileName, const char* binaryDestination="/tmp/a.out") {
+/** Seashell's compiler data structure.
+ * Opaque to Racket - make sure to pass a cleanup function
+ * to the FFI so garbage collection works properly.
+ */
+struct seashell_compiler {
+  vector<string> inputs;
+  string output;
+}
+
+/**
+ * make_seashell_compiler (void)
+ * Creates a new instance of the Seashell compiler.
+ *
+ * Returns:
+ *  A new instance.
+ *
+ * Notes:
+ *  It might be worthwhile to assign free_seashell_compiler as
+ *  the cleanup function for garbage collection in the Racket FFI.
+ */
+extern "C" struct seashell_compiler* seashell_compiler_make (void) {
+  return new seashell_compiler;
+}
+
+/**
+ * free_seashell_compiler (struct seashell_compiler* compiler)
+ * Deletes an instance of the Seashell compiler.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ */
+extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
+  delete compiler;
+}
+
+/**
+ * add_file_to_compiler (struct seashell_compiler* compiler, const char* file)
+ * Adds a file to be compiled.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  file - File to add.
+ */
+extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, cont char* file) {
+  compiler->inputs.push_back(file);
+}
+
+/**
+ * set_compiler_output (struct seashell_compiler* compiler, const char* file)
+ * Sets the compiler's output file.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  file - File to add.
+ */
+void seashell_compiler_set_output (struct seashell_compiler* compiler, const char* file) {
+  compiler->output = file;
+}
+
+/**
+ * seashell_compiler_run (struct seashell_compiler* compiler)
+ * Runs the Seashell compiler instance.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  file - File to add.
+ *
+ * Returns
+ *  0 if everything went OK, nonzero otherwise.
+ */
+int seashell_compiler_run (struct seashell_compiler* compiler) {
+}
+
 int compile_one_file(const char* fileName, const char* binaryDestination) {
     // "clang -Wall foo.c"
     //llvm::sys::Path clangExecutable = llvm::sys::Program::FindProgramByName("clang");
@@ -53,9 +141,3 @@ int compile_one_file(const char* fileName, const char* binaryDestination) {
     return Res;
 }
 
-int main() {
-    const char* fname = "test.c";
-    const char* dest = "/tmp/a.out";
-    compile_one_file(fname, dest);
-    return 0;
-}

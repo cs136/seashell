@@ -42,7 +42,7 @@ add_definitions( ${LLVM_DEFINITIONS} )
 llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core)
 
 # Link.
-add_executable(seashell-clang compiler.cpp)
+add_library(seashell-clang SHARED compiler.cpp)
 target_link_libraries(seashell-clang clangFrontend clangSerialization clangDriver
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
