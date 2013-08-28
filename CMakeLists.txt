@@ -18,4 +18,4 @@
 cmake_minimum_required(VERSION 2.6)
 
 # Build our components.
-add_subdirectory(llvm)
+add_subdirectory(lib)

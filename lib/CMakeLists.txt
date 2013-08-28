@@ -17,29 +17,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 cmake_minimum_required(VERSION 2.6)
 
-# Hacks to get Clang to build properly.
-set(CLANG_BUILD_STANDALONE 1
-    CACHE INTERNAL "Build clang as standalone.")
-set(CLANG_PATH_TO_LLVM_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/llvm"
-    CACHE INTERNAL "Path to LLVM source directory.")
-set(CLANG_PATH_TO_LLVM_BUILD "${CMAKE_CURRENT_BINARY_DIR}/llvm"
-    CACHE INTERNAL "Path to LLVM build directory.")
-
-configure_file(
-    patches/clang-3.3-CMakeLists.txt
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/clang/CMakeLists.txt
-    COPYONLY)
+# Hacks to get Clang/Compiler-RT to build:
+execute_process(COMMAND ln -s "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/tools")
+execute_process(COMMAND ln -s "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
 
 # Build our dependencies.
 add_subdirectory(llvm)
-add_subdirectory(compiler-rt)
-add_subdirectory(clang)
 add_subdirectory(libgit2)
 
 # Set include paths.
 set(LLVM_INCLUDE_DIRS
-    ${CMAKE_BINARY_DIR}/llvm/include
-    ${CMAKE_SOURCE_DIR}/llvm/include)
-set(CLANG_INCLUDE_DIRS
-    ${CMAKE_BINARY_DIR}/clang/include
-    ${CMAKE_SOURCE_DIR}/clang/include)
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include)
