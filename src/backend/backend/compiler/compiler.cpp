@@ -15,26 +15,41 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <clang/Driver/Driver.h>
 #include <clang/Driver/Compilation.h>
+#include <clang/Driver/Options.h>
+#include <clang/Driver/Tool.h>
 #include <clang/Basic/DiagnosticOptions.h>
+#include <clang/Frontend/Utils.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/FrontendDiagnostic.h>
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/FrontendTool/Utils.h>
+#include <clang/CodeGen/CodeGenAction.h>
 #include <llvm/Support/Host.h>
-#include <llvm/Support/Program.h>
-#include <llvm/Support/raw_ostream.h>
+#include <llvm/Option/ArgList.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/TargetSelect.h>
+
 #include <vector>
+#include <string>
+#include <iostream>
+
+using namespace clang;
+using namespace llvm::opt;
 
 /** Seashell's compiler data structure.
  * Opaque to Racket - make sure to pass a cleanup function
  * to the FFI so garbage collection works properly.
  */
 struct seashell_compiler {
-  vector<string> inputs;
-  string output;
-}
+  std::vector<std::string> inputs;
+  std::string output;
+};
 
 /**
  * make_seashell_compiler (void)
@@ -70,7 +85,7 @@ extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
  *  compiler - A Seashell compiler instance.
  *  file - File to add.
  */
-extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, cont char* file) {
+extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file) {
   compiler->inputs.push_back(file);
 }
 
@@ -101,43 +116,60 @@ int seashell_compiler_run (struct seashell_compiler* compiler) {
 }
 
 int compile_one_file(const char* fileName, const char* binaryDestination) {
-    // "clang -Wall foo.c"
-    //llvm::sys::Path clangExecutable = llvm::sys::Program::FindProgramByName("clang");
-    const char* clangPath = "/scratch/m4burns/llvm/bin/clang"; //clangExecutable.c_str();
-    std::vector<const char*> args;
-    args.push_back(clangPath);
+    SmallVector<const char *, 16> args;
+    args.push_back("-I/usr/include");
     args.push_back("-Wall");
     args.push_back(fileName);
+    args.push_back("-o");
+    args.push_back(binaryDestination);
 
-    // temporary. Eventually want to use something custom instead of TextDiagnosticPrinter
-    clang::DiagnosticOptions * diag_opts = new clang::DiagnosticOptions();
-    clang::TextDiagnosticPrinter *diag_client = new clang::TextDiagnosticPrinter(llvm::errs(), diag_opts);
-    //
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+    llvm::InitializeAllAsmParsers();
+
+    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(new clang::DiagnosticOptions());
+    clang::TextDiagnosticPrinter * diag_client = new clang::TextDiagnosticPrinter(llvm::errs(), &*diag_opts);
 
     clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_ID(new clang::DiagnosticIDs());
-    clang::DiagnosticsEngine *Diags = new clang::DiagnosticsEngine(diag_ID, diag_opts, diag_client);
+    clang::DiagnosticsEngine Diags(diag_ID, &*diag_opts, diag_client);
 
-    // now that the diagnostics engine is constructed, compile.
+    llvm::OwningPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
-    // TODO: possibly investigate
-    // from clang/Frontend/Utils.h:
-    // http://clang.llvm.org/doxygen/CreateInvocationFromCommandLine_8cpp_source.html
-    //clang::CompilerInvocation *CI = clang::createInvocationFromCommandLine(args, Diags);
-    clang::driver::Driver TheDriver (clangPath, llvm::sys::getDefaultTargetTriple(), binaryDestination, *Diags);
-
-    clang::OwningPtr<clang::driver::Compilation> C(TheDriver.BuildCompilation(args));
-    int Res = 0;
-    llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 32 > Commands;
-
-    if (C) {
-        Res = TheDriver.ExecuteCompilation(*C, Commands);
+    bool Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), Diags);
+    if(!Success) {
+      std::cerr << "CreateFromArgs() failed\n";
+      return 1;
     }
 
-    if (Res < 0) {
-        for(int i = 0; i < Commands.size(); i++) {
-          TheDriver.generateCompilationDiagnostics(*C, Commands[i].second);
-        }
+    clang::CompilerInstance Clang;
+    Clang.setInvocation(CI.take());
+    Clang.createDiagnostics();
+
+    if(!Clang.hasDiagnostics()) {
+      std::cerr << "createDiagnostics() failed\n";
+      return 1;
     }
-    return Res;
+
+    llvm::OwningPtr<clang::CodeGenAction> Act(new clang::EmitAssemblyAction());
+    Success = Clang.ExecuteAction(*Act);
+    if(!Success) {
+      std::cerr << "Could not execute EmitAssemblyAction.\n";
+      return 1;
+    }
+
+    llvm::Module * mod = Act->takeModule();
+
+    mod->print(llvm::errs(), NULL);
+
+    return !Success;
+}
+
+int derp() {
+  if(compile_one_file("foo.c", "foo.out")) {
+    std::cerr << "not successful\n";
+  } else {
+    std::cerr << "successful\n";
+  }
 }
 
