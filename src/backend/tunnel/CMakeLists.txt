@@ -15,7 +15,11 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-cmake_minimum_required(VERSION 2.6)
 
-# Components
-add_subdirectory(backend)
+# Main library: seashell-tunnel
+add_executable(seashell-tunnel tunnel.c)
+
+# Dependency: libssh2
+find_package(LIBSSH2 REQUIRED)
+include_directories(${LIBSSH2_INCLUDE_DIR})
+target_link_libraries(seashell-tunnel ${LIBSSH2_LIBRARIES})

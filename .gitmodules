@@ -1,0 +1,15 @@
+[submodule "lib/codemirror"]
+	path = lib/codemirror
+	url = https://github.com/marijnh/CodeMirror.git
+[submodule "lib/llvm"]
+	path = lib/llvm
+	url = http://llvm.org/git/llvm.git
+[submodule "lib/clang"]
+	path = lib/clang
+	url = http://llvm.org/git/clang.git
+[submodule "lib/compiler-rt"]
+	path = lib/compiler-rt
+	url = http://llvm.org/git/compiler-rt.git
+[submodule "lib/libgit2"]
+	path = lib/libgit2
+	url = https://github.com/libgit2/libgit2.git
