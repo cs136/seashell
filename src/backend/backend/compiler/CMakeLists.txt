@@ -38,6 +38,9 @@ include_directories( ${CLANG_SOURCE_INCLUDE_DIRS} )
 include_directories( ${CLANG_BINARY_INCLUDE_DIRS} )
 add_definitions( ${LLVM_DEFINITIONS} )
 
+# Set the required flags
+SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
+
 # Grab the core LLVM components.
 llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core bitreader asmparser irreader)
 
