@@ -17,4 +17,4 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 add_subdirectory(compiler)
-#add_subdirectory(git)
+add_subdirectory(git)
