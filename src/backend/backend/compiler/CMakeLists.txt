@@ -39,10 +39,11 @@ include_directories( ${CLANG_BINARY_INCLUDE_DIRS} )
 add_definitions( ${LLVM_DEFINITIONS} )
 
 # Grab the core LLVM components.
-llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core)
+llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core bitreader asmparser irreader)
 
 # Link.
-add_library(seashell-clang SHARED compiler.cpp)
+#add_library(seashell-clang SHARED compiler.cpp)
+add_executable(seashell-clang compiler.cpp)
 target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGen
                               clangSerialization clangDriver
                               clangTooling clangParse clangSema clangAnalysis
