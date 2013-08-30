@@ -15,9 +15,10 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <git2.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include <string>
@@ -49,13 +50,13 @@ extern "C" const char* seashell_git_error (void) {
 }
 
 /**
- * seashell_git_clone (const char* repository, const char* target) 
+ * seashell_git_clone (const char* repository, const char* target)
  * Clones repository into target.
  *
  * Arguments:
  *  repository - Source repository.
  *  target - Target directory.
- * 
+ *
  * Returns:
  *  0 on success, nonzero otherwise.  Consult seashell_git_error.
  */
@@ -119,7 +120,7 @@ extern "C" struct seashell_git_update* seashell_git_commit_init (const char* tar
 
 /**
  * seashell_git_commit_add (struct seashell_git_update* update, const char* file)
- * Adds a file to the git update target. 
+ * Adds a file to the git update target.
  *
  * Arguments:
  *  update - Seashell git commit update.
@@ -163,8 +164,8 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
   git_tree* tree = NULL;
   char *gecos = NULL, *user = NULL;
 
-  if (!passwd) 
-   return 1; 
+  if (!passwd)
+   return 1;
 
   /** Parse the darned gecos field. */
   gecos = strdup(passwd->pw_gecos);
@@ -172,8 +173,8 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
     goto end;
 
   user = strtok(gecos, ",");
-  
-  /** Set up the commit signature. */ 
+
+  /** Set up the commit signature. */
   ret = git_signature_new(&authour, user ? user : passwd->pw_name,
      passwd->pw_name, time(NULL), 0);
   if (ret)
@@ -185,7 +186,7 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
 
   /** Open the repository. */
   ret = git_repository_open(&repo, update->target.c_str());
-  if (ret) 
+  if (ret)
     goto end;
 
   /** Query for the last commit. */
@@ -237,8 +238,8 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
       tree,
       1,
       parent);
-  
-  if (ret) 
+
+  if (ret)
     goto end;
 
 end:
