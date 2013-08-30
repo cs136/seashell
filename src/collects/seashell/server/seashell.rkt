@@ -1,29 +1,40 @@
-;; Seashell (C) 2012-2013 Jennifer Wong, Marc Burns.
-;;  University of Waterloo
-;; Seashell is a server-side C code editing and
-;; execution environment for web browsers.
-(module seashell racket
+#lang racket
+;; Seashell's gateway server.
+;; Copyright (C) 2013 The Seashell Maintainers.
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(module seashell-gateway racket
   (require web-server/managers/lru
            web-server/servlet
            web-server/servlet-env
            web-server/private/xexpr
            net/url
-           "seashell-config.rkt"
-           "log.rkt"
-           "format-trace.rkt"
-           "common.rkt"
-           "seashell-api.rkt")
+           "seashell-config.rkt" ;; TODO
+           seashell/log
+           seashell/format-trace
+           "common.rkt" ;; TODO
+           "seashell-api.rkt") ;; TODO
 
   ;; Entry point for every new request.
   (define (start req)
     (printf "~a~n" (request-path-string req))
     (match (request-path-string req)
-      [(regexp #rx"^/~m4burns/cas.*$")
-       (printf "Initiating CAS authentication...~n")
-       (test-cas)]
       [(regexp #rx"^/api.*$")
        (start-api req)]
-      [else (error 'seashell "Undefined action: ~a" (request-path-string req))]))
+      [else (redirect-to server-root-url temporarily)])) ;; TODO
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -31,8 +42,9 @@
 
   ;; Session expiration handler. Take users back to the application root.
   (define (session-exp-handler req)
-    (response/json '((status . #f))))
+    (redirect-to server-root-url temporarily))
 
+  ;; TODO silence stack trace when not in debug mode
   (define (seashell-pretty-exception-response url exn)
     (response/xexpr
      #:code 500
@@ -54,6 +66,7 @@
                ,@(format-stack-trace
                   (continuation-mark-set->context (exn-continuation-marks exn))))))))))
 
+  ;; TODO
   (define (seashell-servlet-error-responder url exn)
     (logf 'web-exn
           (format "Servlet (@ ~a) exception:\n~a ~a\n" (url->string url) (exn-message exn)
@@ -63,15 +76,11 @@
                            (exn-continuation-marks exn))))))
     (seashell-pretty-exception-response url exn))
 
-  (define server-root-path ".")
-
   (define (start-seashell-webserver hostname port)
     (thread
      (thunk
-      ;; Continuation manager. Timeout seems to have a subtle memory-corruption
-      ;; bug, so we'll use LRU.
-      (let ((manager (make-threshold-LRU-manager session-exp-handler (* 768 1024 1024))))
-        (serve/servlet start
+      (let ((manager (make-threshold-LRU-manager session-exp-handler (* 768 1024 1024)))) ;; TODO configurable
+        (serve/servlet start ;; TODOTODOTODO
                        #:command-line?      #t
                        #:listen-ip          hostname
                        #:port               port
@@ -131,6 +140,5 @@
   (kill-thread db-thread)
 
   (logf 'info "Seashell stopped.")
-  (sleep 0.5) ;; Cleanup time.
   (exit 0))
 

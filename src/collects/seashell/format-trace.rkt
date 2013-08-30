@@ -1,6 +1,5 @@
-#!/usr/bin/racket
-#lang racket
-;; Seashell - a C Development Environment.
+#lang racket/base
+;; Seashell collection
 ;; Copyright (C) 2013 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -17,18 +16,23 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide read-config)
+(require racket/contract)
 
-;; (read-config part) -> any/c
-;; Reads the configuration data
-;;
-;; Arguments:
-;;  part - Part of configuration data to read.
-;; Returns:
-;;  Configuration data.
-(define/contract (read-config part)
-  (-> symbol? any/c)
-  (match part
-         ['host "localhost"]
-         ['seashell (build-path (find-system-path 'home-dir' ".seashell"))]
-                                ))
+(provide
+  (contract-out
+    [format-stack-trace
+      (-> (listof (cons/c (or/c #f symbol?) (or/c #f srcloc?)))
+          (listof string?))]))
+
+(define (format-stack-trace trace)
+  (for/list ([item (in-list trace)])
+    (format "~a at:\n  ~a\n"
+            (if (car item)
+                (car item)
+                "<unknown procedure>")
+            (if (cdr item)
+                (format "line ~a, column ~a, in file ~a"
+                        (srcloc-line (cdr item))
+                        (srcloc-column (cdr item))
+                        (srcloc-source (cdr item)))
+                "<unknown location>"))))

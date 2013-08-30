@@ -1,4 +1,3 @@
-#!/usr/bin/racket
 #lang racket
 ;; Seashell's libgit2 bindings.
 ;; Copyright (C) 2013 The Seashell Maintainers.
@@ -17,10 +16,10 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require ffi/unsafe)
-(require ffi/unsafe/define)
-(require ffi/unsafe/alloc)
-(require racket/runtime-path)
+(require ffi/unsafe
+         ffi/unsafe/define
+         ffi/unsafe/alloc
+         racket/runtime-path)
 
 ;; Load the library (libseashell-git)
 (define-runtime-path libseashell-git "libseashell-git")
@@ -33,7 +32,7 @@
 (struct exn:git exn:fail ())
 
 ;; Error fetching function
-(define-git seashell_git_error (_fun -> _string)) 
+(define-git seashell_git_error (_fun -> _string))
 
 ;; (check result function) -> void?
 ;; Handles seashell-git errors correctly,

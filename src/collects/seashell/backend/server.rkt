@@ -1,4 +1,3 @@
-#!/usr/bin/racket
 #lang racket
 ;; Seashell's backend server.
 ;; Copyright (C) 2013 The Seashell Maintainers.
@@ -21,15 +20,15 @@
 
 ;; main-loop -> (nothing)
 ;; Main loop of the backend server.
-;; 
+;;
 ;; This function will not return.  This function
 ;; will exit with return code 0 if everything succeeds.
 ;;
 ;; JSON messages are read from standard input, and JSON
 ;; responses will be written to standard output.
-;; 
+;;
 ;; Incoming messages should be a JSON array.  The first
-;; field in this array should be the message type. 
+;; field in this array should be the message type.
 ;; The rest of the fields in this array are message-specific.
 ;;
 ;; Outgoing messages will be a JSON array.  The
@@ -45,7 +44,7 @@
   (match message
     ;; Informational messages.
     [`("version")
-      (write-json 
+      (write-json
         `(200 "Seashell/0"))]
     [`("ping")
       (write-json
@@ -94,5 +93,5 @@
         `(501))]
     [`("stop-project" ,project)
       (write-json
-        `(501))]) 
+        `(501))])
   (main-loop))

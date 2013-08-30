@@ -1,6 +1,6 @@
 # Seashell
 # Copyright (C) 2012-2013 The Seashell Maintainers
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -12,7 +12,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 cmake_minimum_required(VERSION 2.6)
@@ -22,15 +22,15 @@ cmake_minimum_required(VERSION 2.6)
 # Contact someone at seashell@cs.uwaterloo.ca if you're uncertain about to do
 # in this case.
 
-# It's not terribly important to keep LLVM/Clang up to date, but do so 
+# It's not terribly important to keep LLVM/Clang up to date, but do so
 # anyways as it's easier to make incremental changes to the build system.
 # We're on 3.3 as of August '13.  Expect 3.4 before the end of the year.
 
 # libgit2 should remain relatively stable.
 
 # Hacks to get Clang/Compiler-RT to build:
-execute_process(COMMAND ln -s "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/tools")
-execute_process(COMMAND ln -s "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
+execute_process(COMMAND ln -sf "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/tools")
+execute_process(COMMAND ln -sf "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
 
 # Build our dependencies.
 
@@ -67,4 +67,3 @@ set(LIBGIT2_LIBRARIES
 set(LLVM_CXX_COMPILE_FLAGS
     "-fno-rtti"
     PARENT_SCOPE)
-

@@ -1,4 +1,3 @@
-#!/usr/bin/racket
 #lang racket
 ;; Seashell's backend server.
 ;; Copyright (C) 2013 The Seashell Maintainers.
@@ -39,7 +38,7 @@
 ;; Predicate for testing if a string is a valid URL
 (define/contract (url-string? str)
   (-> string? boolean?)
-  (with-handlers 
+  (with-handlers
     ([url-exception? (lambda (exn) #f)])
     (string->url str)
     #t))
@@ -61,7 +60,7 @@
                (directory-list seashell))))
 
 ;; (new-project name) -> void?
-;; Creates a new project. 
+;; Creates a new project.
 ;;
 ;; Arguments:
 ;;  name - Name of the new project.
@@ -74,7 +73,7 @@
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project 
+         (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
     (make-directory (build-path (read-config 'seashell) name))
@@ -87,7 +86,7 @@
 ;;
 ;; source is a string which can be the following:
 ;;  * A old project, in which we clone it directly.
-;;  * A URI, in which we clone the URI.  This is useful for setting up 
+;;  * A URI, in which we clone the URI.  This is useful for setting up
 ;;    the base files for a given CS 136 assignment question.
 ;;
 ;; Arguments:
@@ -95,14 +94,14 @@
 ;;  source - See above.
 ;;
 ;; Raises:
-;;  exn:project if the project already exists.  
+;;  exn:project if the project already exists.
 ;;  libgit2 FFI exceptions may also be raised.
 (define/contract (new-project-from-name name source)
   (-> project-name? (or/c project-name? url-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project 
+         (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
     (make-directory (build-path (read-config 'seashell) name))
@@ -120,7 +119,7 @@
 ;;  exn:project if the project does not exist.
 (define/contract (delete-project name)
   (-> project-name? void?)
-  
+
   ;; (recursive-delete-tree path)
   ;; Recursively deletes a directory tree.
   ;;
@@ -138,7 +137,7 @@
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project 
+         (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
     (recursive-delete-tree (build-path (read-config 'seashell) name))))
@@ -166,4 +165,4 @@
 (define/contract (is-project? name)
   (-> project-name? boolean?)
   ;; TODO - probably should also query git.
-  (directory-exists? (build-path (read-config 'seashell) name)))    
+  (directory-exists? (build-path (read-config 'seashell) name)))

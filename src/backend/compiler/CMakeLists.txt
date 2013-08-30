@@ -40,13 +40,15 @@ add_definitions( ${LLVM_DEFINITIONS} )
 
 # Set the required flags
 SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
-SET(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+
+# C++ 11 mode.
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 # Grab the core LLVM components.
 llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core bitreader asmparser irreader)
 
 # Link.
-add_library(seashell-clang SHARED compiler.cpp)
+add_library(seashell-clang SHARED compiler.cc)
 target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGen
                               clangSerialization clangDriver
                               clangTooling clangParse clangSema clangAnalysis

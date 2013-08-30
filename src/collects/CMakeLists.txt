@@ -17,7 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 cmake_minimum_required(VERSION 2.6)
 
-# Components
-add_subdirectory(backend)
-add_subdirectory(collects)
-add_subdirectory(frontend)
+# Global Definitions
+set(SEASHELL_COLLECTS share/collects)
+
+# Racket files to install.
+# Note that we handle everything up here to preserve path structure.
+# Do NOT install Racket files from a subdirectory.
+install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
+	FILES_MATCHING PATTERN "*.rkt")

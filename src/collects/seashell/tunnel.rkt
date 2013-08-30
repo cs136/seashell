@@ -1,4 +1,3 @@
-#!/usr/bin/racket
 #lang racket
 ;; Seashell's authentication and communications backend.
 ;; Copyright (C) 2013 The Seashell Maintainers.
@@ -55,12 +54,12 @@
 ;;
 ;;  The tunnel either will have been set up OR an exception
 ;;  would have been raised at the end of this function.
-;; 
+;;
 ;; Exceptions:
 ;;  exn:tunnel on tunnel error.
 (define/contract (tunnel-launch user password)
   (-> string? string? tunnel?)
-  
+
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
@@ -68,7 +67,7 @@
                 user
                 (read-config 'host)))
   ;; And the logger thread
-  (define status-thread 
+  (define status-thread
     (thread
      (lambda ()
        (let loop ()
@@ -81,14 +80,14 @@
          ;; EOF received - die.
          (close-input-port error))
        )))
-  
+
   ;; Set unbuffered mode for the output port, so nothing funny happens.
   (file-stream-buffer-mode out 'none)
-  
+
   ;; Write out the authentication details
   (define password-bytes (bytes-append (string->bytes/utf-8 password) (bytes 0)))
   (define password-length (bytes-length password-bytes))
-  
+
   ;; Format:
   ;;  length - 4 bytes, unsigned integer, LSB order
   ;;  method - 1 byte, 0 for password authentication.
@@ -96,7 +95,7 @@
   (write-bytes (integer->integer-bytes password-length 4 #f #f) out)
   (write-byte 0 out)
   (write-bytes password-bytes out)
-  
+
   ;; Wait on the input port and see what happens.
   (define check (read-byte in))
   (cond
@@ -117,7 +116,7 @@
     ;; Case 3 - All good.
     [(equal? check 79)
      #t])
-  
+
   ;; All good.
   (tunnel process in out status-thread))
 
