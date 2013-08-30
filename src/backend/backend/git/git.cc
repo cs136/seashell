@@ -22,6 +22,7 @@
 #include <pwd.h>
 #include <string>
 #include <vector>
+#include <string.h>
 
 using std::vector;
 using std::string;
@@ -29,6 +30,7 @@ using std::string;
 /** Structure representing a git repository update. */
 struct seashell_git_update {
   vector<string> files;
+  vector<string> files_to_delete;
   string target;
 };
 
@@ -128,6 +130,18 @@ extern "C" void seashell_git_commit_add (struct seashell_git_update* update, con
 }
 
 /**
+ * seashell_git_commit_delete (struct seashell_git_update* update, const char* file)
+ * Adds a file to be deleted to the git update target.
+ *
+ * Argument:
+ *  update - Seashell git commit update.
+ *  file - File to delete.  NOTE:  Path MUST be relative to repository.
+ */
+extern "C" void seashell_git_commit_delete (struct seashell_git_update* update, const char* file) {
+  update->files_to_delete.push_back(file);
+}
+
+/**
  * seashell_git_commit (struct seashell_git_update* update)
  * Runs the commit.
  *
@@ -147,13 +161,21 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
   struct git_signature* committer = NULL;
   git_commit* parent = NULL;
   git_tree* tree = NULL;
+  char *gecos = NULL, *user = NULL;
 
   if (!passwd) 
    return 1; 
 
+  /** Parse the darned gecos field. */
+  gecos = strdup(passwd->pw_gecos);
+  if (!gecos)
+    goto end;
+
+  user = strtok(gecos, ",");
+  
   /** Set up the commit signature. */ 
-  ret = git_signature_new(&authour, passwd->pw_name ? passwd->pw_name : passwd->pw_passwd,
-     passwd->pw_passwd, time(NULL), 0);
+  ret = git_signature_new(&authour, user ? user : passwd->pw_name,
+     passwd->pw_name, time(NULL), 0);
   if (ret)
     goto end;
   ret = git_signature_new(&committer, "Seashell",
@@ -174,17 +196,23 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
   if (ret)
     goto end;
 
-
   /** Create new commit. */
   ret = git_repository_index(&index, repo);
   if (ret)
     goto end;
-  git_index_clear(index);
+  /** Add files to update. */
   for (string file : update->files) {
     ret = git_index_add_bypath(index, file.c_str());
     if (ret)
       goto end;
   }
+  /** Remove files that need to be deleted. */
+  for (string file : update->files_to_delete) {
+    ret = git_index_remove_bypath(index, file.c_str());
+    if (ret)
+      goto end;
+  }
+  /** Write the new index. */
   ret = git_index_write(index);
   if (ret)
     goto end;
@@ -220,6 +248,7 @@ end:
   git_repository_free(repo);
   git_signature_free(authour);
   git_signature_free(committer);
+  free(gecos);
 
   return ret;
 }
