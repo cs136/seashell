@@ -19,7 +19,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/path)
 (require racket/runtime-path)
-(require "../config.rkt")
+;(require "../config.rkt")
+(require "seashell-config.rkt")
 
 (provide
  tunnel?
@@ -37,7 +38,7 @@
 ;; (tunnel-launch user password) -> tunnel?
 ;; Launches an instance of the Seashell Tunnel backend.
 ;;
-;; Configuration options (see config.rkt):
+;; Configuration options (see seashell-config.rkt):
 ;;  host - host to connect to.
 ;;
 ;; Expects:

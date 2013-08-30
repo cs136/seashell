@@ -8,7 +8,7 @@
            web-server/servlet-env
            web-server/private/xexpr
            net/url
-           "config.rkt"
+           "seashell-config.rkt"
            "log.rkt"
            "format-trace.rkt"
            "common.rkt"
