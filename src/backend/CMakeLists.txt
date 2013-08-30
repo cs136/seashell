@@ -21,9 +21,12 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
 # Configuration file
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/config.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
 
 # Components
 add_subdirectory(backend)
 add_subdirectory(server)
+
+INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h" DESTINATION include)
+INSTALL(PROGRAMS seashell-config.rkt test.rkt DESTINATION bin)

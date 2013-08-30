@@ -52,3 +52,5 @@ target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGe
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
                               ${REQ_LLVM_LIBRARIES})
+
+INSTALL(TARGETS seashell-clang RUNTIME DESTINATION bin)

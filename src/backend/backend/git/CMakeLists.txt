@@ -26,3 +26,5 @@ set(CMAKE_CXX_FLAGS "-std=c++0x" ${CMAKE_CXX_FLAGS})
 # Link.
 add_library(seashell-git SHARED git.cc)
 target_link_libraries(seashell-git ${LIBGIT2_LIBRARIES})
+
+INSTALL(TARGETS seashell-git LIBRARY DESTINATION lib)

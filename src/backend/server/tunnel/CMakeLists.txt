@@ -23,3 +23,6 @@ add_executable(seashell-tunnel tunnel.c)
 find_package(LIBSSH2 REQUIRED)
 include_directories(${LIBSSH2_INCLUDE_DIR})
 target_link_libraries(seashell-tunnel ${LIBSSH2_LIBRARIES})
+
+INSTALL(TARGETS seashell-tunnel RUNTIME DESTINATION bin)
+INSTALL(PROGRAMS tunnel.rkt DESTINATION bin)

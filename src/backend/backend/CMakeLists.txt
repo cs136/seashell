@@ -18,3 +18,6 @@
 
 add_subdirectory(compiler)
 add_subdirectory(git)
+
+INSTALL(DIRECTORY ./ DESTINATION bin
+	FILES_MATCHING PATTERN "*.rkt")
