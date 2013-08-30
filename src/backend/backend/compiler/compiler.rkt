@@ -91,7 +91,9 @@
                 (lambda(comp)
                   (let-values (((size address) (proc comp)))
                     (if address
-                      (cblock->vector address _byte size)
+                      (make-sized-byte-string
+                        (malloc size _bytes address 'nonatomic)
+                        size)
                       #f)))))
 
 (define/contract (seashell-compile-files compiler cflags ldflags sources)
@@ -99,7 +101,7 @@
         (listof string?)
         (listof string?)
         (listof path?)
-        (values (or/c vector? false?) (hash/c path? (listof seashell-diagnostic?))))
+        (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   (define c (seashell-compiler-ptr compiler))
   (define file-vec (list->vector sources))
   (seashell_compiler_clear_files c)
@@ -124,7 +126,7 @@
   (define diags
     (if (equal? linker-diags "")
         compiler-diags
-        (hash-set compiler-diags "a.out" (seashell-diagnostic "" 0 0 linker-diags))))
+        (hash-set compiler-diags (string->path "a.out") (list (seashell-diagnostic "" 0 0 linker-diags)))))
   (if (= 0 res)
     (values (seashell_compiler_get_executable c) diags)
     (values #f diags)))

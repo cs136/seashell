@@ -72,7 +72,6 @@
 
 #include <vector>
 #include <string>
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <algorithm>
@@ -82,6 +81,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <poll.h>
+#include <signal.h>
+#include <stdio.h>
 
 using namespace llvm;
 
@@ -373,7 +374,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
  *  0 if everything went OK, nonzero otherwise.
  *
  * Notes:
- *  May output additional error information to std::cerr.
+ *  May output some additional error information to stderr.
  *  seashell_llvm_setup must be called before this function.
  */
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
@@ -544,8 +545,7 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
     for(int i = 0; i < compiler->compiled_modules.size(); i++) {
       res = pipe(p);
       if(res) {
-        std::cerr << "libseashell-clang: Could not pipe()\n";
-        errors = "Internal error";
+        errors = "libseashell-clang: Could not pipe()";
         return 1;
       }
       in_pipes.push_back(std::shared_ptr<raii_pipe>(new raii_pipe(p)));
@@ -553,16 +553,14 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
 
     res = pipe(p);
     if(res) {
-      std::cerr << "libseashell-clang: Could not pipe()\n";
-      errors = "Internal error";
+      errors = "libseashell-clang: Could not pipe()";
       return 1;
     }
     std::shared_ptr<raii_pipe> out_pipe(new raii_pipe(p));
 
     res = pipe(p);
     if(res) {
-      std::cerr << "libseashell-clang: Could not pipe()\n";
-      errors = "Internal error";
+      errors = "libseashell-clang: Could not pipe()";
       return 1;
     }
     std::shared_ptr<raii_pipe> mesg_pipe(new raii_pipe(p));
@@ -599,10 +597,41 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
 
 #undef ARGPUSH
 
+    /* Fix up signals for fork/exec. */
+    struct sigaction sa_sigchld, sa_sigchld_old,
+                       sa_sigpipe, sa_sigpipe_old;
+    sigset_t blocksigs, blocksigs_old;
+    memset(&sa_sigchld, 0, sizeof(struct sigaction));
+    memset(&sa_sigpipe, 0, sizeof(struct sigaction));
+
+    sa_sigchld.sa_handler = SIG_DFL;
+    sa_sigpipe.sa_handler = SIG_IGN;
+
+    sigemptyset(&blocksigs);
+    sigaddset(&blocksigs, SIGCHLD);
+    sigaddset(&blocksigs, SIGPIPE);
+    sigprocmask(SIG_UNBLOCK, &blocksigs, &blocksigs_old);
+
+    if(sigaction(SIGCHLD, &sa_sigchld, &sa_sigchld_old) < 0) {
+      char buf[256];
+      char * err = strerror_r(errno, buf, 256);
+      fprintf(stderr, "libseashell-clang: error installing SIGCHLD: %s\n", err);
+      exit(1);
+    }
+    if(sigaction(SIGPIPE, &sa_sigpipe, &sa_sigpipe_old) < 0) {
+      char buf[256];
+      char * err = strerror_r(errno, buf, 256);
+      fprintf(stderr, "libseashell-clang: error installing SIGPIPE: %s\n", err);
+      exit(1);
+    }
+
+    /* fork/exec */
     int pid = fork();
     if(pid < 0) {
-      std::cerr << "libseashell-clang: Could not fork()\n";
-      errors = "Internal error";
+      errors = "libseashell-clang: Could not fork()";
+      sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+      sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+      sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
       return 1;
     } else if(pid == 0) {
       close(0);
@@ -619,7 +648,7 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
       if(res) {
         char buf[256];
         char * err = strerror_r(errno, buf, 256);
-        std::cerr << "libseashell-clang: Could not execute host cc: " << err << "\n";
+        fprintf(stderr, "libseashell-clang: Could not execute host cc: %s\n", err);
         exit(1);
       }
     }
@@ -657,8 +686,11 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
         } else {
           char buf[256];
           char * err = strerror_r(errno, buf, 256);
-          std::cerr << "libseashell-clang: poll() failed: " << err << "\n";
-          errors = "Internal error";
+          errors = "libseashell-clang: poll() failed: ";
+          errors += err;
+          sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+          sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+          sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
           return 1;
         }
       }
@@ -670,8 +702,11 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
             if(errno != EINTR) {
               char buf[256];
               char * err = strerror_r(errno, buf, 256);
-              std::cerr << "libseashell-clang: Could not write to pipe: " << err << "\n";
-              errors = "Internal error";
+              errors = "libseashell-clang: Could not write to pipe: ";
+              errors += err;
+              sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+              sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+              sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
               return 1;
             }
           } else {
@@ -690,8 +725,11 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
           if(errno != EINTR) {
             char buf[256];
             char * err = strerror_r(errno, buf, 256);
-            std::cerr << "libseashell-clang: Could not read from pipe: " << err << "\n";
-            errors = "Internal error";
+            errors = "libseashell-clang: Could not read from pipe: ";
+            errors += err;
+            sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+            sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+            sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
             return 1;
           }
         } else if(res == 0) {
@@ -711,8 +749,11 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
           if(errno != EINTR) {
             char buf[256];
             char * err = strerror_r(errno, buf, 256);
-            std::cerr << "libseashell-clang: Could not read from pipe: " << err << "\n";
-            errors = "Internal error";
+            errors = "libseashell-clang: Could not read from pipe: ";
+            errors += err;
+            sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+            sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+            sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
             return 1;
           }
         } else if(res == 0) {
@@ -736,15 +777,22 @@ static int link_modules(struct seashell_compiler* compiler, std::string & errors
     mesg_pipe->close();
 
     int status = 0;
-    while((res = waitpid(pid, &status, 0)) < 0) {
-      if(errno != EINTR) {
+    while((res = waitpid(pid, &status, 0)) <= 0) {
+      if(res < 0 && errno != EINTR) {
         char buf[256];
         char * err = strerror_r(errno, buf, 256);
-        std::cerr << "libseashell-clang: waitpid() failed: " << err << "\n";
-        errors = "Internal error";
+        errors = "libseashell-clang: waitpid() failed: ";
+        errors += err;
+        sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+        sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+        sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
         return 1;
       }
     }
+
+    sigaction(SIGCHLD, &sa_sigchld_old, NULL);
+    sigaction(SIGPIPE, &sa_sigpipe_old, NULL);
+    sigprocmask(SIG_SETMASK, &blocksigs_old, NULL);
 
     if(!WIFEXITED(status) || (WEXITSTATUS(status) != 0)) {
       return 1;
@@ -757,6 +805,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
                           std::string & assembly_code,
                           std::vector<seashell_diag> & compile_messages)
 {
+#define PUSHDIAG(x) compile_messages.push_back(seashell_diag(src_path, (x)))
     LLVMContext Context;
 
     std::vector<const char*> args;
@@ -780,7 +829,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
 
     bool Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), Diags);
     if(!Success) {
-      std::cerr << "libseashell-clang: clang::CompilerInvocation::CreateFromArgs() failed\n";
+      PUSHDIAG("libseashell-clang: clang::CompilerInvocation::CreateFromArgs() failed");
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -791,7 +840,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
     Clang.createDiagnostics(diag_client, false);
 
     if(!Clang.hasDiagnostics()) {
-      std::cerr << "libseashell-clang: clang::CompilerInstance::createDiagnostics() failed\n";
+      PUSHDIAG("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed");
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -800,7 +849,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
     OwningPtr<clang::CodeGenAction> Act(new clang::EmitLLVMOnlyAction());
     Success = Clang.ExecuteAction(*Act);
     if(!Success) {
-      std::cerr << "libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed\n";
+      PUSHDIAG("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed");
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -808,7 +857,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
 
     Module * mod = Act->takeModule();
     if(!mod) {
-      std::cerr << "libseashell-clang: takeModule() failed\n";
+      PUSHDIAG("libseashell-clang: takeModule() failed");
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -827,7 +876,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple, Error);
     if (!TheTarget) {
-      std::cerr << "libseashell-clang: " << Error;
+      PUSHDIAG("libseashell-clang: " + Error);
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -869,7 +918,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
                                             MCPU, FeaturesStr, Options,
                                             RelocModel, CMModel, OLvl));
     if (!target.get()) {
-      std::cerr << "libseashell-clang: Could not allocate target machine\n";
+      PUSHDIAG("libseashell-clang: Could not allocate target machine");
       std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
@@ -908,7 +957,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
 
     if (RelaxAll) {
       if (FileType != TargetMachine::CGFT_ObjectFile)
-        std::cerr << "libseashell-clang: warning: ignoring -mc-relax-all because filetype != obj";
+        PUSHDIAG("libseashell-clang: warning: ignoring -mc-relax-all because filetype != obj");
       else
         Target.setMCRelaxAll(true);
     }
@@ -925,7 +974,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
       if (!StartAfter.empty()) {
         const PassInfo *PI = PR->getPassInfo(StartAfter);
         if (!PI) {
-          std::cerr << "libseashell-clang: fatal: start-after pass is not registered\n";
+          PUSHDIAG("libseashell-clang: fatal: start-after pass is not registered\n");
           std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                       std::back_inserter(compile_messages));
           return 1;
@@ -935,7 +984,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
       if (!StopAfter.empty()) {
         const PassInfo *PI = PR->getPassInfo(StopAfter);
         if (!PI) {
-          std::cerr << "libseashell-clang: fatal: stop-after pass is not registered\n";
+          PUSHDIAG("libseashell-clang: fatal: stop-after pass is not registered");
           std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                       std::back_inserter(compile_messages));
           return 1;
@@ -945,8 +994,7 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
 
       if (Target.addPassesToEmitFile(PM, FOS, FileType, false,
                                     StartAfterID, StopAfterID)) {
-        std::cerr << "libseashell-clang: fatal: target does not support generation of this"
-                  << " file type\n";
+        PUSHDIAG("libseashell-clang: fatal: target does not support generation of this file type");
         std::copy(diag_client->messages.begin(), diag_client->messages.end(),
                     std::back_inserter(compile_messages));
         return 1;
@@ -961,5 +1009,6 @@ static int compile_module(struct seashell_compiler* compiler, const char* src_pa
                 std::back_inserter(compile_messages));
 
     return 0;
+#undef PUSHDIAG
 }
 
