@@ -17,16 +17,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 cmake_minimum_required(VERSION 2.6)
 
+# Global Definitions
+set(SEASHELL_COLLECTS share/collects/seashell-backend)
+
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
 # Configuration file
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rkt")
 
 # Components
 add_subdirectory(backend)
 add_subdirectory(server)
 
-INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h" DESTINATION include)
-INSTALL(PROGRAMS seashell-config.rkt test.rkt DESTINATION bin)
+# Racket files to install. 
+# Note that we handle everything up here to preserve path structure.
+# Do NOT install Racket files from a subdirectory.
+install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
+	FILES_MATCHING PATTERN "*.rkt")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h" DESTINATION include)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rkt" DESTINATION ${SEASHELL_COLLECTS})

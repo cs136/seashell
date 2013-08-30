@@ -19,4 +19,3 @@ cmake_minimum_required(VERSION 2.6)
 
 # Components
 add_subdirectory(tunnel)
-INSTALL(PROGRAMS seashell.rkt DESTINATION bin)

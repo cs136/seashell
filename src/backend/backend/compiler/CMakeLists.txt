@@ -17,7 +17,7 @@
 project(seashell-clang)
 
 # A convenience variable:
-set(LLVM_ROOT "${CMAKE_BINARY_DIR}/lib/llvm" CACHE INTERNAL "Root of LLVM install.")
+set(LLVM_ROOT "${CMAKE_BINARY_DIR}/lib/llvm")
 
 # A bit of a sanity check:
 if( NOT EXISTS ${LLVM_ROOT}/include/llvm )

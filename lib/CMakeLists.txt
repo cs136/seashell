@@ -33,11 +33,13 @@ execute_process(COMMAND ln -s "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/to
 execute_process(COMMAND ln -s "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
 
 # Build our dependencies.
-add_subdirectory(llvm)
+
+# LLVM overrides.
+add_subdirectory(llvm EXCLUDE_FROM_ALL)
 
 # libgit2 overrides.
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
-add_subdirectory(libgit2)
+add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 
 # Set include paths.
 set(LLVM_SOURCE_INCLUDE_DIRS
@@ -65,3 +67,4 @@ set(LIBGIT2_LIBRARIES
 set(LLVM_CXX_COMPILE_FLAGS
     "-fno-rtti"
     PARENT_SCOPE)
+
