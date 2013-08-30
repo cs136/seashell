@@ -325,10 +325,10 @@ extern "C" int seashell_compiler_get_diagnostic_column(struct seashell_compiler*
  */
 extern "C" const char * seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k) {
   if(compiler->module_messages.size() >= n) {
-    return 0;
+    return NULL;
   } else {
     if(compiler->module_messages.at(n).size() >= k) {
-      return 0;
+      return NULL;
     } else {
       return compiler->module_messages.at(n).at(k).file.c_str();
     }
@@ -346,10 +346,10 @@ extern "C" const char * seashell_compiler_get_diagnostic_file(struct seashell_co
  */
 extern "C" const char * seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k) {
   if(compiler->module_messages.size() >= n) {
-    return 0;
+    return NULL;
   } else {
     if(compiler->module_messages.at(n).size() >= k) {
-      return 0;
+      return NULL;
     } else {
       return compiler->module_messages.at(n).at(k).mesg.c_str();
     }
@@ -401,6 +401,27 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
 
     compiler->linker_messages = "";
     return 0;
+}
+
+/**
+ * seashell_compiler_get_executable (struct seashell_compiler* compiler)
+ * Returns a pointer to the resulting executable, if any.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  length - Output argument that will contain the length of the executable.
+ *
+ * Returns
+ *  A pointer to the resulting executable or NULL.
+ */
+extern "C" void * seashell_compiler_get_executable (struct seashell_compiler* compiler, int * length) {
+  if(compiler->output_executable.size() > 0) {
+    *length = compiler->output_executable.size();
+    return (void*)&compiler->output_executable.at(0);
+  } else {
+    *length = 0;
+    return NULL;
+  }
 }
 
 static void printDiagnosticOptions(raw_ostream &OS,
