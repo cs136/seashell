@@ -19,7 +19,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (struct exn:seashell-compiler exn:fail:user ())
 (struct seashell-compiler (ptr))
-(struct seashell-diagnostic (file line column message))
+(struct seashell-diagnostic (file line column message) #:transparent)
 
 (require ffi/unsafe
          ffi/unsafe/define
@@ -27,7 +27,9 @@
          ffi/unsafe/custodian
          (rename-in racket/contract (-> ->/c)))
 
-(provide  ...)
+(provide make-seashell-compiler
+         seashell-compile-files
+         seashell-diagnostic)
 
 (define-ffi-definer define-clang (ffi-lib "libseashell-clang"))
 
@@ -83,7 +85,7 @@
               (_fun _seashell_compiler-ptr -> _int))
 
 (define-clang seashell_compiler_get_executable
-              (_fun _seashell_compiler-ptr (o : _int) -> (r : _pointer) -> (values o r))
+              (_fun _seashell_compiler-ptr (o : (_ptr o _int)) -> (r : _pointer) -> (values o r))
               #:wrap
               (lambda(proc)
                 (lambda(comp)
@@ -97,7 +99,7 @@
         (listof string?)
         (listof string?)
         (listof path?)
-        (values (or/c vector? false?) (hash/c string? (listof seashell-diagnostic?))))
+        (values (or/c vector? false?) (hash/c path? (listof seashell-diagnostic?))))
   (define c (seashell-compiler-ptr compiler))
   (define file-vec (list->vector sources))
   (seashell_compiler_clear_files c)
@@ -105,19 +107,19 @@
   (seashell_compiler_clear_link_flags c)
   (for-each ((curry seashell_compiler_add_compile_flag) c) cflags)
   (for-each ((curry seashell_compiler_add_link_flag) c) ldflags)
-  (for-each ((curry seashell_compiler_add_file) c) sources)
+  (for-each ((curry seashell_compiler_add_file) c) (map path->string sources))
   (define res (seashell_compiler_run c))
   (define compiler-diags
     (foldl
       (lambda(c b) (hash-set b (car c) (cons (cdr c) (hash-ref b (car c) empty))))
       (make-immutable-hash)
       (for*/list ([i (in-range 0 (length sources))]
-                  [j (in-range 0 (seashell_compiler_get_diagnostic_count i))])
+                  [j (in-range 0 (seashell_compiler_get_diagnostic_count c i))])
         `(,(vector-ref file-vec i) .
-            ,(seashell-diagnostic (seashell_compiler_get_diagnostic_file i j)
-                                  (seashell_compiler_get_diagnostic_line i j)
-                                  (seashell_compiler_get_diagnostic_column i j)
-                                  (seashell_compiler_get_diagnostic_message i j))))))
+            ,(seashell-diagnostic (seashell_compiler_get_diagnostic_file c i j)
+                                  (seashell_compiler_get_diagnostic_line c i j)
+                                  (seashell_compiler_get_diagnostic_column c i j)
+                                  (seashell_compiler_get_diagnostic_message c i j))))))
   (define linker-diags (seashell_compiler_get_linker_messages c))
   (define diags
     (if (equal? linker-diags "")
@@ -126,6 +128,10 @@
   (if (= 0 res)
     (values (seashell_compiler_get_executable c) diags)
     (values #f diags)))
+
+(define/contract (make-seashell-compiler)
+  (->/c seashell-compiler?)
+  (seashell-compiler (seashell_compiler_make)))
 
 (void
   (register-custodian-shutdown

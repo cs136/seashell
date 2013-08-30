@@ -265,7 +265,7 @@ extern "C" const char * seashell_compiler_get_linker_messages(struct seashell_co
  *  n - Index into currently added files list.
  */
 extern "C" int seashell_compiler_get_diagnostic_count(struct seashell_compiler* compiler, int n) {
-  if(compiler->module_messages.size() >= n) {
+  if(compiler->module_messages.size() <= n) {
     return 0;
   } else {
     return compiler->module_messages.at(n).size();
@@ -282,10 +282,10 @@ extern "C" int seashell_compiler_get_diagnostic_count(struct seashell_compiler* 
  *  k - Index into file diagnostics list.
  */
 extern "C" int seashell_compiler_get_diagnostic_line(struct seashell_compiler* compiler, int n, int k) {
-  if(compiler->module_messages.size() >= n) {
+  if(compiler->module_messages.size() <= n) {
     return 0;
   } else {
-    if(compiler->module_messages.at(n).size() >= k) {
+    if(compiler->module_messages.at(n).size() <= k) {
       return 0;
     } else {
       return compiler->module_messages.at(n).at(k).line;
@@ -303,10 +303,10 @@ extern "C" int seashell_compiler_get_diagnostic_line(struct seashell_compiler* c
  *  k - Index into file diagnostics list.
  */
 extern "C" int seashell_compiler_get_diagnostic_column(struct seashell_compiler* compiler, int n, int k) {
-  if(compiler->module_messages.size() >= n) {
+  if(compiler->module_messages.size() <= n) {
     return 0;
   } else {
-    if(compiler->module_messages.at(n).size() >= k) {
+    if(compiler->module_messages.at(n).size() <= k) {
       return 0;
     } else {
       return compiler->module_messages.at(n).at(k).col;
@@ -324,10 +324,10 @@ extern "C" int seashell_compiler_get_diagnostic_column(struct seashell_compiler*
  *  k - Index into file diagnostics list.
  */
 extern "C" const char * seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k) {
-  if(compiler->module_messages.size() >= n) {
+  if(compiler->module_messages.size() <= n) {
     return NULL;
   } else {
-    if(compiler->module_messages.at(n).size() >= k) {
+    if(compiler->module_messages.at(n).size() <= k) {
       return NULL;
     } else {
       return compiler->module_messages.at(n).at(k).file.c_str();
@@ -345,10 +345,10 @@ extern "C" const char * seashell_compiler_get_diagnostic_file(struct seashell_co
  *  k - Index into file diagnostics list.
  */
 extern "C" const char * seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k) {
-  if(compiler->module_messages.size() >= n) {
+  if(compiler->module_messages.size() <= n) {
     return NULL;
   } else {
-    if(compiler->module_messages.at(n).size() >= k) {
+    if(compiler->module_messages.at(n).size() <= k) {
       return NULL;
     } else {
       return compiler->module_messages.at(n).at(k).mesg.c_str();
