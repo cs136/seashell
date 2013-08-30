@@ -18,6 +18,9 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide read-config)
 
+(define seashell-install-path
+  "@CMAKE_INSTALL_PREFIX@")
+
 ;; (read-config part) -> any/c
 ;; Reads the configuration data
 ;;
@@ -30,4 +33,5 @@
   (match part
          ['host "localhost"]
          ['seashell (build-path (find-system-path 'home-dir' ".seashell"))]
-                                ))
+         ['tunnel-binary (build-path seashell-install-path "bin" "seashell-tunnel")]
+         ))

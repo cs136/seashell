@@ -18,8 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/path)
 (require racket/runtime-path)
-;(require "../config.rkt")
-(require "seashell-config.rkt")
+(require "../../seashell-config.rkt")
 
 (provide
  tunnel?
@@ -30,7 +29,7 @@
  exn:tunnel?)
 
 (define-logger tunnel)
-(define-runtime-path tunnel-binary "seashell-tunnel")
+
 (struct tunnel (process in out status-thread))
 (struct exn:tunnel exn:fail:user ())
 
@@ -63,7 +62,7 @@
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
-                tunnel-binary
+                (read-config 'tunnel-binary)
                 user
                 (read-config 'host)))
   ;; And the logger thread
