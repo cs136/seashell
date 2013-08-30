@@ -25,7 +25,10 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rktd.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rktd")
+# Make it visible.
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Components
 add_subdirectory(compiler)
 add_subdirectory(git)
+add_subdirectory(server)
