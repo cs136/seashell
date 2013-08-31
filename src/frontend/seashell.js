@@ -79,17 +79,16 @@ function runProgram() {
                     window.ss_term_k();
                     window.ss_pipe_k();
                 }
-            }, currentFile.content);
+            }, currentFile.name);
 }
 
 // compileProgram() does not touch the UI at all and should only be
-// called by compileHandler().
+// called by compileHandler(). compileHandler() should guarantee that
+// k is defined.
 function compileProgram(k) {
 	saveFile(
 			function() {
-	// TODO compiley stuff here
-	var error_list = ""; // TODO get error_list properly from the server
-	if (k) k(error_list);
+	ss.compileProgram(k, currentFile.name);
 			});
 }
 
@@ -292,7 +291,7 @@ function closeDialogHandler(i) {
     if (fileList[i].name == currentFile.name) {
 
 		if (numberOfFiles == 1) {
-			// TODO properly handle closing when there's only one tab
+			// TODO properly handle the closing of one tab
 			fileList[i].tab.hide();
 			fileList[i] = null;
 			editor.focus();
@@ -409,7 +408,6 @@ function submitHandler() {
 function compileHandler(k) {
 	compileProgram(
 			function(error_list) {
-				// TODO check if there are any errors
 				result_cb(error_list);
 				ClangMessages.highlightErrors();
 				// else
