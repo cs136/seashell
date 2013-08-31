@@ -200,7 +200,7 @@ function getFile(k, name) {
 function MakeFileCallbackA(i, flist) {
     return function(event) {
         event.stopPropagation();
-        openFile(flist[i][1], FileListToHTML);
+        openFileHandler(flist[i][1], FileListToHTML);
         var e = new Event("keydown");
         e.keyCode = 27;
         $('.CodeMirror-dialog').remove();
@@ -232,7 +232,7 @@ function FileListToHTML(flist) {
     }
 }
 
-function openFile(name) {
+function openFileHandler(name) {
     if (name == "") return;
 
     // if file is already open, don't open it twice
@@ -263,13 +263,13 @@ function openFile(name) {
     }, name);
 }
 
-function openFileHandler() {
+function openDialogHandler() {
     if ($('.CodeMirror-dialog').length) {
         $('.CodeMirror-dialog').remove();
     } else {
         editor.openDialog(
                 "<ul id='file-list'></ul>" + makeFilePrompt('File name'),
-                openFile);
+                openFileHandler);
 
         ss.getDirListing('/', FileListToHTML);
     }
@@ -507,7 +507,7 @@ function setUpUI() {
         });
     editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {
-                openFileHandler();
+                openDialogHandler();
             },
                 "Ctrl-N": function(cm) {
                     newFileHandler();
@@ -577,7 +577,7 @@ function setUpUI() {
     $("#run").click(runHandler);
     $("#run-input").click(runInputHandler);
     $("#saveas-file").click(saveAsHandler);
-    $("#open-file").click(openFileHandler);
+    $("#open-file").click(openDialogHandler);
     $("#new-file").click(newFileHandler);
 
     /** settings glue **/
