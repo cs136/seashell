@@ -276,11 +276,11 @@ function openDialogHandler() {
 }
 
 /* fi is the index of some file in fileList. */
-function closeFile(i) {
+function closeDialogHandler(i) {
 
     //TODO callback not being called. Investigate.
-//    editor.openDialog('Are you sure? <button>No, don\'t close file</button> <input type="button">Yes, close file</input>',
-//            function(foo) {
+    editor.openConfirm('Are you sure? <button>Close file</button><button>Cancel</button>',
+			[ function(foo) {
     var j;
     if (fileList[i].name == currentFile.name) {
 
@@ -302,7 +302,7 @@ function closeFile(i) {
         editor.focus();
         return;
     }
-//            });
+            }, undefined]);
 }
 
 function newFileHandler() {
@@ -334,7 +334,7 @@ function makeNewTab(file) {
     $("#tab" + file.index + " .tabclose").click(
             function(event) {
                 event.stopPropagation();
-                closeFile(file.index);
+                closeDialogHandler(file.index);
             });
 }
 
