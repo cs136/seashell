@@ -278,12 +278,19 @@ function openDialogHandler() {
 /* fi is the index of some file in fileList. */
 function closeDialogHandler(i) {
 
-    //TODO callback not being called. Investigate.
     editor.openConfirm('Are you sure? <button>Close file</button><button>Cancel</button>',
 			[ function(foo) {
+	console_write("closing file...");
     var j;
     if (fileList[i].name == currentFile.name) {
 
+		if (numberOfFiles == 1) {
+			// TODO properly handle closing when there's only one tab
+			fileList[i].tab.hide();
+			fileList[i] = null;
+			editor.focus();
+			return;
+		}
         for (j = 0; j < numberOfFiles - 1; j++) {
             var offset = i - 1 - j;
             if (offset < 0) offset += numberOfFiles;
