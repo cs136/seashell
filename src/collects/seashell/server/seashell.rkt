@@ -22,7 +22,7 @@
            web-server/servlet-env
            web-server/private/xexpr
            net/url
-           "seashell-config.rkt" ;; TODO
+           seashell/seashell-config
            seashell/log
            seashell/format-trace
            "common.rkt" ;; TODO

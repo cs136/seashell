@@ -20,7 +20,7 @@
 (module seashell-run racket
   (require "log.rkt"
            "common.rkt"
-           "seashell-config.rkt")
+           seashell/seashell-config)
   (provide run-file
            kill-current-pgrm
            accept-user-input
