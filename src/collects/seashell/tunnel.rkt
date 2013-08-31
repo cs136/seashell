@@ -18,7 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/path)
 (require racket/runtime-path)
-(require "../../seashell-config.rkt")
+(require seashell/seashell-config)
 
 (provide
  tunnel?

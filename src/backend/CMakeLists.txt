@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+project(seashell-backend)
 cmake_minimum_required(VERSION 2.6)
 
 # Dependencies
@@ -23,8 +24,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeMod
 # Configuration file
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rktd.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rktd")
+
 # Make it visible.
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
