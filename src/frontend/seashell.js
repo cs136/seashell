@@ -418,15 +418,25 @@ function runInputHandler() {
 // reads off the form in #settings.
 function configureEditor() {
     var new_height = parseInt($('#editor_height').val());
-    //var new_width = parseInt($('#editor_width').val());
+    var new_width = parseInt($('#editor_width').val());
+	var new_fontsize = parseInt($('#editor_font').val());
+	$('.CodeMirror').css('font-size', new_fontsize);
+
+	// needed for heightAtLine to be correct
+	editor.refresh();
+
     if (!isNaN(new_height)) {
-        editor.setSize(null, new_height * (editor.defaultTextHeight() + 1));
+		var line_offset = parseInt(editor.heightAtLine(0, "local"));
+		var line_height = parseInt(editor.heightAtLine(1, "local")) - line_offset;
+        editor.setSize(null, 2*line_offset + (new_height + 1) * line_height);
     }
-    /*
-     if (!isNaN(new_width)) {
-     editor.setSize(new_width * (editor.defaultTextHeight()+1), null);
-     }
-     */
+    if (!isNaN(new_width)) {
+		var char_pos = editor.charCoords({line:1,ch:1}, "local");
+		var char_width = char_pos.right - char_pos.left;
+		// TODO
+		editor.setSize(50 + char_pos.left + new_width * (char_width), null);
+    }
+
     var editor_mode = $('#editor_mode input').filter(':checked').val();
     if (editor_mode == "vim" && !vimBindingsLoaded) {
         jQuery.getScript("codemirror/keymap/vim.js",
@@ -586,9 +596,23 @@ function setUpUI() {
     $("#settings").change(configureEditor);
     $("#settingsToggle").click(showSettings);
 
+    var editor_dimensions = editor.getScrollInfo();
+
+	var line_offset = parseInt(editor.heightAtLine(0, "local"));
+	var line_height = parseInt(editor.heightAtLine(1, "local")); - line_offset;
+
     var editor_height = parseInt($("#codeArea").css("height"));
-    var height_in_lines = Math.round(editor_height / editor.defaultTextHeight() - 1) - 1;
+    var height_in_lines = Math.ceil((editor_dimensions.clientHeight - 0*line_offset) / editor.defaultTextHeight()) - 1;
     $("#editor_height").val(String(height_in_lines));
+
+	var char_pos = editor.charCoords({line:1,ch:1}, "local");
+	var char_width = char_pos.right - char_pos.left;
+	var editor_width = parseInt($('#codeArea').css('width'));
+	var width_in_chars = Math.round(editor_dimensions.clientWidth / char_width - 1);
+	$('#editor_width').val(String(width_in_chars));
+
+	var font_size = parseInt($(".CodeMirror").css("font-size"));
+	$('#editor_font').val(String(font_size));
 
     $("#help").hide();
     $("#helpToggle").toggle(function() {
