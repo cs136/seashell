@@ -85,12 +85,45 @@ int main() {
         </div>
         <a href="#" id="helpToggle">Need help?</a>
         <div id="help">
-            <dl><dt>What's a commit?</dt>
-                <dd>The text in the editor is saved to your account on the school machines
-                once every ten seconds or so. Commits are a way to make "snapshots"
-                of your files that you can move back and forth between. For example, you
-                may wish to commit before you make potentially code-breaking changes
-                to a function.</dd>
+			<dl>
+				<dt>How does Seashell's version control work?</dt>
+				<dd>
+				<p>
+				As Seashell is browser-based and internet connections aren't
+				always reliable, Seashell automatically saves the text in the
+				editor to your account on the school machines once every ten
+				seconds or so, so any unexpected crashes won't hurt you too much.
+				</p>
+
+				<p>
+				This removes your ability to get rid of unwanted changes by 
+				closing a file with unsaved modifications however. Seashell's
+				version control lets you have the best of both worlds by
+				allowing you to commit and revert files.
+				</p>
+
+				<p>
+				Seashell's version control uses git in the backend. 
+				The user interface currently only understands how to commit and 
+				revert to the last commit, but git proper lets you do much,
+				much more than that! You can learn more about git
+				<a href="http://git-scm.com/">here</a>.
+				</p>
+				</dd>
+				<dt>What's a commit?</dt>
+				<dd><p> 
+				Commits are a way to make "snapshots" of your files 
+				<strike>that you can move back and forth between</strike>. 
+				For example, you may wish to commit before you make 
+				potentially code-breaking changes to a function.
+				</p></dd>
+				<dt>What does revert do?</dt>
+				<dd><p>
+				Revert irreversibly destroys all changes you've made in the current
+				file since your last commit. You will be asked to confirm
+				that you actually do want to revert a file, but you should
+				still be careful with this feature.
+				</p></dd>
             </dl>
             Default mode:
             These are shortcuts that will work when the editor window is focused
@@ -127,9 +160,7 @@ int main() {
 
         <h4>Known bugs and booboos</h4>
         <ul>
-            <li>Comment and uncomment don't seem to work at the moment</li>
             <li>The interface for commit is there, but it doesn't actually do anything.</li>
-            <li>Settings are only half-implemented right now and kind of ugly</li>
             <li>The console isn't very useful (ideally you'll be able to type stuff into it as well as read from it)</li>
         </ul>
 
