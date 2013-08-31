@@ -82,9 +82,15 @@ function runProgram() {
             }, currentFile.content);
 }
 
-// eventually: parse clang output. Codemirror will let you jump around to arbitrary lines/positions
-// and hilight bits of code. Should also probably be asynchronous.
-function compileProgram() {
+// compileProgram() does not touch the UI at all and should only be
+// called by compileHandler().
+function compileProgram(k) {
+	saveFile(
+			function() {
+	// TODO compiley stuff here
+	var error_list = ""; // TODO get error_list properly from the server
+	if (k) k(error_list);
+			});
 }
 
 function mark_changed(instance, chobj) {
@@ -124,7 +130,8 @@ function makeFilePrompt2(str, val) {
 }
 
 /** as a general rule, the *Handler functions try to touch only
- * currentFile and the UI. **/
+ * currentFile and the UI. non-handler functions never call handler
+ * functions. **/
 
 /** handlers for buttons that only affect the client-side **/
 function toggleCommentLineHandler() {
@@ -146,14 +153,13 @@ function gotoHandler() {
     });
 }
 
-function saveAndCompile() {
-    saveFile();
-    compileProgram();
+function saveAndCompileHandler() {
+	compileHandler(undefined);
 }
 
 /** handlers for buttons that need to interact with the back-end **/
 
-function saveFile() {
+function saveFile(k) {
     if (! currentFile)
         return;
 
@@ -170,6 +176,7 @@ function saveFile() {
                     currentFile.lastSaved = (new Date()).toLocaleTimeString();
                     $('#time-saved').text(currentFile.lastSaved);
                     //console_write('Your file has been saved as ' + currentFile.name + '.');
+					if (k) k();
                 }
             },
             currentFile.name,
@@ -186,7 +193,7 @@ function saveAsHandler() {
                 } else {
                     console_write("Blank filename! Saving with old name.");
                 }
-                saveFile();
+                saveFile(undefined);
             });
 }
 
@@ -356,7 +363,7 @@ function setFirstTab(file) {
 /** will update currentFile as well **/
 function setTab(file) {
     // save previously open tab before opening new one
-    saveFile();
+    saveFile( function () {
     editor.clearHistory();
 
     // set active tab
@@ -370,6 +377,7 @@ function setTab(file) {
     currentFile = file;
     $('#time-saved').text(currentFile.lastSaved);
     mark_unchanged();
+			});
 }
 
 function switchTabHandler(forwards) {
@@ -398,8 +406,15 @@ function submitHandler() {
             });
 }
 
-function compileHandler() {
-    saveFile();
+function compileHandler(k) {
+	compileProgram(
+			function(error_list) {
+				// TODO check if there are any errors
+				result_cb(error_list);
+				ClangMessages.highlightErrors();
+				// else
+				if (k) k();
+			});
     /*if (!compiled) {
      // TODO compile file
      compiled = true;
@@ -410,9 +425,10 @@ function compileHandler() {
 }
 
 function runHandler() {
-    saveFile();
+    compileHandler(
+			function () {
     runProgram();
-    ClangMessages.highlightErrors();
+			});
 }
 
 function runInputHandler() {
@@ -520,7 +536,7 @@ function setUpUI() {
                 }});
     editor.on('change', function() {
           clearTimeout(delay);
-          delay = setTimeout(saveAndCompile, delayTime);
+          delay = setTimeout(saveAndCompileHandler, delayTime);
         });
     editor.setOption('extraKeys',
             {"Ctrl-O": function(cm) {
@@ -590,7 +606,7 @@ function setUpUI() {
     $("#clear-console").click(function() {
         ss_console.setValue('')
     });
-    $("#compile").click(compileHandler);
+    $("#compile").click(saveAndCompileHandler);
     $("#run").click(runHandler);
     $("#run-input").click(runInputHandler);
     $("#saveas-file").click(saveAsHandler);
