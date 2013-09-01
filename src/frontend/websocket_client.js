@@ -5,7 +5,7 @@ var websocket;
 ws.init = function() {
 	websocket = new WebSocket(wsUri);
 	websocket.onmessage = function(evt) {
-			response = JSON.parse(evt);
+			response = JSON.parse(evt.data);
 			if (response.callback)
 				response.callback(response.ret);
 			websocket.close();
