@@ -682,6 +682,15 @@ seashell_new(
                             alert("Couldn't authenticate as ctdalek!");
                             // TODO maybe make failure pretty? Haha.
                         }
+
+						// I don't know where this should go.
+						jQuery.getScript("websocket_client.js",
+								function(script, textStatus, jqXHR) {
+									// TODO
+									return;
+								}
+								);
+
                         setUpUI();
                     },
                     "ctdalek", "exterminate");
