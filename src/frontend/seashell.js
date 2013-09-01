@@ -196,6 +196,21 @@ function saveAsHandler() {
             });
 }
 
+function revertHandler() {
+    editor.openConfirm('Are you sure? <button>Revert file</button><button>Cancel</button>',
+			[function(foo) {
+				revertFile(function(msg) {
+						console_write("Reverted file " + msg.name);
+				},
+				currentFile.name);
+			},
+			undefined]);
+}
+
+function revertFile(k, name) {
+	ws.revertFile(k, name);
+}
+
 // applies k to the contents of name as a \n-delimited string
 function getFile(k, name) {
     ss.loadFile(k, name);
@@ -608,6 +623,7 @@ function setUpUI() {
     $("#run").click(runHandler);
     $("#run-input").click(runInputHandler);
     $("#saveas-file").click(saveAsHandler);
+    $("#revert-file").click(revertHandler);
     $("#open-file").click(openDialogHandler);
     $("#new-file").click(newFileHandler);
 

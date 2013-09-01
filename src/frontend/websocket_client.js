@@ -38,6 +38,14 @@ ws.saveFile = function(k, file_name, file_content) {
 	websocket.send(JSON.stringify(msg));
 };
 
+ws.revertFile = function(k, file_name) {
+	var msg = {};
+	msg.type = "revertFile";
+	msg.file_name = file_name;
+	msg.callback = k;
+	websocket.send(JSON.stringify(msg));
+};
+
 ws.compileProgram = function(k, file_name) {
 	var msg = {};
 	msg.type = "compileProgram";
