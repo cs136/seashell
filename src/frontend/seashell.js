@@ -230,7 +230,7 @@ function revertHandler() {
 
 // javascript scoping is lots of "fun".
 // http://stackoverflow.com/questions/4506240/understanding-the-concept-of-javascript-callbacks-with-node-js-especially-in-lo
-function MakeFileCallbackA(i, flist) {
+function MakeFileCallback(i, flist) {
     return function(event) {
         event.stopPropagation();
         openFileHandler(flist[i][1], FileListToHTML);
@@ -239,11 +239,11 @@ function MakeFileCallbackA(i, flist) {
         $('.CodeMirror-dialog').remove();
     };
 }
-function MakeFileCallbackB(i, flist) {
+function MakeDirCallback(i, flist) {
     return function(event) {
         console_write('Changing directory to ' + flist[i][1]);
         event.stopPropagation();
-        ss.getDirListing(flist[i][1], FileListToHTML);
+        ws.getDirListing(flist[i][1], FileListToHTML);
     };
 }
 function FileListToHTML(flist) {
@@ -255,11 +255,11 @@ function FileListToHTML(flist) {
     for (var j = 0; j < n_files; j++) {
         if (dir_listing[j][0] == "f") {
             $('#file-list').append($('<li class="file">' + flist[j][1] + '</li>').click(
-                    MakeFileCallbackA(j, flist)
+                    MakeFileCallback(j, flist)
             ));
         } else { // directory
             $('#file-list').append($('<li class="dir">' + flist[j][1] + '</li>').click(
-                    MakeFileCallbackB(j, flist)
+                    MakeDirCallback(j, flist)
             ));
         }
     }
