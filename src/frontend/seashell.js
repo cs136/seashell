@@ -47,11 +47,55 @@ function ssFile(name, content) {
     numberOfFiles++;
 }
 
+/* glue between UI and websockets */
+function revertFile(k, name) {
+	ws.revertFile(k, name);
+}
+
+// applies k to the contents of name as a \n-delimited string
+function getFile(k, name) {
+    ws.loadFile(k, name);
+}
+
+// compileProgram() does not touch the UI at all and should only be
+// called by compileHandler(). compileHandler() should guarantee that
+// k is defined.
+function compileProgram(k) {
+	saveFile(
+			function() {
+	ws.compileProgram(k, currentFile.name);
+			});
+}
+
+function saveFile(k) {
+    if (! currentFile)
+        return;
+
+    // editor.getValue() is a \n-delimited string containing the text currently in the editor
+    currentFile.content = editor.getValue();
+    currentFile.history = editor.getHistory();
+
+    ws.saveFile(
+            function(res) {
+                if (!res) {
+                    alert("Could not save file. Please try again.");
+                } else {
+                    mark_unchanged();
+                    currentFile.lastSaved = (new Date()).toLocaleTimeString();
+                    $('#time-saved').text(currentFile.lastSaved);
+                    //console_write('Your file has been saved as ' + currentFile.name + '.');
+					if (k) k();
+                }
+            },
+            currentFile.name,
+            currentFile.content);
+}
+
 // I'm not sure what this should look like. It should certainly be asynchronous.
 // Maybe it should console_write(str) as it gets lines?
 // ensure currentFile is synced before calling this.
 function runProgram() {
-    ss.runFile(
+    ws.runFile(
             function(res) {
                 if (res) {
                     window.ss_pipe_k = function() {
@@ -82,15 +126,8 @@ function runProgram() {
             }, currentFile.name);
 }
 
-// compileProgram() does not touch the UI at all and should only be
-// called by compileHandler(). compileHandler() should guarantee that
-// k is defined.
-function compileProgram(k) {
-	saveFile(
-			function() {
-	ss.compileProgram(k, currentFile.name);
-			});
-}
+/* end code that touches ws.* functions */
+
 
 function mark_changed(instance, chobj) {
     compiled = false;
@@ -158,30 +195,6 @@ function saveAndCompileHandler() {
 
 /** handlers for buttons that need to interact with the back-end **/
 
-function saveFile(k) {
-    if (! currentFile)
-        return;
-
-    // editor.getValue() is a \n-delimited string containing the text currently in the editor
-    currentFile.content = editor.getValue();
-    currentFile.history = editor.getHistory();
-
-    ss.saveFile(
-            function(res) {
-                if (!res) {
-                    alert("Could not save file. Please try again.");
-                } else {
-                    mark_unchanged();
-                    currentFile.lastSaved = (new Date()).toLocaleTimeString();
-                    $('#time-saved').text(currentFile.lastSaved);
-                    //console_write('Your file has been saved as ' + currentFile.name + '.');
-					if (k) k();
-                }
-            },
-            currentFile.name,
-            currentFile.content);
-}
-
 /** may decide to save file under a different name. **/
 function saveAsHandler() {
     editor.openDialog(makeFilePrompt2('Save as', currentFile.name),
@@ -205,15 +218,6 @@ function revertHandler() {
 				currentFile.name);
 			},
 			undefined]);
-}
-
-function revertFile(k, name) {
-	ws.revertFile(k, name);
-}
-
-// applies k to the contents of name as a \n-delimited string
-function getFile(k, name) {
-    ss.loadFile(k, name);
 }
 
 // javascript scoping is lots of "fun".
