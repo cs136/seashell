@@ -213,7 +213,15 @@ function revertHandler() {
     editor.openConfirm('Are you sure? <button>Revert file</button><button>Cancel</button>',
 			[function(foo) {
 				revertFile(function(msg) {
-						console_write("Reverted file " + msg.name);
+						for (var i = 0; i < numberOfFiles; i++) {
+							if (fileList[i] != null && fileList[i].name == msg.name) {
+								fileList[i].content = msg.content;
+								if (currentFile.name == msg.name) {
+									editor.setValue(msg.content);
+								}
+								console_write("Reverted file " + msg.name);
+							}
+						}
 				},
 				currentFile.name);
 			},
@@ -294,9 +302,11 @@ function openDialogHandler() {
     } else {
         editor.openDialog(
                 "<ul id='file-list'></ul>" + makeFilePrompt('File name'),
-                openFileHandler);
-
-        ss.getDirListing('/', FileListToHTML);
+				function(name) {
+					openFileHandler(name);
+					// TODO does this need to be made asynchronous?
+					ws.getDirListing('/', FileListToHTML);
+				});
     }
 }
 
