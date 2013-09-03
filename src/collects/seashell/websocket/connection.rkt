@@ -21,6 +21,8 @@
 ;; Internal data structure for the Seashell Websocket connection.
 ;;
 ;; Fields:
+;;   closed? - connection closed/dead or not?
+;;
 ;;   in/out-thread - Input/Output thread for handling fragmented packets
 ;;   and synchronization functionality.
 ;;
@@ -33,7 +35,9 @@
 ;;   cline - Connection line.
 ;;   headers - HTTP request headers.
 ;;
-;;   closed? - connection closed/dead or not?
+;;   control - Control function which deals with control frames.
+;;
+;;   mask?   - Mask connection or not.
 ;;
 ;; A connection is a synchronizable event that is ready when
 ;; seashell-websocket-read-frame will not block with synchronization result
@@ -42,15 +46,39 @@
 
 (struct seashell-websocket-connection
   ([closed? #:mutable]
-   in-thread
-   out-thread
+   [in-thread #:mutable]
+   [out-thread #:mutable]
    in-port out-port in-chan out-chan
-   cline headers)
+   cline headers
+   control mask?)
   #:transparent
   #:property prop:evt
   (lambda (conn)
     (wrap-evt (seashell-websocket-connection-in-chan conn)
               (lambda (conn) conn))))
+
+;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) -> 
+;; Creates a new WebSocket connection given in/out ports, headers,
+;; and a control function for dealing with control frames.
+;;
+;; See above for arguments details. 
+(define/contract (make-seashell-websocket-connection in-port out-port control cline headers)
+  (-> port? port? (-> seashell-websocket-connection? seashell-websocket-frame? any/c) any/c any/c boolean?)
+  (define in-chan (make-async-channel))
+  (define out-chan (make-async-channel))
+  (define conn seashell-websocket-connection #f
+                                 #f
+                                 #f
+                                 in-port out-port
+                                 in-chan out-chan
+                                 cline headers
+                                 control
+                                 mask?)
+  (set-seashell-websocket-connection-in-thread! (in-thread connection))
+  (set-seashell-websocket-connection-out-thread! (out-thread connection)
+  )
+
+                                    
 
 ;; seashell-websocket-frame
 ;; Internal data structure for a WebSocket frame.
@@ -211,11 +239,11 @@
   (write-bytes data port)
   (flush-output port))
 
-;; (in-thread port channel control)
+;; (in-thread conn)
 ;; Starts the input thread which reads frames off of the input port
 ;; and writes frames into the channel.
 ;;
-;; Arguments:
+;; Arguments (given through connection):
 ;;  port - Input port
 ;;  channel - Async channel to put completed frames in.
 ;;  control - Control function that handles any control frames sent
@@ -223,6 +251,8 @@
 ;;   this thread will die.  This is typically used to deal
 ;;   with the CLOSE control frame.
 ;;   Control will also be sent exception objects as they occur.
+;;
+;;   Note that this thread will not close the I/O ports.
 ;;
 ;; Returns:
 ;;  Thread object.  Send thread a message to make it quit.  Thread
@@ -234,14 +264,17 @@
 ;;
 ;; TODO: Might be worthwhile to support partial incomplete reads
 ;; with some sort of signaling mechanism.
-(define/contract (in-thread port channel control)
-  (-> port? async-channel? (-> seashell-websocket-frame? boolean?) thread?)
+(define/contract (in-thread port conn)
+  (-> seashell-websocket-connection? thread?)
 
   ;; Internal state for dealing with fragmented frames.
   (define fragmented-buffer #f)
   (define fragmented-opcode #f)
   (define fragmented-rsv #f)
   (define fragmented? #f)
+  (define port (seashell-websocket-connection-in-port conn))
+  (define channel (seashell-websocket-connection-in-channel conn))
+  (define control (seashell-websocket-connection-control conn))
 
   (thread
    (lambda ()
@@ -264,7 +297,7 @@
               ;; returns #f this thread will quit.  It is the responsibility
               ;; of control to close the port and everything.
               [(> (seashell-websocket-frame-opcode frame) 7)
-               (when (control frame)
+               (when (control conn frame)
                  (loop))]
               ;; Case 1 - first and only (unfragmented) frame.
               [(and (not fragmented?)
@@ -312,16 +345,20 @@
 ;; and writes frames into the port.
 ;;
 ;; Arguments:
-;;  port - Output port
-;;  channel - Async channel to read frames from.
-;;  mask? - Mask any frames we send?
+;;  conn - Seashell WebSocket connection.  This function uses
+;;  the output port, output channel, and the mask? fields of the connection.
 ;;
 ;; Returns:
 ;;  Thread object.  Send thread a message to get it to write a CLOSE
 ;;  frame into the port and then quit.
-(define/contract (out-thread port channel mask?)
-  (-> port? async-channel? boolean? thread?)
+(define/contract (out-thread conn)
+  (-> seashell-websocket-connection? boolean? thread?)
+  (define port (seashell-websocket-connection-out-port conn))
+  (define channel (seashell-websocket-connection-out-channel conn))
+  (define mask? (seashell-websocket-connection-mask? conn))
+
   ;; Internal fragmentation state.
+  ;; TODO handle sending fragmented frames. (A sequence of non-final frames followed by a final frame)
   (define fragmented? #f)
 
   (thread
