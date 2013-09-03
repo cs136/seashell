@@ -28,13 +28,13 @@
 (provide
   (contract-out
     [make-seashell-compiler
+      (-> seashell-compiler?)]
+    [seashell-compile-files
       (-> seashell-compiler?
           (listof string?)
           (listof string?)
           (listof path?)
-          (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))]
-    [seashell-compile-files
-      (-> seashell-compiler?)])
+          (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))])
     seashell-diagnostic-file
     seashell-diagnostic-line
     seashell-diagnostic-column
