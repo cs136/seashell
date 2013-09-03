@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013 The Seashell Maintainers.
 ;;
@@ -16,20 +16,24 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require openssl/sha1
-         net/base64
+(require net/base64
+         net/tcp-sig
+         openssl/sha1
+         (prefix-in raw: net/tcp-unit)
+         racket/async-channel
+         racket/contract
+         racket/list
+         racket/port
+         racket/unit
          unstable/contract
-         web-server/private/dispatch-server-unit
-         web-server/private/dispatch-server-sig
-         web-server/private/connection-manager
-         web-server/http/response
          web-server/http/request
          web-server/http/request-structs
-         net/tcp-sig
-         (prefix-in raw: net/tcp-unit)
-         racket/async-channel)
+         web-server/http/response
+         web-server/private/connection-manager
+         web-server/private/dispatch-server-sig
+         web-server/private/dispatch-server-unit)
 
-
+(provide seashell-websocket-serve)
 
 ;; handshake-solution key
 ;; Calculates the correct WebSocket handshake response to key.
@@ -48,15 +52,15 @@
 
 
 ;; (seashell-websocket-serve conn-dispatch ...)
-;; Starts a dispatching WebSocket server compliant with 
+;; Starts a dispatching WebSocket server compliant with
 ;; RFC 6455.
 ;;
 ;; Arguments:
 ;;   Consult http://docs.racket-lang.org/net/websocket.html
 ;; Returns:
 ;;   A thunk when invoked stops the Dispatching Server.
-(define/contract 
-  (seashell-websocket-serve 
+(define/contract
+  (seashell-websocket-serve
    conn-dispatch
    #:conn-headers [pre-conn-dispatch (λ (cline hs) (values empty (void)))]
    #:tcp@ [tcp@ raw:tcp@]
@@ -94,10 +98,10 @@
     (define key (header-value keyh))
     (define proth (headers-assq* #"Sec-WebSocket-Protocol" headers))
     (define prot (if proth (header-value proth) #f))
-    
+
     ;; Compute custom headers.
     (define-values (conn-headers state) (pre-conn-dispatch cline headers))
-    
+
     ;; Write headers.
     (fprintf op "HTTP/1.1 101 Switching Protocols\r\n")
     (print-headers
@@ -112,13 +116,23 @@
       (print-headers
        op
        (list (make-header #"Sec-WebSocket-Protocol" prot))))
-    
+
     ;; Flush headers out before:
     (flush-output op)
-    
+
     ;; Starting output.
     (define conn
       (values #f cline conn-headers ip op))
     (conn-dispatch conn state))
-  1)
+  (define-unit-binding a-tcp@
+    tcp@ (import) (export tcp^))
+  (define-compound-unit/infer dispatch-server@/tcp@
+    (import dispatch-server-config^)
+    (link a-tcp@ dispatch-server@)
+    (export dispatch-server^))
+  (define-values/invoke-unit
+    dispatch-server@/tcp@
+    (import dispatch-server-config^)
+    (export dispatch-server^))
+  (serve #:confirmation-channel confirm-ch))
 

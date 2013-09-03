@@ -37,15 +37,15 @@
 ;;
 ;; A connection is a synchronizable event that is ready when
 ;; seashell-websocket-read-frame will not block with synchronization result
-;; itself. 
+;; itself.
 (require racket/async-channel)
 
-(struct seashell-websocket-connection 
-  ([closed? #:mutable]  
+(struct seashell-websocket-connection
+  ([closed? #:mutable]
    in-thread
    out-thread
-   in-port out-port in-chan out-chan 
-   cline headers) 
+   in-port out-port in-chan out-chan
+   cline headers)
   #:transparent
   #:property prop:evt
   (lambda (conn)
@@ -77,7 +77,7 @@
 ;;  (Un)masked data.
 (define/contract (mask data key)
   (-> bytes? bytes? bytes?)
-  
+
   ;; Recursive helper that mutates the byte string
   ;; to produce the unmasked version.
   (define (mask-helper data key index)
@@ -89,8 +89,8 @@
                    (bitwise-xor (bytes-ref data index)
                                 (bytes-ref key (remainder index 4))))
        (mask-helper data key (add1 index))]))
-  
-  (mask-helper (bytes-copy data) key 0)) 
+
+  (mask-helper (bytes-copy data) key 0))
 
 
 
@@ -106,24 +106,24 @@
   ;; Read the framing byte.
   (define framing-byte (read-byte in-port))
   (check-eof framing-byte)
-  
+
   ;; Extract bit information
   (define final?
     (bitwise-bit-set? framing-byte 7))
-  (define rsv-field 
+  (define rsv-field
     (bitwise-bit-field framing-byte 4 7))
   (define opcode
     (bitwise-bit-field framing-byte 0 4))
-  
+
   ;; Read first byte of length and masking information
   (define length/mask-byte (read-byte in-port))
   (check-eof length/mask-byte)
-  
+
   (define masked?
     (bitwise-bit-set? length/mask-byte 7))
   (define length
     (bitwise-bit-field length/mask-byte 0 7))
-  
+
   ;; Interpret the length field
   (cond
     ;; Read the next two bytes, and interpret it as
@@ -137,20 +137,20 @@
      (check-eof length-bs)
      (set! length (integer-bytes->integer length-bs #f #t))]
     [else void])
-  
+
   ;; Read the mask if it's set.
-  (define masking 
+  (define masking
     (if masked?
         (let ([mask-bs (read-bytes 4 in-port)])
           (check-eof mask-bs)
           mask-bs)
         #"\0\0\0\0"))
-  
+
   ;; Read data, and unmask - note XOR is symmetric.
-  (define data 
+  (define data
     (if masked? (mask (read-bytes length in-port) masking)
         (read-bytes length in-port)))
-  
+
   ;; Return the frame.
   (seashell-websocket-frame final? rsv-field opcode data))
 
@@ -165,28 +165,28 @@
 ;;
 ;; Returns:
 ;;  Nothing.
-(define/contract (send-frame frame port 
+(define/contract (send-frame frame port
                              #:mask? [mask? #f])
   (->* (seashell-websocket-frame? port?)
        (#:mask?
         boolean?)
        void?)
-  
+
   ;; Construct the framing byte
   (define framing-byte
     (bitwise-ior (seashell-websocket-frame-opcode frame)
                  (arithmetic-shift (seashell-websocket-frame-rsv frame) 4)
                  (if (seashell-websocket-frame-final? frame) 128 0)))
-  
+
   ;; Grab data
   (define data (seashell-websocket-frame-data frame))
   (when (equal? (seashell-websocket-frame-opcode frame) 1)
     (set! data (string->bytes/utf-8 data)))
   (define data-length (bytes-length data))
-  
+
   ;; Construct length and mask flag information
   (define length-bstr
-    (cond 
+    (cond
       [(< 126 data-length)
        (bytes (bitwise-ior (if mask? 128 0) data-length))]
       [(< 65536 data-length)
@@ -195,15 +195,15 @@
       [else
        (bytes-append (if mask? 255 127) (integer->integer-bytes
                                          data-length 8 #f #t))]))
-  
+
   ;; Generate a 32-bit randon number
   (define masking
     (if mask? (integer->integer-bytes data-length 4 #f #t (random 4294967087)) 0))
-  
+
   ;; Mask data
   (when mask?
     (set! data (mask data masking)))
-  
+
   ;; Write everything out
   (write-byte framing-byte port)
   (write-bytes length-bstr port)
@@ -230,19 +230,19 @@
 ;;
 ;; Notes:
 ;;  The only objects that will be written to channel will be completed frames
-;;  OR exception objects that denote a failure condition.  
-;; 
+;;  OR exception objects that denote a failure condition.
+;;
 ;; TODO: Might be worthwhile to support partial incomplete reads
 ;; with some sort of signaling mechanism.
 (define/contract (in-thread port channel control)
   (-> port? async-channel? (-> seashell-websocket-frame? boolean?) thread?)
-  
+
   ;; Internal state for dealing with fragmented frames.
   (define fragmented-buffer #f)
   (define fragmented-opcode #f)
   (define fragmented-rsv #f)
   (define fragmented? #f)
-  
+
   (thread
    (lambda ()
      (let loop ()
@@ -254,7 +254,7 @@
               ;; Got an exception - report it,
               ;; and then quit immediately.
               ;; This will be an unclean shutdown in all cases.
-              [(exn:websocket? 
+              [(exn:websocket?
                 (lambda (exn)
                   (control exn)
                   (async-channel-put channel exn)))]
@@ -296,7 +296,7 @@
                (set! fragmented? #f)
                ;; Write the entire frame to the port
                (async-channel-put channel (seashell-websocket-frame #t fragmented-rsv fragmented-opcode fragmented-buffer))
-               (loop)] 
+               (loop)]
               [else
                (raise (exn:websocket (format "Unknown frame ~a!" frame)
                                      (current-continuation-marks)))]
@@ -315,19 +315,19 @@
 ;;  port - Output port
 ;;  channel - Async channel to read frames from.
 ;;  mask? - Mask any frames we send?
-;;  
+;;
 ;; Returns:
 ;;  Thread object.  Send thread a message to get it to write a CLOSE
 ;;  frame into the port and then quit.
 (define/contract (out-thread port channel mask?)
-  (-> port? async-channel? thread?)
+  (-> port? async-channel? boolean? thread?)
   ;; Internal fragmentation state.
   (define fragmented? #f)
-  
+
   (thread
    (lambda ()
      (let loop ()
-       (define sync-result (sync (thread-receive-evt) channel))       
+       (define sync-result (sync (thread-receive-evt) channel))
        (cond
          ;; Message on the thread mailbox.
          [(eq? sync-result (thread-receive-evt))
@@ -337,8 +337,8 @@
          [else
           ;; Send the frame, repeat
           (send-frame sync-result port #:mask? mask)])))))
-          
-       
-       
-       
-       
+
+
+
+
+
