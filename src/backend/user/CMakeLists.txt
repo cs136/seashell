@@ -15,22 +15,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-project(seashell-backend)
-cmake_minimum_required(VERSION 2.6)
 
-# Dependencies
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
+# Main library: seashell-tunnel
+add_executable(seashell-user-backend user.c)
 
-# Configuration file
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
-
-# Make it visible.
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-# Components
-add_subdirectory(compiler)
-add_subdirectory(git)
-add_subdirectory(tunnel)
-add_subdirectory(login)
-add_subdirectory(user)
+install(TARGETS seashell-user-backend RUNTIME DESTINATION bin)
