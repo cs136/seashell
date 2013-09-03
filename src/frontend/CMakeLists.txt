@@ -15,4 +15,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+project(seashell-frontend)
 cmake_minimum_required(VERSION 2.6)
+
+# Global Definitions
+set(SEASHELL_FRONTEND share/frontend)
+
+# Files to install.
+install(DIRECTORY ./ DESTINATION ${SEASHELL_FRONTEND}
+	FILES_MATCHING PATTERN "*"
+  PATTERN "CMakeLists.txt" EXCLUDE
+  PATTERN "README" EXCLUDE)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/codemirror/"
+  DESTINATION "${SEASHELL_FRONTEND}/codemirror"
+  FILES_MATCHING PATTERN "*"
+  PATTERN ".git" EXCLUDE
+  PATTERN ".gitignore" EXCLUDE)
