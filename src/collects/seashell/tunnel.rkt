@@ -99,7 +99,7 @@
   (define check (read-byte in))
   (cond
     ;; Case 1 - EOF read.  Make sure the process exited cleanly.
-    [(and (equal? check eof)
+    [(and (eof-object? check)
           (begin
             (subprocess-wait process)
             (not (equal? 0 (subprocess-status process)))))

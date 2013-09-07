@@ -15,7 +15,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
+include(ExternalProject)
 
 # Implementor's note - this file will need to be updated when changing
 # versions of a library, due to changes in build system, etc.
@@ -41,6 +42,24 @@ add_subdirectory(llvm EXCLUDE_FROM_ALL)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 
+# libtomcrypt - note that we need to call with -fPIC
+ExternalProject_Add(
+  libtomcrypt
+  URL ${CMAKE_CURRENT_SOURCE_DIR}/libtomcrypt
+  CONFIGURE_COMMAND ""
+  BUILD_IN_SOURCE 1
+  BUILD_COMMAND sh -c "CFLAGS='-fPIC' make -j"
+  INSTALL_COMMAND "")
+
+# sjcl - Stanford JavaScript Crypto Library
+ExternalProject_Add(
+  sjcl
+  URL ${CMAKE_CURRENT_SOURCE_DIR}/sjcl
+  CONFIGURE_COMMAND <SOURCE_DIR>/configure --compress=none
+  BUILD_IN_SOURCE 1
+  BUILD_COMMAND make -j
+  INSTALL_COMMAND "")
+
 # Set include paths.
 set(LLVM_SOURCE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include
@@ -63,6 +82,16 @@ set(LIBGIT2_LINK_DIRS
 set(LIBGIT2_LIBRARIES
     git2 z crypt
     PARENT_SCOPE)
+set(LTC_INCLUDE_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers
+    PARENT_SCOPE)
+set(LTC_LINK_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/
+    PARENT_SCOPE)
+set(LTC_LIBRARIES
+    tomcrypt
+    PARENT_SCOPE)
+
 # Set LLVM CXX Flags
 set(LLVM_CXX_COMPILE_FLAGS
     "-fno-rtti"

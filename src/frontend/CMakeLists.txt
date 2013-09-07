@@ -22,6 +22,8 @@ cmake_minimum_required(VERSION 2.6)
 set(SEASHELL_FRONTEND share/frontend)
 
 # Files to install.
+install(FILES ${CMAKE_BINARY_DIR}/lib/sjcl-prefix/src/sjcl/sjcl.js
+  DESTINATION ${SEASHELL_FRONTEND})
 install(DIRECTORY ./ DESTINATION ${SEASHELL_FRONTEND}
 	FILES_MATCHING PATTERN "*"
   PATTERN "CMakeLists.txt" EXCLUDE
