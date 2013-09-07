@@ -22,8 +22,7 @@
          racket/runtime-path)
 
 ;; Load the library (libseashell-git)
-(define-runtime-path libseashell-git "libseashell-git")
-(define-ffi-definer define-git (ffi-lib libseashell-git))
+(define-ffi-definer define-git (ffi-lib (read-config 'seashell-git)))
 
 ;; Opaque data structure - make sure allocator/deallocator is set.
 (define _seashell_git_update (_cpointer 'seashell_git_update*))

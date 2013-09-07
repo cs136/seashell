@@ -38,7 +38,7 @@
          seashell_compiler_run
          seashell_compiler_get_executable)
 
-(define-ffi-definer define-clang (ffi-lib "libseashell-clang"))
+(define-ffi-definer define-clang (ffi-lib (read-config 'seashell-clang)))
 
 (define _seashell_compiler-ptr (_cpointer 'seashell_compiler))
 
