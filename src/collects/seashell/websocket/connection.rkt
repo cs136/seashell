@@ -43,6 +43,8 @@
 ;; seashell-websocket-read-frame will not block with synchronization result
 ;; itself.
 (require racket/async-channel)
+(provide seashell-websocket-connection?
+         make-seashell-websocket-connection)
 
 (struct seashell-websocket-connection
   ([closed? #:mutable]
@@ -57,28 +59,27 @@
     (wrap-evt (seashell-websocket-connection-in-chan conn)
               (lambda (conn) conn))))
 
-;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) -> 
+;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) ->
 ;; Creates a new WebSocket connection given in/out ports, headers,
 ;; and a control function for dealing with control frames.
 ;;
-;; See above for arguments details. 
+;; See above for arguments details.
 (define/contract (make-seashell-websocket-connection in-port out-port control cline headers)
   (-> port? port? (-> seashell-websocket-connection? seashell-websocket-frame? any/c) any/c any/c boolean?)
   (define in-chan (make-async-channel))
   (define out-chan (make-async-channel))
-  (define conn seashell-websocket-connection #f
+  (define conn (seashell-websocket-connection #f
                                  #f
                                  #f
                                  in-port out-port
                                  in-chan out-chan
                                  cline headers
                                  control
-                                 mask?)
+                                 mask?))
   (set-seashell-websocket-connection-in-thread! (in-thread connection))
-  (set-seashell-websocket-connection-out-thread! (out-thread connection)
-  )
+  (set-seashell-websocket-connection-out-thread! (out-thread connection)))
 
-                                    
+
 
 ;; seashell-websocket-frame
 ;; Internal data structure for a WebSocket frame.

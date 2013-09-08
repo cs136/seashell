@@ -56,12 +56,10 @@
     (mt-send
       log-mtx
       (cons cat
-            (with-output-to-string
-            (thunk
-              (apply printf `(,(string-append log-ts-str " ~a: " fmt)
-                              ,@(log-ts-args)
-                              ,cat
-                              ,@args))))))))
+            (apply format `(,(string-append log-ts-str " ~a: " fmt)
+                            ,@(log-ts-args)
+                            ,cat
+                            ,@args))))))
 
 ;; make-log-reader: type-regexp -> (func: -> message)
 (define (make-log-reader type-regexp)
