@@ -23,8 +23,8 @@
 
 /** Implementor's note - these functions are not thread safe. */
 
-int err = CRYPT_OK;
-prng_state prng = {0};
+static int err = CRYPT_OK;
+static prng_state prng = {0};
 
 /**
  * seashell_crypt_setup (void)
@@ -40,18 +40,14 @@ int seashell_crypt_setup(void)
 {
   uint8_t entropy[32] = {0};
 
-  if(register_cipher(&aes_desc) == -1)
+  if (register_cipher(&aes_desc) == -1)
     return 1;
 
-  err = fortuna_start(&prng);
-  if (err != CRYPT_OK)
+  if (register_prng(&fortuna_desc) == -1)
     return 1;
-  if (rng_get_bytes(entropy, sizeof(entropy), NULL) < sizeof(entropy))
-    return 1;
-  err = fortuna_add_entropy(entropy, sizeof(entropy), &prng);
-  if (err != CRYPT_OK)
-    return 1; 
-  err = fortuna_ready(&prng);
+
+  err = rng_make_prng(128, find_prng("fortuna"),
+        &prng, NULL);
   if (err != CRYPT_OK)
     return 1;
 
@@ -64,7 +60,7 @@ int seashell_crypt_setup(void)
  */
 const char* seashell_crypt_error (void) {
   if (err == CRYPT_OK)
-    return "No error!";
+    return "No error or unknown error.";
   return error_to_string(err);
 }
 
