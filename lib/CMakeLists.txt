@@ -48,7 +48,7 @@ ExternalProject_Add(
   URL ${CMAKE_CURRENT_SOURCE_DIR}/libtomcrypt
   CONFIGURE_COMMAND ""
   BUILD_IN_SOURCE 1
-  BUILD_COMMAND sh -c "CFLAGS='-fPIC' make -j"
+  BUILD_COMMAND sh -c "CFLAGS='-fPIC -g3 -DLTC_NO_ASM' GCC_34=1 IGNORE_SPEED=1 make -j"
   INSTALL_COMMAND "")
 
 # sjcl - Stanford JavaScript Crypto Library

@@ -23,5 +23,6 @@ link_directories(${LTC_LINK_DIRS})
 # Main library: seashell-crypto
 add_library(seashell-crypto SHARED crypto.c)
 target_link_libraries(seashell-crypto ${LTC_LIBRARIES})
+add_dependencies(seashell-crypto libtomcrypt)
 
 install(TARGETS seashell-crypto LIBRARY DESTINATION lib)

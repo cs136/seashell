@@ -38,15 +38,23 @@ prng_state prng = {0};
  */
 int seashell_crypt_setup(void)
 {
+  uint8_t entropy[32] = {0};
+
   if(register_cipher(&aes_desc) == -1)
     return 1;
-  if(register_hash(&sha256_desc) == -1)
+
+  err = fortuna_start(&prng);
+  if (err != CRYPT_OK)
     return 1;
-  if(register_prng(&fortuna_desc) == -1)
+  if (rng_get_bytes(entropy, sizeof(entropy), NULL) < sizeof(entropy))
     return 1;
-  if((err = rng_make_prng(256, find_prng("fortuna"),
-          &prng, NULL)) != CRYPT_OK)
+  err = fortuna_add_entropy(entropy, sizeof(entropy), &prng);
+  if (err != CRYPT_OK)
+    return 1; 
+  err = fortuna_ready(&prng);
+  if (err != CRYPT_OK)
     return 1;
+
   return 0;
 }
 
@@ -55,6 +63,8 @@ int seashell_crypt_setup(void)
  * Returns the last error that happened.
  */
 const char* seashell_crypt_error (void) {
+  if (err == CRYPT_OK)
+    return "No error!";
   return error_to_string(err);
 }
 
@@ -165,5 +175,6 @@ int seashell_make_iv (uint8_t iv[12]) {
  */
 int seashell_make_key (uint8_t key[16]) {
   unsigned long len = 16;
-  return rng_read_bytes(key, &len, NULL);
+  return rng_get_bytes(key, len, NULL);
 }
+
