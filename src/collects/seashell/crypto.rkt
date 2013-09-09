@@ -21,6 +21,7 @@
 (require racket/runtime-path)
 (require seashell/seashell-config)
 (require (prefix-in contract: racket/contract))
+(require json)
 
 (define-logger crypto)
 (struct exn:crypto exn:fail:user ())
@@ -146,3 +147,24 @@
       (raise (exn:crypto (format "Couldn't load library: ~a" 
                                  (seashell_crypt_error))
                          (current-continuation-marks))))
+
+;; To get from Racket/LibTomCrypt to SJCL
+;; write the key out, 4 bytes at a time in big-endian signed mode
+;; 
+;; Everything else can be written out as an array of raw bytes.
+;; SJCL expects the coded and tag to be in a single bytestring
+;; (coded|tag).
+(define key (bytes 255 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+(define keyA (integer-bytes->integer (subbytes key 0 4) #t #t))
+(define keyB (integer-bytes->integer (subbytes key 4 8) #t #t))
+(define keyC (integer-bytes->integer (subbytes key 8 12) #t #t))
+(define keyD (integer-bytes->integer (subbytes key 12 16) #t #t))
+(define keyL (jsexpr->string `(,keyA ,keyB ,keyC ,keyD)))
+(define authB #"authenticated")
+(define frameB #"thisisaframeoftexttrymeoutIhavemorethan32bytesfdafdsafdshkjhajhkjhjadsfhjfdsaafdsfdsafdhljfdsalkjfdsafdsfdsa")
+(define-values (iv coded tag) (seashell-encrypt key frameB authB))
+(printf "~v\n~v\n~v\n~v\n~v\n" keyL
+        (jsexpr->string (bytes->list iv))
+        (jsexpr->string (bytes->list coded))
+        (jsexpr->string (bytes->list tag))
+        (jsexpr->string (bytes->list authB)))
