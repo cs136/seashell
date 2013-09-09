@@ -21,6 +21,7 @@
          racket/function
          racket/contract
          racket/port
+         racket/async-channel
          racket/match)
 
 (provide
@@ -28,7 +29,7 @@
     [logf
       (->* (symbol? string?) #:rest (listof any/c) void?)]
     [make-log-reader
-      (-> string? (-> string?))]
+      (-> string? evt?)]
     [make-fs-logger
       (-> string? (or/c string? path?) thread?)]))
 
@@ -61,17 +62,21 @@
                             ,cat
                             ,@args))))))
 
-;; make-log-reader: type-regexp -> (func: -> message)
+;; make-log-reader: type-regexp -> evt?
 (define (make-log-reader type-regexp)
+  (define filter-chan (make-async-channel))
   (define chan (mt-subscribe log-mtx))
-  (define (next-message)
+  (define (next-message fch)
     (match
         (let
             ((msg (mt-receive chan)))
           (cons (symbol->string (car msg)) (cdr msg)))
-      [(cons (regexp type-regexp) (? string? msg)) msg]
-      [else (next-message)]))
-  next-message)
+      [(cons (regexp type-regexp) (? string? msg))
+       (async-channel-put fch msg)]
+      [else (void)])
+    (next-message fch))
+  (thread (thunk (next-message filter-chan)))
+  filter-chan)
 
 ;; make-fs-logger: type-regexp file -> thread
 (define (make-fs-logger type-regexp file)
