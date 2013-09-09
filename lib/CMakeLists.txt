@@ -55,7 +55,7 @@ ExternalProject_Add(
 ExternalProject_Add(
   sjcl
   URL ${CMAKE_CURRENT_SOURCE_DIR}/sjcl
-  CONFIGURE_COMMAND <SOURCE_DIR>/configure --compress=none
+  CONFIGURE_COMMAND <SOURCE_DIR>/configure --compress=none --with-all
   BUILD_IN_SOURCE 1
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
