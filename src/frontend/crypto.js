@@ -37,7 +37,7 @@ function SeashellCoder(key) {
  * @static
  * @param {String|Array} entropy - Entropy to add.
  */
-SeashellCoder.addEntropy(entropy) {
+function SeashellCoder.addEntropy(entropy) {
   sjcl.random.addEntropy(entropy);
 }
 
@@ -62,7 +62,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
   var codedArr = sjcl.bitArray.bitSlice(out, 0, out.bitLength() - 128);
 
   return [iv, sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
-}
+};
 
 /** Decrypts an array of bytes and verifies the extra authenticated data.
  * @param {Array} coded - encrypted frame.
@@ -84,4 +84,4 @@ SeashellCoder.prototype.decrypt = function(coded, iv, tag, plain) {
       authArr,
       128);
   return sjcl.codec.bytes.fromBits(plain);
-}
+};

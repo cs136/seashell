@@ -1,5 +1,5 @@
 #lang racket
-(require "compiler.rkt")
+(require seashell/compiler)
 
 (define cc (make-seashell-compiler))
 
