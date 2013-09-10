@@ -19,7 +19,8 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         ffi/unsafe/custodian)
+         ffi/unsafe/custodian
+         seashell/seashell-config)
 
 (provide seashell_compiler_free
          seashell_compiler_make
