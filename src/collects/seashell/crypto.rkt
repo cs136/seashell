@@ -156,7 +156,7 @@
 ;; else currently is IV, ciphertext, extra authenticated data,
 ;; GCM authentication tag, and plaintext.
 (define/contract (seashell-crypt-key->client key)
-  (-> bytes? bytes?)
+  (contract:-> bytes? bytes?)
   ;; Currently, write out the key as a JSON
   ;; list of 4 4-byte big-endian signed words.
   (define keyA (integer-bytes->integer (subbytes key 0 4) #t #t))
@@ -165,6 +165,31 @@
   (define keyD (integer-bytes->integer (subbytes key 12 16) #t #t))
   ;; Write it out as a bytestring representing [A, B, C, D]
   (jsexpr->bytes `(,keyA ,keyB ,keyC ,keyD)))
+
+;; (seashell-crypt-key->server key) -> bytes?
+;; Given an encryption key, represents it in a way that 
+;; the server side code in Racket can easily handle.
+;;
+;; This code will produce a bytestring that will be sent directly to 
+;; the Racket server.  Make sure this remains in sync with the
+;; function below.
+;;
+;; Everything else will be written out as raw bytes, and will be
+;; expected to in future versions of this library.  Everything
+;; else currently is IV, ciphertext, extra authenticated data,
+;; GCM authentication tag, and plaintext.
+(define/contract (seashell-crypt-key->server key)
+  (contract:-> bytes? bytes?)
+  key)
+
+;; (seashell-crypt-key-server-read port) -> bytes?
+;; Reads an encryption key from port that is represented in a way
+;; that the server siide code in Racket can easily handle.
+;; 
+;; See (seashell-crypt-key->server key)
+(define/contract (seashell-crypt-key-server-read port)
+  (contract:-> port? bytes?)
+  (read-bytes 16 port))
 
 (when (equal? (seashell_crypt_setup) 1)
       (raise (exn:crypto (format "Couldn't load library: ~a" 
