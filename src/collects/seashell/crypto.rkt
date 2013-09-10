@@ -195,3 +195,7 @@
       (raise (exn:crypto (format "Couldn't load library: ~a" 
                                  (seashell_crypt_error))
                          (current-continuation-marks))))
+
+(provide seashell-encrypt seashell-decrypt
+  seashell-crypt-make-key seashell-crypt-key->client
+  seashell-crypt-key->server seashell-crypt-key-server-read)

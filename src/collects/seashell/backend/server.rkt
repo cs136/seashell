@@ -16,82 +16,51 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(require seashell/crypto)
 (require json)
 
-;; main-loop -> (nothing)
-;; Main loop of the backend server.
-;;
-;; This function will not return.  This function
-;; will exit with return code 0 if everything succeeds.
-;;
-;; JSON messages are read from standard input, and JSON
-;; responses will be written to standard output.
-;;
-;; Incoming messages should be a JSON array.  The first
-;; field in this array should be the message type.
-;; The rest of the fields in this array are message-specific.
-;;
-;; Outgoing messages will be a JSON array.  The
-;; the first field of this array
-;; will hold the integral result code of executing the message.
-;; There may be message-specific fields.
-(define (main-loop)
-  ;; This is probably going to have to be tweaked to deal
-  ;; with I/O from running executables.  We're probably
-  ;; going to have to multiplex this, and put this entire thing
-  ;; in a loop with (sync)
-  (define message (read-json))
+;; Read the negotiated key from the login server, which is
+;; provided to us on standard input.
+(define key (seashell-crypt-key-server-read (current-input-port)))
+
+(define (main-loop connection state)
+  ;; TODO - probably want to sync here also on a CLOSE frame.
+  (define encrypted-frame (seashell-websocket-receive connection))
+  (match-define (opcode data)
+    (struct seashell-websocket-frame _ _ opcode data))
+  ;; Framing format (all binary bytes):
+  ;; [IV - 12 bytes][GCM tag - 16 bytes][1 byte - Auth Len][Auth Plain][Encrypted Frame]
+  (define iv (subbytes data 0 12))
+  (define tag (subbytes data 12 28))
+  (define authlen (bytes-ref data 28))
+  (define auth (subbytes data 29 (+ 29 authlen)))
+  (define encrypted (subbytes data (+ 29 authlen)))
+  (define plain (seashell-decrypt key iv tag encrypted auth))
+  ;; Parse plain as a JSON message. 
+  (define message (bytes->jsexpr plain))
   (match message
-    ;; Informational messages.
-    [`("version")
-      (write-json
-        `(200 "Seashell/0"))]
-    [`("ping")
-      (write-json
-        `(200))]
-    ;; Session control.
-    [`("quit")
-      (write-json
-        `(200 "Exiting now!"))
-      (exit 0)]
-    ;; Project manipulation.
-    [`("list-projects")
-      (write-json
-        `(200 ()))]
-    [`("new-project" ,name)
-      (write-json
-        `(501))]
-    [`("new-project-from" ,name ,old)
-      (write-json
-        `(501))]
-    [`("delete-project" ,name)
-      (write-json
-        `(501))]
-    [`("save-project" ,name)
-      (write-json
-        `(501))]
-    ;; Files in projects.
-    [`("new-file" ,project ,name)
-      (write-json
-        `(501))]
-    [`("write-to-file" ,project ,name ,contents)
-      (write-json
-        `(501))]
-    [`("read-from-file" ,project ,name)
-      (write-json
-        `(200 ""))]
-    [`("delete-file" ,project ,name)
-      (write-json
-        `(501))]
-    ;; Running projects
-    [`("run-project" ,project)
-      ;; TODO: I/O handling
-      (write-json
-        `(501))]
-    [`("test-project" ,project)
-      (write-json
-        `(501))]
-    [`("stop-project" ,project)
-      (write-json
-        `(501))])
-  (main-loop))
+    [`(hash-table
+       ('type "runProgram")
+       ('name ,name))]
+    [`(hash-table
+       ('type "compileProgram")
+       ('name ,name))]
+    [`(hash-table 
+       ('type "getListing")
+       ('project ,project))]
+    [`(hash-table 
+       ('type "loadFile")
+       ('project ,project)
+       ('name ,name))]
+    [`(hash-table
+       ('type "saveFile")
+       ('project ,project)
+       ('name ,name)
+       ('contents ,contents))]
+    [`(hash-table
+       ('type "revertFile")
+       ('project ,project)
+       ('name ,name))])
+  ;; Do some output
+  (main-loop)
+)
