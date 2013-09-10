@@ -143,28 +143,30 @@
     coded tag)
   frame)
 
+;; (seashell-crypt-key->client key) -> bytes?
+;; Given an encryption key, represents it in a way that 
+;; the client side code in JavaScript can easily handle.
+;;
+;; This code will produce a bytestring that will be sent directly to 
+;; the JavaScript.  Make sure this remains in sync with the
+;; JavaScript implementation in crypto.js
+;;
+;; Everything else will be written out as raw bytes, and will be
+;; expected to in future versions of this library.  Everything
+;; else currently is IV, ciphertext, extra authenticated data,
+;; GCM authentication tag, and plaintext.
+(define/contract (seashell-crypt-key->client key)
+  (-> bytes? bytes?)
+  ;; Currently, write out the key as a JSON
+  ;; list of 4 4-byte big-endian signed words.
+  (define keyA (integer-bytes->integer (subbytes key 0 4) #t #t))
+  (define keyB (integer-bytes->integer (subbytes key 4 8) #t #t))
+  (define keyC (integer-bytes->integer (subbytes key 8 12) #t #t))
+  (define keyD (integer-bytes->integer (subbytes key 12 16) #t #t))
+  ;; Write it out as a bytestring representing [A, B, C, D]
+  (jsexpr->bytes `(,keyA ,keyB ,keyC ,keyD)))
+
 (when (equal? (seashell_crypt_setup) 1)
       (raise (exn:crypto (format "Couldn't load library: ~a" 
                                  (seashell_crypt_error))
                          (current-continuation-marks))))
-
-;; To get from Racket/LibTomCrypt to SJCL
-;; write the key out, 4 bytes at a time in big-endian signed mode
-;; 
-;; Everything else can be written out as an array of raw bytes.
-;; SJCL expects the coded and tag to be in a single bytestring
-;; (coded|tag).
-(define key (bytes 255 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
-(define keyA (integer-bytes->integer (subbytes key 0 4) #t #t))
-(define keyB (integer-bytes->integer (subbytes key 4 8) #t #t))
-(define keyC (integer-bytes->integer (subbytes key 8 12) #t #t))
-(define keyD (integer-bytes->integer (subbytes key 12 16) #t #t))
-(define keyL (jsexpr->string `(,keyA ,keyB ,keyC ,keyD)))
-(define authB #"authenticated")
-(define frameB #"thisisaframeoftexttrymeoutIhavemorethan32bytesfdafdsafdshkjhajhkjhjadsfhjfdsaafdsfdsafdhljfdsalkjfdsafdsfdsa")
-(define-values (iv coded tag) (seashell-encrypt key frameB authB))
-(printf "~v\n~v\n~v\n~v\n~v\n" keyL
-        (jsexpr->string (bytes->list iv))
-        (jsexpr->string (bytes->list coded))
-        (jsexpr->string (bytes->list tag))
-        (jsexpr->string (bytes->list authB)))

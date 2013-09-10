@@ -21,7 +21,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/** Implementor's note - these functions are not thread safe. */
+/** Implementor's note - these functions are not thread safe. 
+ *  Also, the code present here must maintain consistent with
+ *  the code written in crypto.rkt [Racket FFI] and 
+ *  crypto.js [Client-Side JavaScript]. */
 
 static int err = CRYPT_OK;
 static prng_state prng = {0};
