@@ -2,6 +2,35 @@ var ws = {};
 var wsUri = "TODO";
 var websocket;
 
+function SeashellWebsocket(key) = {
+  this.coder = new SeashellCoder(key);
+  this.websocket = new WebSocket(wsUri);
+
+  this.websocket.onmessage = function(blob) {
+    // We receive all messages in binary,
+    // then we decrypt and extract out the nice
+    // JSON.
+    reader = new FileReader(blob);
+    reader.onloadend = function() {
+      var result = reader.result;
+ 
+      // Framing format (all binary bytes):
+      // [IV - 12 bytes][GCM tag - 16 bytes][1 byte - Auth Len][Auth Plain][Encrypted Frame]
+      var iv = new Uint8Array(result.slice(0,12));
+      var tag = new Uint8Array(result.slice(12, 28));
+      var authlen = new Uint8Array(result.slice(28, 29))[0];
+      var auth = new Uint8Array(result.slice(29, 29+authlen));
+      var encrypted = new Uint8Array(result.slice(29+authlen));
+
+      // Decode plain, and verify.
+      var plain = coder.decrypt(encrypted, iv, tag, auth);
+
+      // TODO: something with plain.
+    } 
+  };
+}
+
+// TODO - package functions up nicely.  Or not.
 ws.init = function() {
 	websocket = new WebSocket(wsUri);
 	websocket.onmessage = function(evt) {
