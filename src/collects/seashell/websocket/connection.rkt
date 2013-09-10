@@ -39,12 +39,20 @@
 ;;
 ;;   mask?   - Mask connection or not.
 ;;
+;;   last-pong - Time at which the most recent pong frame was received from the client.
+;;
 ;; A connection is a synchronizable event that is ready when
 ;; seashell-websocket-read-frame will not block with synchronization result
 ;; itself.
 (require racket/async-channel)
 (provide seashell-websocket-connection?
-         make-seashell-websocket-connection)
+         make-seashell-websocket-connection
+         make-seashell-websocket-control
+         ws-send
+         ws-recv
+         ws-recv-evt
+         ws-close!
+         ws-destroy!)
 
 (struct seashell-websocket-connection
   ([closed? #:mutable]
@@ -52,20 +60,26 @@
    [out-thread #:mutable]
    in-port out-port in-chan out-chan
    cline headers
-   control mask?)
+   control mask?
+   [last-pong #:mutable])
   #:transparent
   #:property prop:evt
   (lambda (conn)
     (wrap-evt (seashell-websocket-connection-in-chan conn)
               (lambda (conn) conn))))
 
+;; seashell-websocket-frame
+;; Internal data structure for a WebSocket frame.
+(struct seashell-websocket-frame
+  (final? rsv opcode data))
+
 ;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) ->
 ;; Creates a new WebSocket connection given in/out ports, headers,
 ;; and a control function for dealing with control frames.
 ;;
 ;; See above for arguments details.
-(define/contract (make-seashell-websocket-connection in-port out-port control cline headers)
-  (-> port? port? (-> seashell-websocket-connection? seashell-websocket-frame? any/c) any/c any/c boolean?)
+(define/contract (make-seashell-websocket-connection in-port out-port control cline headers mask?)
+  (-> port? port? (-> seashell-websocket-connection? (or/c seashell-websocket-frame? exn?) any/c) any/c any/c boolean? seashell-websocket-connection?)
   (define in-chan (make-async-channel))
   (define out-chan (make-async-channel))
   (define conn (seashell-websocket-connection #f
@@ -75,16 +89,79 @@
                                  in-chan out-chan
                                  cline headers
                                  control
-                                 mask?))
-  (set-seashell-websocket-connection-in-thread! (in-thread connection))
-  (set-seashell-websocket-connection-out-thread! (out-thread connection)))
+                                 mask?
+                                 0))
+  (set-seashell-websocket-connection-in-thread! conn (in-thread conn))
+  (set-seashell-websocket-connection-out-thread! conn (out-thread conn))
+  (pretty-print conn)
+  conn)
+
+;; (make-seashell-websocket-control) ->
+;; Evaluates to a function suitable for use as the 'control' argument to make-seashell-websocket-connection.
+(define/contract (make-seashell-websocket-control)
+  (-> (-> seashell-websocket-connection? (or/c seashell-websocket-frame? exn?) any/c))
+  (define (simple-control conn frame-or-exn)
+    (match frame-or-exn
+      [(? exn?) (raise frame-or-exn)]  ;; TODO something else
+      [(seashell-websocket-frame #t rsv 9 data) ;; ping
+       (async-channel-put (seashell-websocket-connection-out-chan conn)
+                          (seashell-websocket-frame #t 0 10 data))
+       #t]
+      [(seashell-websocket-frame #t rsv 10 data) ;; pong
+       (set-seashell-websocket-connection-last-pong! conn (current-inexact-milliseconds))]
+      [(seashell-websocket-frame #t rsv 8 data) ;; close
+       (unless (seashell-websocket-connection-closed? conn)
+         (async-channel-put (seashell-websocket-connection-out-chan conn)
+                            (seashell-websocket-frame #t 0 8 data))
+         (set-seashell-websocket-connection-closed?! conn #t))
+       #f]
+      [else (printf "warning: unhandled control frame ~a" frame-or-exn)
+            #t]))
+  simple-control)
 
 
+;; (ws-send conn bytes) ->
+;; Sends bytes over websocket connection conn.
+(define/contract (ws-send conn bytes)
+  (-> seashell-websocket-connection? bytes? void?)
+  (async-channel-put (seashell-websocket-connection-out-chan conn)
+                     (seashell-websocket-frame #t 0 2 bytes)))
 
-;; seashell-websocket-frame
-;; Internal data structure for a WebSocket frame.
-(struct seashell-websocket-frame
-  (final? rsv opcode data))
+;; (ws-recv conn bytes) ->
+;; Receives bytes synchronously from websocket connection conn.
+(define/contract (ws-recv conn)
+  (-> seashell-websocket-connection? bytes?)
+  (seashell-websocket-frame-data
+    (async-channel-get (seashell-websocket-connection-in-chan conn))))
+
+;; (ws-recv-evt conn) ->
+;; Returns an evt? that is ready when data is received from websocket connection conn.
+;; The synchronization result is the data received.
+(define/contract (ws-recv-evt conn)
+  (-> seashell-websocket-connection? evt?)
+  (wrap-evt (seashell-websocket-connection-in-chan conn) seashell-websocket-frame-data))
+
+;; (ws-close! conn) ->
+;; Closes a websocket connection. Does nothing if the connection has already been closed.
+;; Note that this routine does not close the underlying socket. See ws-destroy!.
+(define/contract (ws-close! conn)
+  (-> seashell-websocket-connection? void?)
+  (unless (seashell-websocket-connection-closed? conn)
+    (async-channel-put (seashell-websocket-connection-out-chan conn)
+                      (seashell-websocket-frame #t 0 8 #""))
+    (set-seashell-websocket-connection-closed?! conn #t)))
+
+;; (ws-destroy! conn) ->
+;; Frees all resources used by a websocket connection. Consider calling ws-close! some time
+;; before you call ws-destroy!.
+(define/contract (ws-destroy! conn)
+  (-> seashell-websocket-connection? void?)
+  (set-seashell-websocket-connection-closed?! conn #t)
+  (kill-thread (seashell-websocket-connection-in-thread conn))
+  (kill-thread (seashell-websocket-connection-out-thread conn))
+  (close-input-port (seashell-websocket-connection-in-port conn))
+  (close-output-port (seashell-websocket-connection-out-port conn))
+  (void))
 
 ;; exn:websocket
 ;; Internal websocket exception structure.
@@ -121,8 +198,6 @@
 
   (mask-helper (bytes-copy data) key 0))
 
-
-
 ;; (read-frame port) -> seashell-websocket-frame?
 ;; Reads a WebSocket frame in from port.
 ;;
@@ -133,7 +208,7 @@
 (define/contract (read-frame port)
   (-> port? seashell-websocket-frame?)
   ;; Read the framing byte.
-  (define framing-byte (read-byte in-port))
+  (define framing-byte (read-byte port))
   (check-eof framing-byte)
 
   ;; Extract bit information
@@ -145,7 +220,7 @@
     (bitwise-bit-field framing-byte 0 4))
 
   ;; Read first byte of length and masking information
-  (define length/mask-byte (read-byte in-port))
+  (define length/mask-byte (read-byte port))
   (check-eof length/mask-byte)
 
   (define masked?
@@ -158,11 +233,11 @@
     ;; Read the next two bytes, and interpret it as
     ;; a big-endian integer
     [(equal? length 126)
-     (define length-bs (read-bytes 2 in-port))
+     (define length-bs (read-bytes 2 port))
      (check-eof length-bs)
      (set! length (integer-bytes->integer length-bs #f #t))]
     [(equal? length 127)
-     (define length-bs (read-bytes 8 in-port))
+     (define length-bs (read-bytes 8 port))
      (check-eof length-bs)
      (set! length (integer-bytes->integer length-bs #f #t))]
     [else void])
@@ -170,15 +245,15 @@
   ;; Read the mask if it's set.
   (define masking
     (if masked?
-        (let ([mask-bs (read-bytes 4 in-port)])
+        (let ([mask-bs (read-bytes 4 port)])
           (check-eof mask-bs)
           mask-bs)
         #"\0\0\0\0"))
 
   ;; Read data, and unmask - note XOR is symmetric.
   (define data
-    (if masked? (mask (read-bytes length in-port) masking)
-        (read-bytes length in-port)))
+    (if masked? (mask (read-bytes length port) masking)
+        (read-bytes length port)))
 
   ;; Return the frame.
   (seashell-websocket-frame final? rsv-field opcode data))
@@ -201,6 +276,9 @@
         boolean?)
        void?)
 
+  ;; TODO debug
+  (printf "Sending frame '~a'~n" frame)
+
   ;; Construct the framing byte
   (define framing-byte
     (bitwise-ior (seashell-websocket-frame-opcode frame)
@@ -216,18 +294,20 @@
   ;; Construct length and mask flag information
   (define length-bstr
     (cond
-      [(< 126 data-length)
+      [(> 126 data-length)
        (bytes (bitwise-ior (if mask? 128 0) data-length))]
-      [(< 65536 data-length)
-       (bytes-append (if mask? 254 126) (integer->integer-bytes
+      [(> 65536 data-length)
+       (bytes-append (bytes (if mask? 254 126)) (integer->integer-bytes
                                          data-length 2 #f #t))]
       [else
-       (bytes-append (if mask? 255 127) (integer->integer-bytes
+       (bytes-append (bytes (if mask? 255 127)) (integer->integer-bytes
                                          data-length 8 #f #t))]))
+
+  (printf "Data = ~a, length = ~a, length-bstr = ~s~n" data data-length length-bstr)
 
   ;; Generate a 32-bit randon number
   (define masking
-    (if mask? (integer->integer-bytes data-length 4 #f #t (random 4294967087)) 0))
+    (if mask? (integer->integer-bytes (random 4294967087) 4 #f #t) 0))
 
   ;; Mask data
   (when mask?
@@ -236,7 +316,7 @@
   ;; Write everything out
   (write-byte framing-byte port)
   (write-bytes length-bstr port)
-  (write-bytes masking port)
+  (when mask? (write-bytes masking port))
   (write-bytes data port)
   (flush-output port))
 
@@ -265,7 +345,7 @@
 ;;
 ;; TODO: Might be worthwhile to support partial incomplete reads
 ;; with some sort of signaling mechanism.
-(define/contract (in-thread port conn)
+(define/contract (in-thread conn)
   (-> seashell-websocket-connection? thread?)
 
   ;; Internal state for dealing with fragmented frames.
@@ -274,7 +354,7 @@
   (define fragmented-rsv #f)
   (define fragmented? #f)
   (define port (seashell-websocket-connection-in-port conn))
-  (define channel (seashell-websocket-connection-in-channel conn))
+  (define channel (seashell-websocket-connection-in-chan conn))
   (define control (seashell-websocket-connection-control conn))
 
   (thread
@@ -290,9 +370,13 @@
               ;; This will be an unclean shutdown in all cases.
               [(exn:websocket?
                 (lambda (exn)
-                  (control exn)
+                  (control conn exn)
                   (async-channel-put channel exn)))]
             (define frame (read-frame port))
+
+            ;; TODO debug
+            (printf "Just read frame '~a'~n" frame)
+
             (cond
               ;; Case 0 - Control frame.  When (control frame)
               ;; returns #f this thread will quit.  It is the responsibility
@@ -353,30 +437,32 @@
 ;;  Thread object.  Send thread a message to get it to write a CLOSE
 ;;  frame into the port and then quit.
 (define/contract (out-thread conn)
-  (-> seashell-websocket-connection? boolean? thread?)
+  (-> seashell-websocket-connection? thread?)
   (define port (seashell-websocket-connection-out-port conn))
-  (define channel (seashell-websocket-connection-out-channel conn))
+  (define channel (seashell-websocket-connection-out-chan conn))
   (define mask? (seashell-websocket-connection-mask? conn))
 
   ;; Internal fragmentation state.
   ;; TODO handle sending fragmented frames. (A sequence of non-final frames followed by a final frame)
   (define fragmented? #f)
 
+  (define last-ping-send-time 0)
+
   (thread
    (lambda ()
      (let loop ()
-       (define sync-result (sync (thread-receive-evt) channel))
+       (define alrm (alarm-evt (+ last-ping-send-time 30000)))
+       (define sync-result (sync (thread-receive-evt) channel alrm))
+       (printf "out: sync-result='~a'~n" sync-result)
        (cond
-         ;; Message on the thread mailbox.
-         [(eq? sync-result (thread-receive-evt))
-          ;; Send a CLOSE frame immediately, then quit.
-          (send-frame (seashell-websocket-frame #t 0 8 #"") port #:mask? mask?)
-          #t]
+         ;; Message on the thread mailbox. Quit immediately.
+         [(eq? sync-result (thread-receive-evt)) #t]
+         ;; Ping alarm went off. Send ping, reset alarm, repeat.
+         [(eq? sync-result alrm)
+          (send-frame (seashell-websocket-frame #t 0 9 #"") port #:mask? #f)
+          (set! last-ping-send-time (current-inexact-milliseconds))
+          (loop)]
          [else
           ;; Send the frame, repeat
-          (send-frame sync-result port #:mask? mask)])))))
-
-
-
-
-
+          (send-frame sync-result port #:mask? #f)
+          (loop)])))))
