@@ -6,8 +6,9 @@
 (define (conn-dispatch wsc header-resp)
   (ws-send wsc #"Hello!")
   (let loop ()
-    (match (sync (ws-recv-evt wsc))
-      [(? bytes? data)
+    (match (sync wsc))
+      [(? seashell-websocket-connection?)
+       (define data (ws-recv wsc))
        (printf "Received message '~a'~n" data)
        (ws-send wsc (bytes-append #"You said: " data))
        (loop)]
@@ -22,7 +23,7 @@
   (seashell-websocket-serve
     conn-dispatch
     #:port 0
-    #:listen-ip "129.97.134.17"
+    #:listen-ip "0.0.0.0"
     #:max-waiting 4
     #:timeout (* 60 60)
     #:confirmation-channel conf-chan))

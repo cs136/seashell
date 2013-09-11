@@ -93,7 +93,6 @@
                                  0))
   (set-seashell-websocket-connection-in-thread! conn (in-thread conn))
   (set-seashell-websocket-connection-out-thread! conn (out-thread conn))
-  (pretty-print conn)
   conn)
 
 ;; (make-seashell-websocket-control) ->
@@ -115,7 +114,7 @@
                             (seashell-websocket-frame #t 0 8 data))
          (set-seashell-websocket-connection-closed?! conn #t))
        #f]
-      [else (printf "warning: unhandled control frame ~a" frame-or-exn)
+      [else ;; TODO - log unhandled control frame event.
             #t]))
   simple-control)
 
@@ -134,13 +133,6 @@
   (seashell-websocket-frame-data
     (async-channel-get (seashell-websocket-connection-in-chan conn))))
 
-;; (ws-recv-evt conn) ->
-;; Returns an evt? that is ready when data is received from websocket connection conn.
-;; The synchronization result is the data received.
-(define/contract (ws-recv-evt conn)
-  (-> seashell-websocket-connection? evt?)
-  (wrap-evt (seashell-websocket-connection-in-chan conn) seashell-websocket-frame-data))
-
 ;; (ws-close! conn) ->
 ;; Closes a websocket connection. Does nothing if the connection has already been closed.
 ;; Note that this routine does not close the underlying socket. See ws-destroy!.
@@ -152,7 +144,7 @@
     (set-seashell-websocket-connection-closed?! conn #t)))
 
 ;; (ws-destroy! conn) ->
-;; Frees all resources used by a websocket connection. Consider calling ws-close! some time
+;; Frees all resources used by a websocket connection. Consider calling ws-close! sometime
 ;; before you call ws-destroy!.
 (define/contract (ws-destroy! conn)
   (-> seashell-websocket-connection? void?)
@@ -170,7 +162,8 @@
 ;; Handy syntax rule for EOF checking
 (define-syntax-rule (check-eof x)
   (when (eof-object? x)
-    (error 'read-frame "Premature connection close!")))
+    (raise (exn:websocket (format "read-frame: Unexpected end of file!")
+                          (current-continuation-marks)))))
 
 ;; (mask data key) -> bytes?
 ;; Masks/Unmasks data from a WebSocket connection.
@@ -305,7 +298,7 @@
 
   (printf "Data = ~a, length = ~a, length-bstr = ~s~n" data data-length length-bstr)
 
-  ;; Generate a 32-bit randon number
+  ;; Generate a 32-bit random number
   (define masking
     (if mask? (integer->integer-bytes (random 4294967087) 4 #f #t) 0))
 
@@ -446,6 +439,7 @@
   ;; TODO handle sending fragmented frames. (A sequence of non-final frames followed by a final frame)
   (define fragmented? #f)
 
+  ;; Does this belong in the connection object?
   (define last-ping-send-time 0)
 
   (thread
@@ -453,16 +447,15 @@
      (let loop ()
        (define alrm (alarm-evt (+ last-ping-send-time 30000)))
        (define sync-result (sync (thread-receive-evt) channel alrm))
-       (printf "out: sync-result='~a'~n" sync-result)
        (cond
          ;; Message on the thread mailbox. Quit immediately.
          [(eq? sync-result (thread-receive-evt)) #t]
          ;; Ping alarm went off. Send ping, reset alarm, repeat.
          [(eq? sync-result alrm)
-          (send-frame (seashell-websocket-frame #t 0 9 #"") port #:mask? #f)
+          (send-frame (seashell-websocket-frame #t 0 9 #"") port #:mask? mask?)
           (set! last-ping-send-time (current-inexact-milliseconds))
           (loop)]
          [else
           ;; Send the frame, repeat
-          (send-frame sync-result port #:mask? #f)
+          (send-frame sync-result port #:mask? mask?)
           (loop)])))))
