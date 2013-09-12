@@ -10,7 +10,7 @@ function SeashellWebsocket(key) = {
     // We receive all messages in binary,
     // then we decrypt and extract out the nice
     // JSON.
-    reader = new FileReader(message.data);
+    reader = new FileReader();
     reader.onloadend = function() {
       var result = reader.result;
  
@@ -39,7 +39,8 @@ function SeashellWebsocket(key) = {
         request.callback(response);
       }
       reader.readAsText(blob);
-    } 
+    }
+    reader.readAsArrayBuffeer(message.data); 
   };
 }
 
