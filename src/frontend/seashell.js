@@ -47,49 +47,7 @@ function ssFile(name, content) {
     numberOfFiles++;
 }
 
-/* glue between UI and websockets */
-function revertFile(k, name) {
-	ws.revertFile(k, name);
-}
-
-// applies k to the contents of name as a \n-delimited string
-function getFile(k, name) {
-    ws.loadFile(k, name);
-}
-
-// compileProgram() does not touch the UI at all and should only be
-// called by compileHandler(). compileHandler() should guarantee that
-// k is defined.
-function compileProgram(k) {
-	saveFile(
-			function() {
-	ws.compileProgram(k, currentFile.name);
-			});
-}
-
-function saveFile(k) {
-    if (! currentFile)
-        return;
-
-    // editor.getValue() is a \n-delimited string containing the text currently in the editor
-    currentFile.content = editor.getValue();
-    currentFile.history = editor.getHistory();
-
-    ws.saveFile(
-            function(res) {
-                if (!res) {
-                    alert("Could not save file. Please try again.");
-                } else {
-                    mark_unchanged();
-                    currentFile.lastSaved = (new Date()).toLocaleTimeString();
-                    $('#time-saved').text(currentFile.lastSaved);
-                    //console_write('Your file has been saved as ' + currentFile.name + '.');
-					if (k) k();
-                }
-            },
-            currentFile.name,
-            currentFile.content);
-}
+/*
 
 // I'm not sure what this should look like. It should certainly be asynchronous.
 // Maybe it should console_write(str) as it gets lines?
@@ -104,7 +62,7 @@ function runProgram() {
                                 console_write_noeol(bytes);
                                 window.ss_pipe_k();
                             } else {
-                                /* do not poll too quickly. */
+                                // do not poll too quickly.
                                 window.setTimeout(window.ss_pipe_k, 500);
                             }
                         });
@@ -112,7 +70,7 @@ function runProgram() {
                     window.ss_term_k = function() {
                         ss.waitProgram(function(res) {
                             if (res) {
-                                /* Program terminated. */
+                                // Program terminated.
                                 window.ss_pipe_k = function() {
                                 };
                             } else {
@@ -125,6 +83,7 @@ function runProgram() {
                 }
             }, currentFile.name);
 }
+*/
 
 /* end code that touches ws.* functions */
 
@@ -153,16 +112,33 @@ function console_write_noeol(str) {
     ss_console.setOption('readOnly', true);
 }
 
+function consoleFlushMsgs(response) {
+	for (var i=0; i < response.messages.length; i++) {
+		console_write(response.messages[i]);
+	}
+	response.messages = new Array();
+	return response;
+}
+
 function makePrompt(str) {
-    return str + ': <input type="text" style="width: 3em"/>';
+    return str + ': <input class="seashell_input" type="text" style="width: 3em"/>';
 }
 
 function makeFilePrompt(str) {
-    return str + ': <input type="text" style="width: 12em"/>';
+    return str + ': <input class="seashell_input" type="text" style="width: 12em"/>';
 }
 
 function makeFilePrompt2(str, val) {
-    return str + ': <input type="text" value="' + val + '" style="width: 12em"/>';
+    return str + ': <input class="seashell_input" type="text" value="' + val + '" style="width: 12em"/>';
+}
+
+function getFileIndex(file_name) {
+	for (var i = 0; i < numberOfFiles; i++) {
+		if (fileList[i] != null && fileList[i].name == file_name) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 /** as a general rule, the *Handler functions try to touch only
@@ -189,62 +165,28 @@ function gotoHandler() {
     });
 }
 
-function saveAndCompileHandler() {
-	compileHandler(undefined);
-}
-
 /** handlers for buttons that need to interact with the back-end **/
-
-/** may decide to save file under a different name. **/
-function saveAsHandler() {
-    editor.openDialog(makeFilePrompt2('Save as', currentFile.name),
-            function(query) {
-                if (query != "") {
-                    currentFile.name = query;
-                    currentFile.tab.children(".filename-text")[0].innerHTML = query;
-                } else {
-                    console_write("Blank filename! Saving with old name.");
-                }
-                saveFile(undefined);
-            });
-}
-
-function revertHandler() {
-    editor.openConfirm('Are you sure? <button>Revert file</button><button>Cancel</button>',
-			[function(foo) {
-				revertFile(function(msg) {
-						for (var i = 0; i < numberOfFiles; i++) {
-							if (fileList[i] != null && fileList[i].name == msg.name) {
-								fileList[i].content = msg.content;
-								if (currentFile.name == msg.name) {
-									editor.setValue(msg.content);
-								}
-								console_write("Reverted file " + msg.name);
-							}
-						}
-				},
-				currentFile.name);
-			},
-			undefined]);
-}
 
 // javascript scoping is lots of "fun".
 // http://stackoverflow.com/questions/4506240/understanding-the-concept-of-javascript-callbacks-with-node-js-especially-in-lo
 function MakeFileCallback(i, flist) {
     return function(event) {
         event.stopPropagation();
-        openFileHandler(flist[i][1], FileListToHTML);
-        var e = new Event("keydown");
-        e.keyCode = 27;
-        $('.CodeMirror-dialog').remove();
+        var req = openHandler(flist[i][1]);
+		req.done(function (response) {
+					$('.CodeMirror-dialog').remove();
+				});
     };
 }
 function MakeDirCallback(i, flist) {
     return function(event) {
         console_write('Changing directory to ' + flist[i][1]);
         event.stopPropagation();
-        ws.getDirListing(flist[i][1], FileListToHTML);
-    };
+        getDirListing(flist[i][1])
+			.done(function (response) {
+				FileListToHTML(response.file_list);
+			});
+	};
 }
 function FileListToHTML(flist) {
     // not sure dir_listing needs to be kept around.
@@ -265,48 +207,49 @@ function FileListToHTML(flist) {
     }
 }
 
-function openFileHandler(name) {
-    if (name == "") return;
+function openHandler(file_name) {
+	var dfd = $.Deferred();
+    if (file_name == "") {
+		dfd.resolve();
+		return dfd;
+	}
 
     // if file is already open, don't open it twice
-    for (var i = 0; i < numberOfFiles; i++) {
-        if (fileList[i] != null && fileList[i].name == name) {
-            getFile(function(data) {
-                if (fileList[i].name == currentFile.name) {
-                    editor.setValue(data);
-                } else {
-                    fileList[i].content = data;
-                }
-                setTab(fileList[i]);
-            }, name);
-
-            return;
-        }
-    }
-
-    getFile(function(data) {
-        if (data) {
-            var file = new ssFile(name, data);
-            makeNewTab(file);
-            setTab(file);
-            console_write('Opened file ' + name + '.');
-        } else {
-            console_write('Failed to open the file ' + name + '.');
-        }
-    }, name);
+	var j = getFileIndex(file_name);
+	if (j != -1) {
+		if (currentFile && currentFile.name != fileList[j].name) {
+			setTab(fileList[j]);
+		}
+		dfd.resolve();
+		return dfd;
+	} else {
+		return getFile(file_name).done(function(response) {
+			if (response.success) {
+				var file = new ssFile(response.file_name, response.file_content);
+				console_write('Opened file ' + response.file_name + '.');
+				makeNewTab(file);
+				setTab(file);
+			} else {
+				console_write('Failed to open the file ' + response.file_name + '.');
+			}
+			return response;
+		});
+	}
 }
 
 function openDialogHandler() {
     if ($('.CodeMirror-dialog').length) {
         $('.CodeMirror-dialog').remove();
     } else {
-        editor.openDialog(
-                "<ul id='file-list'></ul>" + makeFilePrompt('File name'),
-				function(name) {
-					openFileHandler(name);
-					// TODO does this need to be made asynchronous?
-					ws.getDirListing('/', FileListToHTML);
-				});
+		editor.openDialog(
+				makeFilePrompt("<ul id='file-list'></ul> File name"),
+			function(name) {
+				openHandler(name);
+			}, {value: "asdf2"});
+		getDirListing('/')
+		   .done(function (response) {
+			FileListToHTML(response.file_list);
+			});
     }
 }
 
@@ -330,9 +273,9 @@ function closeDialogHandler(i) {
             var offset = i - 1 - j;
             if (offset < 0) offset += numberOfFiles;
             if (fileList[offset] != null) {
-                currentFile.tab.hide();
                 console_write('new file index should be ' + offset);
                 setTab(fileList[offset]);
+                fileList[i].tab.hide();
                 fileList[i] = null;
                 return;
             }
@@ -364,6 +307,165 @@ function newFileHandler() {
             });
 }
 
+function saveAndCompileHandler() {
+	compileHandler(false);
+}
+
+function revertHandler() {
+    editor.openConfirm('Are you sure? <button>Revert file</button><button>Cancel</button>',
+			[function (unused) {
+				if (!currentFile)
+					return;
+				var req = revertFile(currentFile.name);
+				req
+				.then(
+					function (response) {
+						if (response.success) {
+							var j = getFileIndex(response.file_name);
+							if (j == -1) {
+								console_write("Cannot revert the file " + response.file_name + " because it is not currently open.");
+								response.success = false;
+							} else {
+								fileList[j].content = response.file_content;
+								if (currentFile.name == response.file_name) {
+									editor.setValue(response.file_content);
+								}
+								console_write("Reverted file " + response.file_name);
+							}
+						}
+						return response;
+					})
+				.then(null, function (response) {
+					console_write("Failed to revert the file " + response.file_name);
+					consoleFlushMsgs(response);
+				});
+			}, undefined]);
+}
+
+function saveHandler(show_output) {
+    if (!currentFile) {
+		var dfd = $.Deferred();
+		dfd.reject();
+        return  dfd;
+	}
+
+    // editor.getValue() is a \n-delimited string containing the text currently in the editor
+    currentFile.content = editor.getValue();
+	currentFile.history = editor.getHistory();
+
+	var req = saveFile(currentFile.name, currentFile.content, currentFile.history);
+	// return after saveHandler2 is complete. saveHandler2 modifies response.
+	return req.then(saveHandler2, consoleFlushMsgs).then(
+		function (response) {
+			if (show_output) {
+				return consoleFlushMsgs(response);
+			} else {
+				response.messages = new Array();
+				return response;
+			}
+		});
+}
+
+function saveHandler2(response) {
+	var dfd = $.Deferred();
+	var j = getFileIndex(response.file_name);
+
+	if (j == -1) {
+		response.success = false;
+		response.messages.push('Tried to save a file that is no longer open!');
+	} else if (response.success) {
+		fileList[j].lastSaved = (new Date()).toLocaleTimeString();
+		response.messages.push('Your file has been saved as ' + fileList[j].name + '.');
+
+		if (currentFile.index == j) {
+			mark_unchanged();
+			$('#time-saved').text(currentFile.lastSaved); 
+		}
+	} else {
+		response.messages.push('Could not save file ' + response.file_name);
+	}
+
+	if (response.success) {
+		dfd.resolve(response);
+	} else {
+		dfd.reject(response);
+	}
+	return dfd;
+}
+
+/** this is really more of a commitHandler **/
+/** may decide to save file under a different name. **/
+function saveAsHandler() {
+	if (! currentFile) {
+		console_write("No current file.");
+		return;
+	}
+
+    editor.openDialog(makeFilePrompt2('Commit as', currentFile.name),
+            function(query) {
+				if (!currentFile) {
+					console_write("No current file.");
+					return;
+				}
+
+                if (query != "") {
+                    currentFile.name = query;
+                    currentFile.tab.children(".filename-text")[0]
+							.innerHTML = query;
+                } else {
+                    console_write("Blank filename! Saving with old name.");
+                }
+
+				// editor.getValue() is a \n-delimited string containing the text currently in the editor
+				currentFile.content = editor.getValue();
+				currentFile.history = editor.getHistory();
+
+				commitFile(currentFile.name, currentFile.content, currentFile.history)
+				.then(function(response) {
+						if (response.success) {
+							console_write("You have commited the file " + response.file_name); 
+						}
+					}, 
+					consoleFlushMsgs);
+            });
+}
+
+function runHandler() {
+	return runProgram(currentFile.name)
+		.then( function (response) {
+			console_write("Running program.");
+			return response;
+		},
+		consoleFlushMsgs);
+}
+
+function compileHandler(show_output) {
+	var req = saveHandler(show_output); // ws_saveFile promise filtered through saveHandler2()
+
+	// done() means server saved the file. 
+	// fail() means server failed to save.
+	return req.then(function (response) { 
+						return compileProgram(response.file_name); 
+					}, consoleFlushMsgs)
+		.then( function (response) {
+			if (show_output) {
+				if (!response.success) { // compile errors or warnings
+					result_cb(response.error_list);
+					console_write("Compile failed.");
+					clangMessages.highlightErrors();
+				} else {
+					console_write("Compiled successfully.");
+				}
+			}
+			var dfd = $.Deferred();
+			if (response.success)
+				return dfd.resolve(response);
+			else
+				return dfd.reject(response);
+		},
+		consoleFlushMsgs);
+}
+
 function makeNewTab(file) {
     if (numberOfFiles == 1) {
         file.tab.addClass("status_active");
@@ -391,7 +493,7 @@ function setFirstTab(file) {
 /** will update currentFile as well **/
 function setTab(file) {
     // save previously open tab before opening new one
-    saveFile( function () {
+    return saveHandler(false).done( function (response) {
     editor.clearHistory();
 
     // set active tab
@@ -432,30 +534,6 @@ function submitHandler() {
                 // TODO
                 console_write('Submitted file ' + currentFile.name + ', ' + (new Date()).toLocaleTimeString() + '.');
             });
-}
-
-function compileHandler(k) {
-	compileProgram(
-			function(error_list) {
-				result_cb(error_list);
-				ClangMessages.highlightErrors();
-				// else
-				if (k) k();
-			});
-    /*if (!compiled) {
-     // TODO compile file
-     compiled = true;
-     console_write('Done compiling.');
-     } else {
-     console_write('Already compiled.');
-     }*/
-}
-
-function runHandler() {
-    compileHandler(
-			function () {
-    runProgram();
-			});
 }
 
 function runInputHandler() {
@@ -543,7 +621,7 @@ function hoboFile(name) {
 function setUpUI() {
     /** create editor and console **/
 
-    CodeMirror.commands.save = saveFile;
+    CodeMirror.commands.save = function() {saveHandler(true);};
     var delay;
     var delayTime = 1000;
     editor = CodeMirror.fromTextArea($("#seashell")[0],
@@ -728,3 +806,4 @@ seashell_new(
         function(err) {
             alert("Error initializing API: " + err);
         });
+jQuery.getScript("seashell_glue.js", setUpUI);
