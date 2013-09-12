@@ -31,7 +31,8 @@
          web-server/http/response
          web-server/private/connection-manager
          web-server/private/dispatch-server-sig
-         web-server/private/dispatch-server-unit)
+         web-server/private/dispatch-server-unit
+         seashell/websocket/connection)
 
 (provide seashell-websocket-serve)
 
@@ -85,6 +86,8 @@
         #:confirmation-channel
         (or/c false/c async-channel?))
        (-> void))
+  (define (read-request c p port-addresses)
+        (values #f #t))
   (define (dispatch c _)
     ;; Grab the in/out ports.
     (define ip (connection-i-port c))
@@ -122,7 +125,11 @@
 
     ;; Starting output.
     (define conn
-      (values #f cline conn-headers ip op))
+      (make-seashell-websocket-connection
+        ip op
+        (make-seashell-websocket-control)
+        cline conn-headers #f))
+
     (conn-dispatch conn state))
   (define-unit-binding a-tcp@
     tcp@ (import) (export tcp^))
