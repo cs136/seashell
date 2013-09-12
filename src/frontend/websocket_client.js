@@ -1,21 +1,22 @@
-var ws = {};
 var wsUri = "TODO";
-var websocket;
 
 function SeashellWebsocket(key) = {
   this.coder = new SeashellCoder(key);
   this.websocket = new WebSocket(wsUri);
+  this.lastRequest = 0;
+  this.requests = {};
 
-  this.websocket.onmessage = function(blob) {
+  this.websocket.onmessage = function(message) {
     // We receive all messages in binary,
     // then we decrypt and extract out the nice
     // JSON.
-    reader = new FileReader(blob);
+    reader = new FileReader(message.data);
     reader.onloadend = function() {
       var result = reader.result;
  
       // Framing format (all binary bytes):
       // [IV - 12 bytes][GCM tag - 16 bytes][1 byte - Auth Len][Auth Plain][Encrypted Frame]
+      // Keep this consistent with the server.
       var iv = new Uint8Array(result.slice(0,12));
       var tag = new Uint8Array(result.slice(12, 28));
       var authlen = new Uint8Array(result.slice(28, 29))[0];
@@ -23,70 +24,50 @@ function SeashellWebsocket(key) = {
       var encrypted = new Uint8Array(result.slice(29+authlen));
 
       // Decode plain, and verify.
-      var plain = coder.decrypt(encrypted, iv, tag, auth);
-
-      // TODO: something with plain.
+      var plain = this.coder.decrypt(encrypted, iv, tag, auth);
+      // Plain is an Array of bytes. Convert it into an Blob
+      // and then use the FileReader class to convert that Blob
+      // into a UTF-8 string.
+      var blob = new Blob([new Uint8Array(plain)]);
+      var reader = new FileReader();
+      reader.onloadend = function() { 
+        var response_string = reader.result;
+        var response = JSON.parse(response_string);
+        // Assume that response holds the message and response.id holds the 
+        // message identifier that corresponds with it.
+        var request = requests[response.id];
+        request.callback(response);
+      }
+      reader.readAsText(blob);
     } 
   };
 }
 
-// TODO - package functions up nicely.  Or not.
-ws.init = function() {
-	websocket = new WebSocket(wsUri);
-	websocket.onmessage = function(evt) {
-			response = JSON.parse(evt.data);
-			if (response.callback)
-				response.callback(response.ret);
-			websocket.close();
-	};
-	// TODO onopen, onerror, onclose
+SeashellWebsocket.prototype.close = function() {
+  this.websocket.close();
 };
 
-ws.getDirListing = function(base_dir, k) {
-	var msg = {};
-	msg.type = "getDirListing";
-	msg.base_dir = base_dir;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
-};
+SeashellWebsocket.prototype.sendMessage = function(message) {
+  // Reserve a slot for the message.
+  var request_id = this.lastRequests++;
+  this.requests[request_id] = message;
+  message.id = request_id;
+  // Stringify, write out as Array of bytes, send.
+  var blob = new Blob([JSON.stringify(message)]);
+  var reader = new FileReader();
+  reader.onloadend = function() {
+   var frame = new Uint8Array(reader.result); 
+   var plain = [];
+   var result = this.coder.encrypt(frame, plain);
+   var iv = result[0];
+   var coded = result[1];
+   var tag = result[2];
 
-ws.loadFile = function(k, file_name) {
-	var msg = {};
-	msg.type = "loadFile";
-	msg.file_name = file_name;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
-};
+   if (plain.length > 255) {
+     throw "sendMessage: Too many authenticated plaintext bytes!";
+   }
 
-ws.saveFile = function(k, file_name, file_content) {
-	var msg = {};
-	msg.type = "saveFile";
-	msg.file_name = file_name;
-	msg.file_content = file_content;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
-};
-
-ws.revertFile = function(k, file_name) {
-	var msg = {};
-	msg.type = "revertFile";
-	msg.file_name = file_name;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
-};
-
-ws.compileProgram = function(k, file_name) {
-	var msg = {};
-	msg.type = "compileProgram";
-	msg.file_name = file_name;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
-};
-
-ws.runProgram = function(k, base_dir) {
-	var msg = {};
-	msg.type = "runProgram";
-	msg.file_name = base_dir;
-	msg.callback = k;
-	websocket.send(JSON.stringify(msg));
+   var send = iv + tag + [plain.length] + plain + coded;
+   this.websocket.send(new Uint8Array(send));
+  }
 };
