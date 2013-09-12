@@ -38,6 +38,7 @@
   (define plain (seashell-decrypt key iv tag encrypted auth))
   ;; Parse plain as a JSON message. 
   (define message (bytes->jsexpr plain))
+  ;; TODO handle id field in JSON object.
   (match message
     [`(hash-table
        ('type "runProgram")
