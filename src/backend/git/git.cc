@@ -35,6 +35,9 @@ struct seashell_git_update {
   string target;
 };
 
+/** Structure representing a git status. */
+typedef git_status_list seashell_git_status; 
+
 /**
  * seashell_git_error (void)
  * Returns the last libgit2 error string.
@@ -47,6 +50,43 @@ extern "C" const char* seashell_git_error (void) {
     return giterr_last()->message;
   }
   return NULL;
+}
+
+/**
+ * seashell_git_get_status (const char* repository)
+ * Retrieves the status [working tree] of each file in the
+ * repository.
+ *
+ * Arguments:
+ *  repository - repository to consult.
+ * Returns:
+ *  A seashell_git_status* structure.  If NULL, consult seashell_git_error()
+ */
+seashell_git_status* seashell_git_get_status(const char* repository) {
+  seashell_git_status* status = NULL;
+  git_repository* repo = NULL;
+  git_status_options opt = GIT_STATUS_OPTIONS_INIT;
+  int result = 0;
+
+  result = git_repository_open(&repo, update->target.c_str());
+  if (result)
+    goto end;
+
+  result = git_status_list_new(&status, repo, &opt);
+  if (result)
+    goto end;
+
+end:
+  git_repository_free(repo);
+  return status;
+}
+
+/**
+ * seashell_git_status_entrycount (seashell_git_status* status) 
+ * Returns the number of entries in a given seashell_git_status structure.
+ */
+size_t seashell_git_status_entrycount (seashell_git_status* status) {
+  return git_status_list_entrycount(status);
 }
 
 /**
