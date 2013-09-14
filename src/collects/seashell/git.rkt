@@ -27,8 +27,8 @@
 (define-ffi-definer define-git (ffi-lib (read-config 'seashell-git)))
 
 ;; Opaque data structure - make sure allocator/deallocator is set.
-(define _seashell_git_update (_cpointer 'seashell_git_update*))
-(define _seashell_git_status (_cpointer 'seashell_git_status*))
+(define _seashell_git_update (_cpointer/null 'seashell_git_update*))
+(define _seashell_git_status (_cpointer/null 'seashell_git_status*))
 
 ;; Exception type.
 (struct exn:git exn:fail ())
@@ -186,6 +186,16 @@
   (contract:-> seashell-git-update? any/c)
   (seashell_git_commit (seashell-git-update-update update)))
 
+;; Flag test functions.  Make sure these
+;; remain consistent with libgit2.
+(define (seashell-git-flag-new? flags)
+  (bitwise-bit-set? flags 7))
+(define (seashell-git-flag-modified? flags)
+  (bitwise-bit-set? flags 8))
+(define (seashell-git-flag-deleted? flags)
+  (bitwise-bit-set? flags 9))
+
+
 
 (provide exn:git? seashell-git-init seashell-git-clone seashell-git-make-commit
          seashell-git-commit-add-file seashell-git-commit-delete-file seashell-git-commit
@@ -194,3 +204,6 @@
          seashell-git-status-entrycount
          seashell-git-status-flags
          seashell-git-status-path)
+(provide seashell-git-flag-new?
+         seashell-git-flag-modified?
+         seashell-git-flag-deleted?)

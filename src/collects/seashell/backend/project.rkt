@@ -30,6 +30,10 @@
          exn:project?
          exn:project)
 
+(require seashell/git
+         seashell/seashell-config
+         net/url)
+
 ;; (project-name? name) -> bool?
 ;; Predicate for testing if a string is a valid project name.
 (define project-name? path-string?)
@@ -49,7 +53,7 @@
 (define/contract (init-projects)
   (-> void?)
   (when (not (directory-exists? (read-config 'seashell)))
-    (make-directory seashell)))
+    (make-directory (read-config 'seashell))))
 
 ;; list-projects -> (listof project-name?)
 ;; Lists existing Seashell projects.
@@ -57,7 +61,7 @@
   (-> (listof project-name?))
   (map path->string
        (filter (compose directory-exists? (curry build-path (read-config 'seashell)))
-               (directory-list seashell))))
+               (directory-list (read-config 'seashell)))))
 
 ;; (new-project name) -> void?
 ;; Creates a new project.
@@ -76,10 +80,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (make-directory (build-path (read-config 'seashell) name))
-    ;; TODO - add a libgit2 call here to create a new git repository
-    ;; FFI to git_repository_init
-    ))
+    (seashell-git-init (build-path (read-config 'seashell) name))))
 
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
@@ -96,7 +97,7 @@
 ;; Raises:
 ;;  exn:project if the project already exists.
 ;;  libgit2 FFI exceptions may also be raised.
-(define/contract (new-project-from-name name source)
+(define/contract (new-project-from name source)
   (-> project-name? (or/c project-name? url-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
@@ -104,9 +105,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (make-directory (build-path (read-config 'seashell) name))
-    ;; TODO - add a libgit2 call to clone the existing git repository
-    ;; FFI to git_clone
+    (seashell-git-clone source (build-path (read-config 'seashell) name))
     ))
 
 ;; (delete-project name)
@@ -153,8 +152,39 @@
 ;;  libgit2 errors if git errors happen.
 (define/contract (save-project name)
   (-> project-name? void?)
-  ;; TODO - actually write this function.
-  (void))
+  ;; Here's what we do -
+  ;;  1. Grab the status of the repository.
+  ;;  2. Add 'adds' to each of the files that
+  ;;     have been modified and created in the working tree.
+  ;;  3. Add 'deletes' to each of the files that
+  ;;     have been deleted from the working tree.
+  ;;  4. Run the commit.
+  (define status (seashell-git-get-status (build-path (read-config 'seashell) name)))
+  (define entries (seashell-git-status-entrycount status))
+
+  (define files-add
+    (map (curry seashell-git-status-path status)
+         (filter
+           (lambda (index)
+             (define flags (seashell-git-status-flags status index))
+             (or (seashell-git-flag-new? flags) (seashell-git-flag-modified? flags)))
+           (build-list values entries))))
+
+  (define files-delete
+    (map (curry seashell-git-status-path status)
+         (filter
+           (lambda (index)
+             (define flags (seashell-git-status-flags status index))
+             (seashell-git-flag-deleted? flags))
+           (build-list values entries))))
+
+  (define commit (seashell-git-make-commit))
+  (for-each (curry seashell-git-commit-add-file commit)
+            files-add)
+  (for-each (curry seashell-git-commit-delete-file commit)
+            files-delete)
+
+  (seashell-git-commit commit))
 
 ;; (is-project? name)
 ;; Checks if name is a project that exists
@@ -164,5 +194,4 @@
 ;; Returns: #t if it does, #f otherwise.
 (define/contract (is-project? name)
   (-> project-name? boolean?)
-  ;; TODO - probably should also query git.
   (directory-exists? (build-path (read-config 'seashell) name)))

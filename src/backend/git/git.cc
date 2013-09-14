@@ -347,7 +347,6 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
   if (ret)
     goto end;
 
-  // TODO: Remove files from the directory tree.
 end:
   git_tree_free(tree);
   git_index_free(index);
