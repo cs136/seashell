@@ -19,13 +19,16 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         racket/runtime-path)
+         racket/runtime-path
+         seashell/seashell-config)
+(require (prefix-in contract: racket/contract))
 
 ;; Load the library (libseashell-git)
 (define-ffi-definer define-git (ffi-lib (read-config 'seashell-git)))
 
 ;; Opaque data structure - make sure allocator/deallocator is set.
 (define _seashell_git_update (_cpointer 'seashell_git_update*))
+(define _seashell_git_status (_cpointer 'seashell_git_status*))
 
 ;; Exception type.
 (struct exn:git exn:fail ())
@@ -33,39 +36,161 @@
 ;; Error fetching function
 (define-git seashell_git_error (_fun -> _string))
 
-;; (check result function) -> void?
+;; (check result function) -> any/c
 ;; Handles seashell-git errors correctly,
 ;; by raising a exn:git exception with the contents of seashell_git_error
 (define (check result function)
-  (unless (zero? result)
+  (unless (and result (or (not (number? result)) (zero? result)))
     (define message (format "~a: ~a" function (if (seashell_git_error) (seashell_git_error) "")))
-    (raise (exn:git message (current-continuation-marks)))))
+    (raise (exn:git message (current-continuation-marks))))
+  result)
 
 ;; Repository functions (init, clone)
-(define-git seashell_git_clone (_fun _string _string -> (r : _int)
+(define-git seashell_git_clone (_fun _string _path -> (r : _int)
                                      -> (check r 'seashell_git_clone)))
-(define-git seashell_git_init (_fun _string -> (r : _int)
+(define-git seashell_git_init (_fun _path -> (r : _int)
                                     -> (check r 'seashell_git_init)))
 
 ;; Committing files (commit, add_file, ...)
 (define-git seashell_git_commit_free (_fun _seashell_git_update -> _void)
             #:wrap (deallocator))
-(define-git seashell_git_commit_init (_fun _string -> _seashell_git_update)
+(define-git seashell_git_commit_init (_fun _path -> _seashell_git_update)
             #:wrap (allocator seashell_git_commit_free))
-(define-git seashell_git_commit_add (_fun _seashell_git_update _string -> _void))
+(define-git seashell_git_commit_add (_fun _seashell_git_update _path -> _void))
 (define-git seashell_git_commit (_fun _seashell_git_update -> (r : _int)
                                      -> (check r 'seashell_git_commit)))
-(define-git seashell_git_commit_delete (_fun _seashell_git_update _string -> _void))
+(define-git seashell_git_commit_delete (_fun _seashell_git_update _path -> _void))
+
+;; Status functions.
+(define-git seashell_git_status_free (_fun _seashell_git_status -> _void)
+            #:wrap (deallocator))
+(define-git seashell_git_get_status (_fun _path -> (r : _seashell_git_status)
+                                          -> (check r 'seashell_git_get_status))
+            #:wrap (allocator seashell_git_status_free))
+(define-git seashell_git_status_entrycount (_fun _seashell_git_status -> _size))
+(define-git seashell_git_status_flags (_fun _seashell_git_status _size -> _int))
+(define-git seashell_git_status_path (_fun _seashell_git_status _size -> _path))
 
 ;; Provided wrapper functions
-;; See git.cc for documentation.
-(define seashell-git-init seashell_git_init)
-(define seashell-git-clone seashell_git_clone)
-(define seashell-git-update? _seashell_git_update?)
-(define seashell-git-make-commit seashell_git_commit_init)
-(define seashell-git-commit-add-file seashell_git_commit_add)
-(define seashell-git-commit-delete-file seashell_git_commit_delete)
-(define seashell-git-commit seashell-git_commit)
+(struct seashell-git-status (status))
+(struct seashell-git-update (update))
 
-(provide exn:git? seashell-git-init seashell-git-clone seashell-git-update? seashell-git-make-commit
-         seashell-git-commit-add-file seashell-git-commit-delete-file seashell-git-commit)
+;; (seashell-git-get-status repo)
+;; Gets the status of a repository.
+;; 
+;; Arguments:
+;;  repo - Full path to repository.
+;; Returns:
+;;  A seashell-git-status? structure.
+(define/contract (seashell-git-get-status repo)
+  (contract:-> path? seashell-git-status?)
+  (seashell-git-status (seashell_git_get_status repo)))
+
+;; (seashell-git-status-entrycount status)
+;; Gets the number of entries in a Seashell GIT
+;; status structure.
+;;
+;; Arguments:
+;;  status - A seashell-git-status? structure.
+;; Returns:
+;;  Number of entries in the structure.
+(define/contract (seashell-git-status-entrycount status)
+  (contract:-> seashell-git-status? integer?)
+  (seashell_git_status_entrycount (seashell-git-status-status status)))
+
+;; (seashell-git-status-flags status index)
+;; Gets the flags associated with a status entry at index.
+;;
+;; Arguments:
+;;  status - Seashell GIT status structure.
+;; Returns:
+;;  Flags associated with the entry.
+(define/contract (seashell-git-status-flags status index)
+  (contract:->i 
+    ([status seashell-git-status]
+     [index (status) (integer-in 0 (sub1 (seashell-git-status-entrycount status)))])
+    [result integer?])
+  (seashell_git_status_flags (seashell-git-status-status status) index))
+
+;; (seashell-git-status-path status index)
+;; Gets the [relative] path associated with a status entry at index.
+;;
+;; Arguments:
+;;  status - Seashell GIT status structure.
+;; Returns:
+;;  Path associated with the entry.
+(define/contract (seashell-git-status-path status index)
+  (contract:->i 
+    ([status seashell-git-status]
+     [index (status) (integer-in 0 (sub1 (seashell-git-status-entrycount status)))])
+    [result path?])
+  (seashell_git_status_path (seashell-git-status-status status) index))
+
+
+;; (seashell-git-init path)
+;; Creates a new repository at path.
+;;
+;; Arguments:
+;;  path - Full path 
+(define/contract (seashell-git-init path)
+  (contract:-> path? any/c)
+  (seashell_git_init path))
+
+;; (seashell-git-clone from to)
+;; Clones a repository.
+;;
+;; Arguments:
+;;  from - From
+;;  to - To
+(define/contract (seashell-git-clone from to)
+  (contract:-> string? path? any/c)
+  (seashell_git_clone from to))
+
+;; (seashell-git-make-commit repo) -> seashell-git-update?
+;; Creates a new commit update object acting on repo.
+;;
+;; Arguments:
+;;  repo - Seashell git repository path.
+;; Returns:
+;;  A seashell-git-update? object that can be used to batch updates.
+(define/contract (seashell-git-make-commit repo)
+  (contract:-> path? seashell-git-update?)
+  (seashell-git-update (seashell_git_commit_init)))
+
+;; (seashell-git-commit-add-file update file)
+;; Adds a file to the git commit object.
+;; 
+;; Arguments:
+;;  update - Seashell git commit update.
+;;  file - File to add.
+(define/contract (seashell-git-commit-add-file update file)
+  (contract:-> seashell-git-update? path? any/c)
+  (seashell_git_commit_add (seashell-git-update-update update) file))
+
+;; (seashell-git-commit-delete-file update file)
+;; Deletes a file to the git commit object.
+;; 
+;; Arguments:
+;;  update - Seashell git commit update.
+;;  file - File to delete.
+(define/contract (seashell-git-commit-delete-file update file)
+  (contract:-> seashell-git-update? path? any/c)
+  (seashell_git_commit_delete (seashell-git-update-update update) file))
+
+;; (seashell-git-commit update)
+;; Commits an update.
+;;
+;; Arguments:
+;;  update - Update to commit.
+(define/contract (seashell-git-commit update)
+  (contract:-> seashell-git-update? any/c)
+  (seashell_git_commit (seashell-git-update-update update)))
+
+
+(provide exn:git? seashell-git-init seashell-git-clone seashell-git-make-commit
+         seashell-git-commit-add-file seashell-git-commit-delete-file seashell-git-commit
+         seashell-git-update?)
+(provide seashell-git-status? seashell-git-get-status
+         seashell-git-status-entrycount
+         seashell-git-status-flags
+         seashell-git-status-path)
