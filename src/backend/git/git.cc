@@ -62,13 +62,13 @@ extern "C" const char* seashell_git_error (void) {
  * Returns:
  *  A seashell_git_status* structure.  If NULL, consult seashell_git_error()
  */
-seashell_git_status* seashell_git_get_status(const char* repository) {
+extern "C" seashell_git_status* seashell_git_get_status(const char* repository) {
   seashell_git_status* status = NULL;
   git_repository* repo = NULL;
   git_status_options opt = GIT_STATUS_OPTIONS_INIT;
   int result = 0;
 
-  result = git_repository_open(&repo, update->target.c_str());
+  result = git_repository_open(&repo, repository);
   if (result)
     goto end;
 
@@ -84,9 +84,46 @@ end:
 /**
  * seashell_git_status_entrycount (seashell_git_status* status) 
  * Returns the number of entries in a given seashell_git_status structure.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ * Returns:
+ *  # of entries.
  */
-size_t seashell_git_status_entrycount (seashell_git_status* status) {
+extern "C" size_t seashell_git_status_entrycount (seashell_git_status* status) {
   return git_status_list_entrycount(status);
+}
+
+/**
+ * seashell_git_status_flags(seashell_git_status* status, int index)
+ * Returns the status flags associated with an entry at index.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ *  index - Index.
+ * Returns:
+ *  Git Status Flags.
+ */
+extern "C" int seashell_git_status_flags(seashell_git_status* status, int index) {
+  return git_status_byindex(status, index)->status;
+}
+
+/**
+ * seashell_git_status_path(seashell_git_status* status, int index)
+ * Returns the [relative] path associated with a status entry at index.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ *  index - Index.
+ * Returns:
+ *  Relative path.
+ */
+extern "C" const char* seashell_git_status_path(seashell_git_status* status, int index) {
+  const git_status_entry* entry = git_status_byindex(status, index);
+  const char* old_path = entry->index_to_workdir->old_file.path;
+  const char* new_path = entry->index_to_workdir->new_file.path;
+
+  return new_path ? new_path : old_path;
 }
 
 /**
