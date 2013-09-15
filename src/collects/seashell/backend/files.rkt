@@ -28,13 +28,59 @@
 ;;  file - name of new file.
 ;;
 ;; Raises:
-;;  exn:project if project does not exist,
-;;  exn:project:file if file exists,
-;;  libgit2 errors if they occur.
+;;  exn:project:file if file exists.
 (define/contract (new-file project file)
-  (-> project-name? path-string? void?)
-  (when (not (is-project? project))
-    (raise (exn:project
-             (format "~a is not a project!" project)
-             (current-continuation-marks))))
-  ;; TODO: libgit call
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (with-handlers
+    [(exn:fail:filesystem?
+       (lambda (exn)
+         (raise (exn:project
+                  (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
+                  (current-continuation-marks)))))]
+    (close-output-port (open-output-port
+                         (build-path (read-config 'seashell) project file)))))
+
+;; (delete-file project file) -> void?
+;; Deletes a file inside a project.
+;;
+;; Arguments:
+;;  project - project to delete file from.
+;;  file - name of file to delete.
+;;
+;; Raises:
+;;  exn:project:file if file does not exist.
+(define/contract (delete-file project file)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (with-handlers
+    [(exn:fail:filesystem?
+       (lambda (exn)
+         (raise (exn:project
+                  (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
+                  (current-continuation-marks)))))]
+    (delete-file (build-path (read-config 'seashell) project file))))
+
+;; (read-file project file) -> bytes?
+;; Reads a file as a Racket bytestring.
+;;
+;; Arguments:
+;;  project - project to read file from.
+;;  file - name of file to read.
+;;
+;; Returns:
+;;  Contents of the file as a bytestring.
+(define/contract (read-file project file)
+  (-> (and/c project-name? is-project?) path-string? bytes?)
+  (with-input-from-file (build-path (read-config 'seashell) project file)
+                        (lambda () (read-bytes 0))))
+
+;; (write-file project file contents) -> void?
+;; Writes a file from a Racket bytestring.
+;;
+;; Arguments:
+;;  project - project.
+;;  file - name of file to write.
+;;  contents - contents of file.
+(define/contract (write-file project file contents)
+  (-> (and/c project-name? is-project?) path-string? bytes?)
+  (with-output-to-file (build-path (read-config 'seashell) project file)
+                       (lambda () (write-bytes contents))))
