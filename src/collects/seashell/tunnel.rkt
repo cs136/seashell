@@ -71,7 +71,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           (logf 'warn "tunnel stderr (~a@~a): ~a\n" user (read-config 'host) line)
+           (logf 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))
