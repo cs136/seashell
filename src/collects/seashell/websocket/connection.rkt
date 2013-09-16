@@ -133,6 +133,14 @@
   (seashell-websocket-frame-data
     (async-channel-get (seashell-websocket-connection-in-chan conn))))
 
+;; (ws-recv-evt conn bytes) ->
+;; Produces an event that is ready when data can be received on the websocket.
+;; The synchronization result is data read from the socket.
+(define/contract (ws-recv-evt conn)
+  (-> seashell-websocket-connection? evt?)
+  (wrap-evt (seashell-websocket-connection-in-chan conn)
+            seashell-websocket-frame-data))
+
 ;; (ws-close! conn) ->
 ;; Closes a websocket connection. Does nothing if the connection has already been closed.
 ;; Note that this routine does not close the underlying socket. See ws-destroy!.

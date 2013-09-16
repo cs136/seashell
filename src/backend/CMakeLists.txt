@@ -20,11 +20,6 @@ cmake_minimum_required(VERSION 2.6)
 
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  set(SEASHELL_DEBUG 1)
-else(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  set(SEASHELL_DEBUG 0)
-endif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
 # Configuration file
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
