@@ -23,6 +23,27 @@
 ;; provided to us on standard input.
 (define key (seashell-crypt-key-server-read (current-input-port)))
 
+
+(define/contract (handle-message message)
+  (-> jsexpr? jsexpr?)
+  (match message
+         [`(hash-table
+             (id ,id)
+             (type "runProgram")
+             (name ,name))
+           (hash-table `(id ,id) `(result "unimplemented"))]
+         [`(hash-table
+             (id ,id)
+             (type "compileProgram")
+             (name ,name))
+           (hash-table `(id ,id) `(result "unimplemented"))]
+         [`(hash-table
+             (id ,id)
+             (type "getListing")
+
+             
+  )
+
 (define (main-loop connection state)
   ;; TODO - probably want to sync here also on a CLOSE frame.
   (define encrypted-frame (seashell-websocket-receive connection))
