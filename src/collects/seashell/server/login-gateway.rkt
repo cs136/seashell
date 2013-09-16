@@ -84,10 +84,11 @@
         (report-error 3 "Bad password provided."))
       (first l)))
 
-;  (define tun
-;    (with-handlers
-;      ([exn:tunnel? (lambda(e) (report-error 4 "Session could not be started."))])
-      (tunnel-launch uname passwd);))
+  (define tun
+    (with-handlers
+      ([exn:tunnel? (lambda(e) (report-error 4 "Session could not be started."))])
+      (tunnel-launch uname passwd)))
 
-;  (copy-port (tunnel-out tun) (current-output-port))
+  (output-http-headers)
+  (copy-port (tunnel-in tun) (current-output-port))
   (exit 0))
