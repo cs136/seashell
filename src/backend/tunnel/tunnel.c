@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -71,7 +71,7 @@ struct seashell_connection {
 /**
  * seashell_tunnel_{startup/teardown} (void)
  * Sets up/tears down the operating environment for the tunneling code.
- * 
+ *
  * Returns: 0 on success, negative values otherwise.
  * Consult libssh2_init/exit(3).
  */
@@ -107,13 +107,13 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     int* error) {
   struct addrinfo hints;
   struct addrinfo *results, *rp;
-  int sockfd; 
+  int sockfd;
   int i, e;
   struct seashell_connection* result = NULL;
- 
-  /* Resolve the host's address. 
+
+  /* Resolve the host's address.
    * See getaddrinfo(3) for how this works.
-   */ 
+   */
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
@@ -128,7 +128,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
 
   for (rp = results; rp != NULL; rp = rp->ai_next) {
     sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if (sockfd == -1) 
+    if (sockfd == -1)
       continue;
 
     if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) != -1)
@@ -176,7 +176,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
   const char* fingerprint = libssh2_session_hostkey(session, &len, &type);
   if (!fingerprint || type == LIBSSH2_HOSTKEY_TYPE_UNKNOWN) {
     libssh2_knownhost_free(hosts);
-    
+
     SET_ERROR(TUNNEL_ERROR_HOST);
     goto session_teardown;
   }
@@ -185,7 +185,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
   /** NOTE: Documentation is buggy.  hostkey MUST be passed. */
   int check = libssh2_knownhost_check(hosts, host, fingerprint, len,
       LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW, &hostkey);
- 
+
   if (check != LIBSSH2_KNOWNHOST_CHECK_MATCH) {
     int keytype = 0;
 
@@ -199,7 +199,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     }
 
     if (keytype) {
-      libssh2_knownhost_addc(hosts, host, NULL, fingerprint, len, 
+      libssh2_knownhost_addc(hosts, host, NULL, fingerprint, len,
           "Generated from Seashell Tunnel", strlen("Generated from Seashell Tunnel"),
             LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW
           | (type == LIBSSH2_HOSTKEY_TYPE_RSA ? LIBSSH2_KNOWNHOST_KEY_SSHRSA : LIBSSH2_KNOWNHOST_KEY_SSHDSS),
@@ -216,7 +216,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
 
     SET_ERROR(TUNNEL_ERROR_HOST);
     goto session_teardown;
-  } 
+  }
   libssh2_knownhost_free(hosts);
 
   fprintf(stderr, "%s: Host check passed for %s (fingerprint type %d) - ", user, host, type);
@@ -238,7 +238,7 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     goto session_teardown;
   }
 
-  /** 
+  /**
    * Ideally we'd have a subsystem configured,
    * as I don't see a good way of pulling out of ssh2
    * if the target does not exist.
@@ -325,14 +325,14 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
     FD_ZERO(&readfds);
     FD_SET(conn->sockfd, &readfds);
     FD_SET(infd, &readfds);
-   
+
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
     if (select(nfds, &readfds, NULL, NULL, &timeout) > 0) {
       /** We're OK only when we have something to read from and something to write to. */
 
-      /** 
+      /**
        *  Something to read from remote - might block on write, this is OK.
        *  Time permitting, it might be nice to have a write queue and
        *  go through the select loop again for fairness,
@@ -345,7 +345,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
         } else if (len > 0) {
 
           start = 0;
-          
+
           while (len) {
             rc = write(outfd, buffer + start, len);
             if (rc < 0) {
@@ -358,7 +358,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
           return 0;
         }
       }
-      
+
       /**
        * Something to read from local - might block on write, this is OK.
        * See above for rationale, and libssh2_channel_write doesn't seem
@@ -408,7 +408,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
  *
  * Currently, only password authentication is supported.  Therefore,
  * the authentication method is ignored.  It might be worth looking
- * at supporting public key authentication in the future.  This'll 
+ * at supporting public key authentication in the future.  This'll
  * require extending the connection launcher.
  *
  * Bytes after n are simply forwarded onwards with no processing applied.
@@ -503,5 +503,5 @@ end:
   seashell_tunnel_free(conn);
   seashell_tunnel_teardown();
   return error;
-  
+
 }

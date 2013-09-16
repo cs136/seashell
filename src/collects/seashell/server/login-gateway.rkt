@@ -21,6 +21,7 @@
          seashell/seashell-config
          seashell/log
          seashell/format-trace
+         seashell/tunnel
          json)
 
 (provide gateway-main)
@@ -58,7 +59,7 @@
                        "Encountered an exception. Turn debug mode on for information [insecure].")))
       ((error-escape-handler))))
 
-  (uncaught-exception-handler ss-exn-handler)
+  ;(uncaught-exception-handler ss-exn-handler)
 
   (unless
     (equal? (getenv "HTTPS") "on")
@@ -71,19 +72,22 @@
 
   (define bdgs (get-bindings))
 
-  (logf/sync 'info "bgds=~a" bdgs)
-
   (define uname
     (let ((l (extract-bindings 'u bdgs)))
       (unless (= (length l) 1)
-        (report-error 3 "No username provided."))
+        (report-error 3 "Bad username provided."))
       (first l)))
 
   (define passwd
     (let ((l (extract-bindings 'p bdgs)))
       (unless (= (length l) 1)
-        (report-error 3 "No password provided."))
+        (report-error 3 "Bad password provided."))
       (first l)))
 
-  (response/json `#hash((uname . ,uname) (passwd . ,passwd)))
+;  (define tun
+;    (with-handlers
+;      ([exn:tunnel? (lambda(e) (report-error 4 "Session could not be started."))])
+      (tunnel-launch uname passwd);))
+
+;  (copy-port (tunnel-out tun) (current-output-port))
   (exit 0))

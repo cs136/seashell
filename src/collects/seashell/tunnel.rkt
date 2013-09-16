@@ -71,7 +71,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           (logf 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
+           (logf/sync 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))
@@ -102,12 +102,15 @@
             (not (equal? 0 (subprocess-status process)))))
      (define message (format "Seashell tunnel died with status ~a" (subprocess-status process)))
      (logf 'warn "~a" message)
+     (thread-wait status-thread)
      (raise (exn:tunnel message (current-continuation-marks)))]
     ;; Case 2 - Unexpected byte read.  Tunnel will always write ASCII 'O' to output
     ;; before starting two-way data processing.
     [(not (equal? check 79))
      (define message (format "Seashell tunnel wrote bad status byte ~a" check))
      (logf 'warn "~a" message)
+     (subprocess-kill process #t)
+     (thread-wait status-thread)
      (raise (exn:tunnel message (current-continuation-marks)))]
     ;; Case 3 - All good.
     [(equal? check 79)
