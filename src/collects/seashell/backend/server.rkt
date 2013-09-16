@@ -88,33 +88,16 @@
 
     ;; Parse plain as a JSON message.
     (define message (bytes->jsexpr plain))
-
-    ;; TODO handle id field in JSON object.
-    ;(match message
-    ;  [`(hash-table
-    ;     ('type "runProgram")
-    ;     ('name ,name))]
-    ;  [`(hash-table
-    ;     ('type "compileProgram")
-    ;     ('name ,name))]
-    ;  [`(hash-table
-    ;     ('type "getListing")
-    ;     ('project ,project))]
-    ;  [`(hash-table
-    ;     ('type "loadFile")
-    ;     ('project ,project)
-    ;     ('name ,name))]
-    ;  [`(hash-table
-    ;     ('type "saveFile")
-    ;     ('project ,project)
-    ;     ('name ,name)
-    ;     ('contents ,contents))]
-    ;  [`(hash-table
-    ;     ('type "revertFile")
-    ;     ('project ,project)
-    ;     ('name ,name))])
-
-    (logf 'info "Received message: ~s~n" data)
+    (logf 'info "Received message: ~s~n" message)
+   
+    ;; Put long running computation in a deferred thread. 
+    (future 
+      (lambda ()
+        (define result (handle-message message))
+        (define-values
+          (iv coded tag)
+          (seashell-encrypt key (jsexpr->bytes result) #""))
+        (ws-send connection (bytes-append iv tag (bytes 0) #"" coded))))
     (main-loop connection state))
 
   (define (conn-dispatch key wsc header-resp)
