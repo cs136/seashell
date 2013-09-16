@@ -33,6 +33,11 @@
 ;; Exception type.
 (struct exn:git exn:fail ())
 
+;; Global semaphore on git operations.
+(define git-sema (make-semaphore 1))
+(define-syntax-rule (guard proc args ...)
+  (call-with-semaphore git-sema proc args ...))
+
 ;; Error fetching function
 (define-git seashell_git_error (_fun -> _string))
 
@@ -84,7 +89,8 @@
 ;;  A seashell-git-status? structure.
 (define/contract (seashell-git-get-status repo)
   (contract:-> path? seashell-git-status?)
-  (seashell-git-status (seashell_git_get_status repo)))
+  (seashell-git-status
+    (guard seashell_git_get_status repo)))
 
 ;; (seashell-git-status-entrycount status)
 ;; Gets the number of entries in a Seashell GIT
@@ -96,7 +102,8 @@
 ;;  Number of entries in the structure.
 (define/contract (seashell-git-status-entrycount status)
   (contract:-> seashell-git-status? integer?)
-  (seashell_git_status_entrycount (seashell-git-status-status status)))
+  (guard
+    seashell_git_status_entrycount (seashell-git-status-status status)))
 
 ;; (seashell-git-status-flags status index)
 ;; Gets the flags associated with a status entry at index.
@@ -110,7 +117,7 @@
     ([status seashell-git-status]
      [index (status) (integer-in 0 (sub1 (seashell-git-status-entrycount status)))])
     [result integer?])
-  (seashell_git_status_flags (seashell-git-status-status status) index))
+  (guard seashell_git_status_flags (seashell-git-status-status status) index))
 
 ;; (seashell-git-status-path status index)
 ;; Gets the [relative] path associated with a status entry at index.
@@ -124,7 +131,7 @@
     ([status seashell-git-status]
      [index (status) (integer-in 0 (sub1 (seashell-git-status-entrycount status)))])
     [result path?])
-  (seashell_git_status_path (seashell-git-status-status status) index))
+  (guard seashell_git_status_path (seashell-git-status-status status) index))
 
 
 ;; (seashell-git-init path)
@@ -134,7 +141,7 @@
 ;;  path - Full path 
 (define/contract (seashell-git-init path)
   (contract:-> path? any/c)
-  (seashell_git_init path))
+  (guard seashell_git_init path))
 
 ;; (seashell-git-clone from to)
 ;; Clones a repository.
@@ -144,7 +151,7 @@
 ;;  to - To
 (define/contract (seashell-git-clone from to)
   (contract:-> string? path? any/c)
-  (seashell_git_clone from to))
+  (guard seashell_git_clone from to))
 
 ;; (seashell-git-make-commit repo) -> seashell-git-update?
 ;; Creates a new commit update object acting on repo.
@@ -155,7 +162,7 @@
 ;;  A seashell-git-update? object that can be used to batch updates.
 (define/contract (seashell-git-make-commit repo)
   (contract:-> path? seashell-git-update?)
-  (seashell-git-update (seashell_git_commit_init)))
+  (seashell-git-update (guard seashell_git_commit_init)))
 
 ;; (seashell-git-commit-add-file update file)
 ;; Adds a file to the git commit object.
@@ -165,7 +172,7 @@
 ;;  file - File to add.
 (define/contract (seashell-git-commit-add-file update file)
   (contract:-> seashell-git-update? path? any/c)
-  (seashell_git_commit_add (seashell-git-update-update update) file))
+  (guard seashell_git_commit_add (seashell-git-update-update update) file))
 
 ;; (seashell-git-commit-delete-file update file)
 ;; Deletes a file to the git commit object.
@@ -175,7 +182,7 @@
 ;;  file - File to delete.
 (define/contract (seashell-git-commit-delete-file update file)
   (contract:-> seashell-git-update? path? any/c)
-  (seashell_git_commit_delete (seashell-git-update-update update) file))
+  (guard seashell_git_commit_delete (seashell-git-update-update update) file))
 
 ;; (seashell-git-commit update)
 ;; Commits an update.
@@ -184,7 +191,7 @@
 ;;  update - Update to commit.
 (define/contract (seashell-git-commit update)
   (contract:-> seashell-git-update? any/c)
-  (seashell_git_commit (seashell-git-update-update update)))
+  (guard seashell_git_commit (seashell-git-update-update update)))
 
 ;; Flag test functions.  Make sure these
 ;; remain consistent with libgit2.
