@@ -28,10 +28,14 @@
   (contract-out
     [logf
       (->* (symbol? string?) #:rest (listof any/c) void?)]
+    [logf/sync
+      (->* (symbol? string?) #:rest (listof any/c) void?)]
     [make-log-reader
       (-> string? evt?)]
     [make-fs-logger
-      (-> string? (or/c string? path?) thread?)]))
+      (-> string? (or/c string? path?) thread?)]
+    [make-port-logger
+      (-> string? port? thread?)]))
 
 (define log-mtx (make-multiplexer))
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
@@ -56,37 +60,61 @@
   (lambda(cat fmt . args)
     (mt-send
       log-mtx
-      (cons cat
+      (list (symbol->string cat)
             (apply format `(,(string-append log-ts-str " ~a: " fmt)
                             ,@(log-ts-args)
                             ,cat
                             ,@args))))))
 
+;; logf/sync: category format args... -> void
+(define logf/sync
+  (lambda(cat fmt . args)
+    (define s (make-semaphore 0))
+    (mt-send
+      log-mtx
+      (list s (symbol->string cat)
+            (apply format `(,(string-append log-ts-str " ~a: " fmt)
+                            ,@(log-ts-args)
+                            ,cat
+                            ,@args))))
+    (semaphore-wait s)))
+
 ;; make-log-reader: type-regexp -> evt?
 (define (make-log-reader type-regexp)
   (define filter-chan (make-async-channel))
-  (define chan (mt-subscribe log-mtx))
-  (define (next-message fch)
-    (match
-        (let
-            ((msg (mt-receive chan)))
-          (cons (symbol->string (car msg)) (cdr msg)))
-      [(cons (regexp type-regexp) (? string? msg))
-       (async-channel-put fch msg)]
-      [else (void)])
-    (next-message fch))
-  (thread (thunk (next-message filter-chan)))
+  (define (courier chan fch)
+    (async-channel-put fch 'ready)
+    (let loop ()
+      (match (mt-receive chan)
+        [(list (regexp type-regexp) (? string? msg))
+         (async-channel-put fch msg)]
+        [(list (? semaphore? s) (regexp type-regexp) (? string? msg))
+         (async-channel-put fch (cons s msg))]
+        [else (void)])
+      (loop)))
+  (thread (thunk (courier (mt-subscribe log-mtx) filter-chan)))
+  (async-channel-get filter-chan)
   filter-chan)
 
-;; make-fs-logger: type-regexp file -> thread
-(define (make-fs-logger type-regexp file)
+;; make-port-logger: type-regexp port -> thread
+(define (make-port-logger type-regexp port)
   (define reader (make-log-reader type-regexp))
   (thread
     (thunk
-    (call-with-output-file file
-      (lambda(port)
-        (let loop ()
-          (fprintf port "~a~n" (reader))
-          (flush-output port)
-          (loop)))
-      #:exists 'append))))
+      (let loop ()
+        (match (sync reader)
+          [(cons (? semaphore? s) (? string? msg))
+           (fprintf port "~a~n" msg)
+           (flush-output port)
+           (semaphore-post s)]
+          [(? string? msg)
+           (fprintf port "~a~n" msg)
+           (flush-output port)])
+        (loop)))))
+
+;; make-fs-logger: type-regexp file -> thread
+(define (make-fs-logger type-regexp file)
+    (call-with-output-file
+      file
+      ((curry make-port-logger) type-regexp) #:exists 'append))
+

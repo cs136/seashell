@@ -18,7 +18,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/path)
 (require racket/runtime-path)
-(require seashell/seashell-config)
+(require seashell/seashell-config
+         seashell/log)
 
 (provide
  tunnel?
@@ -27,8 +28,6 @@
  tunnel-in
  tunnel-out
  exn:tunnel?)
-
-(define-logger tunnel)
 
 (struct tunnel (process in out status-thread))
 (struct exn:tunnel exn:fail:user ())
@@ -72,9 +71,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           ;; TODO - configure the logger properly
-           (printf "~a\n" line)
-           (log-tunnel-error line)
+           (logf 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))
@@ -104,13 +101,13 @@
             (subprocess-wait process)
             (not (equal? 0 (subprocess-status process)))))
      (define message (format "Seashell tunnel died with status ~a" (subprocess-status process)))
-     (log-tunnel-error message)
+     (logf 'warn "~a" message)
      (raise (exn:tunnel message (current-continuation-marks)))]
     ;; Case 2 - Unexpected byte read.  Tunnel will always write ASCII 'O' to output
     ;; before starting two-way data processing.
     [(not (equal? check 79))
      (define message (format "Seashell tunnel wrote bad status byte ~a" check))
-     (log-tunnel-error message)
+     (logf 'warn "~a" message)
      (raise (exn:tunnel message (current-continuation-marks)))]
     ;; Case 3 - All good.
     [(equal? check 79)
@@ -118,6 +115,3 @@
 
   ;; All good.
   (tunnel process in out status-thread))
-
-
-

@@ -17,33 +17,73 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require net/cgi
-          net/url
-          seashell/seashell-config
-          seashell/log
-          seashell/format-trace)
+         net/url
+         seashell/seashell-config
+         seashell/log
+         seashell/format-trace
+         json)
 
 (provide gateway-main)
 
-(define (gateway-main)
-  (define (setup-log regexp file)
-    (printf "Logging messages matching '~a' to '~a'.~n" regexp file)
-    (make-fs-logger regexp file)
-    (void))
+;; The gateway CGI expects a username 'u' and password 'p' argument
+;; as POST data. It will only run when the webserver reports an SSL
+;; connection.
+;;  (this is to ensure user has correct Apache config; only SSL
+;;   requests should be permitted to this script).
 
-  (setup-log "^web-exn$" "seashell-error.log")
-  (setup-log "^info$" "info.log")
-  (setup-log "^warn$" "warn.log")
-  (setup-log "^exception$" "exn.log")
+(define (gateway-main)
+  (define (response/json jsexpr)
+    (output-http-headers)
+    (write-json jsexpr)
+    (flush-output))
+  (define (report-error code desc)
+    (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
+    (exit 0))
+
+  (make-port-logger "^info$" (current-error-port))
+  (make-port-logger "^warn$" (current-error-port))
+  (make-port-logger "^exception$" (current-error-port))
 
   (define ss-exn-handler
     (lambda(e)
       (when (not (exn:break? e))
-        (logf 'exception "~a:~n ~a"
+        (if (read-config 'debug)
+            (logf/sync 'exception "~a:~ntrace: ~a"
               (exn-message e)
               (foldl string-append ""
                     (format-stack-trace
                       (continuation-mark-set->context
-                      (exn-continuation-marks e))))))
+                      (exn-continuation-marks e)))))
+            (logf/sync 'exception
+                       "Encountered an exception. Turn debug mode on for information [insecure].")))
       ((error-escape-handler))))
 
   (uncaught-exception-handler ss-exn-handler)
+
+  (unless
+    (equal? (getenv "HTTPS") "on")
+    (logf/sync 'warn "Refusing to operate over a non-SSL connection.")
+    (report-error 1 "Requires SSL."))
+
+  (unless
+    (equal? (get-cgi-method) "POST")
+    (report-error 2 "Requires POST request method."))
+
+  (define bdgs (get-bindings))
+
+  (logf/sync 'info "bgds=~a" bdgs)
+
+  (define uname
+    (let ((l (extract-bindings 'u bdgs)))
+      (unless (= (length l) 1)
+        (report-error 3 "No username provided."))
+      (first l)))
+
+  (define passwd
+    (let ((l (extract-bindings 'p bdgs)))
+      (unless (= (length l) 1)
+        (report-error 3 "No password provided."))
+      (first l)))
+
+  (response/json `#hash((uname . ,uname) (passwd . ,passwd)))
+  (exit 0))
