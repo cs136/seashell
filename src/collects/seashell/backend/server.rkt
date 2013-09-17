@@ -23,6 +23,7 @@
          seashell/format-trace
          seashell/backend/project
          seashell/backend/files
+         seashell/git
          racket/async-channel
          json)
 (provide backend-main)
@@ -68,6 +69,7 @@
       [(or (not (hash? message)) (not (hash-has-key? message 'id)))
         `#hash((id . (json-null)) (result . (format "Bad message: ~s" message)))]
       [else
+        (define id (hash-ref message 'id))
         (with-handlers
           ([exn:project?
             (lambda (exn)
@@ -188,10 +190,10 @@
     ;; Parse plain as a JSON message.
     (define message (bytes->jsexpr plain))
     (logf 'info "Received message: ~s~n" message)
-   
+
     ;; Put long running computation in a deferred thread/future.
-    ;; This will require synchronization in places that expect it - probably FFI things will need this. 
-    (future 
+    ;; This will require synchronization in places that expect it - probably FFI things will need this.
+    (future
       (lambda ()
         (define result (handle-message message))
         (define-values
@@ -238,5 +240,7 @@
         [(? async-channel?) (loop)])))
 
   ;; Shutdown.
+  (logf/sync 'info "Shutting down...")
   (shutdown-server)
-  (logf/sync 'info "Graceful shutdown."))
+  (logf/sync 'info "Graceful shutdown.")
+  (exit 0))

@@ -65,15 +65,14 @@
 (define-syntax-rule (check-and-build-path args ...)
   (check-path (build-path args ...)))
 
-  
+
 ;; (project-name? name) -> bool?
 ;; Predicate for testing if a string is a valid project name.
 (define (project-name? name)
   (cond
     [(not (string? name)) #f]
     [(not (path-string? name)) #f]
-    [(begin
-      (define-values (base suffix _) (split-path name))
+    [(let-values ([(base suffix _) (split-path name)])
       (and (equal? base 'relative) (path-for-some-system? suffix)))
      #t]
     [else #f]))

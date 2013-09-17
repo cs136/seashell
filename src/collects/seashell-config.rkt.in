@@ -55,7 +55,7 @@
   [host                          "localhost"]
 
   ;; Location of per-user configuration directory.
-  [seashell                      (build-path (find-system-path 'home-dir' ".seashell"))]
+  [seashell                      (build-path (find-system-path 'home-dir) ".seashell")]
 
   ;; Location of SSH tunnel binary.
   [tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel")]
@@ -68,6 +68,9 @@
 
   ;; Location of Seashell git library.
   [seashell-git                  (build-path seashell-install-path "lib" "libseashell-git")]
+
+  ;; Location of Seashell collects.
+  [seashell-collects             (build-path seashell-install-path "share" "collects")]
 
   ;; Timeout in milliseconds after which a per-user backend process, having
   ;; received no new messages, will terminate.
