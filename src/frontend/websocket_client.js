@@ -17,10 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
-var wsUri = "TODO";
 
 /** Seashell's Websocket Communication Class.
  * @constructor
+ * @param {String} uri - URI to connect to.  Should look like ws://[IP of linux student environment host]:[some port]/.  Encryption is not handled through SSL.
  * @param {Array} key - Array of 4 words that represent the 128-bit AES session key.
  * 
  * Implementor's note - this class must maintain consistent with
@@ -29,9 +29,9 @@ var wsUri = "TODO";
  * TODO: Exception handling on bad keys.  Probably want to redirect
  * to the login page _again_ with a reason.
  */
-function SeashellWebsocket(key) = {
+function SeashellWebsocket(uri, key) = {
   this.coder = new SeashellCoder(key);
-  this.websocket = new WebSocket(wsUri);
+  this.websocket = new WebSocket(uri);
   this.lastRequest = 0;
   this.requests = {};
 
