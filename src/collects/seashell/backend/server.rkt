@@ -60,7 +60,7 @@
   ;;  Response, as a jsexpr?.
   ;; Notes:
   ;;  This function _SHOULD_ not raise _ANY_ exceptions in
-  ;;  the course of normal errors..
+  ;;  the course of normal execution and errors (file does not exist, ...)
   (define/contract (handle-message message)
     (-> (and/c jsexpr?)
         (and/c jsexpr?))
@@ -72,12 +72,19 @@
           ([exn:project?
             (lambda (exn)
               `#hash((id . ,id)
+                     (error . #t)
                      (result . ,(exn-message exn))))]
+           [exn:fail:contract?
+            (lambda (exn)
+              `#hash((id . ,id)
+                     (error . #t)
+                     (result . ,(format "Bad argument: ~a." (exn-message exn)))))]
            [exn:git?
             (lambda (exn)
               `#hash((id . ,id)
+                     (error . #t)
                      (result .
-                      ,(format "Internal [git] error: ~s" (exn-message exn)))))]
+                      ,(format "Internal [git] error: ~s." (exn-message exn)))))]
            ;; TODO - other handlers here.
            )
            (match message
@@ -103,8 +110,37 @@
                     `#hash((id . ,id) (result . ,(list-files project)))]
                   [`(hash-table
                      (id . ,id)
+                     (type . "newFile")
+                     (project . ,project)
+                     (file . ,file))
+                    (new-file project file)
+                    `#hash((id . ,id) (result . #t))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "deleteFile")
+                     (project . ,project)
+                     (file . ,file))
+                    (delete-file project file)
+                    `#hash((id . ,id) (result . #t))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "writeFile")
+                     (project . ,project)
+                     (file . ,file)
+                     (contents . ,contents))
+                    (write-file project file (string->bytes/utf-8 contents))
+                    `#hash((id . ,id) (result . #t))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "readFile")
+                     (project . ,project)
+                     (file . ,file))
+                    `#hash((id . ,id) (result . ,(bytes->string/utf-8 read-file project file)))]
+                  [`(hash-table
+                     (id . ,id)
                      (key . ,value) ...)
                     `#hash((id . ,id)
+                           (error . #t)
                            (result . (format "Unknown message: ~s" message)))]))]))
 
   ;; Channel used to keep process alive.
@@ -130,7 +166,8 @@
     (define message (bytes->jsexpr plain))
     (logf 'info "Received message: ~s~n" message)
    
-    ;; Put long running computation in a deferred thread. 
+    ;; Put long running computation in a deferred thread/future.
+    ;; This will require synchronization in places that expect it - probably FFI things will need this. 
     (future 
       (lambda ()
         (define result (handle-message message))
