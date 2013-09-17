@@ -37,6 +37,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <seashell-config.h>
@@ -102,6 +103,8 @@ void seashell_tunnel_teardown (void) {
  *  user - User to run as.
  *  password - User's password.
  *  error - [optional] denotes error on failure.
+ *  remote_addr - Address to which the remote IP address will
+ *   be written. Reserve 128 bytes.
  *
  * Returns:
  *  Handle to connection object on success, NULL otherwise.
@@ -110,7 +113,8 @@ void seashell_tunnel_teardown (void) {
 struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     const char* user,
     const char* password,
-    int* error) {
+    int* error,
+    char * remote_addr) {
   struct addrinfo hints;
   struct addrinfo *results, *rp;
   int sockfd;
@@ -141,6 +145,30 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
       break;
 
     close(sockfd);
+  }
+
+  /* Write address that we're connecting to into
+   * remote_addr.
+   */
+
+  if(rp != NULL) {
+    switch(rp->ai_family) {
+      case AF_INET:
+        if(inet_ntop(rp->ai_family, &((struct sockaddr_in *)rp->ai_addr)->sin_addr, remote_addr, 128) == NULL) {
+          SET_ERROR(TUNNEL_ERROR_RESOLV);
+          return NULL;
+        }
+        break;
+      case AF_INET6:
+        if(inet_ntop(rp->ai_family, &((struct sockaddr_in6 *)rp->ai_addr)->sin6_addr, remote_addr, 128) == NULL) {
+          SET_ERROR(TUNNEL_ERROR_RESOLV);
+          return NULL;
+        }
+        break;
+      default:
+        SET_ERROR(TUNNEL_ERROR_RESOLV);
+        return NULL;
+    }
   }
 
   freeaddrinfo(results);
@@ -473,8 +501,11 @@ int main (int argc, char *argv[]) {
     goto end;
   }
 
+  char remote_addr[128];
+  memset(remote_addr, 0, 128);
+
   struct seashell_connection* conn = seashell_tunnel_connect_password(
-      argv[2], argv[1], data, &error);
+      argv[2], argv[1], data, &error, remote_addr);
 
   if (!conn) {
     fprintf(stderr, "%s: Error on opening tunnel to %s: %d\n", argv[1], argv[2], error);
@@ -482,8 +513,15 @@ int main (int argc, char *argv[]) {
   }
 
   /** Signal success */
-  const int8_t success = 'O';
-  write(1, &success, 1);
+  {
+    const int8_t success = 'O';
+    write(1, &success, 1);
+    uint8_t addrlen = strlen(remote_addr);
+    write(1, &addrlen, 1);
+    write(1, remote_addr, addrlen);
+
+    FPRINTF_IF_DEBUG(stderr, "%s: Remote address is '%s' (%d)\n", argv[1], remote_addr, (int)addrlen);
+  }
   FPRINTF_IF_DEBUG(stderr, "%s: Tunnel launched!\n", argv[1]);
 
   /** Now we select from fd 0, write to socket,

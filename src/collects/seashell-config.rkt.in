@@ -73,4 +73,7 @@
   ;; received no new messages, will terminate.
   [backend-client-idle-timeout   1800000]
 
+  ;; Timeout in seconds after which an in-progress gateway login will be killed.
+  [backend-login-timeout         30]
+
 )

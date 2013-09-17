@@ -205,6 +205,10 @@
     (main-loop wsc 'unused key))
 
   ;; EXECUTION BEGINS HERE
+
+  (file-stream-buffer-mode (current-input-port) 'none)
+  (file-stream-buffer-mode (current-output-port) 'none)
+
   (define key (seashell-crypt-key-server-read (current-input-port)))
   (define conf-chan  (make-async-channel))
   (init-projects)
