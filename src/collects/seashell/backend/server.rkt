@@ -88,6 +88,7 @@
            ;; TODO - other handlers here.
            )
            (match message
+                  ;; Project compilation functions.
                   [`(hash-table
                      (id ,id)
                      (type "runProgram")
@@ -98,9 +99,10 @@
                      (type "compileProgram")
                      (name ,name))
                     `#hash((id . ,id) (result . "unimplemented"))]
+                  ;; Project manipulation functions.
                   [`(hash-table
                      (id ,id)
-                     (type "getProjects"))
+                     (type . "getProjects"))
                     `#hash((id . ,id)
                            (result . ,(list-projects)))]
                   [`(hash-table
@@ -108,6 +110,25 @@
                      (type . "listProject")
                      (project . ,project))
                     `#hash((id . ,id) (result . ,(list-files project)))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "newProject")
+                     (project . ,project))
+                    (new-project project)
+                    `#hash((id . ,id) (result . #t))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "deleteProject")
+                     (project . ,project))
+                    (delete-project project)
+                    `#hash((id . ,id) (result . #t))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "saveProject")
+                     (project . ,project))
+                    (save-project project)
+                    `#hash((id . ,id) (result . #t))]
+                  ;; File functions.
                   [`(hash-table
                      (id . ,id)
                      (type . "newFile")
@@ -136,6 +157,8 @@
                      (project . ,project)
                      (file . ,file))
                     `#hash((id . ,id) (result . ,(bytes->string/utf-8 read-file project file)))]
+                  ;; TODO: revertFile.
+                  ;; Fall through case.
                   [`(hash-table
                      (id . ,id)
                      (key . ,value) ...)
@@ -183,8 +206,8 @@
 
   ;; EXECUTION BEGINS HERE
   (define key (seashell-crypt-key-server-read (current-input-port)))
-
   (define conf-chan  (make-async-channel))
+  (init-projects)
 
   (define shutdown-server
     (seashell-websocket-serve
