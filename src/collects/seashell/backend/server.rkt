@@ -203,7 +203,10 @@
     (main-loop connection state))
 
   (define (conn-dispatch key wsc header-resp)
-    (ws-send wsc #"hello Seashell/0")
+    (define-values
+      (iv coded tag)
+      (seashell-encrypt key (jsexpr->bytes '("hello Seashell/0")) #""))
+    (ws-send wsc (bytes-append iv tag (bytes 0) #"" coded))
     (main-loop wsc 'unused key))
 
   ;; EXECUTION BEGINS HERE

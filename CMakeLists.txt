@@ -41,8 +41,6 @@ SET(CPACK_PACKAGING_INSTALL_PREFIX "/opt/seashell")
 SET(CPACK_STRIP_FILES "bin/*" "lib/*")
 SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst;")
 
-SET(CMAKE_INSTALL_PREFIX "/opt/seashell")
-
 # Hack to get around LLVM's use of CPack.
 SET(CPack_CMake_INCLUDED 0)
 include(CPack)

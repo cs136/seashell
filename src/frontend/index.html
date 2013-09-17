@@ -3,7 +3,8 @@
 	<head>
 		<title>Seashell</title>
 
-		<link rel="stylesheet" type="text/css" href="css/style.css" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
 
 		<link rel="apple-touch-icon" href="touchicon.png">
 		<link rel="icon" href="path/to/favicon.png">
@@ -12,17 +13,25 @@
 		<meta name="msapplication-TileImage" content="tileicon.png">
 	</head>
 	<body id="body">
-		<img src="img/seashell-logo.png"/>
-		<script type="text/javascript" src="js/main.js"></script>
+    <img src="img/seashell-logo.png"/>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+    <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
+    <script type="text/javascript" src="sjcl.js"></script>
+    <script type="text/javascript" src="crypto.js"></script>
+    <script type="text/javascript" src="websocket_client.js"></script>
+    <script type="text/javascript" src="js/login.js"></script>
 		<div id="login-wrap">
 			<div id="login">
-				<h1>Log in with your UWaterloo email and password</h1>
-				<div id="input-wrap">
-					<h2><i>email:</i></h2>
-					<input type="text" id="email-input" name="input" />
-					<h2><i>password:</i></h2>
-					<input type="password" id="password-input" name="password" />
-					<button id="submit-button">Submit</button>
+				<h1>Log in with your UWaterloo CS-TEACHING username and password</h1>
+        <div id="input-wrap">
+          <form id="loginform" onSubmit="submit_login(); return false;">
+            <h2><i>username:</i></h2>
+            <input type="text" id="u" name="u" />
+            <h2><i>password:</i></h2>
+            <input type="password" id="p" name="p" />
+            <button id="submit-button" type="submit">Submit</button>
+          </form>
 				</div>
 			</div>
 		</div>
