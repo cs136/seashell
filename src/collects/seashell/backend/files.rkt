@@ -18,6 +18,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project)
 
+(provide exn:project:file new-file delete-file read-file write-file list-files)
+
 (struct exn:project:file exn:project ())
 
 ;; (new-file project file) -> void?
@@ -38,7 +40,7 @@
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (close-output-port (open-output-port
-                         (build-path (read-config 'seashell) project file)))))
+                         (check-and-build-path (read-config 'seashell) project file)))))
 
 ;; (delete-file project file) -> void?
 ;; Deletes a file inside a project.
@@ -57,7 +59,7 @@
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (delete-file (build-path (read-config 'seashell) project file))))
+    (delete-file (check-and-build-path (read-config 'seashell) project file))))
 
 ;; (read-file project file) -> bytes?
 ;; Reads a file as a Racket bytestring.
@@ -70,7 +72,7 @@
 ;;  Contents of the file as a bytestring.
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (build-path (read-config 'seashell) project file)
+  (with-input-from-file (check-and-build-path (read-config 'seashell) project file)
                         (lambda () (read-bytes 0))))
 
 ;; (write-file project file contents) -> void?
@@ -81,6 +83,27 @@
 ;;  file - name of file to write.
 ;;  contents - contents of file.
 (define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-output-to-file (build-path (read-config 'seashell) project file)
-                       (lambda () (write-bytes contents))))
+  (-> (and/c project-name? is-project?) path-string? bytes? void?)
+  (with-output-to-file (check-and-build-path (read-config 'seashell) project file)
+                       (lambda () (write-bytes contents))
+                       #:exists 'truncate/replace))
+
+;; (list-files project)
+;; Lists all files in a project.
+;;
+;; Arguments:
+;;  project - Project to deal with.
+;; Returns:
+;;  (listof string?) - Files in project.
+;;
+;; Notes:
+;;  This function assumes that projects are organized in a flat manner.
+;;  We will have to rework Seashell if this assumption does not hold in the future.
+(define/contract (list-files project)
+  (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
+  (define project-path (check-and-build-path (read-config 'seashell) project))
+  (map path->string
+    (filter
+      (lambda (path)
+        (file-exists? (build-path project-path path)))
+      (directory-list project-path))))

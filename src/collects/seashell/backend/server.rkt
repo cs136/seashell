@@ -21,6 +21,8 @@
          seashell/log
          seashell/seashell-config
          seashell/format-trace
+         seashell/backend/project
+         seashell/backend/files
          racket/async-channel
          json)
 (provide backend-main)
@@ -48,24 +50,62 @@
   ;; TODO
   ;(uncaught-exception-handler ss-exn-handler)
 
-  ;; Message handler.
+  ;; (handle-message message)
+  ;;
+  ;; Given a message, passes it on to the appropriate function.
+  ;;
+  ;; Arguments:
+  ;;  message - jsexpr? message/request.
+  ;; Returns:
+  ;;  Response, as a jsexpr?.
+  ;; Notes:
+  ;;  This function _SHOULD_ not raise _ANY_ exceptions in
+  ;;  the course of normal errors..
   (define/contract (handle-message message)
-    (-> jsexpr? jsexpr?)
-    (match message
-           [`(hash-table
-               (id ,id)
-               (type "runProgram")
-               (name ,name))
-             `#hash((id . ,id) (result . "unimplemented"))]
-           [`(hash-table
-               (id ,id)
-               (type "compileProgram")
-               (name ,name))
-             `#hash((id . ,id) (result . "unimplemented"))]
-           [`(hash-table
-               (id ,id)
-               (type "getListing"))
-             `#hash((id . ,id) (result . "unimplemented"))]))
+    (-> (and/c jsexpr?)
+        (and/c jsexpr?))
+    (cond
+      [(or (not (hash? message)) (not (hash-has-key? message 'id)))
+        `#hash((id . (json-null)) (result . (format "Bad message: ~s" message)))]
+      [else
+        (with-handlers
+          ([exn:project?
+            (lambda (exn)
+              `#hash((id . ,id)
+                     (result . ,(exn-message exn))))]
+           [exn:git?
+            (lambda (exn)
+              `#hash((id . ,id)
+                     (result .
+                      ,(format "Internal [git] error: ~s" (exn-message exn)))))]
+           ;; TODO - other handlers here.
+           )
+           (match message
+                  [`(hash-table
+                     (id ,id)
+                     (type "runProgram")
+                     (name ,name))
+                    `#hash((id . ,id) (result . "unimplemented"))]
+                  [`(hash-table
+                     (id ,id)
+                     (type "compileProgram")
+                     (name ,name))
+                    `#hash((id . ,id) (result . "unimplemented"))]
+                  [`(hash-table
+                     (id ,id)
+                     (type "getProjects"))
+                    `#hash((id . ,id)
+                           (result . ,(list-projects)))]
+                  [`(hash-table
+                     (id . ,id)
+                     (type . "listProject")
+                     (project . ,project))
+                    `#hash((id . ,id) (result . ,(list-files project)))]
+                  [`(hash-table
+                     (id . ,id)
+                     (key . ,value) ...)
+                    `#hash((id . ,id)
+                           (result . (format "Unknown message: ~s" message)))]))]))
 
   ;; Channel used to keep process alive.
   (define keepalive-chan (make-async-channel))

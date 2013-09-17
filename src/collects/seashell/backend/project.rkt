@@ -28,15 +28,56 @@
          delete-project
          save-project
          exn:project?
-         exn:project)
+         exn:project
+         check-path
+         check-and-build-path)
 
 (require seashell/git
          seashell/seashell-config
          net/url)
 
+;; (check-path path)
+;; Makes sure nothing funny is in a path.  Currently deals with .. ('up)
+;; This function should be called on any path that depends on user input.
+;;
+;; Arguments:
+;;  path - Path to check.
+;;
+;; Returns:
+;;  path if OK.
+;;
+;; Raises:
+;;  exn:project if a bad path is given.
+;;
+;; Notes:
+;;  Use the special form (check-and-build-path ...) to check the result of build-path.
+(define/contract (check-path path)
+  (-> path? path?)
+  (define/contract (check-path-recursive current)
+    (-> path? void?)
+    (define-values (base name _) (split-path current))
+    (when (equal? name 'up)
+          (raise (exn:project (format "Invalid path ~a!" path)
+                              (current-continuation-marks))))
+    (when (path? base) (check-path-recursive base)))
+  (check-path-recursive path)
+  path)
+(define-syntax-rule (check-and-build-path args ...)
+  (check-path (build-path args ...)))
+
+  
 ;; (project-name? name) -> bool?
 ;; Predicate for testing if a string is a valid project name.
-(define project-name? path-string?)
+(define (project-name? name)
+  (cond
+    [(not (string? name)) #f]
+    [(not (path-string? name)) #f]
+    [(begin
+      (define-values (base suffix _) (split-path name))
+      (and (equal? base 'relative) (path-for-some-system? suffix)))
+     #t]
+    [else #f]))
+
 
 ;; (url-string? str) -> bool?
 ;; Predicate for testing if a string is a valid URL
@@ -80,7 +121,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init (build-path (read-config 'seashell) name))))
+    (seashell-git-init (check-and-build-path (read-config 'seashell) name))))
 
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
@@ -105,8 +146,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone source (build-path (read-config 'seashell) name))
-    ))
+    (seashell-git-clone source (check-and-build-path (read-config 'seashell) name))))
 
 ;; (delete-project name)
 ;; Deletes a project.
@@ -139,7 +179,7 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (recursive-delete-tree (build-path (read-config 'seashell) name))))
+    (recursive-delete-tree (check-and-build-path (read-config 'seashell) name))))
 
 ;; (save-project name)
 ;; Commits the current state of a project to Git.
@@ -159,7 +199,7 @@
   ;;  3. Add 'deletes' to each of the files that
   ;;     have been deleted from the working tree.
   ;;  4. Run the commit.
-  (define status (seashell-git-get-status (build-path (read-config 'seashell) name)))
+  (define status (seashell-git-get-status (check-and-build-path (read-config 'seashell) name)))
   (define entries (seashell-git-status-entrycount status))
 
   (define files-add
@@ -194,4 +234,4 @@
 ;; Returns: #t if it does, #f otherwise.
 (define/contract (is-project? name)
   (-> project-name? boolean?)
-  (directory-exists? (build-path (read-config 'seashell) name)))
+  (directory-exists? (check-and-build-path (read-config 'seashell) name)))
