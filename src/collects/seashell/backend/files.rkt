@@ -16,7 +16,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/backend/project)
+(require seashell/backend/project
+         seashell/seashell-config)
 
 (struct exn:project:file exn:project ())
 
@@ -37,8 +38,9 @@
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (close-output-port (open-output-port
-                         (build-path (read-config 'seashell) project file)))))
+    (close-output-port (open-output-file
+                         (build-path (read-config 'seashell) project file)
+                         #:exists 'append))))
 
 ;; (delete-file project file) -> void?
 ;; Deletes a file inside a project.
@@ -81,6 +83,6 @@
 ;;  file - name of file to write.
 ;;  contents - contents of file.
 (define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
+  (-> (and/c project-name? is-project?) path-string? bytes? void?)
   (with-output-to-file (build-path (read-config 'seashell) project file)
                        (lambda () (write-bytes contents))))

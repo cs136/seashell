@@ -18,8 +18,7 @@
 ;;
 ;; Authors: Jennifer Wong, Marc Burns
 (module seashell-run racket
-  (require "log.rkt"
-           "common.rkt"
+  (require seashell/log
            seashell/seashell-config)
   (provide run-file
            kill-current-pgrm
@@ -51,7 +50,7 @@
                         (or
                          (> (- (current-seconds)
                                (pgrm-ts v))
-                            pgrm-idle-timeout)
+                            100) ;pgrm-idle-timeout) ;;TODO
                          (not (equal? ((pgrm-handle v) 'status)
                                       'running))))
                (set-pgrm-reaped! v #t)
@@ -111,7 +110,7 @@
     (let
         ((proc
           (apply process*
-                 `(,ce-helper-binary
+                 `("TODO" ;,ce-helper-binary TODO
                    ,binary-name
                    ,@src-list))))
       ;; Create a thread to clean up the working files
