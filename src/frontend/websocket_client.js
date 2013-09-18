@@ -124,7 +124,7 @@ SeashellWebsocket.prototype.close = function() {
 SeashellWebsocket.prototype.sendMessage = function(message) {
   var self = this;
   // Reserve a slot for the message.
-  var request_id = self.lastRequests++;
+  var request_id = self.lastRequest++;
   self.requests[request_id] = message;
   message.id = request_id;
   // Stringify, write out as Array of bytes, send.
