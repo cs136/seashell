@@ -197,7 +197,7 @@
   ;;  message - Seashell message, as a JSON expression.
   (define counter/out (make-counter))
   (define counter/in (make-counter))
-  (define/contract (send-frame connnection message)
+  (define/contract (send-message connection message)
     (-> seashell-websocket-connection? jsexpr? void?)
     (define ctr (integer->integer-bytes (counter/out) 2 #f #t))
     ;; Framing format (given in bytes) 
@@ -210,7 +210,7 @@
     (define-values
       (iv coded tag)
       (seashell-encrypt key
-                        (jsexpr->bytes result)
+                        (jsexpr->bytes message)
                         ctr))
     (ws-send connection (bytes-append ctr iv tag (bytes 0) #"" coded)))
 
@@ -262,17 +262,17 @@
   ;; Per-connection event loop.
   (define (main-loop connection state key)
     (with-handlers
-      [exn:fail:counter?
-        (lambda (exn)
-          (logf 'error (format "Data integrity failed: ~s" (exn-message exn)))
-          (send-message `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
-          (ws-close! connection))]
-      [exn:break?
-        (lambda (exn) (raise exn))]
-      [(lambda (exn) #t)
-        (lambda (exn) 
-          (logf 'error (format "Unexpected exception: ~s" (exn-message exn)))
-          (send-message `#hash((id . -2) (error . #t) (result . "Unexpected exception!"))))]
+      ([exn:fail:counter?
+         (lambda (exn)
+           (logf 'error (format "Data integrity failed: ~s" (exn-message exn)))
+           (send-message `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
+           (ws-close! connection))]
+       [exn:break?
+         (lambda (exn) (raise exn))]
+       [(lambda (exn) #t)
+         (lambda (exn) 
+           (logf 'error (format "Unexpected exception: ~s" (exn-message exn)))
+           (send-message `#hash((id . -2) (error . #t) (result . "Unexpected exception!"))))])
       ;; TODO - probably want to sync here also on a CLOSE frame.
       ;; TODO - close the connection when appropriate (timeout).
       ;; TODO - send messages on the keepalive channel whenever there is activity.
@@ -289,7 +289,7 @@
 
   ;; Dispatch function.
   (define (conn-dispatch key wsc header-resp)
-    (send-message connection `#hash((id . -1) (result . "Hello from Seashell/0!")))
+    (send-message wsc `#hash((id . -1) (result . "Hello from Seashell/0!")))
     (main-loop wsc 'unused key))
 
   ;; EXECUTION BEGINS HERE
