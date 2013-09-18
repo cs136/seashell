@@ -33,9 +33,24 @@ function SeashellWebsocket(uri, key) {
   var self = this;
 
   self.coder = new SeashellCoder(key);
-  self.websocket = new WebSocket(uri);
   self.lastRequest = 0;
   self.requests = {};
+  self.ready = false;
+  // Ready [-1]
+  self.requests[-1] = {
+    callback : function() {
+      self.ready = true;
+    }
+  };
+  // Failure [-2]
+  self.requests[-2] = {
+    callback : function () {
+      self.failed = true;
+    }
+  };
+  self.read_ctr = 0;
+  self.write_ctr = 0;
+  self.websocket = new WebSocket(uri);
 
   this.websocket.onmessage = function(message) {
     // We receive all messages in binary,
@@ -48,13 +63,24 @@ function SeashellWebsocket(uri, key) {
       var result = readerT.result;
 
       // Framing format (all binary bytes):
-      // [IV - 12 bytes][GCM tag - 16 bytes][1 byte - Auth Len][Auth Plain][Encrypted Frame]
+      // [CTR - 2 bytes]
+      // [IV - 12 bytes]
+      // [GCM tag - 16 bytes]
+      // [1 byte - Auth Len]
+      // [Auth Plain]
+      // [Encrypted Frame]
       // Keep this consistent with the server.
-      var iv = new Uint8Array(result.slice(0,12));
-      var tag = new Uint8Array(result.slice(12, 28));
-      var authlen = new Uint8Array(result.slice(28, 29))[0];
-      var auth = new Uint8Array(result.slice(29, 29+authlen));
-      var encrypted = new Uint8Array(result.slice(29+authlen));
+      var ctr = new Uint8Array(result.slice(0,2));
+          ctr = ctr[0] << 8 | ctr[1];
+      var iv = new Uint8Array(result.slice(2,14));
+      var tag = new Uint8Array(result.slice(16, 30));
+      var authlen = new Uint8Array(result.slice(30, 31))[0];
+      var auth = new Uint8Array(result.slice(31, 31+authlen));
+      var encrypted = new Uint8Array(result.slice(31+authlen));
+
+      // Check counters
+      if (ctr != self.read_ctr)
+        throw "Bad counter received!";
 
       // Decode plain, and verify.
       var plain = self.coder.decrypt(encrypted, iv, tag, auth);
@@ -68,9 +94,13 @@ function SeashellWebsocket(uri, key) {
         var response = JSON.parse(response_string);
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
+
+        // TODO: Error handling!
         var request = requests[response.id];
         request.callback(response);
-        delete requests[response.id];
+
+        if (response.id > 0)
+         delete requests[response.id];
       }
       reader.readAsText(blob);
     }
@@ -99,9 +129,21 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
   var blob = new Blob([JSON.stringify(message)]);
   var reader = new FileReader();
   reader.onloadend = function() {
+    // Keep in mind the framing format:
+    // [CTR - 2 bytes]
+    // [IV - 12 bytes]
+    // [GCM tag - 16 bytes]
+    // [1 byte - Auth Len]
+    // [Auth Plain]
+    // [Encrypted Frame]
+    // Keep this consistent with the server.
+    var ctr = self.write_ctr;
+    self.write_ctr = (self.write_ctr + 1) % 65536;
+        ctr = [(write_ctr >> 8) & 0xFF] +
+              [write_ctr & 0xFF];
     var frame = new Uint8Array(reader.result);
     var plain = [];
-    var result = self.coder.encrypt(frame, plain);
+    var result = self.coder.encrypt(frame, ctr + plain);
     var iv = result[0];
     var coded = result[1];
     var tag = result[2];
@@ -110,7 +152,7 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
       throw "sendMessage: Too many authenticated plaintext bytes!";
     }
 
-    var send = iv + tag + [plain.length] + plain + coded;
+    var send = ctr + iv + tag + [plain.length] + plain + coded;
     self.websocket.send(new Uint8Array(send));
   }
 };
