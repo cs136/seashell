@@ -141,8 +141,7 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
     // Keep this consistent with the server.
     var ctr = self.write_ctr;
     self.write_ctr = (self.write_ctr + 1) % 65536;
-        ctr = [(write_ctr >> 8) & 0xFF] +
-              [write_ctr & 0xFF];
+        ctr = [(ctr >> 8) & 0xFF, ctr & 0xFF];
     var frame = new Uint8Array(reader.result);
     var plain = [];
     var result = self.coder.encrypt(frame, ctr + plain);
