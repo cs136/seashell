@@ -52,14 +52,14 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
   var ivArr = sjcl.codec.bytes.toBits(iv);
   var frameArr = sjcl.codec.bytes.toBits(frame);
   var plainArr = sjcl.codec.bytes.toBits(plain);
-  var authArr = sjcl.codec.bytes.concat(ivArr, plainArr);
+  var authArr = sjcl.bitArray.concat(ivArr, plainArr);
   var out = sjcl.mode.gcm.encrypt(this.cipher,
       frameArr,
       ivArr,
       plainArr,
       128);
-  var tagArr = sjcl.bitArray.bitSlice(out, out.bitLength() - 128);
-  var codedArr = sjcl.bitArray.bitSlice(out, 0, out.bitLength() - 128);
+  var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
+  var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
   return [iv, sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
 };

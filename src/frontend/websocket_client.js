@@ -144,7 +144,9 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
         ctr = [(ctr >> 8) & 0xFF, ctr & 0xFF];
     var frame = new Uint8Array(reader.result);
     var plain = [];
-    var result = self.coder.encrypt(frame, ctr + plain);
+    var authenticated = ctr;
+    authenticated.concat(plain);
+    var result = self.coder.encrypt(frame, authenticated);
     var iv = result[0];
     var coded = result[1];
     var tag = result[2];
@@ -153,7 +155,12 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
       throw "sendMessage: Too many authenticated plaintext bytes!";
     }
 
-    var send = ctr + iv + tag + [plain.length] + plain + coded;
+    var send = [];
+    [ctr, iv, tag, [plain.length], plain, coded].forEach(
+      function (arr) {
+        send = send.concat(arr);
+      });
     self.websocket.send(new Uint8Array(send));
-  }
+  };
+  reader.readAsArrayBuffer(blob);
 };
