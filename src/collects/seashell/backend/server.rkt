@@ -200,7 +200,7 @@
   (define/contract (send-message connection message)
     (-> seashell-websocket-connection? jsexpr? void?)
     (define ctr (integer->integer-bytes (counter/out) 2 #f #t))
-    ;; Framing format (given in bytes) 
+    ;; Framing format (given in bytes)
     ;; Counter [2 bytes]
     ;; IV      [12 bytes]
     ;; GCM tag [16 bytes]
@@ -231,7 +231,7 @@
     (define ctr (integer->integer-bytes (counter/in) 2 #f #t))
     (semaphore-post recv-guard)
 
-    ;; Framing format (given in bytes) 
+    ;; Framing format (given in bytes)
     ;; Counter [2 bytes]
     ;; IV      [12 bytes]
     ;; GCM tag [16 bytes]
@@ -244,20 +244,20 @@
     (define authlen (bytes-ref data 30))
     (define auth (subbytes data 31 (+ 31 authlen)))
     (define encrypted (subbytes data (+ 31 authlen)))
-    
+
     ;; Check the counters.
     (unless (equal? read-ctr ctr)
       (raise (exn:fail:counter (format "Frame counter mismatch: ~s ~s" read-ctr ctr)
-                               (current-continuation-marks)))) 
-  
+                               (current-continuation-marks))))
+
     (define plain (seashell-decrypt key iv tag encrypted auth))
-    
+
     ;; Parse plain as a JSON message.
     (define message (bytes->jsexpr plain))
     (logf 'info "Received message: ~s~n" message)
-    
+
     message)
-    
+
 
   ;; Per-connection event loop.
   (define (main-loop connection state key)
@@ -270,7 +270,7 @@
        [exn:break?
          (lambda (exn) (raise exn))]
        [(lambda (exn) #t)
-         (lambda (exn) 
+         (lambda (exn)
            (logf 'error (format "Unexpected exception: ~s" (exn-message exn)))
            (send-message `#hash((id . -2) (error . #t) (result . "Unexpected exception!"))))])
       ;; TODO - probably want to sync here also on a CLOSE frame.
@@ -316,6 +316,9 @@
     (raise start-result))
 
   (printf "~a~n" start-result)
+
+  (current-output-port (open-output-file "/home/seashelltest/log" #:exists 'append))
+  (current-error-port (current-output-port))
 
   (with-handlers
     ([exn:break? (lambda(e) (logf/sync 'exception "Terminating on break~n"))])
