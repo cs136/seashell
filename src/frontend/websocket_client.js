@@ -82,6 +82,8 @@ function SeashellWebsocket(uri, key) {
       if (ctr != self.read_ctr)
         throw "Bad counter received!";
 
+      self.read_ctr = (self.read_ctr + 1) % 65536;
+
       // Decode plain, and verify.
       var plain = self.coder.decrypt(encrypted, iv, tag, auth);
       // Plain is an Array of bytes. Convert it into an Blob
