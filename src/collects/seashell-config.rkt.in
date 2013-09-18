@@ -18,23 +18,65 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide read-config)
 
-(define seashell-install-path
-  "@CMAKE_INSTALL_PREFIX@")
-
-;; (read-config part) -> any/c
-;; Reads the configuration data
+;; (seashell-declare-config read-config (key value) ...)
+;; This macro binds a procedure (read-config part) -> any/c
+;; with the following contract:
 ;;
 ;; Arguments:
 ;;  part - Part of configuration data to read.
 ;; Returns:
 ;;  Configuration data.
-(define/contract (read-config part)
-  (-> symbol? any/c)
-  (match part
-         ['host "localhost"]
-         ['seashell (build-path (find-system-path 'home-dir' ".seashell"))]
-         ['tunnel-binary (build-path seashell-install-path "bin" "seashell-tunnel")]
-         ['seashell-crypto (build-path seashell-install-path "lib" "libseashell-crypto")]
-         ['seashell-clang (build-path seashell-install-path "lib" "libseashell-clang")]
-         ['seashell-git (build-path seashell-install-path "lib" "libseashell-git")]
-         ))
+
+(define-syntax seashell-declare-config
+  (syntax-rules ()
+    [(_  read-config (k v) ...)
+     (define/contract (read-config part)
+         (-> symbol? any/c)
+         (match part
+                ['k v] ...
+                [else 'undefined]))]))
+
+;; Seashell configuration follows.
+
+;; These constants are used to build several configuration values.
+(define seashell-install-path
+  "@CMAKE_INSTALL_PREFIX@")
+
+(define seashell-numeric-debug
+  @SEASHELL_DEBUG@)
+
+(seashell-declare-config read-config
+
+  ;; Enable debug mode execution (corresponds to seashell-numeric-debug value by default)
+  [debug                         (= seashell-numeric-debug 1)]
+
+  ;; Backend target host. The gateway will attempt to start user sessions on this host
+  ;; via SSH.
+  [host                          "localhost"]
+
+  ;; Location of per-user configuration directory.
+  [seashell                      (build-path (find-system-path 'home-dir) ".seashell")]
+
+  ;; Location of SSH tunnel binary.
+  [tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel")]
+
+  ;; Location of Seashell crypto library.
+  [seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto")]
+
+  ;; Location of Seashell clang library.
+  [seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang")]
+
+  ;; Location of Seashell git library.
+  [seashell-git                  (build-path seashell-install-path "lib" "libseashell-git")]
+
+  ;; Location of Seashell collects.
+  [seashell-collects             (build-path seashell-install-path "share" "collects")]
+
+  ;; Timeout in milliseconds after which a per-user backend process, having
+  ;; received no new messages, will terminate.
+  [backend-client-idle-timeout   1800000]
+
+  ;; Timeout in seconds after which an in-progress gateway login will be killed.
+  [backend-login-timeout         30]
+
+)

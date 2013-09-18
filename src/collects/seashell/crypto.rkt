@@ -143,11 +143,11 @@
     coded tag)
   frame)
 
-;; (seashell-crypt-key->client key) -> bytes?
+;; (seashell-crypt-key->client key) -> jsexpr?
 ;; Given an encryption key, represents it in a way that 
 ;; the client side code in JavaScript can easily handle.
 ;;
-;; This code will produce a bytestring that will be sent directly to 
+;; This code will produce a JSON expression that will be sent directly to 
 ;; the JavaScript.  Make sure this remains in sync with the
 ;; JavaScript implementation in crypto.js
 ;;
@@ -164,7 +164,7 @@
   (define keyC (integer-bytes->integer (subbytes key 8 12) #t #t))
   (define keyD (integer-bytes->integer (subbytes key 12 16) #t #t))
   ;; Write it out as a bytestring representing [A, B, C, D]
-  (jsexpr->bytes `(,keyA ,keyB ,keyC ,keyD)))
+  `(,keyA ,keyB ,keyC ,keyD))
 
 ;; (seashell-crypt-key->server key) -> bytes?
 ;; Given an encryption key, represents it in a way that 

@@ -18,7 +18,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/path)
 (require racket/runtime-path)
-(require seashell/seashell-config)
+(require seashell/seashell-config
+         seashell/log)
 
 (provide
  tunnel?
@@ -26,12 +27,12 @@
  tunnel-process
  tunnel-in
  tunnel-out
+ tunnel-remote-addr
+ exn:tunnel
  exn:tunnel?)
 
-(define-logger tunnel)
-
-(struct tunnel (process in out status-thread))
-(struct exn:tunnel exn:fail:user ())
+(struct tunnel (process in out status-thread remote-addr))
+(struct exn:tunnel exn:fail:user (status-code))
 
 ;; (tunnel-launch user password) -> tunnel?
 ;; Launches an instance of the Seashell Tunnel backend.
@@ -72,15 +73,14 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           ;; TODO - configure the logger properly
-           (printf "~a\n" line)
-           (log-tunnel-error line)
+           (logf/sync 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))
        )))
 
-  ;; Set unbuffered mode for the output port, so nothing funny happens.
+  ;; Set unbuffered mode for the ports, so nothing funny happens.
+  (file-stream-buffer-mode in 'none)
   (file-stream-buffer-mode out 'none)
 
   ;; Write out the authentication details
@@ -98,26 +98,39 @@
   ;; Wait on the input port and see what happens.
   (define check (read-byte in))
   (cond
-    ;; Case 1 - EOF read.  Make sure the process exited cleanly.
-    [(and (eof-object? check)
-          (begin
-            (subprocess-wait process)
-            (not (equal? 0 (subprocess-status process)))))
+    ;; Case 1 - EOF read.
+    [(eof-object? check)
+     (subprocess-kill process #t)
+     (subprocess-wait process)
      (define message (format "Seashell tunnel died with status ~a" (subprocess-status process)))
-     (log-tunnel-error message)
-     (raise (exn:tunnel message (current-continuation-marks)))]
+     (logf 'warn "~a" message)
+     (thread-wait status-thread)
+     (raise (exn:tunnel message (current-continuation-marks)
+                        (subprocess-status process)))]
     ;; Case 2 - Unexpected byte read.  Tunnel will always write ASCII 'O' to output
     ;; before starting two-way data processing.
     [(not (equal? check 79))
      (define message (format "Seashell tunnel wrote bad status byte ~a" check))
-     (log-tunnel-error message)
-     (raise (exn:tunnel message (current-continuation-marks)))]
+     (logf 'warn "~a" message)
+     (subprocess-kill process #t)
+     (thread-wait status-thread)
+     (raise (exn:tunnel message (current-continuation-marks) #f))]
     ;; Case 3 - All good.
     [(equal? check 79)
-     #t])
+     (void)])
+
+  ;; Get remote address.
+  (define remote-addr-len (read-byte in))
+  (define remote-addr-bytes (if (eof-object? remote-addr-len) #f (read-bytes remote-addr-len in)))
+
+  (when (or (eof-object? remote-addr-len)
+            (eof-object? remote-addr-bytes))
+    (subprocess-kill process #t)
+    (subprocess-wait process)
+    (define message "Unexpected EOF from tunnel binary (get remote address).")
+    (logf 'warn message)
+    (raise (exn:tunnel message (current-continuation-marks)
+                       (subprocess-status process))))
 
   ;; All good.
-  (tunnel process in out status-thread))
-
-
-
+  (tunnel process in out status-thread (bytes->string/utf-8 remote-addr-bytes)))

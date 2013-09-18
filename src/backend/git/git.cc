@@ -35,6 +35,13 @@ struct seashell_git_update {
   string target;
 };
 
+/** Structure representing a git status. */
+struct seashell_git_status {
+  git_repository* repo;
+  git_status_list* status;
+};
+
+
 /**
  * seashell_git_error (void)
  * Returns the last libgit2 error string.
@@ -47,6 +54,104 @@ extern "C" const char* seashell_git_error (void) {
     return giterr_last()->message;
   }
   return NULL;
+}
+
+/**
+ * seashell_git_get_status (const char* repository)
+ * Retrieves the status [working tree] of each file in the
+ * repository.
+ *
+ * Arguments:
+ *  repository - repository to consult.
+ * Returns:
+ *  A seashell_git_status* structure.  If NULL, consult seashell_git_error()
+ */
+extern "C" struct seashell_git_status* seashell_git_get_status(const char* repository) {
+  struct seashell_git_status* status = NULL;
+  git_repository* repo = NULL;
+  git_status_options opt = GIT_STATUS_OPTIONS_INIT;
+  git_status_list* list = NULL;
+  int result = 0;
+
+  result = git_repository_open(&repo, repository);
+  if (result)
+    goto cleanup;
+
+  result = git_status_list_new(&list, repo, &opt);
+  if (result)
+    goto cleanup;
+
+  status = new seashell_git_status;
+  if (!status)
+    goto cleanup;
+
+  status->repo = repo;
+  status->status = list;
+  goto end;
+cleanup:
+  git_status_list_free(list);
+  git_repository_free(repo);
+  delete status;
+end:
+  return status;
+}
+
+/**
+ * seashell_git_status_entrycount (seashell_git_status* status) 
+ * Returns the number of entries in a given seashell_git_status structure.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ * Returns:
+ *  # of entries.
+ */
+extern "C" size_t seashell_git_status_entrycount (struct seashell_git_status* status) {
+  return git_status_list_entrycount(status->status);
+}
+
+/**
+ * seashell_git_status_flags(seashell_git_status* status, int index)
+ * Returns the status flags associated with an entry at index.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ *  index - Index.
+ * Returns:
+ *  Git Status Flags.
+ */
+extern "C" int seashell_git_status_flags(struct seashell_git_status* status, size_t index) {
+  return git_status_byindex(status->status, index)->status;
+}
+
+/**
+ * seashell_git_status_path(seashell_git_status* status, int index)
+ * Returns the [relative] path associated with a status entry at index.
+ *
+ * Arguments:
+ *  status - Seashell GIT status structure.
+ *  index - Index.
+ * Returns:
+ *  Relative path.
+ */
+extern "C" const char* seashell_git_status_path(struct seashell_git_status* status, size_t index) {
+  const git_status_entry* entry = git_status_byindex(status->status, index);
+  const char* old_path = entry->index_to_workdir->old_file.path;
+  const char* new_path = entry->index_to_workdir->new_file.path;
+
+  return new_path ? new_path : old_path;
+}
+
+/**
+ * seashell_git_status_free(seashell_git_status* status)
+ * Frees the status structure.
+ *
+ * Arguments:
+ *  status - Status structure to free.
+ */
+extern "C" void seashell_git_status_free(struct seashell_git_status* status) {
+  git_status_list_free(status->status);
+  git_repository_free(status->repo);
+  delete status;
 }
 
 /**

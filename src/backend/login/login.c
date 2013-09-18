@@ -7,7 +7,8 @@
 
 int main () {
   char * argv[] = { "racket", "-S", INSTALL_PREFIX "/share/collects",
-                    "-l", "seashell/login", NULL };
+                    "-l", "racket/base", "-l", "seashell/server", "-e",
+                    "(gateway-main)", NULL };
 
   execvp("racket", argv);
   return 1;

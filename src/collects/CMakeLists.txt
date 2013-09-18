@@ -32,3 +32,4 @@ install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
 	FILES_MATCHING PATTERN "*.rkt")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rkt" DESTINATION
   ${SEASHELL_COLLECTS}/seashell)
+install(CODE "execute_process(COMMAND racket -S ${CMAKE_INSTALL_PREFIX}/${SEASHELL_COLLECTS} -l seashell/compile-collects)")
