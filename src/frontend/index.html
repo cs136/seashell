@@ -12,8 +12,22 @@
 		<meta name="msapplication-TileColor" content="#D83434">
 		<meta name="msapplication-TileImage" content="tileicon.png">
 	</head>
-	<body id="body">
+	<body id="body" onLoad="init_login()">
     <img src="img/seashell-logo.png"/>
+		<div id="login-wrap">
+			<div id="login">
+				<h1>Log in with your UWaterloo CS-TEACHING username and password</h1>
+        <div id="input-wrap">
+          <form id="loginform" target="#" onSubmit="submit_login(); return false;">
+            <h2><i>username:</i></h2>
+            <input type="text" id="login-username" name="login-username" disabled />
+            <h2><i>password:</i></h2>
+            <input type="password" id="login-password" name="login-password" disabled />
+            <button id="login-submit" name="login-submig" type="submit" disabled>Submit</button>
+          </form>
+				</div>
+			</div>
+    </div>
     <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
     <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
@@ -21,19 +35,5 @@
     <script type="text/javascript" src="crypto.js"></script>
     <script type="text/javascript" src="websocket_client.js"></script>
     <script type="text/javascript" src="js/login.js"></script>
-		<div id="login-wrap">
-			<div id="login">
-				<h1>Log in with your UWaterloo CS-TEACHING username and password</h1>
-        <div id="input-wrap">
-          <form id="loginform" onSubmit="submit_login(); return false;">
-            <h2><i>username:</i></h2>
-            <input type="text" id="u" name="u" />
-            <h2><i>password:</i></h2>
-            <input type="password" id="p" name="p" />
-            <button id="submit-button" type="submit">Submit</button>
-          </form>
-				</div>
-			</div>
-		</div>
 	</body>
 </html>
