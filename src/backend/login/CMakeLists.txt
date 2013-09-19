@@ -19,4 +19,4 @@
 # Main library: seashell-tunnel
 add_executable(login.cgi login.c)
 
-install(TARGETS login.cgi RUNTIME DESTINATION bin)
+install(TARGETS login.cgi RUNTIME DESTINATION cgi-bin)
