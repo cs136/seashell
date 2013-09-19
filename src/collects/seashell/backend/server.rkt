@@ -328,7 +328,8 @@
       (define timeout-alarm (alarm-evt (+ (current-inexact-milliseconds)
                                           (read-config 'backend-client-idle-timeout))))
       (match (sync/enable-break timeout-alarm keepalive-chan)
-        [(? async-channel?) (loop)])))
+        [(? async-channel?) (loop)]
+        [else (void)])))
 
   ;; Shutdown.
   (logf/sync 'info "Shutting down...")
