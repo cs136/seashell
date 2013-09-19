@@ -36,8 +36,10 @@
 
 (define (gateway-main)
   (define (response/json jsexpr)
-    (output-http-headers)
+    (printf "Access-Control-Allow-Origin: *\r\n")
+    (printf "Content-Type: application/json\r\n\r\n")
     (write-json jsexpr)
+    (printf "\r\n")
     (flush-output))
   (define (report-error code desc)
     (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))

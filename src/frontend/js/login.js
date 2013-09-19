@@ -41,11 +41,11 @@ function submit_login() {
   var pass = $('#login-password')[0].value;
   var upload = "u=" + fixedEncodeURIComponent(user)
                + "&p=" + fixedEncodeURIComponent(pass);
-  $.post("login.cgi",
+  /** TODO: calculate the proper URL. */
+  $.post("https://localhost/cgi-bin/login.cgi",
          upload,
-         function(textdata, textStatus, jqXHR) {
-           data = JSON.parse(textdata);
-           console.log("Response: " + textdata);
+         function(data, textStatus, jqXHR) {
+           console.log("Response: " + data);
            window.ssdata = data;
            if(typeof(data) == "object") {
              if(data.error !== undefined) {

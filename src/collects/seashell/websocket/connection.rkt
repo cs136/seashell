@@ -371,7 +371,7 @@
                   (control conn exn)
                   (async-channel-put channel exn)))]
             (define frame (read-frame port))
-            (logf 'info "Read frame ~s" frame)
+            (logf 'debug "Read frame ~s" frame)
 
             (cond
               ;; Case 0 - Control frame.  When (control frame)
@@ -460,5 +460,6 @@
           (loop)]
          [else
           ;; Send the frame, repeat
+          (logf 'debug "Sending frame: ~s" sync-result)
           (send-frame sync-result port #:mask? mask?)
           (loop)])))))

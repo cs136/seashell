@@ -30,11 +30,16 @@
 (struct exn:fail:counter exn:fail ())
 
 (define (backend-main)
+  ;; Directory setup.
+  (init-projects)
   ;; Log / handlers setup.
-  (current-error-port (open-output-file "/home/seashelltest/log" #:exists 'append))
+  (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
+                                        #:exists 'append))
+  (make-port-logger "^debug$" (current-error-port))
   (make-port-logger "^info$" (current-error-port))
   (make-port-logger "^warn$" (current-error-port))
   (make-port-logger "^exception$" (current-error-port))
+
   ;; Channel used to keep process alive.
   (define keepalive-chan (make-async-channel))
 
@@ -185,6 +190,7 @@
         (semaphore-wait guard)
         (define result counter)
         (set! counter (remainder (add1 counter) (expt 2 16)))
+        (semaphore-post guard)
         result))
 
     ;; (send-message connection message) -> void?
@@ -196,23 +202,26 @@
     ;;  connection - Websocket connection.
     ;;  message - Seashell message, as a JSON expression.
     (define counter/out (make-counter))
+    (define send-guard (make-semaphore 1))
     (define/contract (send-message connection message)
       (-> seashell-websocket-connection? jsexpr? void?)
-      (define ctr (integer->integer-bytes (counter/out) 2 #f #t))
-      ;; Framing format (given in bytes)
-      ;; Counter [2 bytes]
-      ;; IV      [12 bytes]
-      ;; GCM tag [16 bytes]
-      ;; Auth Len[1 byte]
-      ;; Authenticated Data
-      ;; Encrypted Frame
-      (logf 'info "Sending frame: ~s" message)
-      (define-values
-        (iv coded tag)
-        (seashell-encrypt key
-                          (jsexpr->bytes message)
-                          ctr))
-      (ws-send connection (bytes-append ctr iv tag (bytes 0) #"" coded)))
+      (call-with-semaphore send-guard
+        (lambda ()
+          (define ctr (integer->integer-bytes (counter/out) 2 #f #t))
+          ;; Framing format (given in bytes)
+          ;; Counter [2 bytes]
+          ;; IV      [12 bytes]
+          ;; GCM tag [16 bytes]
+          ;; Auth Len[1 byte]
+          ;; Authenticated Data
+          ;; Encrypted Frame
+          (logf 'debug "Sending message: ~s with counter ~s" message ctr)
+          (define-values
+            (iv coded tag)
+            (seashell-encrypt key
+                              (jsexpr->bytes message)
+                              ctr))
+          (ws-send connection (bytes-append ctr iv tag (bytes 0) #"" coded)))))
 
     ;; (recv-message connection) -> jsexpr?
     ;; Receives a JSON message, by unpacking a frame from
@@ -227,39 +236,39 @@
     (define counter/in (make-counter))
     (define/contract (recv-message connection)
       (-> seashell-websocket-connection? jsexpr?)
-      (semaphore-wait recv-guard)
-      (define data (ws-recv connection))
-      (define ctr (integer->integer-bytes (counter/in) 2 #f #t))
-      (semaphore-post recv-guard)
+      (call-with-semaphore recv-guard
+        (lambda ()
+          (logf 'debug "Waiting for message.")
+          (define data (ws-recv connection))
+          (define ctr (integer->integer-bytes (counter/in) 2 #f #t))
 
-      ;; Framing format (given in bytes)
-      ;; Counter [2 bytes]
-      ;; IV      [12 bytes]
-      ;; GCM tag [16 bytes]
-      ;; Auth Len[1 byte]
-      ;; Authenticated Data
-      ;; Encrypted Frame
-      (logf 'info "Read message: ~s" data)
-      (define read-ctr (subbytes data 0 2))
-      (define iv (subbytes data 2 14))
-      (define tag (subbytes data 14 30))
-      (define authlen (bytes-ref data 30))
-      (define auth (subbytes data 31 (+ 31 authlen)))
-      (define encrypted (subbytes data (+ 31 authlen)))
-      (logf 'info "Read (parsed) message: (~s ~s) ~s" ctr read-ctr encrypted)
+          ;; Framing format (given in bytes)
+          ;; Counter [2 bytes]
+          ;; IV      [12 bytes]
+          ;; GCM tag [16 bytes]
+          ;; Auth Len[1 byte]
+          ;; Authenticated Data
+          ;; Encrypted Frame
+          (define read-ctr (subbytes data 0 2))
+          (define iv (subbytes data 2 14))
+          (define tag (subbytes data 14 30))
+          (define authlen (bytes-ref data 30))
+          (define auth (subbytes data 31 (+ 31 authlen)))
+          (define encrypted (subbytes data (+ 31 authlen)))
+          (logf 'debug "Read (parsed) message: (~s ~s) ~s" ctr read-ctr encrypted)
 
-      ;; Check the counters.
-      (unless (equal? read-ctr ctr)
-        (raise (exn:fail:counter (format "Frame counter mismatch: ~s ~s" read-ctr ctr)
-                                 (current-continuation-marks))))
+          ;; Check the counters.
+          (unless (equal? read-ctr ctr)
+            (raise (exn:fail:counter (format "Frame counter mismatch: ~s ~s" read-ctr ctr)
+                                     (current-continuation-marks))))
 
-      (define plain (seashell-decrypt key iv tag encrypted auth))
+          (define plain (seashell-decrypt key iv tag encrypted auth))
 
-      ;; Parse plain as a JSON message.
-      (define message (bytes->jsexpr plain))
-      (logf 'info "Received message: ~s~n" message)
+          ;; Parse plain as a JSON message.
+          (define message (bytes->jsexpr plain))
+          (logf 'debug "Received message: ~s~n" message)
 
-      message)
+          message)))
 
 
     ;; Per-connection event loop.
@@ -270,20 +279,18 @@
              (logf 'error (format "Data integrity failed: ~s" (exn-message exn)))
              (send-message connection `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
              (ws-close! connection))])
-        (logf 'info "In main loop.")
+        (logf 'debug "In main loop.")
         ;; TODO - probably want to sync here also on a CLOSE frame.
         ;; TODO - close the connection when appropriate (timeout).
         ;; TODO - send messages on the keepalive channel whenever there is activity.
         (define message (recv-message connection))
 
-        (thread
+        (thread 
           (lambda ()
             (define result (handle-message message))
-            (define-values
-              (iv coded tag)
-              (seashell-encrypt key (jsexpr->bytes result) #""))
-            (ws-send connection (bytes-append iv tag (bytes 0) #"" coded))))
-        (main-loop connection state key)))
+            (logf 'debug "Result of handling message ~s: ~s" message result)
+            (send-message connection result))))
+      (main-loop connection state key))
 
     (logf 'info "Received new connection.")
     (send-message wsc `#hash((id . -1) (result . "Hello from Seashell/0!")))
@@ -296,7 +303,6 @@
 
   (define key (seashell-crypt-key-server-read (current-input-port)))
   (define conf-chan  (make-async-channel))
-  (init-projects)
 
   (logf/sync 'info "Starting up.")
   (define shutdown-server
