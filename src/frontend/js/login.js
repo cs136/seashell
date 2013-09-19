@@ -54,6 +54,7 @@ function submit_login() {
              } else if(data.port !== undefined) {
                createCookie("seashell-session", JSON.stringify(data), 365);
                console.log("All done login.");
+               top.location = "frontend.html";
              } else {
                alert("Internal error (1).");
              }
