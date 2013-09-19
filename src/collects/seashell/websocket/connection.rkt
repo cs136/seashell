@@ -44,7 +44,8 @@
 ;; A connection is a synchronizable event that is ready when
 ;; seashell-websocket-read-frame will not block with synchronization result
 ;; itself.
-(require racket/async-channel)
+(require racket/async-channel
+         seashell/log)
 (provide seashell-websocket-connection?
          make-seashell-websocket-connection
          make-seashell-websocket-control
@@ -71,7 +72,8 @@
 ;; seashell-websocket-frame
 ;; Internal data structure for a WebSocket frame.
 (struct seashell-websocket-frame
-  (final? rsv opcode data))
+  (final? rsv opcode data)
+  #:transparent)
 
 ;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) ->
 ;; Creates a new WebSocket connection given in/out ports, headers,
@@ -277,9 +279,6 @@
         boolean?)
        void?)
 
-  ;; TODO debug
-  (printf "Sending frame '~a'~n" frame)
-
   ;; Construct the framing byte
   (define framing-byte
     (bitwise-ior (seashell-websocket-frame-opcode frame)
@@ -303,8 +302,6 @@
       [else
        (bytes-append (bytes (if mask? 255 127)) (integer->integer-bytes
                                          data-length 8 #f #t))]))
-
-  (printf "Data = ~a, length = ~a, length-bstr = ~s~n" data data-length length-bstr)
 
   ;; Generate a 32-bit random number
   (define masking
@@ -374,9 +371,7 @@
                   (control conn exn)
                   (async-channel-put channel exn)))]
             (define frame (read-frame port))
-
-            ;; TODO debug
-            (printf "Just read frame '~a'~n" frame)
+            (logf 'info "Read frame ~s" frame)
 
             (cond
               ;; Case 0 - Control frame.  When (control frame)

@@ -48,7 +48,7 @@ SeashellCoder.addEntropy = function(entropy) {
  *  be 12 bytes, and tag must be 16 bytes.
  */
 SeashellCoder.prototype.encrypt = function(frame, plain) {
-  var iv = sjcl.random.randomWords(3);
+  var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
   var ivArr = sjcl.codec.bytes.toBits(iv);
   var frameArr = sjcl.codec.bytes.toBits(frame);
   var plainArr = sjcl.codec.bytes.toBits(plain);
@@ -61,7 +61,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
   var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
   var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
-  return [iv, sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
+  return [sjcl.codec.bytes.fromBits(ivArr), sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
 };
 
 /** Decrypts an array of bytes and verifies the extra authenticated data.

@@ -71,11 +71,15 @@ function SeashellWebsocket(uri, key) {
       // [Encrypted Frame]
       // Keep this consistent with the server.
       var ctr = new Uint8Array(result.slice(0,2));
-          ctr = ctr[0] << 8 | ctr[1];
+      var auth_typed = new Uint8Array(result.slice(31, 31+authlen));
+            var auth = [ctr[0], ctr[1]]
+            ctr = ctr[0] << 8 | ctr[1];
+            for(var auth_index = 0; auth_index < auth_typed.length; auth_index++) {
+              auth.push(auth_typed[auth_index]);
+            }
       var iv = new Uint8Array(result.slice(2,14));
-      var tag = new Uint8Array(result.slice(16, 30));
+      var tag = new Uint8Array(result.slice(14, 30));
       var authlen = new Uint8Array(result.slice(30, 31))[0];
-      var auth = new Uint8Array(result.slice(31, 31+authlen));
       var encrypted = new Uint8Array(result.slice(31+authlen));
 
       // Check counters
@@ -98,7 +102,7 @@ function SeashellWebsocket(uri, key) {
         // message identifier that corresponds with it.
 
         // TODO: Error handling!
-        var request = requests[response.id];
+        var request = self.requests[response.id];
         request.callback(response);
 
         if (response.id > 0)
