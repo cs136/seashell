@@ -35,7 +35,7 @@
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
-  (make-port-logger "^debug$" (current-error-port))
+  (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
   (make-port-logger "^info$" (current-error-port))
   (make-port-logger "^warn$" (current-error-port))
   (make-port-logger "^exception$" (current-error-port))
@@ -61,6 +61,10 @@
   ;(uncaught-exception-handler ss-exn-handler)
 
   ;; Dispatch function.
+  ;; Arguments:
+  ;;  key - Communications key.
+  ;;  wsc - WebSocket connection.
+  ;;  header-resp - Headers.
   (define (conn-dispatch key wsc header-resp)
     ;; (handle-message message)
     ;;
@@ -272,18 +276,30 @@
 
 
     ;; Per-connection event loop.
+    ;;
+    ;; Arguments:
+    ;;  connection - WebSocket connection.
+    ;;  state - Unused for now.
+    ;;  key - Communications key.
     (define (main-loop connection state key)
       (with-handlers
         ([exn:fail:counter?
            (lambda (exn)
-             (logf 'error (format "Data integrity failed: ~s" (exn-message exn)))
+             (logf 'error (format "Data integrity failed: ~a" (exn-message exn)))
              (send-message connection `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
+             (ws-close! connection))]
+         [exn:crypto?
+           (lambda (exn)
+             (logf 'error (format "Cryptographic failure: ~a" (exn-message exn)))
+             ;; This may raise another exception, if the cryptographic failure is caused by lack of 
+             ;; random bytes.
+             (send-message connection `#hash((id . -2) (error . #t) (result . "Cryptographic failure!")))
              (ws-close! connection))])
         (logf 'debug "In main loop.")
         ;; TODO - probably want to sync here also on a CLOSE frame.
         ;; TODO - close the connection when appropriate (timeout).
-        ;; TODO - send messages on the keepalive channel whenever there is activity.
         (define message (recv-message connection))
+        (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
 
         (thread 
           (lambda ()
