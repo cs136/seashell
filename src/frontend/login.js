@@ -1,3 +1,31 @@
+/**
+ * Seashell's login tools.
+ * Copyright (C) 2013 The Seashell Maintainers.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * createCookie(name, value, days)
+ * Creates a new cookie.
+ *
+ * @param {String} name - Name of the cookie.
+ * @param {String} value - Value of the cookie.
+ * @param {String} days - Time to live.
+ */
 function createCookie(name, value, days) {
     if (days) {
         var date = new Date();
@@ -7,6 +35,14 @@ function createCookie(name, value, days) {
     document.cookie = escape(name) + "=" + escape(value) + expires + "; path=/";
 }
 
+/**
+ * readCookie(name)
+ * Reads a cookie.
+ *
+ * @param {String} name - Name of cookie.
+ *
+ * @return {String/null} Value of the cookie, null if not found.
+ */
 function readCookie(name) {
     var nameEQ = escape(name) + "=";
     var ca = document.cookie.split(';');
@@ -18,10 +54,24 @@ function readCookie(name) {
     return null;
 }
 
+/**
+ * eraseCookie(name)
+ * Erases a cookie.
+ *
+ * @param {String} name - Name of cookie.
+ */
 function eraseCookie(name) {
     createCookie(name, "", -1);
 }
 
+/**
+ * fixedEncodeURIComponent (str)
+ * URI encoding function that wraps encodeURIComponent in a way
+ * that produces HTTP POST safe data.
+ *
+ * @param {String} str - String to encode.
+ * @return {String} Encoded string.
+ */
 function fixedEncodeURIComponent (str) {
     return encodeURIComponent(str)
             .replace(/[!'()]/g, escape)
@@ -29,6 +79,11 @@ function fixedEncodeURIComponent (str) {
             .replace("%20", "+");
 }
 
+/**
+ * init_login()
+ *
+ * Sets up the page.
+ */
 function init_login() {
   $('#login-username')[0].disabled = false;
   $('#login-password')[0].disabled = false;
@@ -36,6 +91,12 @@ function init_login() {
   $('#login-username')[0].focus();
 }
 
+/**
+ * submit_login()
+ *
+ * Submits Seashell login credentials to the launcher CGI executable.
+ * Redirects to the main page if successful.
+ */
 function submit_login() {
   var user = $('#login-username')[0].value;
   var pass = $('#login-password')[0].value;
@@ -62,4 +123,21 @@ function submit_login() {
              alert("Internal error (2).");
            }
          });
+}
+
+/**
+ * read_login_credentials()
+ *
+ * Reads Seashell login credentials.
+ *
+ * @return {Object} - Login credentials, null if none.
+ */
+function read_login_credentials() {
+  var creds = readCookie("seashell-session");
+  if (creds) {
+    return JSON.parse(data);
+  } else {
+    return null;
+  }
+}
 }
