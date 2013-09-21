@@ -294,7 +294,10 @@
              ;; This may raise another exception, if the cryptographic failure is caused by lack of 
              ;; random bytes.
              (send-message connection `#hash((id . -2) (error . #t) (result . "Cryptographic failure!")))
-             (ws-close! connection))])
+             (ws-close! connection))]
+         [exn:websocket?
+           (lambda (exn)
+             (logf 'error (format "Data connection failure: ~a" (exn-message exn))))]
         (logf 'debug "In main loop.")
         ;; TODO - probably want to sync here also on a CLOSE frame.
         ;; TODO - close the connection when appropriate (timeout).

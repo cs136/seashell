@@ -53,12 +53,19 @@
          ws-recv
          ws-close!)
 
+
+;; exn:websocket
+;; Internal websocket exception structure.
+(struct exn:websocket exn:fail:user ())
+
 ;; seashell-websocket-frame
 ;; Internal data structure for a WebSocket frame.
 (struct seashell-websocket-frame
   (final? rsv opcode data)
   #:transparent)
 
+;; seashell-websocket-connection
+;; Connection structure.
 (struct seashell-websocket-connection
   ([closed? #:mutable]
    [in-thread #:mutable]
@@ -73,7 +80,12 @@
   #:property prop:evt
   (lambda (conn)
     (wrap-evt (seashell-websocket-connection-in-chan conn)
-              seashell-websocket-frame-data)))
+              (lambda (frame-or-exn)
+                (cond
+                  [(exn? frame-or-exn)
+                   (raise exn)]
+                  [else
+                    (seashell-websocket-frame-data frame-or-exn)])))))
 
 ;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) ->
 ;; Creates a new WebSocket connection given in/out ports, headers,
@@ -104,7 +116,12 @@
   (-> (-> seashell-websocket-connection? (or/c seashell-websocket-frame? exn?) any/c))
   (define (simple-control conn frame-or-exn)
     (match frame-or-exn
-      [(? exn?) (raise frame-or-exn)]  ;; TODO something else
+      [(? exn?)
+       ;; There's not much we can do.  We may as well log it and
+       ;; quit.  Raising an exception here is probably a bad idea,
+       ;; as we're running in a separate thread.
+       (logf 'exception "WebSocket received exception: ~a" (exn-message exn))
+       #f]
       [(seashell-websocket-frame #t rsv 9 data) ;; ping
        (async-channel-put (seashell-websocket-connection-out-chan conn)
                           (seashell-websocket-frame #t 0 10 data))
@@ -115,8 +132,10 @@
        (unless (seashell-websocket-connection-closed? conn)
          (thread (thunk (ws-close! conn))))
        #f]
-      [else ;; TODO - log unhandled control frame event.
-            #t]))
+      [else
+        ;; Unhandled message - log it, quit.
+        (logf 'debug "WebSocket - unknown control message: ~s" frame-or-exn)
+        ]))
   simple-control)
 
 
@@ -124,15 +143,22 @@
 ;; Sends bytes over websocket connection conn.
 (define/contract (ws-send conn bytes)
   (-> seashell-websocket-connection? bytes? void?)
+  (when (seashell-websocket-connection-closed? conn)
+    (raise (exn:websocket "Connection closed!"
+                          (current-continuation-marks))))
   (async-channel-put (seashell-websocket-connection-out-chan conn)
                      (seashell-websocket-frame #t 0 2 bytes)))
 
 ;; (ws-recv conn bytes) ->
 ;; Receives bytes synchronously from websocket connection conn.
+;; This function will raise an exception if an error happened
+;; on the connection.
 (define/contract (ws-recv conn)
   (-> seashell-websocket-connection? bytes?)
-  (seashell-websocket-frame-data
-    (async-channel-get (seashell-websocket-connection-in-chan conn))))
+  (when (seashell-websocket-connection-closed? conn)
+    (raise (exn:websocket "Connection closed!"
+                          (current-continuation-marks))))
+  (sync conn))
 
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a websocket connection.
@@ -151,10 +177,6 @@
         (close-input-port (seashell-websocket-connection-in-port conn))
         (close-output-port (seashell-websocket-connection-out-port conn))
         (void)))))
-
-;; exn:websocket
-;; Internal websocket exception structure.
-(struct exn:websocket exn:fail:user ())
 
 ;; Handy syntax rule for EOF checking
 (define-syntax-rule (check-eof x)
