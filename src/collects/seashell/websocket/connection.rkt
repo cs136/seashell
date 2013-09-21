@@ -122,13 +122,22 @@
        ;; as we're running in a separate thread.
        (logf 'exception "WebSocket received exception: ~a" (exn-message exn))
        #f]
-      [(seashell-websocket-frame #t rsv 9 data) ;; ping
+      [(seashell-websocket-frame #t rsv 9 data) 
+       ;; Ping frame.
        (async-channel-put (seashell-websocket-connection-out-chan conn)
                           (seashell-websocket-frame #t 0 10 data))
        #t]
-      [(seashell-websocket-frame #t rsv 10 data) ;; pong
+      [(seashell-websocket-frame #t rsv 10 data)
+       ;; Pong frame.
        (set-seashell-websocket-connection-last-pong! conn (current-inexact-milliseconds))]
-      [(seashell-websocket-frame #t rsv 8 data) ;; close
+      [(seashell-websocket-frame #t rsv 8 data)
+       ;; Behaviour seems poorly documented here in the RFC.
+       ;; Closing the TCP port is supposed to be handled by the server.
+       ;; In any case, we'll have to send a CLOSE frame,
+       ;; which is handled by ws-close!
+       ;;
+       ;; As we're receiving a CLOSE frame, even though it's recommended that
+       ;; the server closes the connection, we may as well do it anyways.
        (unless (seashell-websocket-connection-closed? conn)
          (thread (thunk (ws-close! conn))))
        #f]
@@ -162,6 +171,12 @@
 
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a websocket connection.
+;; Also sends a CLOSE frame.
+;;
+;; (It may be worthwhile to actually implement CLOSE nicely
+;; - write a message to out-thread
+;; - wait on timeout
+;; - if not closed yet, CLOSE)
 (define/contract (ws-close! conn)
   (-> seashell-websocket-connection? void?)
   (call-with-semaphore (seashell-websocket-connection-close-semaphore conn)
@@ -444,7 +459,6 @@
   (thread
    (lambda ()
      (let loop ()
-       ;(define alrm (alarm-evt (+ last-ping-send-time 30000)))
        (define alrm (alarm-evt (+ (seashell-websocket-connection-last-ping conn) 1000)))
        (define sync-result (sync channel alrm))
        (cond
