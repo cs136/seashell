@@ -36,7 +36,7 @@
 ;; Global semaphore on git operations.
 (define git-sema (make-semaphore 1))
 (define-syntax-rule (guard proc args ...)
-  (call-with-semaphore git-sema proc args ...))
+  (call-with-semaphore git-sema (lambda () (proc args ...))))
 
 ;; Error fetching function
 (define-git seashell_git_error (_fun -> _string))
