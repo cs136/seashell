@@ -141,8 +141,8 @@
        ;; the server closes the connection, we may as well do it anyways.
 
        ;; Create a dummy frame that holds a EOF object, then post it.
-       (async-channel-put (seashell-websocket-in-chan conn)
-                          (seashell-websocket-frame #t 0 0 (eof-object)))
+       (async-channel-put (seashell-websocket-connection-in-chan conn)
+                          (seashell-websocket-frame #t 0 0 eof))
 
        ;; Kill the connection.
        (unless (seashell-websocket-connection-closed? conn)
@@ -187,7 +187,7 @@
   (-> seashell-websocket-connection? void?)
   (unless (seashell-websocket-connection-closed? conn)
     (async-channel-put
-      (seashell-websocket-out-chan conn)
+      (seashell-websocket-connection-out-chan conn)
       (seashell-websocket-frame #t 0 8 #""))))
 
 ;; (ws-close! conn) ->
