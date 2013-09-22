@@ -131,6 +131,11 @@ function submit_login() {
  * Reads Seashell login credentials.
  *
  * @return {Object} - Login credentials, null if none.
+ * As of now [keep this documentation in sync with login-gateway.rkt],
+ * the returned object will have three fields:
+ *  - key - Array of 4 words, for a 128-bit AES session key.
+ *  - port - String, representing the port to connect to.
+ *  - host - String, representing the host to connect to.
  */
 function read_login_credentials() {
   var creds = readCookie("seashell-session");
