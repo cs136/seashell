@@ -195,7 +195,7 @@ SeashellWebsocket.prototype.saveFile = function(file_name, file_content) {
   msg.file_name = file_name;
   msg.file_content = file_content;
   msg.dfd = $.Deferred();
-  this.sendMessage(JSON.stringify(msg));
+  this.sendMessage(msg);
 };
 
 SeashellWebsocket.prototype.commitFile = function(file_name, file_content) {
