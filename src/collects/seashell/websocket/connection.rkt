@@ -152,7 +152,7 @@
        ;; as we're running in a separate thread.
        (logf 'exception "WebSocket received exception: ~a" (exn-message exn))
        #f]
-      [(seashell-websocket-frame #t rsv 9 data) 
+      [(seashell-websocket-frame #t rsv 9 data)
        ;; Ping frame.
        (async-channel-put (seashell-websocket-connection-out-chan conn)
                           (seashell-websocket-frame #t 0 10 data))
@@ -526,7 +526,7 @@
   (thread
    (lambda ()
      (let loop ()
-       (define alrm (alarm-evt (+ (seashell-websocket-connection-last-ping conn) 1000)))
+       (define alrm (alarm-evt (+ (seashell-websocket-connection-last-ping conn) 30000)))
        (define sync-result (sync channel alrm))
        (cond
          ;; Ping alarm went off. Send ping, reset alarm, repeat.
