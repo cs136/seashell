@@ -88,17 +88,17 @@
             ([exn:project?
               (lambda (exn)
                 `#hash((id . ,id)
-                       (error . #t)
+                       (success . #f)
                        (result . ,(exn-message exn))))]
              [exn:fail:contract?
               (lambda (exn)
                 `#hash((id . ,id)
-                       (error . #t)
+                       (success . #f)
                        (result . ,(format "Bad argument: ~a." (exn-message exn)))))]
              [exn:git?
               (lambda (exn)
                 `#hash((id . ,id)
-                       (error . #t)
+                       (success . #f)
                        (result .
                         ,(format "Internal [git] error: ~s." (exn-message exn)))))]
              ;; TODO - other handlers here.
@@ -109,41 +109,54 @@
                        ('id id)
                        ('type "runProgram")
                        ('name name))
-                      `#hash((id . ,id) (result . "unimplemented"))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . "unimplemented"))]
                     [(hash-table
                        ('id id)
                        ('type "compileProgram")
                        ('name name))
-                      `#hash((id . ,id) (result . "unimplemented"))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . "unimplemented"))]
                     ;; Project manipulation functions.
                     [(hash-table
                        ('id id)
                        ('type "getProjects"))
                       `#hash((id . ,id)
+                             (success . #t)
                              (result . ,(list-projects)))]
                     [(hash-table
                        ('id id)
                        ('type "listProject")
                        ('project project))
-                      `#hash((id . ,id) (result . ,(list-files project)))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . ,(list-files project)))]
                     [(hash-table
                        ('id id)
                        ('type "newProject")
                        ('project project))
                       (new-project project)
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     [(hash-table
                        ('id id)
                        ('type "deleteProject")
                        ('project project))
                       (delete-project project)
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     [(hash-table
                        ('id id)
                        ('type  "saveProject")
                        ('project project))
                       (save-project project)
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     ;; File functions.
                     [(hash-table
                        ('id id)
@@ -151,14 +164,18 @@
                        ('project project)
                        ('file file))
                       (new-file project file)
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     [(hash-table
                        ('id id)
                        ('type "deleteFile")
                        ('project project)
                        ('file file))
                       (delete-file project file)
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     [(hash-table
                        ('id id)
                        ('type "writeFile")
@@ -166,18 +183,22 @@
                        ('file file)
                        ('contents contents))
                       (write-file project file (string->bytes/utf-8 contents))
-                      `#hash((id . ,id) (result . #t))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . #t))]
                     [(hash-table
                        ('id id)
                        ('type "readFile")
                        ('project project)
                        ('file file))
-                      `#hash((id . ,id) (result . ,(bytes->string/utf-8 read-file project file)))]
+                      `#hash((id . ,id)
+                             (success . #t)
+                             (result . ,(bytes->string/utf-8 read-file project file)))]
                     ;; TODO: revertFile.
                     ;; Fall through case.
                     [_
                       `#hash((id . ,(hash-ref message 'id))
-                             (error . #t)
+                             (success . #f)
                              (result . ,(format "Unknown message: ~s" message)))]))]))
 
 
@@ -285,14 +306,14 @@
            (lambda (exn)
              (logf 'exception (format "Data integrity failed: ~a" (exn-message exn)))
              (send-message connection `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
-             (ws-close! connection))]
+             (ws-close connection))]
          [exn:crypto?
            (lambda (exn)
              (logf 'exception (format "Cryptographic failure: ~a" (exn-message exn)))
              ;; This may raise another exception, if the cryptographic failure is caused by lack of 
              ;; random bytes.
              (send-message connection `#hash((id . -2) (error . #t) (result . "Cryptographic failure!")))
-             (ws-close! connection))]
+             (ws-close connection))]
          [exn:websocket?
            (lambda (exn)
              (logf 'exception (format "Data connection failure: ~a" (exn-message exn))))])
@@ -310,7 +331,7 @@
                 ;; Alarm - write out a message and close the connection.
                 (logf 'info (format "Client timed out."))
                 (send-message connection `#hash((id . -2) (error . #t) (result . "Timeout!")))
-                (ws-close! connection)]
+                (ws-close connection)]
                [(var data)
                 ;; Plain old data.
                 ;; This needs to run in blocking mode.
