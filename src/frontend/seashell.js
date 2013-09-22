@@ -20,6 +20,8 @@
  Authors: Jennifer Wong, Marc Burns
  ---------------------------------------------------------------------*/
 
+var ws; // websocket
+
 var editor;
 var ss_console;
 var currentFile;
@@ -806,4 +808,13 @@ seashell_new(
         function(err) {
             alert("Error initializing API: " + err);
         });
-jQuery.getScript("seashell_glue.js", setUpUI);
+
+function seashellInit() {
+	var creds = read_login_credentials();
+	if (creds) {
+		ws = SeashellWebsocket(creds.host + ":" + creds.port, creds.key);
+		setUpUI();
+	}
+}
+
+jQuery.getScript("seashell_glue.js", seashellInit);
