@@ -139,6 +139,12 @@
        ;;
        ;; As we're receiving a CLOSE frame, even though it's recommended that
        ;; the server closes the connection, we may as well do it anyways.
+
+       ;; Create a dummy frame that holds a EOF object, then post it.
+       (async-channel-put (seashell-websocket-in-chan conn)
+                          (seashell-websocket-frame #t 0 0 (eof-object)))
+
+       ;; Kill the connection.
        (unless (seashell-websocket-connection-closed? conn)
          (thread (thunk (ws-close! conn))))
        #f]
@@ -180,10 +186,9 @@
 (define/contract (ws-close conn)
   (-> seashell-websocket-connection? void?)
   (unless (seashell-websocket-connection-closed? conn)
-    (send-frame (seashell-websocket-frame #t 0 8 #"")
-                (seashell-websocket-connection-out-port conn)
-                #:mask?
-                (seashell-websocket-connection-mask? conn))))
+    (async-channel-put
+      (seashell-websocket-out-chan conn)
+      (seashell-websocket-frame #t 0 8 #""))))
 
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a websocket connection.
@@ -460,8 +465,7 @@
 ;;  the output port, output channel, and the mask? fields of the connection.
 ;;
 ;; Returns:
-;;  Thread object.  Send thread a message to get it to write a CLOSE
-;;  frame into the port and then quit.
+;;  Thread object.
 (define/contract (out-thread conn)
   (-> seashell-websocket-connection? thread?)
   (define port (seashell-websocket-connection-out-port conn))
