@@ -100,12 +100,12 @@ function SeashellWebsocket(uri, key) {
         var response = JSON.parse(response_string);
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
-
-        // TODO: error handling.  response.error will have the string "true"
-        // if an error has happened.
         var request = self.requests[response.id];
-        request.callback(response);
-
+		if (response.success) {
+			request.dfd.resolve(response);
+		} else {
+			request.dfd.reject(response);
+		}
         if (response.id >= 0)
          delete self.requests[response.id];
       }
@@ -169,3 +169,61 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
   };
   reader.readAsArrayBuffer(blob);
 };
+
+SeashellWebsocket.prototype.getDirListing = function(base_dir) {
+	var msg = {};
+	msg.type = "getDirListing";
+	msg.base_dir = base_dir;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+
+SeashellWebsocket.prototype.loadFile = function(file_name) {
+	var msg = {};
+	msg.type = "loadFile";
+	msg.file_name = file_name;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+
+ws.saveFile = function(file_name, file_content) {
+	var msg = {};
+	msg.type = "saveFile";
+	msg.file_name = file_name;
+	msg.file_content = file_content;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+
+ws.commitFile = function(file_name, file_content) {
+	var msg = {};
+	msg.type = "commitFile";
+	msg.file_name = file_name;
+	msg.file_content = file_content;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+ws.revertFile = function(file_name) {
+	var msg = {};
+	msg.type = "revertFile";
+	msg.file_name = file_name;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+
+ws.compileProgram = function(base_dir) {
+	var msg = {};
+	msg.type = "compileProgram";
+	msg.base_dir = base_dir;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+
+ws.runProgram = function(base_dir) {
+	var msg = {};
+	msg.type = "runProgram";
+	msg.base_dir = base_dir;
+	msg.dfd = $.Deferred();
+	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+};
+

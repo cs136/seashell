@@ -198,3 +198,6 @@ body {
     min-width: 3em;
 }
 
+.dir {
+	font-weight: bold;
+}
