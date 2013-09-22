@@ -28,11 +28,22 @@
  tunnel-in
  tunnel-out
  tunnel-remote-addr
+ tunnel-close
  exn:tunnel
  exn:tunnel?)
 
 (struct tunnel (process in out status-thread remote-addr))
 (struct exn:tunnel exn:fail:user (status-code))
+
+;; (tunnel-close tunnel)
+;; Closes a tunnel.
+;;
+;; Arguments:
+;;  tunnel - Tunnel to close.
+(define/contract (tunnel-close tunnel)
+  (-> tunnel? void?)
+  (close-input-port (tunnel-in tunnel))
+  (close-output-port (tunnel-out tunnel)))
 
 ;; (tunnel-launch user password) -> tunnel?
 ;; Launches an instance of the Seashell Tunnel backend.
@@ -73,7 +84,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           (logf/sync 'warn "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
+           (logf/sync 'debug "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))

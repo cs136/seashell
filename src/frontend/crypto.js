@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /** Make sure we start the entropy collectors before doing anything stupid. */
@@ -37,7 +37,7 @@ function SeashellCoder(key) {
  * @static
  * @param {String|Array} entropy - Entropy to add.
  */
-function SeashellCoder.addEntropy(entropy) {
+SeashellCoder.addEntropy = function(entropy) {
   sjcl.random.addEntropy(entropy);
 }
 
@@ -48,20 +48,20 @@ function SeashellCoder.addEntropy(entropy) {
  *  be 12 bytes, and tag must be 16 bytes.
  */
 SeashellCoder.prototype.encrypt = function(frame, plain) {
-  var iv = sjcl.random.randomWords(3);
+  var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
   var ivArr = sjcl.codec.bytes.toBits(iv);
   var frameArr = sjcl.codec.bytes.toBits(frame);
   var plainArr = sjcl.codec.bytes.toBits(plain);
-  var authArr = sjcl.codec.bytes.concat(ivArr, plainArr);
-  var out = sjcl.mode.gcm.encrypt(new sjcl.cipher.aes(this.key),
+  var authArr = sjcl.bitArray.concat(ivArr, plainArr);
+  var out = sjcl.mode.gcm.encrypt(this.cipher,
       frameArr,
       ivArr,
       plainArr,
       128);
-  var tagArr = sjcl.bitArray.bitSlice(out, out.bitLength() - 128);
-  var codedArr = sjcl.bitArray.bitSlice(out, 0, out.bitLength() - 128);
+  var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
+  var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
-  return [iv, sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
+  return [sjcl.codec.bytes.fromBits(ivArr), sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
 };
 
 /** Decrypts an array of bytes and verifies the extra authenticated data.
@@ -70,7 +70,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
  * @param {Array} tag - GCM verification tag.
  * @param {Array} plain - Extra authenticated data.
  * @returns {Array} Decrypted data, or will throw an exception.  Consult SJCL
- * documentation. */ 
+ * documentation. */
 SeashellCoder.prototype.decrypt = function(coded, iv, tag, plain) {
   var ivArr = sjcl.codec.bytes.toBits(iv);
   var plainArr = sjcl.codec.bytes.toBits(plain);
@@ -78,10 +78,10 @@ SeashellCoder.prototype.decrypt = function(coded, iv, tag, plain) {
   var codedArr = sjcl.codec.bytes.toBits(coded);
   var tagArr = sjcl.codec.bytes.toBits(tag);
   var cryptedArr = sjcl.bitArray.concat(codedArr, tagArr);
-  var result = sjcl.mode.gcm.decrypt(new sjcl.cipher.aes(this.key),
+  var result = sjcl.mode.gcm.decrypt(this.cipher,
       cryptedArr,
-      ivArr, 
+      ivArr,
       authArr,
       128);
-  return sjcl.codec.bytes.fromBits(plain);
+  return sjcl.codec.bytes.fromBits(result);
 };

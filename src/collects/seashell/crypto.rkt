@@ -156,7 +156,7 @@
 ;; else currently is IV, ciphertext, extra authenticated data,
 ;; GCM authentication tag, and plaintext.
 (define/contract (seashell-crypt-key->client key)
-  (contract:-> bytes? bytes?)
+  (contract:-> bytes? jsexpr?)
   ;; Currently, write out the key as a JSON
   ;; list of 4 4-byte big-endian signed words.
   (define keyA (integer-bytes->integer (subbytes key 0 4) #t #t))
@@ -198,4 +198,5 @@
 
 (provide seashell-encrypt seashell-decrypt
   seashell-crypt-make-key seashell-crypt-key->client
-  seashell-crypt-key->server seashell-crypt-key-server-read)
+  seashell-crypt-key->server seashell-crypt-key-server-read
+  exn:crypto?)

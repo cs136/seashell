@@ -36,13 +36,16 @@
 
 (define (gateway-main)
   (define (response/json jsexpr)
-    (output-http-headers)
+    (printf "Access-Control-Allow-Origin: *\r\n")
+    (printf "Content-Type: application/json\r\n\r\n")
     (write-json jsexpr)
+    (printf "\r\n")
     (flush-output))
   (define (report-error code desc)
     (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
     (exit 0))
 
+  (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
   (make-port-logger "^info$" (current-error-port))
   (make-port-logger "^warn$" (current-error-port))
   (make-port-logger "^exception$" (current-error-port))
@@ -89,16 +92,19 @@
 
   ;; Binding for tunnel process outside scope of with-limits.
   (define tun-proc #f)
+  (define tun #f)
 
   ;; Timeout the login process.
   (with-handlers
     ([exn:fail:resource? (lambda(e)
                            (when tun-proc
                              (subprocess-kill tun-proc #t))
+                           (when tun
+                             (tunnel-close tun))
                            (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Spawn backend process on backend host.
-      (define tun
+      (set! tun
         (with-handlers
           ([exn:tunnel?
              (match-lambda
@@ -115,19 +121,22 @@
       ;; Key generation
       (define shared-key (seashell-crypt-make-key))
 
-      (logf/sync 'info "Remote address is ~a" (tunnel-remote-addr tun))
-      (logf/sync 'info "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
+      (logf/sync 'debug "Remote address is ~a" (tunnel-remote-addr tun))
+      (logf/sync 'debug "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
 
       ;; Send key to backend process
       (write-bytes shared-key (tunnel-out tun))
       (flush-output (tunnel-out tun))
 
-      (logf/sync 'info "Waiting for tunnel port.")
+      (logf/sync 'debug "Waiting for tunnel port.")
       ;; Get initialization info from backend process
       (define be-address (tunnel-remote-addr tun))
       (define be-port (read-line (tunnel-in tun)))
 
-      (logf/sync 'info "Waiting for tunnel shutdown.")
+      (when (eof-object? be-port)
+        (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
+
+      (logf/sync 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
       (subprocess-wait (tunnel-process tun))
 
@@ -136,11 +145,13 @@
         (report-error 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
 
+      ;; Close the tunnel
+      (tunnel-close tun)
+
       ;; Send key, address, and port to client.
       ;; This duplicates some code in seashell/crypto.
       (response/json
-        `#hash((key . ,(for/list ([i (in-range 0 4)])
-                                 (integer-bytes->integer (subbytes shared-key (* 4 i) (* 4 (add1 i))) #t #t)))
+        `#hash((key . ,(seashell-crypt-key->client shared-key))
                (host . ,be-address)
                (port . ,be-port)))))
 

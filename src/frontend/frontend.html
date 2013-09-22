@@ -11,7 +11,7 @@
         <title>Seashell</title>
     </head>
     <body>
-    <div id="overlay"></div>
+    <!-- <div id="overlay"></div> -->
     <div id="container">
         <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settingsToggle">Settings</a> - <a href="">Logout</a></div>
         <h1>Seashell, the C Shell</h1>
@@ -96,25 +96,25 @@ int main() {
 				</p>
 
 				<p>
-				This removes your ability to get rid of unwanted changes by 
+				This removes your ability to get rid of unwanted changes by
 				closing a file with unsaved modifications however. Seashell's
 				version control lets you have the best of both worlds by
 				allowing you to commit and revert files.
 				</p>
 
 				<p>
-				Seashell's version control uses git in the backend. 
-				The user interface currently only understands how to commit and 
+				Seashell's version control uses git in the backend.
+				The user interface currently only understands how to commit and
 				revert to the last commit, but git proper lets you do much,
 				much more than that! You can learn more about git
 				<a href="http://git-scm.com/">here</a>.
 				</p>
 				</dd>
 				<dt>What's a commit?</dt>
-				<dd><p> 
-				Commits are a way to make "snapshots" of your files 
-				<strike>that you can move back and forth between</strike>. 
-				For example, you may wish to commit before you make 
+				<dd><p>
+				Commits are a way to make "snapshots" of your files
+				<strike>that you can move back and forth between</strike>.
+				For example, you may wish to commit before you make
 				potentially code-breaking changes to a function.
 				</p></dd>
 				<dt>What does revert do?</dt>
@@ -236,13 +236,15 @@ int main() {
           <!--.CodeMirror-empty { outline: 1px solid #c22; }-->
         <!--</style>-->
 
-        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.js"></script>
+        <script type="text/javascript" src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
-        <script type="text/javascript" src="api.js"></script>
-        <script type="text/javascript" src="clangMessages.js"></script>
-        <script type="text/javascript" src="format.js"></script>
-        <script type="text/javascript" src="seashell.js"></script>
         <script type="text/javascript" src="sjcl.js"></script>
         <script type="text/javascript" src="crypto.js"></script>
+        <script type="text/javascript" src="websocket_client.js"></script>
+        <script type="text/javascript" src="clangMessages.js"></script>
+        <script type="text/javascript" src="format.js"></script>
+        <script type="text/javascript" src="login.js"></script>
+        <script type="text/javascript" src="seashell.js"></script>
     </body>
 </html>

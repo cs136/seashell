@@ -15,66 +15,103 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /** Seashell's Websocket Communication Class.
  * @constructor
  * @param {String} uri - URI to connect to.  Should look like ws://[IP of linux student environment host]:[some port]/.  Encryption is not handled through SSL.
  * @param {Array} key - Array of 4 words that represent the 128-bit AES session key.
- * 
+ *
  * Implementor's note - this class must maintain consistent with
  * the code written in server.rkt.
  *
  * TODO: Exception handling on bad keys.  Probably want to redirect
  * to the login page _again_ with a reason.
  */
-function SeashellWebsocket(uri, key) = {
-  this.coder = new SeashellCoder(key);
-  this.websocket = new WebSocket(uri);
-  this.lastRequest = 0;
-  this.requests = {};
+function SeashellWebsocket(uri, key) {
+  var self = this;
+
+  self.coder = new SeashellCoder(key);
+  self.lastRequest = 0;
+  self.requests = {};
+  self.ready = false;
+  // Ready [-1]
+  self.requests[-1] = {
+    callback : function(result) {
+      self.ready = true;
+    }
+  };
+  // Failure [-2]
+  self.requests[-2] = {
+    callback : function (result) {
+      self.failed = true;
+    }
+  };
+  self.read_ctr = 0;
+  self.write_ctr = 0;
+  self.websocket = new WebSocket(uri);
 
   this.websocket.onmessage = function(message) {
     // We receive all messages in binary,
     // then we decrypt and extract out the nice
     // JSON.
-    reader = new FileReader();
-    reader.onloadend = function() {
-      var result = reader.result;
- 
+    var readerT = new FileReader();
+    console.log(readerT);
+    readerT.onloadend = function() {
+      console.log(readerT);
+      var result = readerT.result;
+
       // Framing format (all binary bytes):
-      // [IV - 12 bytes][GCM tag - 16 bytes][1 byte - Auth Len][Auth Plain][Encrypted Frame]
+      // [CTR - 2 bytes]
+      // [IV - 12 bytes]
+      // [GCM tag - 16 bytes]
+      // [1 byte - Auth Len]
+      // [Auth Plain]
+      // [Encrypted Frame]
       // Keep this consistent with the server.
-      var iv = new Uint8Array(result.slice(0,12));
-      var tag = new Uint8Array(result.slice(12, 28));
-      var authlen = new Uint8Array(result.slice(28, 29))[0];
-      var auth = new Uint8Array(result.slice(29, 29+authlen));
-      var encrypted = new Uint8Array(result.slice(29+authlen));
+      var ctr = new Uint8Array(result.slice(0,2));
+      var auth_typed = new Uint8Array(result.slice(31, 31+authlen));
+            var auth = [ctr[0], ctr[1]]
+            ctr = ctr[0] << 8 | ctr[1];
+            for(var auth_index = 0; auth_index < auth_typed.length; auth_index++) {
+              auth.push(auth_typed[auth_index]);
+            }
+      var iv = new Uint8Array(result.slice(2,14));
+      var tag = new Uint8Array(result.slice(14, 30));
+      var authlen = new Uint8Array(result.slice(30, 31))[0];
+      var encrypted = new Uint8Array(result.slice(31+authlen));
+
+      // Check counters
+      if (ctr != self.read_ctr)
+        throw "Bad counter received!";
+
+      self.read_ctr = (self.read_ctr + 1) % 65536;
 
       // Decode plain, and verify.
-      var plain = this.coder.decrypt(encrypted, iv, tag, auth);
+      var plain = self.coder.decrypt(encrypted, iv, tag, auth);
       // Plain is an Array of bytes. Convert it into an Blob
       // and then use the FileReader class to convert that Blob
       // into a UTF-8 string.
       var blob = new Blob([new Uint8Array(plain)]);
       var reader = new FileReader();
-      reader.onloadend = function() { 
+      reader.onloadend = function() {
         var response_string = reader.result;
         var response = JSON.parse(response_string);
-        // Assume that response holds the message and response.id holds the 
+        // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
-        var request = requests[response.id];
+        var request = self.requests[response.id];
 		if (response.success) {
 			request.dfd.resolve(response);
 		} else {
 			request.dfd.reject(response);
 		}
-        delete requests[response.id];
+        if (response.id >= 0)
+         delete self.requests[response.id];
       }
       reader.readAsText(blob);
     }
-    reader.readAsArrayBuffer(message.data); 
+    readerT.readAsArrayBuffer(message.data);
   };
 }
 
@@ -90,17 +127,31 @@ SeashellWebsocket.prototype.close = function() {
  * @param message - JSON message to send (as JavaScript object).
  */
 SeashellWebsocket.prototype.sendMessage = function(message) {
+  var self = this;
   // Reserve a slot for the message.
-  var request_id = this.lastRequests++;
-  this.requests[request_id] = message;
+  var request_id = self.lastRequest++;
+  self.requests[request_id] = message;
   message.id = request_id;
   // Stringify, write out as Array of bytes, send.
   var blob = new Blob([JSON.stringify(message)]);
   var reader = new FileReader();
   reader.onloadend = function() {
-    var frame = new Uint8Array(reader.result); 
+    // Keep in mind the framing format:
+    // [CTR - 2 bytes]
+    // [IV - 12 bytes]
+    // [GCM tag - 16 bytes]
+    // [1 byte - Auth Len]
+    // [Auth Plain]
+    // [Encrypted Frame]
+    // Keep this consistent with the server.
+    var ctr = self.write_ctr;
+    self.write_ctr = (self.write_ctr + 1) % 65536;
+        ctr = [(ctr >> 8) & 0xFF, ctr & 0xFF];
+    var frame = new Uint8Array(reader.result);
     var plain = [];
-    var result = this.coder.encrypt(frame, plain);
+    var authenticated = ctr;
+    authenticated.concat(plain);
+    var result = self.coder.encrypt(frame, authenticated);
     var iv = result[0];
     var coded = result[1];
     var tag = result[2];
@@ -109,9 +160,14 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
       throw "sendMessage: Too many authenticated plaintext bytes!";
     }
 
-    var send = iv + tag + [plain.length] + plain + coded;
-    this.websocket.send(new Uint8Array(send));
-  }
+    var send = [];
+    [ctr, iv, tag, [plain.length], plain, coded].forEach(
+      function (arr) {
+        send = send.concat(arr);
+      });
+    self.websocket.send(new Uint8Array(send));
+  };
+  reader.readAsArrayBuffer(blob);
 };
 
 SeashellWebsocket.prototype.getDirListing = function(base_dir) {
