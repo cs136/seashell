@@ -13,7 +13,7 @@
        (loop)]
       [(var x)
        (printf "Received something strange: ~a~n" x)
-       (ws-close! wsc)])))
+       (ws-close wsc)])))
 
 (define conf-chan (make-async-channel))
 

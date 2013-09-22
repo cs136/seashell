@@ -51,7 +51,7 @@
          make-seashell-websocket-control
          ws-send
          ws-recv
-         ws-close!
+         ws-close
          exn:websocket?)
 
 
@@ -66,9 +66,13 @@
   #:transparent)
 
 ;; seashell-websocket-connection
-;; Connection structure.
+;; Connection structure.  Usable as a synchronizable event
+;; with the following possible results:
+;;  bytes? - Regular websocket frame.
+;;  eof-object? - End of file/Websocket closed.
+;;  (raised exception) - Error.
 (struct seashell-websocket-connection
-  ([closed? #:mutable]
+  (closed-semaphore
    [in-thread #:mutable]
    [out-thread #:mutable]
    in-port out-port in-chan out-chan
@@ -80,13 +84,18 @@
   #:transparent
   #:property prop:evt
   (lambda (conn)
-    (wrap-evt (seashell-websocket-connection-in-chan conn)
-              (lambda (frame-or-exn)
+    (choice-evt
+      (wrap-evt (seashell-websocket-connection-in-chan conn)
+        (lambda (frame-or-exn)
                 (cond
                   [(exn? frame-or-exn)
                    (raise exn)]
                   [else
-                    (seashell-websocket-frame-data frame-or-exn)])))))
+                   (seashell-websocket-frame-data frame-or-exn)])))
+      (wrap-evt (semaphore-peek-evt
+                  (seashell-websocket-connection-closed-semaphore conn))
+        (lambda (ignored)
+          eof)))))
 
 ;; (make-seashell-websocket-connection in-port out-port control cline headers mask?) ->
 ;; Creates a new WebSocket connection given in/out ports, headers,
@@ -97,7 +106,7 @@
   (-> port? port? (-> seashell-websocket-connection? (or/c seashell-websocket-frame? exn?) any/c) any/c any/c boolean? seashell-websocket-connection?)
   (define in-chan (make-async-channel))
   (define out-chan (make-async-channel))
-  (define conn (seashell-websocket-connection #f
+  (define conn (seashell-websocket-connection (make-semaphore 0)
                                  #f
                                  #f
                                  in-port out-port
@@ -111,8 +120,28 @@
   (set-seashell-websocket-connection-out-thread! conn (out-thread conn))
   conn)
 
+;; (seashell-websocket-connection-closed? conn)
+;; Tests if a connection is closed.
+;;
+;; Arguments:
+;;  conn - Connection.
+;; Returns:
+;;  true if closed, false otherwise.
+(define/contract (seashell-websocket-connection-closed? conn)
+  (-> seashell-websocket-connection? boolean?)
+  (if (sync/timeout 0
+                    (semaphore-peek-evt
+                      (seashell-websocket-connection-closed-semaphore)))
+    #t #f))
+
 ;; (make-seashell-websocket-control) ->
 ;; Evaluates to a function suitable for use as the 'control' argument to make-seashell-websocket-connection.
+;;
+;; Returns:
+;;  (seashell-websocket-connection? (or/c seashell-websocket-frame? exn) -> any/c)
+;;  Function that'll work as a control to a websocket connection.  By default,
+;;  this function will close automatically and destroy all resources associated
+;;  with a connection when the CLOSE handshake is received.
 (define/contract (make-seashell-websocket-control)
   (-> (-> seashell-websocket-connection? (or/c seashell-websocket-frame? exn?) any/c))
   (define (simple-control conn frame-or-exn)
@@ -140,10 +169,6 @@
        ;; As we're receiving a CLOSE frame, even though it's recommended that
        ;; the server closes the connection, we may as well do it anyways.
 
-       ;; Create a dummy frame that holds a EOF object, then post it.
-       (async-channel-put (seashell-websocket-connection-in-chan conn)
-                          (seashell-websocket-frame #t 0 0 eof))
-
        ;; Kill the connection.
        (unless (seashell-websocket-connection-closed? conn)
          (thread (thunk (ws-close! conn))))
@@ -157,6 +182,10 @@
 
 ;; (ws-send conn bytes) ->
 ;; Sends bytes over websocket connection conn.
+;;
+;; Arguments:
+;;  conn - Websocket connection.
+;;  bytes - Bytes to send.
 (define/contract (ws-send conn bytes)
   (-> seashell-websocket-connection? bytes? void?)
   (when (seashell-websocket-connection-closed? conn)
@@ -165,15 +194,20 @@
   (async-channel-put (seashell-websocket-connection-out-chan conn)
                      (seashell-websocket-frame #t 0 2 bytes)))
 
-;; (ws-recv conn bytes) ->
+;; (ws-recv conn) -> bytes?
 ;; Receives bytes synchronously from websocket connection conn.
 ;; This function will raise an exception if an error happened
 ;; on the connection.
+;;
+;; Arguments:
+;;  conn - Websocket connection.
+;; Returns:
+;;  Bytes if not closed, eof-object? if closed.
+;; Raises:
+;;  exn-websocket if any connections occured.  Keep in mind that
+;;  the behaviour of ws-recv is identical to (sync conn).
 (define/contract (ws-recv conn)
-  (-> seashell-websocket-connection? bytes?)
-  (when (seashell-websocket-connection-closed? conn)
-    (raise (exn:websocket "Connection closed!"
-                          (current-continuation-marks))))
+  (-> seashell-websocket-connection? (or/c bytes? eof-object?))
   (sync conn))
 
 ;; (ws-close conn) ->
@@ -182,28 +216,41 @@
 ;; with the second part of the close handshake, which
 ;; will cause the default control to close the connection.
 ;;
-;; Fails the connection after some time has passed (TODO).
-(define/contract (ws-close conn)
-  (-> seashell-websocket-connection? void?)
+;; Fails the connection after some time has passed.  This is done
+;; asynchronously.
+;;
+;; Arguments:
+;;  conn - Websocket connection.
+;;  timeout - Timeout.
+(define/contract (ws-close conn #:timeout [timeout 5])
+  (->* (seashell-websocket-connection?) (#:timeout (and/c real? (not/c negative?)))
+       void?)
   (unless (seashell-websocket-connection-closed? conn)
     (async-channel-put
       (seashell-websocket-connection-out-chan conn)
-      (seashell-websocket-frame #t 0 8 #""))))
+      (seashell-websocket-frame #t 0 8 #"")))
+  (thread
+    (thunk
+      (unless (sync/timeout timeout
+                            (semaphore-peek-evt
+                              (seashell-websocket-connection-closed-semaphore conn)))
+        (ws-close! conn))))
+  (void))
+
 
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a websocket connection.
-;; Also sends a CLOSE frame.
+;; Also sends a CLOSE frame.  This call is nonblocking
+;; and all socket I/O is done in a different thread.
 ;;
-;; (It may be worthwhile to actually implement CLOSE nicely
-;; - write a message to out-thread
-;; - wait on timeout
-;; - if not closed yet, CLOSE)
+;; Arguments:
+;;  conn - Websocket connection.
 (define/contract (ws-close! conn)
   (-> seashell-websocket-connection? void?)
   (call-with-semaphore (seashell-websocket-connection-close-semaphore conn)
     (thunk
       (unless (seashell-websocket-connection-closed? conn)
-        (set-seashell-websocket-connection-closed?! conn #t)
+        (semaphore-post (seashell-websocket-connection-closed-semaphore conn))
         (kill-thread (seashell-websocket-connection-in-thread conn))
         (kill-thread (seashell-websocket-connection-out-thread conn))
         (send-frame (seashell-websocket-frame #t 0 8 #"")
