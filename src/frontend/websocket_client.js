@@ -179,6 +179,7 @@ SeashellWebsocket.prototype.getDirListing = function(base_dir) {
   msg.base_dir = base_dir;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.loadFile = function(file_name) {
@@ -187,6 +188,7 @@ SeashellWebsocket.prototype.loadFile = function(file_name) {
   msg.file_name = file_name;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.saveFile = function(file_name, file_content) {
@@ -196,6 +198,7 @@ SeashellWebsocket.prototype.saveFile = function(file_name, file_content) {
   msg.file_content = file_content;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.commitFile = function(file_name, file_content) {
@@ -205,6 +208,7 @@ SeashellWebsocket.prototype.commitFile = function(file_name, file_content) {
   msg.file_content = file_content;
   msg.dfd = $.Deferred();
   this.sendMessage(msg));
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.revertFile = function(file_name) {
@@ -213,6 +217,7 @@ SeashellWebsocket.prototype.revertFile = function(file_name) {
 	msg.file_name = file_name;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.compileProgram = function(base_dir) {
@@ -221,6 +226,7 @@ SeashellWebsocket.prototype.compileProgram = function(base_dir) {
   msg.base_dir = base_dir;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
 SeashellWebsocket.prototype.runProgram = function(base_dir) {
@@ -229,5 +235,6 @@ SeashellWebsocket.prototype.runProgram = function(base_dir) {
   msg.base_dir = base_dir;
   msg.dfd = $.Deferred();
   this.sendMessage(msg);
+  return msg.dfd;
 };
 
