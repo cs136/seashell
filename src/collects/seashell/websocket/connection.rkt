@@ -170,6 +170,21 @@
                           (current-continuation-marks))))
   (sync conn))
 
+;; (ws-close conn) ->
+;; Sends a CLOSE frame on a websocket connection,
+;; which will (hopefully) trigger the remote end to respond
+;; with the second part of the close handshake, which
+;; will cause the default control to close the connection.
+;;
+;; Fails the connection after some time has passed (TODO).
+(define/contract (ws-close conn)
+  (-> seashell-websocket-connection? void?)
+  (unless (seashell-websocket-connection-closed? conn)
+    (send-frame (seashell-websocket-frame #t 0 8 #"")
+                (seashell-websocket-connection-out-port conn)
+                #:mask?
+                (seashell-websocket-connection-mask? conn))))
+
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a websocket connection.
 ;; Also sends a CLOSE frame.
