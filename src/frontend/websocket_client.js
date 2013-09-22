@@ -38,13 +38,13 @@ function SeashellWebsocket(uri, key) {
   self.ready = false;
   // Ready [-1]
   self.requests[-1] = {
-    callback : function() {
+    callback : function(result) {
       self.ready = true;
     }
   };
   // Failure [-2]
   self.requests[-2] = {
-    callback : function () {
+    callback : function (result) {
       self.failed = true;
     }
   };
@@ -101,12 +101,13 @@ function SeashellWebsocket(uri, key) {
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
 
-        // TODO: Error handling!
+        // TODO: error handling.  response.error will have the string "true"
+        // if an error has happened.
         var request = self.requests[response.id];
         request.callback(response);
 
-        if (response.id > 0)
-         delete requests[response.id];
+        if (response.id >= 0)
+         delete self.requests[response.id];
       }
       reader.readAsText(blob);
     }
