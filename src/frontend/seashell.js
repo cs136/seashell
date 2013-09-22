@@ -766,6 +766,7 @@ function hideSettings() {
 }
 
 /** initialize api. **/
+/*
 seashell_new(
         function(ss) {
             // temporary!
@@ -808,11 +809,12 @@ seashell_new(
         function(err) {
             alert("Error initializing API: " + err);
         });
+		*/
 
 function seashellInit() {
 	var creds = read_login_credentials();
 	if (creds) {
-		ws = SeashellWebsocket(creds.host + ":" + creds.port, creds.key);
+		ws = new SeashellWebsocket("ws://" + "seashell.student.cs" + ":" + creds.port, creds.key);
 		setUpUI();
 	}
 }
