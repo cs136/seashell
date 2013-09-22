@@ -76,6 +76,10 @@
   ;; received no new messages, will terminate.
   [backend-client-idle-timeout   1800000]
 
+  ;; Timeout in milliseconds after which a per-user backend connection,
+  ;; having received no new messages, will quit.
+  [backend-client-connection-timeout 900000]
+
   ;; Timeout in seconds after which an in-progress gateway login will be killed.
   [backend-login-timeout         30]
 

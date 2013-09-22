@@ -133,6 +133,9 @@
       (define be-address (tunnel-remote-addr tun))
       (define be-port (read-line (tunnel-in tun)))
 
+      (when (eof-object? be-port)
+        (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
+
       (logf/sync 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
       (subprocess-wait (tunnel-process tun))
