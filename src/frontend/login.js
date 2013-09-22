@@ -135,9 +135,8 @@ function submit_login() {
 function read_login_credentials() {
   var creds = readCookie("seashell-session");
   if (creds) {
-    return JSON.parse(data);
+    return JSON.parse(creds);
   } else {
     return null;
   }
-}
 }

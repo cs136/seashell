@@ -51,7 +51,8 @@
          make-seashell-websocket-control
          ws-send
          ws-recv
-         ws-close!)
+         ws-close!
+         exn:websocket?)
 
 
 ;; exn:websocket

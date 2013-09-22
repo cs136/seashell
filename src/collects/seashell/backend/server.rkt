@@ -297,7 +297,7 @@
              (ws-close! connection))]
          [exn:websocket?
            (lambda (exn)
-             (logf 'error (format "Data connection failure: ~a" (exn-message exn))))]
+             (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
         (logf 'debug "In main loop.")
         ;; TODO - probably want to sync here also on a CLOSE frame.
         ;; TODO - close the connection when appropriate (timeout).

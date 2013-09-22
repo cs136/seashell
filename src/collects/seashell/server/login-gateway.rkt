@@ -92,17 +92,19 @@
 
   ;; Binding for tunnel process outside scope of with-limits.
   (define tun-proc #f)
+  (define tun #f)
 
   ;; Timeout the login process.
   (with-handlers
     ([exn:fail:resource? (lambda(e)
                            (when tun-proc
-                             (tunnel-close tun)
                              (subprocess-kill tun-proc #t))
+                           (when tun
+                             (tunnel-close tun))
                            (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Spawn backend process on backend host.
-      (define tun
+      (set! tun
         (with-handlers
           ([exn:tunnel?
              (match-lambda

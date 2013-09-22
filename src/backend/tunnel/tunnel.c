@@ -352,7 +352,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
   fd_set readfds;
 
   char buffer[4096];
-  int rc = 0, len = 0, start = 0;
+  ssize_t start = 0, len = 0, rc = 0;
   int nfds = 1 + MAX(infd, conn->sockfd);
 
   while (1) {
@@ -543,6 +543,14 @@ int main (int argc, char *argv[]) {
   if (exitsignal) {
     error = OTHER_ERROR;
   }
+
+  /** Drain stderr on the SSH connection. */
+  char stderr_buffer[4096];
+  ssize_t read = 0;
+  while ((read = libssh2_channel_read_stderr(conn->channel, stderr_buffer, sizeof(char)*4096)) > 0) {
+    fwrite(stderr_buffer, sizeof(char), read, stderr);
+  }
+
 end:
   seashell_tunnel_free(conn);
   seashell_tunnel_teardown();
