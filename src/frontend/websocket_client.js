@@ -101,14 +101,14 @@ function SeashellWebsocket(uri, key) {
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
         var request = self.requests[response.id];
-		if (response.success) {
-			request.dfd.resolve(response);
-		} else {
-			request.dfd.reject(response);
-		}
+        if (response.success) {
+          request.dfd.resolve(response);
+        } else {
+          request.dfd.reject(response);
+        }
         if (response.id >= 0)
-         delete self.requests[response.id];
-      }
+           delete self.requests[response.id];
+      };
       reader.readAsText(blob);
     }
     readerT.readAsArrayBuffer(message.data);
