@@ -28,6 +28,9 @@
  *
  * TODO: Exception handling on bad keys.  Probably want to redirect
  * to the login page _again_ with a reason.
+ *
+ * Invocation:
+ *  ws = new SeashellWebsocket( ... )
  */
 function SeashellWebsocket(uri, key) {
   var self = this;
@@ -171,59 +174,60 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
 };
 
 SeashellWebsocket.prototype.getDirListing = function(base_dir) {
-	var msg = {};
-	msg.type = "getDirListing";
-	msg.base_dir = base_dir;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+  var msg = {};
+  msg.type = "getDirListing";
+  msg.base_dir = base_dir;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg);
 };
 
 SeashellWebsocket.prototype.loadFile = function(file_name) {
-	var msg = {};
-	msg.type = "loadFile";
-	msg.file_name = file_name;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+  var msg = {};
+  msg.type = "loadFile";
+  msg.file_name = file_name;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg);
 };
 
-ws.saveFile = function(file_name, file_content) {
-	var msg = {};
-	msg.type = "saveFile";
-	msg.file_name = file_name;
-	msg.file_content = file_content;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+SeashellWebsocket.prototype.saveFile = function(file_name, file_content) {
+  var msg = {};
+  msg.type = "saveFile";
+  msg.file_name = file_name;
+  msg.file_content = file_content;
+  msg.dfd = $.Deferred();
+  this.sendMessage(JSON.stringify(msg));
 };
 
-ws.commitFile = function(file_name, file_content) {
-	var msg = {};
-	msg.type = "commitFile";
-	msg.file_name = file_name;
-	msg.file_content = file_content;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
-};
-ws.revertFile = function(file_name) {
-	var msg = {};
-	msg.type = "revertFile";
-	msg.file_name = file_name;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+SeashellWebsocket.prototype.commitFile = function(file_name, file_content) {
+  var msg = {};
+  msg.type = "commitFile";
+  msg.file_name = file_name;
+  msg.file_content = file_content;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg));
 };
 
-ws.compileProgram = function(base_dir) {
-	var msg = {};
-	msg.type = "compileProgram";
-	msg.base_dir = base_dir;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+SeashellWebsocket.prototype.revertFile = function(file_name) {
+  var msg = {};
+  msg.type = "revertFile";
+	msg.file_name = file_name;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg);
 };
 
-ws.runProgram = function(base_dir) {
-	var msg = {};
-	msg.type = "runProgram";
-	msg.base_dir = base_dir;
-	msg.dfd = $.Deferred();
-	SeashellWebsocket.prototype.sendMessage(JSON.stringify(msg));
+SeashellWebsocket.prototype.compileProgram = function(base_dir) {
+  var msg = {};
+  msg.type = "compileProgram";
+  msg.base_dir = base_dir;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg);
+};
+
+SeashellWebsocket.prototype.runProgram = function(base_dir) {
+  var msg = {};
+  msg.type = "runProgram";
+  msg.base_dir = base_dir;
+  msg.dfd = $.Deferred();
+  this.sendMessage(msg);
 };
 
