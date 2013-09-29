@@ -16,14 +16,16 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct seashell-diagnostic (file line column message) #:transparent)
+(struct seashell-diagnostic (file line column message) #:prefab)
 
 (require seashell/compiler/ffi
          seashell/seashell-config)
 
 (provide
   seashell-compile-files
-  seashell-diagnostic)
+  seashell-diagnostic
+  seashell-compiler-place-main
+  seashell-compile-files/place)
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -38,6 +40,10 @@
 ;;    returns no binary and the list of messages produced.
 ;;  (values bytes? (hash/c path? (listof seashell-diagnostic?))) - On success,
 ;;    returns the ELF binary as a bytestring and the list of messages produced.
+;;
+;; Notes:
+;;  This function ought not to produce any exceptions - otherwise,
+;;  things may go south if this is running in a place.
 (define/contract (seashell-compile-files cflags ldflags sources)
   (-> (listof string?) (listof string?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
@@ -117,3 +123,39 @@
         (values #f diags))]
     [else
       (values #f compiler-diags)]))
+
+;; (seashell-compiler-place-main pch)
+;; Main function for a place that reads, from its channel:
+;;  cflags, ldflags, sources - as above.
+;; And writes:
+;;  Result of running seashell-compile-files onto its channel.
+;;
+;; Arguments:
+;;  pch - Place channel.
+(define (seashell-compiler-place-main pch)
+  (define cflags (place-channel-get pch))
+  (define ldflags (place-channel-get pch))
+  (define sources (place-channel-get pch))
+
+  (define-values (object diags) (seashell-compile-files cflags ldflags sources))
+  (cond
+    [(bytes? object)
+      (define result (make-shared-bytes (bytes-length object)))
+      (bytes-copy! result 0 object 0)
+      (place-channel-put pch result)]
+    [else
+      (place-channel-put pch object)])
+  (place-channel-put pch diags))
+
+;; (seashell-compile-files/place cflags ldflags sources)
+;; Like seashell-compile-files, but invokes the compilation process
+;; in a separate place.  This is used to enable parallelism
+;; when dealing with the FFI.
+(define (seashell-compile-files/place cflags ldflags sources)
+  (define result (dynamic-place 'seashell/compiler/seashell-compiler 'seashell-compiler-place-main))
+  (place-channel-put result cflags)
+  (place-channel-put result ldflags)
+  (place-channel-put result sources)
+  (define object (place-channel-get result))
+  (define diags (place-channel-get result))
+  (values object diags))

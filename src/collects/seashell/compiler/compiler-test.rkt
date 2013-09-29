@@ -9,7 +9,13 @@
     "-I/usr/include"))
 
 (define-values (bin diag)
-               (seashell-compile-files
+               (seashell-compile-files/place
+                                       (append include-search-path '("-Wall"))
+                                       '()
+                                       `(,(string->path "foo.c") ,(string->path "bar.c"))))
+
+(define-values (bin2 diag2)
+               (seashell-compile-files/place
                                        (append include-search-path '("-Wall"))
                                        '()
                                        `(,(string->path "foo.c") ,(string->path "bar.c"))))
