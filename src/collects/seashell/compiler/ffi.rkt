@@ -36,7 +36,9 @@
          seashell_compiler_get_diagnostic_file
          seashell_compiler_get_diagnostic_message
          seashell_compiler_run
-         seashell_compiler_get_object)
+         seashell_compiler_get_object
+         seashell_llvm_setup
+         seashell_llvm_cleanup)
 
 
 (define-ffi-definer define-clang (ffi-lib (read-config 'seashell-clang)))
@@ -81,11 +83,3 @@
                         size)
                       #f)))))
 
-;; Start up and cleanup procedures.
-(void
-  (register-custodian-shutdown
-    (void)
-    (lambda(v) (seashell_llvm_cleanup))
-    (current-custodian)
-    #:at-exit? #t))
-(void (seashell_llvm_setup))

@@ -83,4 +83,9 @@
   ;; Timeout in seconds after which an in-progress gateway login will be killed.
   [backend-login-timeout         30]
 
+  ;; Default binary to invoke when linking.
+  [system-linker                 "/usr/bin/cc"]
+
+  ;; Prefix on linker flags.
+  [linker-flag-prefix            "-Wl,"]
 )

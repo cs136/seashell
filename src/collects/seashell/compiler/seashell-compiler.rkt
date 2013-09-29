@@ -18,12 +18,26 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (struct seashell-diagnostic (file line column message) #:transparent)
 
-(require seashell/compiler/ffi)
+(require seashell/compiler/ffi
+         seashell/seashell-config)
 
 (provide
   seashell-compile-files
   seashell-diagnostic)
 
+;; (seashell-compile-files cflags ldflags source)
+;; Invokes the internal compiler and external linker to create
+;; an executable based on the source files.
+;;
+;; Arguments:
+;;  cflags - List of flags to pass to the compiler.
+;;  ldflags - List of flags to pass to the linker.
+;;  source - List of source paths to compile.
+;; Returns:
+;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
+;;    returns no binary and the list of messages produced.
+;;  (values bytes? (hash/c path? (listof seashell-diagnostic?))) - On success,
+;;    returns the ELF binary as a bytestring and the list of messages produced.
 (define/contract (seashell-compile-files cflags ldflags sources)
   (-> (listof string?) (listof string?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
@@ -70,8 +84,8 @@
                            (thunk (write-bytes object))
                            #:exists 'truncate)
       (define-values (linker linker-output linker-input linker-error)
-        (apply subprocess #f #f #f "/usr/bin/cc" 
-               (append (map (curry string-append "-Wl,") ldflags)
+        (apply subprocess #f #f #f (read-config 'system-linker)
+               (append (map (curry string-append (read-config 'linker-flag-prefix)) ldflags)
                        (list "-o" "/dev/stdout" (path->string temporary-file)))))
       ;; Close unused port.
       (close-output-port linker-input)
