@@ -1,4 +1,4 @@
-#lang racket/base
+#lang racket
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013 The Seashell Maintainers.
 ;;
@@ -16,61 +16,84 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct seashell-compiler (ptr))
 (struct seashell-diagnostic (file line column message) #:transparent)
 
-(require racket/contract
-         racket/function
-         racket/list
-         racket/bool
-         seashell/compiler/ffi)
+(require seashell/compiler/ffi)
 
 (provide
-  (contract-out
-    [make-seashell-compiler
-      (-> seashell-compiler?)]
-    [seashell-compile-files
-      (-> seashell-compiler?
-          (listof string?)
-          (listof string?)
-          (listof path?)
-          (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))])
-    seashell-diagnostic-file
-    seashell-diagnostic-line
-    seashell-diagnostic-column
-    seashell-diagnostic-message
-    seashell-diagnostic?
-    seashell-compiler?)
+  seashell-compile-files
+  seashell-diagnostic)
 
-(define (seashell-compile-files compiler cflags ldflags sources)
-  (define c (seashell-compiler-ptr compiler))
+(define/contract (seashell-compile-files cflags ldflags sources)
+  (-> (listof string?) (listof string?) (listof path?)
+      (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
+
+  ;; Set up the compiler instance.
+  (define compiler (seashell_compiler_make))
   (define file-vec (list->vector sources))
-  (seashell_compiler_clear_files c)
-  (seashell_compiler_clear_compile_flags c)
-  (seashell_compiler_clear_link_flags c)
-  (for-each ((curry seashell_compiler_add_compile_flag) c) cflags)
-  (for-each ((curry seashell_compiler_add_link_flag) c) ldflags)
-  (for-each ((curry seashell_compiler_add_file) c) (map path->string sources))
-  (define res (seashell_compiler_run c))
+  (seashell_compiler_clear_files compiler)
+  (seashell_compiler_clear_compile_flags compiler)
+  (for-each ((curry seashell_compiler_add_compile_flag) compiler) cflags)
+  (for-each ((curry seashell_compiler_add_file) compiler) (map path->string sources))
+
+  ;; Run the compiler + intermediate linkage step.
+  (define compiler-res (seashell_compiler_run compiler))
   (define compiler-diags
     (foldl
-      (lambda(c b) (hash-set b (car c) (cons (cdr c) (hash-ref b (car c) empty))))
+      (lambda (message table)
+        (if (not (equal? "" (cdr message)))
+          (hash-set table (car message)
+                    (cons (seashell-diagnostic "" 0 0 (cdr message))
+                          (hash-ref table (car message) '())))
+          table))
       (make-immutable-hash)
       (for*/list ([i (in-range 0 (length sources))]
-                  [j (in-range 0 (seashell_compiler_get_diagnostic_count c i))])
+                  [j (in-range 0 (seashell_compiler_get_diagnostic_count compiler i))])
         `(,(vector-ref file-vec i) .
-            ,(seashell-diagnostic (seashell_compiler_get_diagnostic_file c i j)
-                                  (seashell_compiler_get_diagnostic_line c i j)
-                                  (seashell_compiler_get_diagnostic_column c i j)
-                                  (seashell_compiler_get_diagnostic_message c i j))))))
-  (define linker-diags (seashell_compiler_get_linker_messages c))
-  (define diags
-    (if (equal? linker-diags "")
-        compiler-diags
-        (hash-set compiler-diags (string->path "a.out") (list (seashell-diagnostic "" 0 0 linker-diags)))))
-  (if (= 0 res)
-    (values (seashell_compiler_get_executable c) diags)
-    (values #f diags)))
+            ,(seashell-diagnostic (seashell_compiler_get_diagnostic_file compiler i j)
+                                  (seashell_compiler_get_diagnostic_line compiler i j)
+                                  (seashell_compiler_get_diagnostic_column compiler i j)
+                                  (seashell_compiler_get_diagnostic_message compiler i j))))))
+  ;; Grab the results of running the intermediate code generation step.
+  (define intermediate-linker-diags (seashell_compiler_get_linker_messages compiler))
 
-(define (make-seashell-compiler)
-  (seashell-compiler (seashell_compiler_make)))
+  ;; Invoke the final link step on the object file.
+  (define object (seashell_compiler_get_object compiler))
+  ;; Write it to a temporary file, invoke cc [-Wl,$ldflags] -o /dev/stdout <temporary_file>
+  (define temporary-file (make-temporary-file "seashell-object-~a"))
+  (with-output-to-file temporary-file
+                       (thunk (write-bytes object))
+                       #:exists 'truncate)
+  (define-values (linker linker-output linker-input linker-error)
+    (apply subprocess #f #f #f "/usr/bin/cc" 
+           (append (map (curry string-append "-Wl,") ldflags)
+                   (list "-o" "/dev/stdout" (path->string temporary-file)))))
+  ;; Close unused port.
+  (close-output-port linker-input)
+  ;; Read result from linker:
+  (define linker-result (port->bytes linker-output))
+  (define linker-messages (port->string linker-error))
+  (close-input-port linker-output)
+  (close-input-port linker-error)
+  ;; Get the linker termination code
+  (define linker-res (subprocess-status (sync linker)))
+
+  ;; Create the final diagnostics table:
+  (define diags
+    (foldl
+      (lambda (message table)
+        (if (not (equal? "" (cdr message)))
+          (hash-set table (car message)
+                    (cons (seashell-diagnostic "" 0 0 (cdr message))
+                          (hash-ref table (car message) '())))
+          table))
+      compiler-diags
+      ;; Create list of linker diagnostics:
+      (list*
+        (cons (string->path "intermediate-link-result") intermediate-linker-diags)
+        (map (curry cons (string->path "final-link-result"))
+             (string-split linker-messages #px"\n")))))
+  
+  (if (and (zero? compiler-res) (zero? linker-res))
+    (values linker-result diags)
+    (values #f diags)))

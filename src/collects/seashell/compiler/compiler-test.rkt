@@ -1,7 +1,6 @@
 #lang racket
 (require seashell/compiler)
 
-(define cc (make-seashell-compiler))
 
 (define include-search-path
   '("-I/usr/local/include"
@@ -10,7 +9,7 @@
     "-I/usr/include"))
 
 (define-values (bin diag)
-               (seashell-compile-files cc
+               (seashell-compile-files
                                        (append include-search-path '("-Wall"))
                                        '()
                                        `(,(string->path "foo.c") ,(string->path "bar.c"))))

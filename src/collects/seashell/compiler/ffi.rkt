@@ -1,5 +1,5 @@
 #lang racket/base
-;; Seashell's Clang interface FFI bindings.
+;; Seashell's LLVM/Clang interface FFI bindings.
 ;; Copyright (C) 2013 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -22,14 +22,13 @@
          ffi/unsafe/custodian
          seashell/seashell-config)
 
+;; Exported FFI functions.  See compiler.cc for more details.
 (provide seashell_compiler_free
          seashell_compiler_make
          seashell_compiler_add_file
          seashell_compiler_clear_files
          seashell_compiler_add_compile_flag
          seashell_compiler_clear_compile_flags
-         seashell_compiler_add_link_flag
-         seashell_compiler_clear_link_flags
          seashell_compiler_get_linker_messages
          seashell_compiler_get_diagnostic_count
          seashell_compiler_get_diagnostic_line
@@ -37,62 +36,40 @@
          seashell_compiler_get_diagnostic_file
          seashell_compiler_get_diagnostic_message
          seashell_compiler_run
-         seashell_compiler_get_executable)
+         seashell_compiler_get_object)
+
 
 (define-ffi-definer define-clang (ffi-lib (read-config 'seashell-clang)))
-
 (define _seashell_compiler-ptr (_cpointer 'seashell_compiler))
-
 (define-clang seashell_llvm_setup (_fun -> _void))
-
 (define-clang seashell_llvm_cleanup (_fun -> _void))
-
 (define-clang seashell_compiler_free (_fun _seashell_compiler-ptr -> _void)
               #:wrap (deallocator))
-
 (define-clang seashell_compiler_make (_fun -> _seashell_compiler-ptr)
               #:wrap (allocator seashell_compiler_free))
-
 (define-clang seashell_compiler_add_file
               (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
-
 (define-clang seashell_compiler_clear_files
               (_fun _seashell_compiler-ptr -> _void))
-
 (define-clang seashell_compiler_add_compile_flag
               (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
-
 (define-clang seashell_compiler_clear_compile_flags
               (_fun _seashell_compiler-ptr -> _void))
-
-(define-clang seashell_compiler_add_link_flag
-              (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
-
-(define-clang seashell_compiler_clear_link_flags
-              (_fun _seashell_compiler-ptr -> _void))
-
 (define-clang seashell_compiler_get_linker_messages
               (_fun _seashell_compiler-ptr -> _string/utf-8))
-
 (define-clang seashell_compiler_get_diagnostic_count
               (_fun _seashell_compiler-ptr _int -> _int))
-
 (define-clang seashell_compiler_get_diagnostic_line
               (_fun _seashell_compiler-ptr _int _int -> _int))
-
 (define-clang seashell_compiler_get_diagnostic_column
               (_fun _seashell_compiler-ptr _int _int -> _int))
-
 (define-clang seashell_compiler_get_diagnostic_file
               (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
-
 (define-clang seashell_compiler_get_diagnostic_message
               (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
-
 (define-clang seashell_compiler_run
               (_fun _seashell_compiler-ptr -> _int))
-
-(define-clang seashell_compiler_get_executable
+(define-clang seashell_compiler_get_object
               (_fun _seashell_compiler-ptr (o : (_ptr o _int)) -> (r : _pointer) -> (values o r))
               #:wrap
               (lambda(proc)
@@ -104,11 +81,11 @@
                         size)
                       #f)))))
 
+;; Start up and cleanup procedures.
 (void
   (register-custodian-shutdown
     (void)
     (lambda(v) (seashell_llvm_cleanup))
     (current-custodian)
     #:at-exit? #t))
-
 (void (seashell_llvm_setup))
