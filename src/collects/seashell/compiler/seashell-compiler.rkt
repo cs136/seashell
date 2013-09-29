@@ -43,7 +43,9 @@
 ;;
 ;; Notes:
 ;;  This function ought not to produce any exceptions - otherwise,
-;;  things may go south if this is running in a place.
+;;  things may go south if this is running in a place.  It might be
+;;  worthwhile installing an exception handler in the place main
+;;  function to deal with this, though.
 (define/contract (seashell-compile-files cflags ldflags sources)
   (-> (listof string?) (listof string?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
@@ -102,6 +104,8 @@
       (close-input-port linker-error)
       ;; Get the linker termination code
       (define linker-res (subprocess-status (sync linker)))
+      ;; Remove the object file.
+      (delete-file temporary-file)
 
       ;; Create the final diagnostics table:
       (define diags
