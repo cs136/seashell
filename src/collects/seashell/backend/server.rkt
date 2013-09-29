@@ -29,6 +29,10 @@
 (provide backend-main)
 (struct exn:fail:counter exn:fail ())
 
+;; (backend/main)
+;; Entry point to the backend server.
+;;
+;; This function is invoked directly from login-process.c
 (define (backend-main)
   ;; Directory setup.
   (init-projects)
@@ -341,7 +345,7 @@
                     (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
                     (define result (handle-message message))
                     (logf 'debug "Result of handling message ~s: ~s" message result)
-                      (send-message connection result)))
+                    (send-message connection result)))
                 (main-loop connection state key)])))
 
     (logf 'info "Received new connection.")
