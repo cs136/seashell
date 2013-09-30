@@ -32,8 +32,9 @@
 ;; an executable based on the source files.
 ;;
 ;; Arguments:
-;;  cflags - List of flags to pass to the compiler.
-;;  ldflags - List of flags to pass to the linker.
+;;  cflags - List of flags to pass to the internal compiler.
+;;  ldflags - List of flags to pass to the system compiler to
+;;            finish the assembly and linking passes.
 ;;  source - List of source paths to compile.
 ;; Returns:
 ;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
@@ -84,18 +85,15 @@
 
   (cond
     [(zero? compiler-res)
-      ;; Invoke the final link step on the object file - if it exists.
+      ;; Invoke the final link step on the assembly file - if it exists.
+      ;; It's a good thing GNU as supports pipes.
       (define object (seashell_compiler_get_object compiler))
-      ;; Write it to a temporary file, invoke cc [-Wl,$ldflags] -o /dev/stdout <temporary_file>
-      (define temporary-file (make-temporary-file "seashell-object-~a"))
-      (with-output-to-file temporary-file
-                           (thunk (write-bytes object))
-                           #:exists 'truncate)
       (define-values (linker linker-output linker-input linker-error)
-        (apply subprocess #f #f #f (read-config 'system-linker)
-               (append (map (curry string-append (read-config 'linker-flag-prefix)) ldflags)
-                       (list "-o" "/dev/stdout" (path->string temporary-file)))))
+        (apply subprocess #f #f #f (read-config 'system-compiler)
+               (append ldflags
+                       (list "-x" "assembler" "-pipe" "-o" "/dev/stdout" "/dev/stdin"))))
       ;; Close unused port.
+      (write-bytes object linker-input)
       (close-output-port linker-input)
       ;; Read result from linker:
       (define linker-result (port->bytes linker-output))
@@ -104,8 +102,6 @@
       (close-input-port linker-error)
       ;; Get the linker termination code
       (define linker-res (subprocess-status (sync linker)))
-      ;; Remove the object file.
-      (delete-file temporary-file)
 
       ;; Create the final diagnostics table:
       (define diags

@@ -397,14 +397,14 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
 
 /**
  * seashell_compiler_get_object (struct seashell_compiler* compiler)
- * Returns a pointer to the resulting object, if any.
+ * Returns a pointer to the resulting assembly file, if any.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
  *  length - Output argument that will contain the length of the executable.
  *
  * Returns
- *  A pointer to the resulting executable or NULL.
+ *  A pointer to the resulting file contents or NULL.
  */
 extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length) {
   if (compiler->output_object.size() > 0) {
@@ -569,7 +569,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   llvm::raw_string_ostream raw(result);
   llvm::formatted_raw_ostream output(raw);
 
-  if (Target.addPassesToEmitFile(PM, output, llvm::TargetMachine::CGFT_ObjectFile)) {
+  if (Target.addPassesToEmitFile(PM, output, llvm::TargetMachine::CGFT_AssemblyFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
     return 1;
   }
@@ -577,8 +577,8 @@ static int final_link_step (struct seashell_compiler* compiler)
   PM.run(*mod);
   output.flush();
 
-  /** Final link step needs to happen with an invocation to cc.
-   *  We'll do this in Racket.  Pass back the completed object file
+  /** Final link and assemble step needs to happen with an invocation to cc.
+   *  We'll do this in Racket.  Pass back the completed assembly file
    *  in memory.
    */
   compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
