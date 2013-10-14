@@ -94,10 +94,13 @@
  */
 struct seashell_diag {
   public:
-    seashell_diag(std::string f, std::string m, int l = 0, int c = 0)
-      : file(f), mesg(m), line(l), col(c), loc_known(true) { }
+    seashell_diag(bool e, std::string f, std::string m, int l = 0, int c = 0)
+      : error(e), file(f), mesg(m), line(l), col(c), loc_known(true) { }
   public:
     /** Diagnostic location information: */
+
+    /** Is error? */
+    bool error;
 
     /** File, message */
     std::string file, mesg;
@@ -314,6 +317,27 @@ extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler
 }
 
 /**
+ * seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k)
+ * Gets if the kth available diagnostic message for the nth file is an error.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  n - Index into currently added files list.
+ *  k - Index into file diagnostics list.
+ */
+extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k) {
+  if (compiler->module_messages.size() <= n) {
+    return 0;
+  } else {
+    if(compiler->module_messages.at(n).size() <= k) {
+      return 0;
+    } else {
+      return compiler->module_messages.at(n).at(k).error;
+    }
+  }
+}
+
+/**
  * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k)
  * Gets the file name for the kth available diagnostic message for the nth file.
  *
@@ -471,7 +495,6 @@ public:
   void BeginSourceFile(const clang::LangOptions &LO, const clang::Preprocessor *PP) { }
   void EndSourceFile() { }
   void HandleDiagnostic(clang::DiagnosticsEngine::Level Level, const clang::Diagnostic & Info) {
-    clang::DiagnosticConsumer::HandleDiagnostic(Level, Info);
     llvm::SmallString<100> OutStr;
     Info.FormatDiagnostic(OutStr);
     llvm::raw_svector_ostream DiagMessageStream(OutStr);
@@ -479,22 +502,23 @@ public:
 
     const clang::SourceManager & SM = Info.getSourceManager();
     const clang::SourceLocation & Loc = Info.getLocation();
-
     clang::PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+    bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
+
     if (PLoc.isInvalid()) {
       clang::FileID FID = SM.getFileID(Loc);
       if( !FID.isInvalid()) {
         const clang::FileEntry * FE = SM.getFileEntryForID(FID);
         if(FE && FE->getName()) {
-          messages.push_back(seashell_diag(FE->getName(), OutStr.c_str()));
+          messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
         } else {
-          messages.push_back(seashell_diag("?", OutStr.c_str()));
+          messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
         }
       } else {
-        messages.push_back(seashell_diag("?", OutStr.c_str()));
+        messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
       }
     } else {
-      messages.push_back(seashell_diag(PLoc.getFilename(), OutStr.c_str(),
+      messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
                                         PLoc.getLine(), PLoc.getColumn()));
     }
   }
@@ -617,7 +641,7 @@ static int compile_module (seashell_compiler* compiler,
       return 1;
 
     std::vector<seashell_diag>& compile_messages = compiler->module_messages[index];
-    #define PUSH_DIAGNOSTIC(x) compile_messages.push_back(seashell_diag(src_path, (x)))
+    #define PUSH_DIAGNOSTIC(x) compile_messages.push_back(seashell_diag(true, src_path, (x)))
    
 
     /** Set up compilation arguments. */

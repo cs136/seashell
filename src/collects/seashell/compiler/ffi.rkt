@@ -33,6 +33,7 @@
          seashell_compiler_get_diagnostic_count
          seashell_compiler_get_diagnostic_line
          seashell_compiler_get_diagnostic_column
+         seashell_compiler_get_diagnostic_error
          seashell_compiler_get_diagnostic_file
          seashell_compiler_get_diagnostic_message
          seashell_compiler_run
@@ -63,6 +64,8 @@
               (_fun _seashell_compiler-ptr _int -> _int))
 (define-clang seashell_compiler_get_diagnostic_line
               (_fun _seashell_compiler-ptr _int _int -> _int))
+(define-clang seashell_compiler_get_diagnostic_error
+              (_fun _seashell_compiler-ptr _int _int -> _bool))
 (define-clang seashell_compiler_get_diagnostic_column
               (_fun _seashell_compiler-ptr _int _int -> _int))
 (define-clang seashell_compiler_get_diagnostic_file

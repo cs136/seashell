@@ -34,6 +34,7 @@
 
 (require seashell/git
          seashell/seashell-config
+         seashell/compiler
          net/url)
 
 ;; (check-path path)
@@ -187,10 +188,13 @@
 ;;  name - Name of project.
 ;;
 ;; Raises:
-;;  exn:project if the project does not exist,
+;;  exn:project if project does not exist.
 ;;  libgit2 errors if git errors happen.
 (define/contract (save-project name)
   (-> project-name? void?)
+  (when (not (is-project? name))
+    (raise (exn:project (format "Project ~a does not exist!" name)
+                        (current-continuation-marks))))
   ;; Here's what we do -
   ;;  1. Grab the status of the repository.
   ;;  2. Add 'adds' to each of the files that
@@ -226,7 +230,7 @@
   (seashell-git-commit commit))
 
 ;; (is-project? name)
-;; Checks if name is a project that exists
+;; Checks if name is a project that exists.
 ;;
 ;; Arguments:
 ;;  name - Name of project.
@@ -234,3 +238,31 @@
 (define/contract (is-project? name)
   (-> project-name? boolean?)
   (directory-exists? (check-and-build-path (read-config 'seashell) name)))
+
+;; (compile-project name)
+;; Compiles a project.
+;;
+;; Arguments:
+;;  name - Name of project.
+;; Returns:
+;;  List of diagnostics (error?, file, line, column, message)
+;;
+;; Raises:
+;;  exn:project if project does not exist.
+(define/contract (compile-project name)
+  (-> project-name? (list/c boolean? string? integer? integer? string?))
+  (when (not (is-project? name))
+    (raise (exn:project (format "Project ~a does not exist!" name)
+                        (current-continuation-marks))))
+  ;; Get *.c files in project.
+  (define c-files
+    (filter (lambda (file)
+              (equal? (filename-extension file) #"c"))
+            (directory-list (check-and-build-path (read-config 'seashell) name))))
+  ;; Run the compiler - save the binary to .seashell/${name}-binary,
+  ;; if everything succeeds.
+  (define-values (result messages) (seashell-compile-files/place '("-I /usr/include") '("-lm") c-files))
+  (when result
+    (with-output-to-file (check-and-build-path (read-config 'seashell) (format "~a-binary" name))
+                         (thunk
+                           (write-bytes result)))))

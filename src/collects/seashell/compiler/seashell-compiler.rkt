@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct seashell-diagnostic (file line column message) #:prefab)
+(struct seashell-diagnostic (error? file line column message) #:prefab)
 
 (require seashell/compiler/ffi
          seashell/seashell-config)
@@ -74,11 +74,12 @@
           table))
       (make-immutable-hash)
       (list*
-        `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic "" 0 0 intermediate-linker-diags))
+        `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
         (for*/list ([i (in-range 0 (length sources))]
                     [j (in-range 0 (seashell_compiler_get_diagnostic_count compiler i))])
           `(,(vector-ref file-vec i) .
-             ,(seashell-diagnostic (seashell_compiler_get_diagnostic_file compiler i j)
+             ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
+                                   (seashell_compiler_get_diagnostic_file compiler i j)
                                    (seashell_compiler_get_diagnostic_line compiler i j)
                                    (seashell_compiler_get_diagnostic_column compiler i j)
                                    (seashell_compiler_get_diagnostic_message compiler i j)))))))
@@ -109,7 +110,7 @@
           (lambda (message table)
             (if (not (equal? "" (cdr message)))
               (hash-set table (car message)
-                        (cons (seashell-diagnostic "" 0 0 (cdr message))
+                        (cons (seashell-diagnostic (not (zero? linker-res)) "" 0 0 (cdr message))
                               (hash-ref table (car message) '())))
               table))
           compiler-diags
