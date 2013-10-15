@@ -36,7 +36,7 @@ execute_process(COMMAND ln -sf "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/
 # Build our dependencies.
 
 # LLVM overrides.
-add_subdirectory(llvm EXCLUDE_FROM_ALL)
+add_subdirectory(llvm)
 
 # libgit2 overrides.
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)

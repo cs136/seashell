@@ -121,7 +121,8 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init (check-and-build-path (read-config 'seashell) name))))
+    (seashell-git-init (check-and-build-path (read-config 'seashell) name)))
+  (void))
 
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
@@ -146,7 +147,8 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone source (check-and-build-path (read-config 'seashell) name))))
+    (seashell-git-clone source (check-and-build-path (read-config 'seashell) name)))
+  (void))
 
 ;; (delete-project name)
 ;; Deletes a project.
@@ -179,7 +181,8 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (recursive-delete-tree (check-and-build-path (read-config 'seashell) name))))
+    (recursive-delete-tree (check-and-build-path (read-config 'seashell) name)))
+  (void))
 
 ;; (save-project name)
 ;; Commits the current state of a project to Git.
@@ -227,7 +230,8 @@
   (for-each (curry seashell-git-commit-delete-file commit)
             files-delete)
 
-  (seashell-git-commit commit))
+  (seashell-git-commit commit)
+  (void))
 
 ;; (is-project? name)
 ;; Checks if name is a project that exists.
@@ -250,7 +254,7 @@
 ;; Raises:
 ;;  exn:project if project does not exist.
 (define/contract (compile-project name)
-  (-> project-name? (list/c boolean? string? integer? integer? string?))
+  (-> project-name? any/c)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -258,11 +262,12 @@
   (define c-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"c"))
-            (directory-list (check-and-build-path (read-config 'seashell) name))))
+            (directory-list (check-and-build-path (read-config 'seashell) name) #:build? #t)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
-  (define-values (result messages) (seashell-compile-files/place '("-I /usr/include") '("-lm") c-files))
+  (define-values (result messages) (seashell-compile-files/place '() '("-lm") c-files))
   (when result
     (with-output-to-file (check-and-build-path (read-config 'seashell) (format "~a-binary" name))
                          (thunk
-                           (write-bytes result)))))
+                           (write-bytes result))))
+  messages)
