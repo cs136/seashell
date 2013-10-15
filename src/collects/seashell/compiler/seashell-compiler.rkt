@@ -23,9 +23,7 @@
 
 (provide
   seashell-compile-files
-  seashell-diagnostic
-  seashell-compiler-place-main
-  seashell-compile-files/place)
+  seashell-diagnostic)
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -46,9 +44,18 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(define/contract (seashell-compile-files cflags ldflags sources)
+(define/contract (seashell-compile-files user-cflags user-ldflags sources)
   (-> (listof string?) (listof string?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
+
+  ;; Set up the proper flags.
+  (define cflags
+    (list*
+      "-fsanitize=address"
+      "-I/usr/include"
+      (format "-I~a" (path->string (build-path (read-config 'seashell-install) "lib" "clang"
+                                   (seashell_clang_version) "include")))
+      user-cflags))
 
   ;; Set up the compiler instance.
   (define compiler (seashell_compiler_make))
@@ -85,28 +92,51 @@
 
   (cond
     [(zero? compiler-res)
+      ;; Set up the linker flags.
+      (define ldflags
+        (list*
+          "-whole-archive"
+          (path->string
+            (build-path (read-config 'seashell-install) "lib" "clang"
+                        (seashell_clang_version)
+                        "lib"
+                        (seashell_compiler_object_os compiler)
+                        (format "libclang_rt.asan-~a.a" (seashell_compiler_object_arch compiler))))
+          "-no-whole-archive"
+          "-ldl"
+          "-lrt"
+          "-lpthread"
+          user-ldflags))
+
       ;; Invoke the final link step on the object file - if it exists.
       (define object (seashell_compiler_get_object compiler))
-      ;; Write it to a temporary file, invoke cc [-Wl,$ldflags] -o /dev/stdout <temporary_file>
-      (define temporary-file (make-temporary-file "seashell-object-~a"))
-      (with-output-to-file temporary-file
+      ;; Write it to a temporary file, invoke cc -Wl,$ldflags -o <result_file> <object_file>
+      (define object-file (make-temporary-file "seashell-object-~a"))
+      (define result-file (make-temporary-file "seashell-result-~a"))
+
+      (with-output-to-file object-file
                            (thunk (write-bytes object))
                            #:exists 'truncate)
       (define-values (linker linker-output linker-input linker-error)
         (apply subprocess #f #f #f (read-config 'system-linker)
-               (append (map (curry string-append (read-config 'linker-flag-prefix)) ldflags)
-                       (list "-o" "/dev/stdout" (path->string temporary-file)))))
+               (list* "-o" (path->string result-file) (path->string object-file)
+                      (map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
       ;; Close unused port.
       (close-output-port linker-input)
-      ;; Read result from linker:
-      (define linker-result (port->bytes linker-output))
-      (define linker-messages (port->string linker-error))
       (close-input-port linker-output)
+      ;; Read messages from linker:
+      (define linker-messages (port->string linker-error))
       (close-input-port linker-error)
       ;; Get the linker termination code
       (define linker-res (subprocess-status (sync linker)))
       ;; Remove the object file.
-      (delete-file temporary-file)
+      (delete-file object-file)
+
+      ;; Read the result:
+      (define linker-result #"")
+      (when (zero? linker-res)
+        (set! linker-result (call-with-input-file result-file port->bytes))
+        (delete-file result-file))
 
       ;; Create the final diagnostics table:
       (define diags
@@ -128,39 +158,3 @@
         (values #f diags))]
     [else
       (values #f compiler-diags)]))
-
-;; (seashell-compiler-place-main pch)
-;; Main function for a place that reads, from its channel:
-;;  cflags, ldflags, sources - as above.
-;; And writes:
-;;  Result of running seashell-compile-files onto its channel.
-;;
-;; Arguments:
-;;  pch - Place channel.
-(define (seashell-compiler-place-main pch)
-  (define cflags (place-channel-get pch))
-  (define ldflags (place-channel-get pch))
-  (define sources (place-channel-get pch))
-
-  (define-values (object diags) (seashell-compile-files cflags ldflags sources))
-  (cond
-    [(bytes? object)
-      (define result (make-shared-bytes (bytes-length object)))
-      (bytes-copy! result 0 object 0)
-      (place-channel-put pch result)]
-    [else
-      (place-channel-put pch object)])
-  (place-channel-put pch diags))
-
-;; (seashell-compile-files/place cflags ldflags sources)
-;; Like seashell-compile-files, but invokes the compilation process
-;; in a separate place.  This is used to enable parallelism
-;; when dealing with the FFI.
-(define (seashell-compile-files/place cflags ldflags sources)
-  (define result (dynamic-place 'seashell/compiler/seashell-compiler 'seashell-compiler-place-main))
-  (place-channel-put result cflags)
-  (place-channel-put result ldflags)
-  (place-channel-put result sources)
-  (define object (place-channel-get result))
-  (define diags (place-channel-get result))
-  (values object diags))

@@ -57,6 +57,9 @@
   ;; Location of per-user configuration directory.
   [seashell                      (build-path (find-system-path 'home-dir) ".seashell")]
 
+  ;; Location of install path.
+  [seashell-install              (build-path seashell-install-path)]
+
   ;; Location of SSH tunnel binary.
   [tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel")]
 

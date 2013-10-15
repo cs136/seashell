@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <clang/Basic/Version.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/DiagnosticOptions.h>
 #include <clang/Basic/FileManager.h>
@@ -169,6 +170,14 @@ extern "C" void seashell_llvm_setup() {
  */
 extern "C" void seashell_llvm_cleanup() {
   llvm_shutdown();
+}
+
+/**
+ * seashell_clang_version (void)
+ * Gets the Clang version string.
+ */
+extern "C" const char* seashell_clang_version() {
+  return CLANG_VERSION_STRING;
 }
 
 /**
@@ -438,6 +447,40 @@ extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compil
     *length = 0;
     return NULL;
   }
+}
+
+/**
+ * seashell_compiler_object_arch (struct seashell_compiler* compiler)
+ * Returns a string representing the resulting object's architecture, if any.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ * Returns:
+ *  Architecture, or NULL.
+ */
+extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler) {
+  /** Grab the triple, get the right code generator. */
+  llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
+  if (TheTriple.getArch() == llvm::Triple::UnknownArch)
+    return NULL;
+  return llvm::Triple::getArchTypeName(TheTriple.getArch());
+}
+
+/**
+ * seashell_compiler_object_os (struct seashell_compiler* compiler)
+ * Returns a string representing the target's operating system.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ * Returns:
+ *  OS name, or NULL.
+ */
+extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler) {
+  /** Grab the triple, get the right code generator. */
+  llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
+  if (TheTriple.getOS() == llvm::Triple::UnknownOS)
+    return NULL;
+  return llvm::Triple::getOSTypeName(TheTriple.getOS());
 }
 
 static void printDiagnosticOptions(raw_ostream &OS,
