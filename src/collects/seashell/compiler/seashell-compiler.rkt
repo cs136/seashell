@@ -48,13 +48,11 @@
   (-> (listof string?) (listof string?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
 
-  ;; Set up the proper flags.
+  ;; Set up the proper flags.  Headers are taken care of in compiler.cc.
+  ;; Might be worth writing stripped down C standard headers.
   (define cflags
     (list*
       "-fsanitize=address"
-      "-I/usr/include"
-      (format "-I~a" (path->string (build-path (read-config 'seashell-install) "lib" "clang"
-                                   (seashell_clang_version) "include")))
       user-cflags))
 
   ;; Set up the compiler instance.
@@ -96,6 +94,9 @@
       (define ldflags
         (list*
           "-whole-archive"
+          ;; CAUTION: This here is very clang-specific code - as we need to simulate the final link step
+          ;; of -fsanitize=address.  Make sure that this pulls in the right version of clang's
+          ;; AddressSanitizer code.
           (path->string
             (build-path (read-config 'seashell-install) "lib" "clang"
                         (seashell_clang_version)
@@ -111,9 +112,8 @@
       ;; Invoke the final link step on the object file - if it exists.
       (define object (seashell_compiler_get_object compiler))
       ;; Write it to a temporary file, invoke cc -Wl,$ldflags -o <result_file> <object_file>
-      (define object-file (make-temporary-file "seashell-object-~a"))
+      (define object-file (make-temporary-file "seashell-object-~a.o"))
       (define result-file (make-temporary-file "seashell-result-~a"))
-
       (with-output-to-file object-file
                            (thunk (write-bytes object))
                            #:exists 'truncate)

@@ -89,6 +89,7 @@
 #include <signal.h>
 #include <stdio.h>
 
+#include <seashell-config.h>
 
 /** Data structure for compiler diagnostic messages.
  * Opaque to Racket - C accessor functions described below.
@@ -716,6 +717,10 @@ static int compile_module (seashell_compiler* compiler,
     clang::CompilerInstance Clang;
     Clang.setInvocation(CI.take());
     Clang.createDiagnostics(diag_client, false);
+
+    /** Set up the default headers */
+    Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
+    Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true); 
 
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
