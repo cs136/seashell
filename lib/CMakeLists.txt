@@ -60,6 +60,14 @@ ExternalProject_Add(
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
 
+# OpenSSL libraries for libgit2 (On OS/X, Linux).
+if (MINGW OR NOT WIN32)
+  find_package(OpenSSL)
+endif ()
+
+# Optional zlib dependency for libgit2.
+find_package(zlib QUIET)
+
 # Set include paths.
 set(LLVM_SOURCE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include
@@ -80,7 +88,7 @@ set(LIBGIT2_LINK_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libgit2
     PARENT_SCOPE)
 set(LIBGIT2_LIBRARIES
-    git2 z crypt
+    git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES}
     PARENT_SCOPE)
 set(LTC_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers
