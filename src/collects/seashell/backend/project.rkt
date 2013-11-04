@@ -30,7 +30,8 @@
          exn:project?
          exn:project
          check-path
-         check-and-build-path)
+         check-and-build-path
+         compile-project)
 
 (require seashell/git
          seashell/seashell-config

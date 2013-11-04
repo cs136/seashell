@@ -34,8 +34,6 @@
 ;;
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
-  ;; Directory setup.
-  (init-projects)
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
@@ -43,6 +41,8 @@
   (make-port-logger "^info$" (current-error-port))
   (make-port-logger "^warn$" (current-error-port))
   (make-port-logger "^exception$" (current-error-port))
+  ;; Directory setup.
+  (init-projects)
 
   ;; Channel used to keep process alive.
   (define keepalive-chan (make-async-channel))
@@ -120,9 +120,11 @@
                        ('id id)
                        ('type "compileProgram")
                        ('name name))
-                      `#hash((id . ,id)
-                             (success . #t)
-                             (result . "unimplemented"))]
+                     (define-values (result messages)
+                       (compile-project name))
+                     `#hash((id . ,id)
+                            (success . ,result)
+                            (result . ,messages))]
                     ;; Project manipulation functions.
                     [(hash-table
                        ('id id)
