@@ -173,7 +173,7 @@
        ;; the server closes the connection, we may as well do it anyways.
 
        ;; Kill the connection.  (note: ws-close! ensures that the connection is closed only once).
-       (thread (thunk (ws-close! conn))))
+       (thread (thunk (ws-close! conn)))
        #f]
       [else
        ;; Unhandled message - log it, quit.
