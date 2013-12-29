@@ -238,10 +238,10 @@
             (async-channel-put
               (ws-connection-out-chan conn)
               (ws-frame #t 0 8 #"")))
-            (unless (sync/timeout timeout
-                                  (semaphore-peek-evt
-                                    (ws-connection-closed-semaphore conn)))
-              (ws-close! conn))))))
+          (unless (sync/timeout timeout
+                                (semaphore-peek-evt
+                                  (ws-connection-closed-semaphore conn)))
+            (ws-close! conn))))))
   (void))
 
 ;; (ws-close! conn) ->
