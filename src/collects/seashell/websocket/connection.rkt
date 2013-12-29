@@ -204,7 +204,7 @@
 ;; Returns:
 ;;  Bytes if not closed, eof-object? if closed.
 ;; Raises:
-;;  exn-websocket if any connections occured.  Keep in mind that
+;;  exn-websocket if any connections occurred.  Keep in mind that
 ;;  the behaviour of ws-recv is identical to (sync conn).
 (define/contract (ws-recv conn)
   (-> ws-connection? (or/c bytes? eof-object?))
