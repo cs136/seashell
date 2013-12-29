@@ -30,7 +30,8 @@
          exn:project?
          exn:project
          check-path
-         check-and-build-path)
+         check-and-build-path
+         compile-project)
 
 (require seashell/git
          seashell/seashell-config
@@ -250,11 +251,12 @@
 ;;  name - Name of project.
 ;; Returns:
 ;;  List of diagnostics (error?, file, line, column, message)
+;;  Error if any diagnostics have error? set.
 ;;
 ;; Raises:
 ;;  exn:project if project does not exist.
 (define/contract (compile-project name)
-  (-> project-name? any/c)
+  (-> project-name? (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -268,6 +270,21 @@
   (define-values (result messages) (seashell-compile-files '() '("-lm") c-files))
   (when result
     (with-output-to-file (check-and-build-path (read-config 'seashell) (format "~a-binary" name))
+                         #:exists 'replace
                          (thunk
                            (write-bytes result))))
-  messages)
+  ;; Messages is a list of seashell-diagnostic(s)
+  (values
+    (not (not result))
+    (apply append
+      (hash-map
+        messages
+        (lambda (key diagnostics)
+                (map
+                  (lambda (diagnostic)
+                    (list (seashell-diagnostic-error? diagnostic)
+                          (path->string key)
+                          (seashell-diagnostic-line diagnostic)
+                          (seashell-diagnostic-column diagnostic)
+                          (seashell-diagnostic-message diagnostic)))
+                  diagnostics))))))

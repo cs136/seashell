@@ -43,22 +43,22 @@
 ;;
 ;; A connection is a synchronizable event that is ready when
 ;; ws-read-frame will not block with synchronization result
-;; itself.
-(require racket/async-channel)
+;; the data that would be read from ws-recv invoked on itself,
+;; <eof>, or an exception object.
+(require racket/async-channel
+         seashell/log)
+
 (provide ws-connection?
          make-ws-connection
          make-ws-control
          ws-send
          ws-recv
          ws-close
-         exn:ws?)
+         exn:websocket?)
 
-;; Logger for ws library
-(define ws-log (make-logger 'ws))
-
-;; exn:ws
-;; Internal ws exception structure.
-(struct exn:ws exn:fail:user ())
+;; exn:websocket
+;; Internal websocket exception structure.
+(struct exn:websocket exn:fail:user ())
 
 ;; ws-frame
 ;; Internal data structure for a WebSocket frame.
@@ -71,7 +71,7 @@
 ;; with the following possible results:
 ;;  bytes? - Regular websocket frame.
 ;;  eof-object? - End of file/Websocket closed.
-;;  (raised exception) - Error.
+;;  exn? - Error.
 (struct ws-connection
   (closed-semaphore
    [in-thread #:mutable]
@@ -90,7 +90,7 @@
                (lambda (frame-or-exn)
                  (cond
                    [(exn? frame-or-exn)
-                    eof]
+                    frame-or-exn]
                    [else
                     (ws-frame-data frame-or-exn)])))
      (wrap-evt (semaphore-peek-evt
@@ -108,15 +108,15 @@
   (define in-chan (make-async-channel))
   (define out-chan (make-async-channel))
   (define conn (ws-connection (make-semaphore 0)
-                                     #f
-                                     #f
-                                     in-port out-port
-                                     in-chan out-chan
-                                     cline headers
-                                     control
-                                     mask?
-                                     0 0
-                                     (make-semaphore 1)))
+                                 #f
+                                 #f
+                                 in-port out-port
+                                 in-chan out-chan
+                                 cline headers
+                                 control
+                                 mask?
+                                 0 0
+                                 (make-semaphore 1)))
   (set-ws-connection-in-thread! conn (in-thread conn))
   (set-ws-connection-out-thread! conn (out-thread conn))
   conn)
@@ -132,15 +132,15 @@
   (-> ws-connection? boolean?)
   (if (sync/timeout 0
                     (semaphore-peek-evt
-                     (ws-connection-closed-semaphore conn)))
-      #t #f))
+                      (ws-connection-closed-semaphore conn)))
+    #t #f))
 
 ;; (make-ws-control) ->
 ;; Evaluates to a function suitable for use as the 'control' argument to make-ws-connection.
 ;;
 ;; Returns:
 ;;  (ws-connection? (or/c ws-frame? exn) -> any/c)
-;;  Function that'll work as a control to a ws connection.  By default,
+;;  Function that'll work as a control to a websocket connection.  By default,
 ;;  this function will close automatically and destroy all resources associated
 ;;  with a connection when the CLOSE handshake is received.
 (define/contract (make-ws-control)
@@ -151,8 +151,8 @@
        ;; There's not much we can do.  We may as well log it and
        ;; quit.  Raising an exception here is probably a bad idea,
        ;; as we're running in a separate thread.
-       (log-message ws-log 'error #f
-                    (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
+       (logf 'error #f
+              (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
        (thread (thunk (ws-close! conn)))
        #f]
       [(ws-frame #t rsv 9 data)
@@ -172,16 +172,15 @@
        ;; As we're receiving a CLOSE frame, even though it's recommended that
        ;; the server closes the connection, we may as well do it anyways.
 
-       ;; Kill the connection.
-       (thread (thunk (ws-close! conn)))
+       ;; Kill the connection.  (note: ws-close! ensures that the connection is closed only once).
+       (thread (thunk (ws-close! conn))))
        #f]
       [else
        ;; Unhandled message - log it, quit.
-       (log-message ws-log 'warning
-                    (format "WebSocket - unknown control message: ~s" frame-or-exn))
+       (logf 'warning
+              (format "WebSocket - unknown control message: ~s" frame-or-exn))
        ]))
   simple-control)
-
 
 ;; (ws-send conn bytes) ->
 ;; Sends bytes over websocket connection conn.
@@ -192,7 +191,7 @@
 (define/contract (ws-send conn bytes)
   (-> ws-connection? bytes? void?)
   (when (ws-connection-closed? conn)
-    (raise (exn:ws "Connection closed!"
+    (raise (exn:websocket "Connection closed!"
                           (current-continuation-marks))))
   (async-channel-put (ws-connection-out-chan conn)
                      (ws-frame #t 0 2 bytes)))
@@ -207,11 +206,13 @@
 ;; Returns:
 ;;  Bytes if not closed, eof-object? if closed.
 ;; Raises:
-;;  exn-ws if any connections occured.  Keep in mind that
-;;  the behaviour of ws-recv is identical to (sync conn).
+;;  exn:websocket if any connections occurred.
 (define/contract (ws-recv conn)
   (-> ws-connection? (or/c bytes? eof-object?))
-  (sync conn))
+  (define result (sync conn))
+  (cond 
+    [(exn? result) (raise result)]
+    [else result]))
 
 ;; (ws-close conn) ->
 ;; Sends a CLOSE frame on a websocket connection,
@@ -230,13 +231,15 @@
        void?)
   (unless (ws-connection-closed? conn)
     (async-channel-put
-     (ws-connection-out-chan conn)
-     (ws-frame #t 0 8 #"")))
-  (unless (sync/timeout timeout
-                        (semaphore-peek-evt
-                          (ws-connection-closed-semaphore conn)))
-    (ws-close! conn)))
-
+      (ws-connection-out-chan conn)
+      (ws-frame #t 0 8 #"")))
+  (thread
+    (thunk
+      (unless (sync/timeout timeout
+                            (semaphore-peek-evt
+                              (ws-connection-closed-semaphore conn)))
+        (ws-close! conn))))
+  (void))
 
 ;; (ws-close! conn) ->
 ;; Frees all resources used by a ws connection.
@@ -248,23 +251,23 @@
 (define/contract (ws-close! conn)
   (-> ws-connection? void?)
   (call-with-semaphore (ws-connection-close-semaphore conn)
-                       (thunk
-                        (unless (ws-connection-closed? conn)
-                          (semaphore-post (ws-connection-closed-semaphore conn))
-                          (kill-thread (ws-connection-in-thread conn))
-                          (kill-thread (ws-connection-out-thread conn))
-                          (send-frame (ws-frame #t 0 8 #"")
-                                      (ws-connection-out-port conn)
-                                      #:mask?
-                                      (ws-connection-mask? conn))
-                          (close-input-port (ws-connection-in-port conn))
-                          (close-output-port (ws-connection-out-port conn))
-                          (void)))))
+    (thunk
+      (unless (ws-connection-closed? conn)
+        (semaphore-post (ws-connection-closed-semaphore conn))
+        (kill-thread (ws-connection-in-thread conn))
+        (kill-thread (ws-connection-out-thread conn))
+        (send-frame (ws-frame #t 0 8 #"")
+                    (ws-connection-out-port conn)
+                    #:mask?
+                    (ws-connection-mask? conn))
+        (close-input-port (ws-connection-in-port conn))
+        (close-output-port (ws-connection-out-port conn))
+        (void)))))
 
 ;; Handy syntax rule for EOF checking
 (define-syntax-rule (check-eof x)
   (when (eof-object? x)
-    (raise (exn:ws (format "read-frame: Unexpected end of file!")
+    (raise (exn:websocket (format "read-frame: Unexpected end of file!")
                           (current-continuation-marks)))))
 
 ;; (mask data key) -> bytes?
@@ -294,7 +297,7 @@
   (mask-helper (bytes-copy data) key 0))
 
 ;; (read-frame port) -> ws-frame?
-;; Reads a websocket frame in from port.
+;; Reads a WebSocket frame in from port.
 ;;
 ;; Arguments:
 ;;  port - Input port.
@@ -427,7 +430,7 @@
 ;;
 ;; Returns:
 ;;  Thread object.  Send thread a message to make it quit.  Thread
-;;  will also die if a exn:ws? is raised.
+;;  will also die if a exn:websocket? is raised.
 ;;
 ;; Notes:
 ;;  The only objects that will be written to channel will be completed frames
@@ -455,7 +458,7 @@
            ;; Got an exception - report it,
            ;; and then quit immediately.
            ;; This will be an unclean shutdown in all cases.
-           [(exn:ws?
+           [(exn:websocket?
              (lambda (exn)
                (control conn exn)
                (async-channel-put channel exn)))]
@@ -465,41 +468,41 @@
            ;; It is the responsibility of control to close the port and
            ;; kill in/out threads.
            [(> (ws-frame-opcode frame) 7)
-            (control conn frame)
-            (loop)]
+             (control conn frame)
+             (loop)]
            ;; Case 1 - first and only (unfragmented) frame.
            [(and (not fragmented?)
                  (ws-frame-final? frame))
-            (async-channel-put channel frame)
-            (loop)]
+             (async-channel-put channel frame)
+             (loop)]
            ;; Case 2 - start of a fragmented frame.
            [(and (not fragmented?)
                  (not (ws-frame-final? frame)))
-            (set! fragmented? #t)
-            (set! fragmented-rsv (ws-frame-rsv frame))
-            (set! fragmented-opcode (ws-frame-opcode frame))
-            (set! fragmented-buffer (ws-frame-data frame))
-            (loop)]
+             (set! fragmented? #t)
+             (set! fragmented-rsv (ws-frame-rsv frame))
+             (set! fragmented-opcode (ws-frame-opcode frame))
+             (set! fragmented-buffer (ws-frame-data frame))
+             (loop)]
            ;; Case 3 - continuation frame.
            [(and fragmented?
                  (not (ws-frame-final? frame))
                  (equal? 0 (ws-frame-opcode frame)))
-            (set! fragmented-buffer
-                  (bytes-append fragmented-buffer (ws-frame-data frame)))
-            (loop)]
+             (set! fragmented-buffer
+                   (bytes-append fragmented-buffer (ws-frame-data frame)))
+             (loop)]
            ;; Case 4 - final frame.
            [(and fragmented?
                  (ws-frame-final? frame)
                  (equal? 0 (ws-frame-opcode frame)))
-            (set! fragmented-buffer
-                  (bytes-append fragmented-buffer (ws-frame-data frame)))
-            ;; Reset fragmented?
-            (set! fragmented? #f)
-            ;; Write the entire frame to the port
-            (async-channel-put channel (ws-frame #t fragmented-rsv fragmented-opcode fragmented-buffer))
-            (loop)]
+             (set! fragmented-buffer
+                   (bytes-append fragmented-buffer (ws-frame-data frame)))
+             ;; Reset fragmented?
+             (set! fragmented? #f)
+             ;; Write the entire frame to the port
+             (async-channel-put channel (ws-frame #t fragmented-rsv fragmented-opcode fragmented-buffer))
+             (loop)]
            [else
-            (raise (exn:ws (format "Unknown frame ~a!" frame)
+            (raise (exn:websocket (format "Unknown frame ~a!" frame)
                                   (current-continuation-marks)))]))))))
 
 ;; (out-thread port channel)

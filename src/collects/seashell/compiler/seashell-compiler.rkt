@@ -16,14 +16,15 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct seashell-diagnostic (error? file line column message) #:prefab)
-
 (require seashell/compiler/ffi
          seashell/seashell-config)
 
 (provide
   seashell-compile-files
-  seashell-diagnostic)
+  (struct-out seashell-diagnostic))
+
+;; Diagnostic structure.  Self-explanatory.
+(struct seashell-diagnostic (error? file line column message) #:prefab)
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create

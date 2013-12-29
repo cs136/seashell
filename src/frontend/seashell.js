@@ -814,9 +814,8 @@ seashell_new(
 function seashellInit() {
 	var creds = read_login_credentials();
 	if (creds) {
-		ws = new SeashellWebsocket("ws://" + "seashell.student.cs" + ":" + creds.port, creds.key);
+		ws = new SeashellWebsocket("ws://" + creds.host + ":" + creds.port, creds.key);
 		setUpUI();
 	}
 }
 
-jQuery.getScript("seashell_glue.js", seashellInit);

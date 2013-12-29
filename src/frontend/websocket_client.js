@@ -38,18 +38,15 @@ function SeashellWebsocket(uri, key) {
   self.coder = new SeashellCoder(key);
   self.lastRequest = 0;
   self.requests = {};
-  self.ready = false;
+  self.ready = $.Deferred();
   // Ready [-1]
   self.requests[-1] = {
-    callback : function(result) {
-      self.ready = true;
-    }
+    deferred : self.ready
   };
+  self.failed = $.Deferred();
   // Failure [-2]
   self.requests[-2] = {
-    callback : function (result) {
-      self.failed = true;
-    }
+    deferred : self.failed
   };
   self.read_ctr = 0;
   self.write_ctr = 0;
@@ -105,9 +102,9 @@ function SeashellWebsocket(uri, key) {
         // message identifier that corresponds with it.
         var request = self.requests[response.id];
         if (response.success) {
-          request.dfd.resolve(response);
+          request.deferred.resolve(response);
         } else {
-          request.dfd.reject(response);
+          request.deferred.reject(response);
         }
         if (response.id >= 0)
            delete self.requests[response.id];
@@ -135,8 +132,11 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
   var request_id = self.lastRequest++;
   self.requests[request_id] = message;
   message.id = request_id;
-  // Stringify, write out as Array of bytes, send.
+  // Stringify, write out as Array of bytes.
   var blob = new Blob([JSON.stringify(message)]);
+  // Grab a deferred for the message:
+  self.requests[request_id].deferred = $.Deferred();
+  // Send the message:
   var reader = new FileReader();
   reader.onloadend = function() {
     // Keep in mind the framing format:
@@ -171,70 +171,66 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
     self.websocket.send(new Uint8Array(send));
   };
   reader.readAsArrayBuffer(blob);
+  return self.requests[request_id].deferred = $.Deferred();
 };
 
-SeashellWebsocket.prototype.getDirListing = function(base_dir) {
-  var msg = {};
-  msg.type = "getDirListing";
-  msg.base_dir = base_dir;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
+/** The following functions are wrappers around sendMessage.
+ *  Consult server.rkt for a full list of functions.
+ *  These functions take in arguments as specified in server.rkt
+ *  and return a JQuery Deferred object. */
+SeashellWebsocket.prototype.runProgram = function(project) {
+  return this.sendMessage({
+    type : "runProgram",
+    name : project});
+}
+
+SeashellWebsocket.prototype.compileProgram = function(project) {
+  return this.sendMessage({
+    type : "compileProgram",
+    name : project});
+}
+
+SeashellWebsocket.prototype.getProjects = function() {
+  return this.sendMessage({
+    type : "getProjects"});
+}
+
+SeashellWebsocket.prototype.listProject = function(name) {
+  return this.sendMessage({
+    type : "listProject",
+    project : name});
+} 
+
+SeashellWebsocket.prototype.newProject = function(name) {
+  return this.sendMessage({
+    type : "newProject",
+    project : name});
+}
+
+SeashellWebsocket.prototype.deleteProject = function(name) {
+  return this.sendMessage({
+    type : "deleteProject",
+    project : name});
+}
+
+SeashellWebsocket.prototype.readFile = function(name, file_name) {
+  return this.sendMessage({
+    type : "readFile",
+    project : name,
+    file : file_name});
 };
 
-SeashellWebsocket.prototype.loadFile = function(file_name) {
-  var msg = {};
-  msg.type = "loadFile";
-  msg.file_name = file_name;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
+SeashellWebsocket.prototype.writeFile = function(project, file_name, file_content) {
+  return this.sendMessage({
+    type : "writeFile",
+    project : name,
+    file : file_name,
+    contents : file_content});
 };
 
-SeashellWebsocket.prototype.saveFile = function(file_name, file_content) {
-  var msg = {};
-  msg.type = "saveFile";
-  msg.file_name = file_name;
-  msg.file_content = file_content;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
+SeashellWebsocket.prototype.deleteFile = function(file_name, file_namet) {
+  return this.sendMessage({
+    type : "writeFile",
+    project : name,
+    file : file_name});
 };
-
-SeashellWebsocket.prototype.commitFile = function(file_name, file_content) {
-  var msg = {};
-  msg.type = "commitFile";
-  msg.file_name = file_name;
-  msg.file_content = file_content;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg));
-  return msg.dfd;
-};
-
-SeashellWebsocket.prototype.revertFile = function(file_name) {
-  var msg = {};
-  msg.type = "revertFile";
-	msg.file_name = file_name;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
-};
-
-SeashellWebsocket.prototype.compileProgram = function(base_dir) {
-  var msg = {};
-  msg.type = "compileProgram";
-  msg.base_dir = base_dir;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
-};
-
-SeashellWebsocket.prototype.runProgram = function(base_dir) {
-  var msg = {};
-  msg.type = "runProgram";
-  msg.base_dir = base_dir;
-  msg.dfd = $.Deferred();
-  this.sendMessage(msg);
-  return msg.dfd;
-};
-
