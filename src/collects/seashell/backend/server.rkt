@@ -41,28 +41,12 @@
   (make-port-logger "^info$" (current-error-port))
   (make-port-logger "^warn$" (current-error-port))
   (make-port-logger "^exception$" (current-error-port))
+
   ;; Directory setup.
   (init-projects)
 
   ;; Channel used to keep process alive.
   (define keepalive-chan (make-async-channel))
-
-  (define ss-exn-handler
-    (lambda(e)
-      (when (not (exn:break? e))
-        (if (read-config 'debug)
-            (logf/sync 'exception "~a:~ntrace: ~a"
-              (exn-message e)
-              (foldl string-append ""
-                    (format-stack-trace
-                      (continuation-mark-set->context
-                      (exn-continuation-marks e)))))
-            (logf/sync 'exception
-                       "Encountered an exception. Turn debug mode on for information [insecure].")))
-      ((error-escape-handler))))
-
-  ;; TODO
-  ;(uncaught-exception-handler ss-exn-handler)
 
   ;; Dispatch function.
   ;; Arguments:
@@ -354,14 +338,17 @@
     (send-message wsc `#hash((id . -1) (result . "Hello from Seashell/0!")))
     (main-loop wsc 'unused key))
 
-  ;; EXECUTION BEGINS HERE
+  (logf/sync 'info "Starting up.")
+
+  ;; Unbuffered mode for I/O ports
   (file-stream-buffer-mode (current-input-port) 'none)
   (file-stream-buffer-mode (current-output-port) 'none)
 
+  ;; Read encryption key.
   (define key (seashell-crypt-key-server-read (current-input-port)))
-  (define conf-chan  (make-async-channel))
 
-  (logf/sync 'info "Starting up.")
+  ;; Start the server.
+  (define conf-chan  (make-async-channel))
   (define shutdown-server
     (ws-serve
       ((curry conn-dispatch) key)
@@ -370,22 +357,20 @@
       #:max-waiting 4
       #:timeout (* 60 60)
       #:confirmation-channel conf-chan))
-
   (define start-result (async-channel-get conf-chan))
-
   (when (exn? start-result)
     (raise start-result))
 
+  ;; Write out the listening port
   (printf "~a~n" start-result)
+  (logf/sync 'info "Listening on port ~a." start-result)
 
-
+  ;; Loop and serve requests.
   (with-handlers
     ([exn:break? (lambda(e) (logf/sync 'exception "Terminating on break~n"))])
     (let loop ()
-      (define timeout-alarm (alarm-evt (+ (current-inexact-milliseconds)
-                                          (read-config 'backend-client-idle-timeout))))
-      (match (sync/enable-break timeout-alarm keepalive-chan)
-        [(? (lambda (res) (eq? timeout-alarm res))) (void)]
+      (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
+        [#f (void)]
         [else (loop)])))
 
   ;; Shutdown.
