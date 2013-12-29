@@ -34,7 +34,7 @@
          web-server/private/dispatch-server-unit
          seashell/websocket/connection)
 
-(provide seashell-websocket-serve)
+(provide ws-serve)
 
 ;; handshake-solution key
 ;; Calculates the correct WebSocket handshake response to key.
@@ -52,16 +52,16 @@
    #""))
 
 
-;; (seashell-websocket-serve conn-dispatch ...)
+;; (ws-serve conn-dispatch ...)
 ;; Starts a dispatching WebSocket server compliant with
 ;; RFC 6455.
 ;;
 ;; Arguments:
-;;   Consult http://docs.racket-lang.org/net/websocket.html
+;;   Consult http://docs.racket-lang.org/net/ws.html
 ;; Returns:
 ;;   A thunk when invoked stops the Dispatching Server.
 (define/contract
-  (seashell-websocket-serve
+  (ws-serve
    conn-dispatch
    #:conn-headers [pre-conn-dispatch (λ (cline hs) (values empty (void)))]
    #:tcp@ [tcp@ raw:tcp@]
@@ -87,7 +87,7 @@
         (or/c false/c async-channel?))
        (-> void))
   (define (read-request c p port-addresses)
-        (values #f #t))
+    (values #f #t))
   (define (dispatch c _)
     ;; Grab the in/out ports.
     (define ip (connection-i-port c))
@@ -97,7 +97,7 @@
     ;; Get headers.
     (define headers (read-headers ip))
     (define keyh (headers-assq* #"Sec-WebSocket-Key" headers))
-    (unless keyh (error 'seashell-websocket-serve "Invalid WebSocket request, no Key"))
+    (unless keyh (error 'ws-serve "Invalid WebSocket request, no Key"))
     (define key (header-value keyh))
     (define proth (headers-assq* #"Sec-WebSocket-Protocol" headers))
     (define prot (if proth (header-value proth) #f))
@@ -125,10 +125,10 @@
 
     ;; Starting output.
     (define conn
-      (make-seashell-websocket-connection
-        ip op
-        (make-seashell-websocket-control)
-        cline conn-headers #f))
+      (make-ws-connection
+       ip op
+       (make-ws-control)
+       cline conn-headers #f))
 
     (conn-dispatch conn state))
   (define-unit-binding a-tcp@
