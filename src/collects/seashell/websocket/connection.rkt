@@ -220,8 +220,9 @@
 ;; with the second part of the close handshake, which
 ;; will cause the default control to close the connection.
 ;;
-;; Fails the connection after some time has passed.  This is done
-;; asynchronously.
+;; Fails the connection after some time has passed.
+;;
+;; Everything is done asynchronously.
 ;;
 ;; Arguments:
 ;;  conn - Websocket connection.
@@ -229,16 +230,18 @@
 (define/contract (ws-close conn #:timeout [timeout 5])
   (->* (ws-connection?) (#:timeout (and/c real? (not/c negative?)))
        void?)
-  (unless (ws-connection-closed? conn)
-    (async-channel-put
-      (ws-connection-out-chan conn)
-      (ws-frame #t 0 8 #"")))
   (thread
     (thunk
-      (unless (sync/timeout timeout
-                            (semaphore-peek-evt
-                              (ws-connection-closed-semaphore conn)))
-        (ws-close! conn))))
+      (call-with-semaphore (ws-connection-close-semaphore conn)
+        (thunk
+          (unless (ws-connection-closed? conn)
+            (async-channel-put
+              (ws-connection-out-chan conn)
+              (ws-frame #t 0 8 #"")))
+            (unless (sync/timeout timeout
+                                  (semaphore-peek-evt
+                                    (ws-connection-closed-semaphore conn)))
+              (ws-close! conn))))))
   (void))
 
 ;; (ws-close! conn) ->
