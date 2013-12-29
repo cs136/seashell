@@ -235,7 +235,7 @@
     (define counter/out (make-counter))
     (define send-guard (make-semaphore 1))
     (define/contract (send-message connection message)
-      (-> seashell-websocket-connection? jsexpr? void?)
+      (-> ws-connection? jsexpr? void?)
       (call-with-semaphore send-guard
         (lambda ()
           (define ctr (integer->integer-bytes (counter/out) 2 #f #t))
@@ -363,7 +363,7 @@
 
   (logf/sync 'info "Starting up.")
   (define shutdown-server
-    (seashell-websocket-serve
+    (ws-serve
       ((curry conn-dispatch) key)
       #:port 0
       #:listen-ip "0.0.0.0"

@@ -18,10 +18,10 @@
 (define conf-chan (make-async-channel))
 
 (define shutdown-server
-  (seashell-websocket-serve
+  (ws-serve
     conn-dispatch
     #:port 12345
-    #:listen-ip "129.97.134.17"
+    #:listen-ip "127.0.0.1"
     #:max-waiting 4
     #:timeout (* 60 60)
     #:confirmation-channel conf-chan))
