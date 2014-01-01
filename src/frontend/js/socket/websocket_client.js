@@ -100,11 +100,14 @@ function SeashellWebsocket(uri, key) {
         var response = JSON.parse(response_string);
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
+        //
+        // response.result will hold the result if the API call succeeded,
+        // error message otherwise. 
         var request = self.requests[response.id];
         if (response.success) {
-          request.deferred.resolve(response);
+          request.deferred.resolve(response.result);
         } else {
-          request.deferred.reject(response);
+          request.deferred.reject(response.result);
         }
         if (response.id >= 0)
            delete self.requests[response.id];
@@ -124,7 +127,8 @@ SeashellWebsocket.prototype.close = function() {
 /** Sends a message along the connection, encrypting as
  * necessary.
  *
- * @param message - JSON message to send (as JavaScript object).
+ * @param {Object} message - JSON message to send (as JavaScript object).
+ * @returns {Promise} - jQuery promise.
  */
 SeashellWebsocket.prototype.sendMessage = function(message) {
   var self = this;
@@ -171,7 +175,7 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
     self.websocket.send(new Uint8Array(send));
   };
   reader.readAsArrayBuffer(blob);
-  return self.requests[request_id].deferred = $.Deferred();
+  return self.requests[request_id].deferred.promise();
 };
 
 /** The following functions are wrappers around sendMessage.

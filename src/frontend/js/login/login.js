@@ -113,6 +113,9 @@ function submit_login() {
              if(data.error !== undefined) {
                alert("Login error: " + data.error.message + " (code " + data.error.code + ")");
              } else if(data.port !== undefined) {
+               /** Set additional fields. */
+               data["user"] = user;
+
                createCookie("seashell-session", JSON.stringify(data), 365);
                console.log("All done login.");
                top.location = "frontend.html";

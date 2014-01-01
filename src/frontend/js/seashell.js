@@ -765,51 +765,6 @@ function hideSettings() {
     editor.focus();
 }
 
-/** initialize api. **/
-/*
-seashell_new(
-        function(ss) {
-            // temporary!
-            ss.getDirListing = function(rootdir, callback) {
-                if (rootdir == "/") {
-                    return callback([
-                        ["d", "a"],
-                        ["f", "b.c"],
-                        ["f", "c.c"],
-                        ["f", "d.c"],
-                        ["d", "aa"]
-                    ]);
-                } else {
-                    return callback([
-                        ["f", "foobar.c"]
-                    ]);
-                }
-            };
-            // TODO marc please take out the above ss.getDirListing when you have a real ss.getDirListing implemented. -JW
-            window.ss = ss;
-            ss.authenticate(
-                    function(res) {
-                        if (!res) {
-                            alert("Couldn't authenticate as ctdalek!");
-                            // TODO maybe make failure pretty? Haha.
-                        }
-
-						// I don't know where this should go.
-						jQuery.getScript("websocket_client.js",
-								function(script, textStatus, jqXHR) {
-									// TODO
-									return;
-								}
-								);
-
-                        setUpUI();
-                    },
-                    "ctdalek", "exterminate");
-        },
-        function(err) {
-            alert("Error initializing API: " + err);
-        });
-		*/
 
 function seashellInit() {
 	var creds = read_login_credentials();

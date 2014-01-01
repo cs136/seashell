@@ -1,250 +1,326 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
-        <link rel="icon" type="image/png" href="seashell.png" />
-        <link type="text/css" rel="stylesheet" href="codemirror/lib/codemirror.css"/>
-        <link type="text/css" rel="stylesheet" href="codemirror/addon/dialog/dialog.css"/>
-        <link type="text/css" rel="stylesheet" href="seashell.css"/>
-        <title>Seashell</title>
-    </head>
-    <body>
-    <!-- <div id="overlay"></div> -->
-    <div id="container">
-        <div class="right">Logged in as <span class="userid">ctdalek</span> - <a href="#" id="settingsToggle">Settings</a> - <a href="">Logout</a></div>
-        <h1>Seashell, the C Shell</h1>
-        <div id="top">
-            <!-- newlines have semantic meaning. -->
-            <div class="buttons left">
-                <button type="button" id="undo" title="Undo last change to file">Undo</button><!--
-             --><button type="button" id="redo" title="Redo last change to file">Redo</button>
-            </div>
-            <div class="buttons left">
-                <button type="button" id="saveas-file" title="Commit file in the current tab">Commit</button><!--
-             --><button type="button" id="revert-file" title="Revert this file to a previous version">Revert&hellip;</button><!--
-             --><button type="button" id="open-file" title="Open an existing file">Open&hellip;</button><!--
-             --><button type="button" id="new-file" title="Create a new file">New&hellip;</button>
-            </div>
-            <div class="buttons right">
-                <button type="button" id="commentLine" title="Comment lines">//</button><!--
-             --><button type="button" id="commentSelection" title="Comment selected code">/**/</button>
-            </div>
-            <div class="buttons right">
-                <button type="button" id="autoindent" title="Format code">Format</button>
-            </div>
-            <div class="buttons right">
-                <button type="button" id="goto-line" title="Quickly skip to a given line.">Goto&hellip;</button>
-            </div>
-            <ul id="filelist">
-                <!--
-                <li class="filename status_active"></li>
-                -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="icon" type="image/png" href="seashell.png">
+    <link rel="stylesheet" href="codemirror/addon/lint/lint.css">
+    <link rel="stylesheet" href="codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="codemirror/addon/dialog/dialog.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="css/common.css">
+
+    <title>Seashell</title>
+  </head>
+  <body>
+    <!-- Navigation header begins.  This is manipulated with stuff
+    in JavaScript, so placeholder entries are put down as a mock-up.
+    -->
+    <header class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">Seashell</a>
+      </div>
+
+      <nav role="navigation">
+      <ul class="nav navbar-nav">
+        <li class="dropdown projects-dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">cs136-foo</a>
+        </li>
+        <li class="dropdown file-menu">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Project</a>
+        <ul class="dropdown-menu">
+          <li><a href="#" class="commit">Commit</a></li>
+          <li><a href="#" class="revert">Revert</a></li>
+          <li><a href="#" class="compile">Compile</a></li>
+          <li><a href="#" class="run">Run</a></li>
+          <li><a href="#" class="submit">Submit</a></li>
+        </ul>
+        </li>
+        <li class="dropdown edit-menu">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Edit</a>
+        <ul class="dropdown-menu">
+          <li><a href="#" class="undo">Undo</a></li>
+          <li><a href="#" class="redo">Redo</a></li>
+          <li><a href="#" class="commentLine">Comment lines...</a></li>
+          <li><a href="#" class="commentSelection">Comment selection...</a></li>
+          <li class="divider"></li>
+          <li><a href="#" class="autoformat">Autoformat</a></li>
+        </ul>       
+        </li>
+      </ul>
+
+      <ul class="nav navbar-nav navbar-right">
+        <li class="dropdown">
+        <a href="#" class="dropdown-toggle userid" data-toggle="dropdown">ctdalek</a>
+        <ul class="dropdown-menu">
+          <li><a href="#settings-dialog" data-toggle="modal">Settings</a></li>
+          <li><a href="#" class="logout">Logout</a></li>
+        </ul>
+        </li>
+        <li><a data-toggle="modal" href="#help-dialog">Help</a></li>
+      </ul>
+      </nav>
+    </div>
+    </header>
+
+    <!-- Here begins the body. -->
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="affix-top" role="navigation">
+            <ul class="nav file-navigator">
+              <li class="active"><a href="#">foo.c</a></li>
+              <li><a href="#">bar.c</a></li>
             </ul>
-            <div id="save-status" class="right">Last saved <span id="time-saved">never</span></div>
-
-            <div id="codeArea">
-                <textarea id="seashell" rows="19" cols="93">
-Either you've disabled Javascript or the page needs a bit more time to load.
-                </textarea>
-                <!--
-#include &lt;stdio.h&gt;
-int main() {
-    int i;
-    for (i = 0; i &lt;3; i++) {
-        printf("She sells C shells by the sea shore");
-    }
-    return(0);
-}</textarea>
--->
-            </div>
+          </div>
         </div>
-        <div id="bottom">
-            <div class="buttons left">
-                <button type="button" id="clear-console" title="Clear the contents of the bottom console.">Clear</button>
+        <div class="col-md-9" role="main">
+          <div id="top">
+            <div class="editor-div">
+              <textarea id="editor" class="editor" rows="19" cols="93" width="100%"> </textarea>
             </div>
-            <div class="buttons left">
-                <button type="button" id="compile">Compile</button>
-                <button type="button" id="run" title="Execute this program">Run</button><!--
-             --><button type="button" id="run-input" disabled="disabled">Set input files&hellip;</button>
-            </div>
-            <div class="buttons left">
-                <button type="button" id="prev-error" disabled="disabled">Prev error</button><!--
-             --><button type="button" id="next-error" disabled="disabled">Next error</button>
-                <!--
-                <button type="button" id="test-runc">Test with RunC</button>
-                -->
-
-            </div>
-            <div class="buttons right">
-                <button type="button" id="submit-assignment" disabled="disabled">Submit to Marmoset</button>
-            </div>
-            <!--Messages and program output will appear here.-->
-            <div id="console" class="dark-on-light"></div>
+          </div>
+          <!--Messages and program output will appear here.-->
+          <div id="console" class="dark-on-light"></div>
         </div>
-        <a href="#" id="helpToggle">Need help?</a>
-        <div id="help">
-			<dl>
-				<dt>How does Seashell's version control work?</dt>
-				<dd>
-				<p>
-				As Seashell is browser-based and internet connections aren't
-				always reliable, Seashell automatically saves the text in the
-				editor to your account on the school machines once every ten
-				seconds or so, so any unexpected crashes won't hurt you too much.
-				</p>
+      </div>
+    </div>
 
-				<p>
-				This removes your ability to get rid of unwanted changes by
-				closing a file with unsaved modifications however. Seashell's
-				version control lets you have the best of both worlds by
-				allowing you to commit and revert files.
-				</p>
+    <!-- Help dialog -->
+    <div class="modal fade" id="help-dialog" tabindex="-1" role="dialog" aria-labelledby="help-label" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="help-label">Seashell Documentation</h4>
+          </div>
+          <div class="modal-body">
+            <h4>Frequently asked questions.</h4>
+            <dl>
+              <dt>How does Seashell's version control work?</dt>
+              <dd>
+              <p>
+              As Seashell is browser-based and internet connections aren't
+              always reliable, Seashell automatically saves the text in the
+              editor to your account on the school machines once every ten
+              seconds or so, so any unexpected crashes won't hurt you too much.
+              </p>
 
-				<p>
-				Seashell's version control uses git in the backend.
-				The user interface currently only understands how to commit and
-				revert to the last commit, but git proper lets you do much,
-				much more than that! You can learn more about git
-				<a href="http://git-scm.com/">here</a>.
-				</p>
-				</dd>
-				<dt>What's a commit?</dt>
-				<dd><p>
-				Commits are a way to make "snapshots" of your files
-				<strike>that you can move back and forth between</strike>.
-				For example, you may wish to commit before you make
-				potentially code-breaking changes to a function.
-				</p></dd>
-				<dt>What does revert do?</dt>
-				<dd><p>
-				Revert irreversibly destroys all changes you've made in the current
-				file since your last commit. You will be asked to confirm
-				that you actually do want to revert a file, but you should
-				still be careful with this feature.
-				</p></dd>
+              <p>
+              This removes your ability to get rid of unwanted changes by
+              closing a file with unsaved modifications however. Seashell's
+              version control lets you have the best of both worlds by
+              allowing you to commit and revert files.
+              </p>
+
+              <p>
+              Seashell's version control uses git in the backend.
+              The user interface currently only understands how to commit and
+              revert to the last commit, but git proper lets you do much,
+              much more than that! You can learn more about git
+              <a href="http://git-scm.com/">here</a>.
+              </p>
+              </dd>
+
+              <dt>What's a commit?</dt>
+              <dd>
+              <p>
+              Commits are a way to make "snapshots" of your files
+              <strike>that you can move back and forth between</strike>.
+              For example, you may wish to commit before you make
+              potentially code-breaking changes to a function.
+              </p>
+              </dd>
+
+              <dt>What does revert do?</dt>
+              <dd>
+              <p>
+              Revert irreversibly destroys all changes you've made in the current
+              file since your last commit. You will be asked to confirm
+              that you actually do want to revert a file, but you should
+              still be careful with this feature.
+              </p>
+              </dd>
             </dl>
-            Default mode:
+
+            <hr>
+
+            <h4>Default Editor Shortcuts</h4>
             These are shortcuts that will work when the editor window is focused
             (the cursor will be blinking if the window is focused).
-            <dl id="help_default">
-                <dt>Ctrl f</dt><dd>Start new search</dd>
-                <dt>Ctrl g</dt><dd>Search/Go to next match</dd>
-                <dt>Ctrl G</dt><dd>Search/Go to previous match</dd>
-                <dt>Ctrl z</dt><dd>Undo</dd>
-                <dt>Ctrl y</dt><dd>Redo</dd>
-                <dt>Ctrl s</dt><dd>Save</dd>
-                <dt>Ctrl o</dt><dd>Open</dd>
-                <dt>Ctrl n</dt><dd>New</dd>
-                <dt>Ctrl i</dt><dd>Indent selection</dd>
-                <dt>Ctrl j</dt><dd>Goto line...</dd>
-
-                <dt>Ctrl Enter</dt><dd>Run</dd>
-
-                <dt>Ctrl Left</dt><dd>Switch to tab on the left</dd>
-                <dt>Ctrl Right</dt><dd>Switch to tab on the right</dd>
-            </dl>
-
-        </div>
-
-        <h3>Welcome, testers!</h3>
-        <p>Here is a rough preview of Seashell, an in-browser editing environment. Seashell should work in
-        web browsers that support WebSockets and <a href="www.codemirror.org">CodeMirror</a>. If you're
-        having issues with a browser that you think should work, send us an email with the name and
-        version of your browser as well as what the issue is and how to reproduce it.</p>
-
-        <p>The user interface (especially the left side of the bottom panel) is not set in stone. If you
-        can think of something you'd like to see in the editor that isn't there or if you wish the
-        buttons were arranged a little differently let us know about it.</p>
-
-        <h4>Known bugs and booboos</h4>
-        <ul>
-            <li>The interface for commit is there, but it doesn't actually do anything.</li>
-            <li>The console isn't very useful (ideally you'll be able to type stuff into it as well as read from it)</li>
-        </ul>
-
-        <form id="settings" action="">
-            Settings
-            <fieldset>
-                <legend>Size</legend>
-                <ul id="settings_size">
-                <li>
-                    <label for="editor_width">Width</label>
-                    <input type="text" name="editor_width" id="editor_width" size="2" /> characters
-                </li><li>
-                    <label for="editor_height">Height</label>
-                    <input type="text" name="editor_height" id="editor_height" size="2" /> lines
-                </li><li>
-                    <label for="editor_font">Font</label>
-                    <input type="text" name="editor_font" id="editor_font" size="2" /> pt
-					<!--
-                    <button type="button" id="font_bigger" title="Make the editor font bigger">+</button>
-                    <button type="button" id="font_smaller" title="Make the editor font smaller">-</button>
-					-->
-                </li>
-                </ul>
-            </fieldset>
-
-            <fieldset>
-                <legend>Editor keybinding mode</legend>
-                <ul id="editor_mode">
-                <li>
-                <input type="radio" name="editor_mode" id="standard" checked="checked" value="default" />
-                <label for="standard">Standard</label></li>
-                <li>
-                <input type="radio" name="editor_mode" id="vim" value="vim" />
-                <label for="vim">Vim-style</label></li>
-                <li>
-                <input type="radio" name="editor_mode" id="emacs" value="emacs" />
-                <label for="emacs">Emacs-style</label></li>
+            <ul class="list-group">
+              <li class="list-group-item">
+              <span class="badge">Ctrl-f</span>
+              Start new search.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-g</span>
+              Go to next match.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-G</span>
+              Go to previous match.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-z</span>
+              Undo.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-y</span>
+              Redo.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-s</span>
+              Commit.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-i</span>
+              Indent.
+              <li class="list-group-item">
+              <span class="badge">Ctrl-j</span>
+              Go to line.
+              </li>
+              <li class="list-group-item">
+              <span class="badge">Ctrl-Enter</span>
+              Run.
+              </li>
             </ul>
-            </fieldset>
-            <fieldset>
-                <legend>Tabs</legend>
-                <ul> <li>
-                <label for="tab-width">Tab-width</label>
-                <select id="tab-width" size="1">
-                    <option value="1">1</option>
-                    <option value="2" selected="selected">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Big warning dialog -->
+    <div class="modal fade" id="warning-dialog" tabindex="-1" role="dialog" aria-labelledby="warning-label" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="warning-label">
+              <span class="glyphicon glyphicon-warning-sign"></span> 
+              Warning!</h4>
+          </div>
+          <div class="modal-body">
+            <h4>Welcome, testers!</h4>
+            <p>Here is a rough preview of Seashell, an in-browser editing environment. Seashell should work in
+            web browsers that support WebSockets and <a href="www.codemirror.org">CodeMirror</a>. If you're
+            having issues with a browser that you think should work, send us an email with the name and
+            version of your browser as well as what the issue is and how to reproduce it.</p>
+
+            <p>The user interface (especially the left side of the bottom panel) is not set in stone. If you
+            can think of something you'd like to see in the editor that isn't there or if you wish the
+            buttons were arranged a little differently let us know about it.</p>
+
+            <hr>
+
+            <h4>Known bugs and issues</h4>
+            <ul>
+              <li>The interface for commit is there, but it doesn't actually do anything.</li>
+              <li>The console isn't very useful (ideally you'll be able to type stuff into it as well as read from it)</li>
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!-- Settings dialog -->
+    <div class="modal fade" id="settings-dialog" tabindex="-1" role="dialog" aria-labelledby="settings-label" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="settings-label">
+              <span class="glyphicon glyphicon-cog"></span> 
+              Settings.</h4>
+          </div>
+          <div class="modal-body">
+            <form role="form">
+              <div class="form-group">
+                <label for="editor_font">Font size:</label>
+                <input type="text" id="editor_font" class="form-control" placeholder="(in points)">
+              </div>
+
+              <div class="form-group">
+                <label for="editor_mode">Editor mode:</label>
+                <select id="editor_mode" class="form-control">
+                  <option value="standard">Standard</option>
+                  <option value="vim">Vim</option>
+                  <option value="emacs">Emacs</option>
                 </select>
-                </li> <li>
-                <input type="checkbox" name="use-spaces" id="use-spaces" checked="checked" />
-                <label for="use-spaces">Use spaces instead of actual tabs</label>
-                </li></ul>
-            </fieldset>
-        </form>
-    </div> <!-- container -->
-        <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
-        <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
-        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
-        <script type="text/javascript" src="codemirror/addon/dialog/dialog.js"></script>
-        <script type="text/javascript" src="codemirror/addon/search/searchcursor.js"></script>
-        <script type="text/javascript" src="codemirror/addon/search/search.js"></script>
-        <script type="text/javascript" src="codemirror/addon/edit/matchbrackets.js"></script>
-        <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
+              </div>
 
-        <script type="text/javascript" src="codemirror/addon/selection/active-line.js"></script>
-        <link rel="stylesheet" href="codemirror/addon/lint/lint.css">
-        <script type="text/javascript" src="codemirror/addon/lint/lint.js"></script>
-        <script type="text/javascript" src="codemirror/addon/lint/javascript-lint.js"></script>
-        <script type="text/javascript" src="cm-validator-remote.js"></script>
-        <!--<style type="text/css">-->
-          <!--.CodeMirror {border-top: 1px solid black; border-bottom: 1px solid black;}-->
-          <!--.CodeMirror-empty { outline: 1px solid #c22; }-->
-        <!--</style>-->
+              <div class="form-group">
+                <label for="tab_width">Tab Width:</label>
+                <select id="tab_width" class="form-control">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
 
-        <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.js"></script>
-        <script type="text/javascript" src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
-        <script type="text/javascript" src="jquery.json-2.3.min.js"></script>
-        <script type="text/javascript" src="sjcl.js"></script>
-        <script type="text/javascript" src="crypto.js"></script>
-        <script type="text/javascript" src="websocket_client.js"></script>
-        <script type="text/javascript" src="clangMessages.js"></script>
-        <script type="text/javascript" src="format.js"></script>
-        <script type="text/javascript" src="login.js"></script>
-        <script type="text/javascript" src="seashell.js"></script>
-    </body>
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" id="use-spaces" checked="checked" class="form-control"> Use spaces instead of tabs.
+                </label>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default save-settings">Save</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+
+
+    <!-- Scripts to run. -->
+    <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="//code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="codemirror/lib/codemirror.js"></script>
+    <script type="text/javascript" src="codemirror/lib/util/formatting.js"></script>
+    <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
+    <script type="text/javascript" src="codemirror/addon/dialog/dialog.js"></script>
+    <script type="text/javascript" src="codemirror/addon/search/searchcursor.js"></script>
+    <script type="text/javascript" src="codemirror/addon/search/search.js"></script>
+    <script type="text/javascript" src="codemirror/addon/edit/matchbrackets.js"></script>
+    <script type="text/javascript" src="codemirror/mode/clike/clike.js"></script>
+
+    <script type="text/javascript" src="codemirror/addon/selection/active-line.js"></script>
+    <script type="text/javascript" src="codemirror/addon/lint/lint.js"></script>
+    <script type="text/javascript" src="codemirror/addon/lint/javascript-lint.js"></script>
+
+    <script type="text/javascript" src="js/codemirror/cm-validator-remote.js"></script>
+    <script type="text/javascript" src="js/codemirror/clangMessages.js"></script>
+    <script type="text/javascript" src="js/codemirror/format.js"></script>
+
+    <script type="text/javascript" src="sjcl/sjcl.js"></script>
+
+    <script type="text/javascript" src="js/socket/crypto.js"></script>
+    <script type="text/javascript" src="js/socket/websocket_client.js"></script>
+
+    <script type="text/javascript" src="js/login/login.js"></script>
+
+    <script type="text/javascript" src="js/setup.js"></script>
+
+    <!-- Window setup. -->
+    <script type="text/javascript">
+      $(document).ready(function(){
+          $('#warning-dialog').modal('show');
+          });
+    </script>
+  </body>
 </html>
