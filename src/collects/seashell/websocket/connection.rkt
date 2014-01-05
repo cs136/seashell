@@ -71,7 +71,7 @@
 ;; with the following possible results:
 ;;  bytes? - Regular websocket frame.
 ;;  eof-object? - End of file/Websocket closed.
-;;  exn? - Error.
+;;  <raised exception> - error.
 (struct ws-connection
   (closed-semaphore
    [in-thread #:mutable]
@@ -90,7 +90,8 @@
                (lambda (frame-or-exn)
                  (cond
                    [(exn? frame-or-exn)
-                    frame-or-exn]
+                    ;; This will work as expected, actually.
+                    (raise frame-or-exn)]
                    [else
                     (ws-frame-data frame-or-exn)])))
      (wrap-evt (semaphore-peek-evt

@@ -317,9 +317,6 @@
                 ;; so just quit.
                 (logf 'info (format "Client connection closed gracefully."))
                 (void)]
-               [(and (? exn?) (var exception))
-                ;; Raise the exception.
-                (raise exception)]
                [(? (lambda (result) (eq? result alarm)))
                 ;; Alarm - write out a message and close the connection.
                 (logf 'info (format "Client timed out."))
