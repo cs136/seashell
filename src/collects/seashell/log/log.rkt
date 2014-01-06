@@ -1,6 +1,6 @@
-#lang racket/base
+#lang racket
 ;; Seashell collection
-;; Copyright (C) 2013 The Seashell Maintainers.
+;; Copyright (C) 2013-2014 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -16,30 +16,14 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/log/multiplex
-         racket/date
-         racket/function
-         racket/contract
-         racket/port
-         racket/async-channel
-         racket/match)
+(require seashell/seashell-config)
+(provide logf make-port-logger standard-logger-setup)
 
-(provide
-  (contract-out
-    [logf
-      (->* (symbol? string?) #:rest (listof any/c) void?)]
-    [logf/sync
-      (->* (symbol? string?) #:rest (listof any/c) void?)]
-    [make-log-reader
-      (-> string? evt?)]
-    [make-fs-logger
-      (-> string? (or/c string? path?) thread?)]
-    [make-port-logger
-      (-> string? port? thread?)]))
-
-(define log-mtx (make-multiplexer))
+(define logger (make-logger 'seashell))
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
 
+;; log-ts-args
+;; Generates a list of values to substitute into the logging string.
 (define (log-ts-args)
   (define (pad-left z i)
     (string-append (make-string (- z (string-length (number->string i))) #\0)
@@ -55,66 +39,72 @@
       (string-append (number->string (quotient (date-time-zone-offset dt) 3600))
                     (pad-left 2 (remainder (date-time-zone-offset dt) 3600))))))
 
-;; logf: category format args... -> void
-(define logf
-  (lambda(cat fmt . args)
-    (mt-send
-      log-mtx
-      (list (symbol->string cat)
-            (apply format `(,(string-append log-ts-str " ~a: " fmt)
-                            ,@(log-ts-args)
-                            ,cat
-                            ,@args))))))
-
-;; logf/sync: category format args... -> void
-(define logf/sync
-  (lambda(cat fmt . args)
-    (define s (make-semaphore 0))
-    (mt-send
-      log-mtx
-      (list s (symbol->string cat)
-            (apply format `(,(string-append log-ts-str " ~a: " fmt)
-                            ,@(log-ts-args)
-                            ,cat
-                            ,@args))))
-    (semaphore-wait s)))
+;; logf: category format args... -> void?
+;; Writes an entry into the logger.
+(define/contract (logf category format-string . args)
+  (->* ((or/c 'fatal 'error 'warning 'info 'debug) string?)
+       #:rest (listof any/c) 
+       void?)
+  (log-message logger
+               category
+               #f
+               (apply format `(,(string-append log-ts-str " ~a: " format-string)
+                  ,@(log-ts-args)
+                  ,category
+                  ,@args))
+               (current-continuation-marks)))
 
 ;; make-log-reader: type-regexp -> evt?
-(define (make-log-reader type-regexp)
-  (define filter-chan (make-async-channel))
-  (define (courier chan fch)
-    (async-channel-put fch 'ready)
-    (let loop ()
-      (match (mt-receive chan)
-        [(list (regexp type-regexp) (? string? msg))
-         (async-channel-put fch msg)]
-        [(list (? semaphore? s) (regexp type-regexp) (? string? msg))
-         (async-channel-put fch (cons s msg))]
-        [else (void)])
-      (loop)))
-  (thread (thunk (courier (mt-subscribe log-mtx) filter-chan)))
-  (async-channel-get filter-chan)
-  filter-chan)
+;; Creates a log receiver that receives all messages at level or higher.
+(define/contract (make-log-reader level)
+  (-> (or/c 'fatal 'error 'warning 'info 'debug) log-receiver?)
+  (make-log-receiver logger level))
 
-;; make-port-logger: type-regexp port -> thread
-(define (make-port-logger type-regexp port)
-  (define reader (make-log-reader type-regexp))
+;; format-stack-trace
+;; Formats a stack trace.
+(define (format-stack-trace trace)
+  (string-join
+    `(,@(for/list ([item (in-list trace)])
+         (format "~a at:\n  ~a\n"
+                  (if (car item)
+                      (car item)
+                      "<unknown procedure>")
+                  (if (cdr item)
+                      (format "line ~a, column ~a, in file ~a"
+                              (srcloc-line (cdr item))
+                              (srcloc-column (cdr item))
+                              (srcloc-source (cdr item)))
+                      "<unknown location>"))))
+    ""))
+
+;; make-port-logger
+;; Creates a thread that receives events at level or higher
+;; and writes it to the specified port.
+(define/contract (make-port-logger level port)
+  (-> (or/c 'fatal 'error 'warning 'info 'debug) output-port? thread?)
+  (define reader (make-log-reader level))
   (thread
     (thunk
       (let loop ()
         (match (sync reader)
-          [(cons (? semaphore? s) (? string? msg))
-           (fprintf port "~a~n" msg)
-           (flush-output port)
-           (semaphore-post s)]
-          [(? string? msg)
-           (fprintf port "~a~n" msg)
-           (flush-output port)])
+          [(vector level message marks _)
+           (cond
+             [(and (read-config 'debug) (or (equal? level 'fatal) (equal? level 'error)))
+              (fprintf port "~a~n***Stacktrace follows***~n~a~n***End Stacktrace***~n" 
+                       message
+                       (format-stack-trace (continuation-mark-set->context marks)))]
+             [else
+              (fprintf port "~a~n" message)])
+           (flush-output port)]
+          [anything
+           (fprintf port "warning: unknown message ~a~n" anything)])
         (loop)))))
 
-;; make-fs-logger: type-regexp file -> thread
-(define (make-fs-logger type-regexp file)
-    (call-with-output-file
-      file
-      ((curry make-port-logger) type-regexp) #:exists 'append))
-
+;; standard-logger-setup
+;; Sets up the logger in a standard fashion - writing to standard error
+;; all messages at >debug in regular mode, all messages at >=debug when
+;; debugging.
+(define (standard-logger-setup)
+  (if (read-config 'debug)
+    (make-port-logger 'debug (current-error-port))
+    (make-port-logger 'info (current-error-port))))

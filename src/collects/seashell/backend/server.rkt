@@ -37,10 +37,7 @@
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
-  (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
-  (make-port-logger "^info$" (current-error-port))
-  (make-port-logger "^warning$" (current-error-port))
-  (make-port-logger "^error$" (current-error-port))
+  (standard-logger-setup)
 
   ;; Directory setup.
   (init-projects)
@@ -338,7 +335,7 @@
     (send-message wsc `#hash((id . -1) (result . "Hello from Seashell/0!")))
     (main-loop wsc 'unused key))
 
-  (logf/sync 'info "Starting up.")
+  (logf 'info "Starting up.")
 
   ;; Unbuffered mode for I/O ports
   (file-stream-buffer-mode (current-input-port) 'none)
@@ -363,18 +360,18 @@
 
   ;; Write out the listening port
   (printf "~a~n" start-result)
-  (logf/sync 'info "Listening on port ~a." start-result)
+  (logf 'info "Listening on port ~a." start-result)
 
   ;; Loop and serve requests.
   (with-handlers
-    ([exn:break? (lambda(e) (logf/sync 'error "Terminating on break."))])
+    ([exn:break? (lambda(e) (logf 'error "Terminating on break."))])
     (let loop ()
       (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
         [#f (void)]
         [else (loop)])))
 
   ;; Shutdown.
-  (logf/sync 'info "Shutting down...")
+  (logf 'info "Shutting down...")
   (shutdown-server)
-  (logf/sync 'info "Graceful shutdown.")
+  (logf 'info "Graceful shutdown.")
   (exit 0))

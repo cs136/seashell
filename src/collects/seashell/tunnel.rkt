@@ -84,7 +84,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           (logf/sync 'debug "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
+           (logf 'debug "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))

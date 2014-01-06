@@ -92,3 +92,6 @@
   ;; Prefix on linker flags.
   [linker-flag-prefix            "-Wl,"]
 )
+
+;; Configuration for the Racket interpreter
+(compile-context-preservation-enabled (read-config 'debug))

@@ -33,7 +33,6 @@
 ;; connection.
 ;;  (this is to ensure user has correct Apache config; only SSL
 ;;   requests should be permitted to this script).
-
 (define (gateway-main)
   (define (response/json jsexpr)
     (printf "Access-Control-Allow-Origin: *\r\n")
@@ -45,31 +44,11 @@
     (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
     (exit 0))
 
-  (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
-  (make-port-logger "^info$" (current-error-port))
-  (make-port-logger "^warning$" (current-error-port))
-  (make-port-logger "^error$" (current-error-port))
-
-  (define ss-exn-handler
-    (lambda(e)
-      (when (not (exn:break? e))
-        (if (read-config 'debug)
-            (logf/sync 'error "~a:~ntrace: ~a"
-              (exn-message e)
-              (foldl string-append ""
-                    (format-stack-trace
-                      (continuation-mark-set->context
-                      (exn-continuation-marks e)))))
-            (logf/sync 'error
-                       "Encountered an exception. Turn debug mode on for information [insecure].")))
-      ((error-escape-handler))))
-
-  ;; TODO
-  ;(uncaught-exception-handler ss-exn-handler)
+  (standard-logger-setup)
 
   (unless
     (equal? (getenv "HTTPS") "on")
-    (logf/sync 'warning "Refusing to operate over a non-SSL connection.")
+    (logf 'warning "Refusing to operate over a non-SSL connection.")
     (report-error 1 "Requires SSL."))
 
   (unless
@@ -121,14 +100,14 @@
       ;; Key generation
       (define shared-key (seashell-crypt-make-key))
 
-      (logf/sync 'debug "Remote address is ~a" (tunnel-remote-addr tun))
-      (logf/sync 'debug "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
+      (logf 'debug "Remote address is ~a" (tunnel-remote-addr tun))
+      (logf 'debug "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
 
       ;; Send key to backend process
       (write-bytes shared-key (tunnel-out tun))
       (flush-output (tunnel-out tun))
 
-      (logf/sync 'debug "Waiting for tunnel port.")
+      (logf 'debug "Waiting for tunnel port.")
       ;; Get initialization info from backend process
       (define be-address (tunnel-remote-addr tun))
       (define be-port (read-line (tunnel-in tun)))
@@ -136,7 +115,7 @@
       (when (eof-object? be-port)
         (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
 
-      (logf/sync 'debug "Waiting for tunnel shutdown.")
+      (logf 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
       (subprocess-wait (tunnel-process tun))
 
