@@ -31,6 +31,9 @@
 (struct exn:fail:counter exn:fail ())
 
 
+;; Channel used to keep process alive.
+(define keepalive-chan (make-async-channel))
+
 ;; Dispatch function.
 ;; Arguments:
 ;;  key - Communications key.
@@ -333,9 +336,6 @@
 
   ;; Directory setup.
   (init-projects)
-
-  ;; Channel used to keep process alive.
-  (define keepalive-chan (make-async-channel))
 
   (logf 'info "Starting up.")
 
