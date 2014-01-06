@@ -15,4 +15,4 @@
                                        `(,(string->path "foo.c") ,(string->path "bar.c"))))
 
 (pretty-print diag)
-(with-output-to-file "foo" (thunk (write-bytes bin)) #:exists 'replace)
+(when bin (with-output-to-file "foo" (thunk (write-bytes bin)) #:exists 'replace))

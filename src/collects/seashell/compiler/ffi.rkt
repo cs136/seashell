@@ -85,12 +85,13 @@
 (define-clang seashell_compiler_get_object
               (_fun _seashell_compiler-ptr (o : (_ptr o _int)) -> (r : _pointer) -> (values o r))
               #:wrap
-              (lambda(proc)
-                (lambda(comp)
-                  (let-values (((size address) (proc comp)))
-                    (if address
-                      (make-sized-byte-string
-                        (malloc size _bytes address 'nonatomic)
-                        size)
-                      #f)))))
+              (lambda (proc)
+                (lambda (comp)
+                  (let-values ([(size address) (proc comp)])
+                    (cond
+                      [address
+                        (define result (make-bytes size))
+                        (memcpy result address size)
+                        result]
+                      [else #f])))))
 
