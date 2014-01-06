@@ -276,7 +276,7 @@
   ;;  connection - WebSocket connection.
   ;;  state - Unused for now.
   ;;  key - Communications key.
-  (define (m ain-loop connection state key)
+  (define (main-loop connection state key)
     (with-handlers
       ([exn:fail:counter?
          (lambda (exn)
