@@ -39,8 +39,8 @@
                                         #:exists 'append))
   (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
   (make-port-logger "^info$" (current-error-port))
-  (make-port-logger "^warn$" (current-error-port))
-  (make-port-logger "^exception$" (current-error-port))
+  (make-port-logger "^warning$" (current-error-port))
+  (make-port-logger "^error$" (current-error-port))
 
   ;; Directory setup.
   (init-projects)
@@ -279,7 +279,7 @@
 
       ;; Parse plain as a JSON message.
       (define message (bytes->jsexpr plain))
-      (logf 'debug "Received message: ~s~n" message)
+      (logf 'debug "Received message: ~s" message)
 
       message)
 
@@ -294,19 +294,19 @@
       (with-handlers
         ([exn:fail:counter?
            (lambda (exn)
-             (logf 'exception (format "Data integrity failed: ~a" (exn-message exn)))
+             (logf 'error (format "Data integrity failed: ~a" (exn-message exn)))
              (send-message connection `#hash((id . -2) (error . #t) (result . "Data integrity check failed!")))
              (ws-close connection))]
          [exn:crypto?
            (lambda (exn)
-             (logf 'exception (format "Cryptographic failure: ~a" (exn-message exn)))
+             (logf 'error (format "Cryptographic failure: ~a" (exn-message exn)))
              ;; This may raise another exception, if the cryptographic failure is caused by lack of 
              ;; random bytes.
              (send-message connection `#hash((id . -2) (error . #t) (result . "Cryptographic failure!")))
              (ws-close connection))]
          [exn:websocket?
            (lambda (exn)
-             (logf 'exception (format "Data connection failure: ~a" (exn-message exn))))])
+             (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
         (logf 'debug "In main loop.")
 
         (define alarm (alarm-evt 
@@ -367,7 +367,7 @@
 
   ;; Loop and serve requests.
   (with-handlers
-    ([exn:break? (lambda(e) (logf/sync 'exception "Terminating on break~n"))])
+    ([exn:break? (lambda(e) (logf/sync 'error "Terminating on break."))])
     (let loop ()
       (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
         [#f (void)]

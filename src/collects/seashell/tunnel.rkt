@@ -114,7 +114,7 @@
      (subprocess-kill process #t)
      (subprocess-wait process)
      (define message (format "Seashell tunnel died with status ~a" (subprocess-status process)))
-     (logf 'warn "~a" message)
+     (logf 'warning "~a" message)
      (thread-wait status-thread)
      (raise (exn:tunnel message (current-continuation-marks)
                         (subprocess-status process)))]
@@ -122,7 +122,7 @@
     ;; before starting two-way data processing.
     [(not (equal? check 79))
      (define message (format "Seashell tunnel wrote bad status byte ~a" check))
-     (logf 'warn "~a" message)
+     (logf 'warning "~a" message)
      (subprocess-kill process #t)
      (thread-wait status-thread)
      (raise (exn:tunnel message (current-continuation-marks) #f))]
@@ -139,7 +139,7 @@
     (subprocess-kill process #t)
     (subprocess-wait process)
     (define message "Unexpected EOF from tunnel binary (get remote address).")
-    (logf 'warn message)
+    (logf 'warning message)
     (raise (exn:tunnel message (current-continuation-marks)
                        (subprocess-status process))))
 

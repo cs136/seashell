@@ -47,20 +47,20 @@
 
   (when (read-config 'debug) (make-port-logger "^debug$" (current-error-port)))
   (make-port-logger "^info$" (current-error-port))
-  (make-port-logger "^warn$" (current-error-port))
-  (make-port-logger "^exception$" (current-error-port))
+  (make-port-logger "^warning$" (current-error-port))
+  (make-port-logger "^error$" (current-error-port))
 
   (define ss-exn-handler
     (lambda(e)
       (when (not (exn:break? e))
         (if (read-config 'debug)
-            (logf/sync 'exception "~a:~ntrace: ~a"
+            (logf/sync 'error "~a:~ntrace: ~a"
               (exn-message e)
               (foldl string-append ""
                     (format-stack-trace
                       (continuation-mark-set->context
                       (exn-continuation-marks e)))))
-            (logf/sync 'exception
+            (logf/sync 'error
                        "Encountered an exception. Turn debug mode on for information [insecure].")))
       ((error-escape-handler))))
 
@@ -69,7 +69,7 @@
 
   (unless
     (equal? (getenv "HTTPS") "on")
-    (logf/sync 'warn "Refusing to operate over a non-SSL connection.")
+    (logf/sync 'warning "Refusing to operate over a non-SSL connection.")
     (report-error 1 "Requires SSL."))
 
   (unless
