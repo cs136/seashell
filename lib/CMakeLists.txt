@@ -20,12 +20,13 @@ include(ExternalProject)
 
 # Implementor's note - this file will need to be updated when changing
 # versions of a library, due to changes in build system, etc.
-# Contact someone at seashell@cs.uwaterloo.ca if you're uncertain about to do
+# Contact someone at seashell@cs.uwaterloo.ca if you're uncertain about what to do
 # in this case.
 
 # It's not terribly important to keep LLVM/Clang up to date, but do so
 # anyways as it's easier to make incremental changes to the build system.
-# We're on 3.3 as of August '13.  Expect 3.4 before the end of the year.
+# We're on 3.4 as of January '14.  Expect 3.5 before the end of the year.
+# (At any rate, we should try to keep in sync with the version of clang used in RunC)
 
 # libgit2 should remain relatively stable.
 
@@ -34,8 +35,10 @@ execute_process(COMMAND ln -sf "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/t
 execute_process(COMMAND ln -sf "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
 
 # Build our dependencies.
+# Global overrides
+set(CMAKE_BUILD_TYPE "MinSizeRel")
 
-# LLVM overrides.
+# llvm/clang/compiler-rt (no overrides).
 add_subdirectory(llvm)
 
 # libgit2 overrides.
