@@ -105,6 +105,7 @@
                         (seashell_compiler_object_os compiler)
                         (format "libclang_rt.asan-~a.a" (seashell_compiler_object_arch compiler))))
           "-no-whole-archive"
+          "-lm"
           "-ldl"
           "-lrt"
           "-lpthread"
