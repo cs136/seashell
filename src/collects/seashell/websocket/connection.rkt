@@ -54,7 +54,8 @@
          ws-send
          ws-recv
          ws-close
-         exn:websocket?)
+         exn:websocket?
+         exn:websocket)
 
 ;; exn:websocket
 ;; Internal websocket exception structure.

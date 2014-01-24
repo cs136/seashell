@@ -32,24 +32,11 @@
          web-server/private/connection-manager
          web-server/private/dispatch-server-sig
          web-server/private/dispatch-server-unit
-         seashell/websocket/connection)
+         seashell/websocket/connection
+         seashell/websocket/handshake)
 
 (provide ws-serve)
 
-;; handshake-solution key
-;; Calculates the correct WebSocket handshake response to key.
-;;
-;; Arguments:
-;;  key - Client's handshake.
-;; Returns:
-;;  Handshake response.
-(define/contract (handshake-solution key)
-  (-> bytes? bytes?)
-  (base64-encode
-   (with-input-from-bytes
-    (bytes-append key #"258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-    (lambda() (sha1-bytes (current-input-port))))
-   #""))
 
 
 ;; (ws-serve conn-dispatch ...)
@@ -97,7 +84,10 @@
     ;; Get headers.
     (define headers (read-headers ip))
     (define keyh (headers-assq* #"Sec-WebSocket-Key" headers))
-    (unless keyh (error 'ws-serve "Invalid WebSocket request, no Key"))
+    (unless keyh (raise 
+                  (exn:websocket 
+                   "Invalid WebSocket request, no Key"       
+                   (current-continuation-marks))))
     (define key (header-value keyh))
     (define proth (headers-assq* #"Sec-WebSocket-Protocol" headers))
     (define prot (if proth (header-value proth) #f))
@@ -112,7 +102,7 @@
      (list* (make-header #"Upgrade" #"WebSocket")
             (make-header #"Connection" #"Upgrade")
             (make-header #"Server" #"Seashell/0")
-            (make-header #"Sec-Websocket-Accept" (handshake-solution key))
+            (make-header #"Sec-Websocket-Accept" (handshake-solution-server key))
             conn-headers))
     ;; ... more headers.
     (when prot
