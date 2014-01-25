@@ -23,11 +23,18 @@ var creds = null;
 /**
  * Sets up the development environment.
  */
-function seashellInit() {
+function seashellInit(rest) {
   creds = read_login_credentials();
   if (creds) {
     socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-    setUpUI();
+    socket.ready.resolve(function() {
+      setUpUI();
+      if (rest)
+        rest();
+    });
+    socket.ready.fail(function() {
+      // TODO - some sort of error handling.
+    });
   } else {
     window.location.replace("/");
   }

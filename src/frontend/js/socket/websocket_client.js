@@ -20,17 +20,17 @@
 
 /** Seashell's Websocket Communication Class.
  * @constructor
- * @param {String} uri - URI to connect to.  Should look like ws://[IP of linux student environment host]:[some port]/.  Encryption is not handled through SSL.
- * @param {Array} key - Array of 4 words that represent the 128-bit AES session key.
+ * @param {String} uri - URI to connect to.  Should look like wss://[IP of linux student environment host]:[some port]/.
+ * @param {Array} key - Array of 4 words that represent the 128-bit session key.
  *
  * Implementor's note - this class must maintain consistent with
  * the code written in server.rkt.
  *
- * TODO: Exception handling on bad keys.  Probably want to redirect
- * to the login page _again_ with a reason.
- *
  * Invocation:
  *  ws = new SeashellWebsocket( ... )
+ *
+ * Code should not attempt to use the socket until after the ready Deferred
+ * can be resolved.
  */
 function SeashellWebsocket(uri, key) {
   var self = this;
