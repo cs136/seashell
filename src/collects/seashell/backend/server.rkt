@@ -25,6 +25,8 @@
          seashell/backend/files
          seashell/git
          racket/async-channel
+         seashell/security
+         seashell/websocket/ssl-tcp
          json)
 
 (provide backend-main)
@@ -329,6 +331,19 @@
 ;;
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
+  ;; SSL setup.
+  (define ssl-unit
+    (make-ssl-tcp@
+      (read-config 'ssl-cert)
+      (read-config 'ssl-key)
+      #f #f #f #f #f))
+
+  ;; Dropping permissions.
+  (unless (= 0 (seashell_drop_permissions))
+    (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
+    (exit 1))
+
+
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
@@ -352,6 +367,7 @@
     (ws-serve
       ((curry conn-dispatch) key)
       #:port 0
+      #:tcp@ ssl-unit
       #:listen-ip "0.0.0.0"
       #:max-waiting 4
       #:timeout (* 60 60)

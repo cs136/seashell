@@ -16,5 +16,5 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/server/login-gateway)
-(provide (all-from-out seashell/server/login-gateway))
+(require seashell/login/login-gateway)
+(provide (all-from-out seashell/login/login-gateway))

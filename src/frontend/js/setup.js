@@ -26,7 +26,7 @@ var creds = null;
 function seashellInit() {
   creds = read_login_credentials();
   if (creds) {
-    socket = new SeashellWebsocket("ws://" + creds.host + ":" + creds.port, creds.key);
+    socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
     setUpUI();
   } else {
     window.location.replace("/");

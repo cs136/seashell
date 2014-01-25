@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;; This file was modified from net/websocket/client.rkt frm Racket 5.3.6
 (require racket/tcp
          net/url
          web-server/http/response

@@ -59,6 +59,12 @@
 
   ;; Location of install path.
   [seashell-install              (build-path seashell-install-path)]
+  
+  ;; Location of SSL key.
+  [ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem")]
+
+  ;; Location of SSL certificate.
+  [ssl-cert                      (build-path seashell-install-path "etc" "keys" "server.pem")]
 
   ;; Location of SSH tunnel binary.
   [tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel")]
