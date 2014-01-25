@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Main library: seashell-tunnel
+# Main library: seashell-user-backend, seashell-user-launcher
 add_executable(seashell-user-backend user.c)
+add_executable(seashell-user-launcher launcher.c)
 
 install(TARGETS seashell-user-backend RUNTIME DESTINATION bin)
+install(TARGETS seashell-user-launcher RUNTIME DESTINATION bin)

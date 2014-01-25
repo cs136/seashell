@@ -20,15 +20,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/prctl.h>
 #include <string.h>
-#include <signal.h>
+#include <errno.h>
 #include "seashell-config.h"
 
-int main () {
-  char * argv[] = { "racket", "-S", INSTALL_PREFIX "/share/collects",
-                    "-l", "racket/base", "-l", "seashell/login", "-e",
-                    "(gateway-main)", NULL };
+/** This file launches the main Seashell launcher process with
+ *  prctl(PR_SET_DUMPABLE, 0) and with effective GID set to allow
+ *  read-access to the shared SSL keys.
+ *
+ *  Seashell should _not_ in any case execute any student code
+ *  in its address space.
+ *
+ *  This file should be chmod 2755 and chown root:seashell-data
+ */
+int main(void) {
+  if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0) {
+    fprintf(stderr, "Could not disable ptrace!\n");
+    return 1;
+  }
 
-  execv(SEASHELL_RACKET, argv);
-  return 1;
+  char * argv[] = { "racket", "-S", INSTALL_PREFIX "/share/collects",
+                    "-l", "racket/base", "-l", "seashell/backend", "-e",
+                    "(backend-main)", NULL };
+  // SECURITY NOTE:
+  //  SEASHELL_RACKET MUST BE AN ABSOLUTE PATH OR ELSE
+  //  AN ARBITRARY FILE CAN BE EXECUTED HERE.  THIS WILL LEAK
+  //  SSL KEYS.
+  return execv(SEASHELL_RACKET, argv);
 }
