@@ -153,8 +153,7 @@
        ;; There's not much we can do.  We may as well log it and
        ;; quit.  Raising an exception here is probably a bad idea,
        ;; as we're running in a separate thread.
-       (logf 'error #f
-              (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
+       (logf 'error (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
        (thread (thunk (ws-close! conn)))
        #f]
       [(ws-frame #t rsv 9 data)
@@ -179,8 +178,7 @@
        #f]
       [else
        ;; Unhandled message - log it, quit.
-       (logf 'warning
-              (format "WebSocket - unknown control message: ~s" frame-or-exn))
+       (logf 'warning (format "WebSocket - unknown control message: ~s" frame-or-exn))
        ]))
   simple-control)
 

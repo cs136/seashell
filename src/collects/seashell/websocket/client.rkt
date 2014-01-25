@@ -84,7 +84,7 @@
                    (list* (make-header #"Host" (string->bytes/utf-8 host))
                           (make-header #"Connection" #"Upgrade")
                           (make-header #"Upgrade" #"WebSocket")
-                          (make-header #"Sec-WebSocket-Key" (string->bytes/utf-8 handshake))
+                          (make-header #"Sec-WebSocket-Key" handshake)
                           headers))))
                op)
   (flush-output op)
@@ -98,7 +98,7 @@
   (define rheaders (read-headers ip))
   (define server-ans (headers-assq* #"Sec-WebSocket-Accept" rheaders))
   ;; Check the handshake.
-  (unless (handshake-solution-ok? server-ans handshake)
+  (unless (and server-ans (handshake-solution-ok? handshake (header-value server-ans)))
     (raise (exn:websocket
             (format "Invalid server handshake response. Got ~e for ~e." server-ans handshake)
             (current-continuation-marks))))
@@ -107,9 +107,3 @@
         ip op
         (make-ws-control)
         #"" rheaders #t))
-
-
-(define (freadf ip s)
-  (define i (read-line ip 'any))
-  (unless (string=? s i)
-    (error 'ws-connect "Invalid server response. Expected ~e, got ~e." s i)))

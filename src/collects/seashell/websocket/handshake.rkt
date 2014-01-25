@@ -33,8 +33,7 @@
 (define/contract (make-handshake)
   (-> bytes?)
   (base64-encode
-   (apply bytes (for/list ([i (in-range 16)]) (random 256))))
-  #"")
+   (apply bytes (for/list ([i (in-range 16)]) (random 256))) #""))
 
 (define/contract (handshake-solution-server key)
   (-> bytes? bytes?)
