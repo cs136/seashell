@@ -39,17 +39,18 @@ function SeashellWebsocket(uri, key) {
   self.lastRequest = 0;
   self.requests = {};
   self.ready = $.Deferred();
-  // Ready [-1]
+  self.authenticated = false;
+
+  // Ready to authenticate [-1]
   self.requests[-1] = {
-    deferred : self.ready
+    deferred : $.Deferred().done(self._authenticate)
   };
-  self.failed = $.Deferred();
   // Failure [-2]
   self.requests[-2] = {
-    deferred : self.failed
+    callback : null,
+    deferred : null
   };
-  self.read_ctr = 0;
-  self.write_ctr = 0;
+
   self.websocket = new WebSocket(uri);
 
   this.websocket.onmessage = function(message) {
@@ -59,44 +60,7 @@ function SeashellWebsocket(uri, key) {
     var readerT = new FileReader();
     console.log(readerT);
     readerT.onloadend = function() {
-      console.log(readerT);
-      var result = readerT.result;
-
-      // Framing format (all binary bytes):
-      // [CTR - 2 bytes]
-      // [IV - 12 bytes]
-      // [GCM tag - 16 bytes]
-      // [1 byte - Auth Len]
-      // [Auth Plain]
-      // [Encrypted Frame]
-      // Keep this consistent with the server.
-      var ctr = new Uint8Array(result.slice(0,2));
-      var auth_typed = new Uint8Array(result.slice(31, 31+authlen));
-            var auth = [ctr[0], ctr[1]]
-            ctr = ctr[0] << 8 | ctr[1];
-            for(var auth_index = 0; auth_index < auth_typed.length; auth_index++) {
-              auth.push(auth_typed[auth_index]);
-            }
-      var iv = new Uint8Array(result.slice(2,14));
-      var tag = new Uint8Array(result.slice(14, 30));
-      var authlen = new Uint8Array(result.slice(30, 31))[0];
-      var encrypted = new Uint8Array(result.slice(31+authlen));
-
-      // Check counters
-      if (ctr != self.read_ctr)
-        throw "Bad counter received!";
-
-      self.read_ctr = (self.read_ctr + 1) % 65536;
-
-      // Decode plain, and verify.
-      var plain = self.coder.decrypt(encrypted, iv, tag, auth);
-      // Plain is an Array of bytes. Convert it into an Blob
-      // and then use the FileReader class to convert that Blob
-      // into a UTF-8 string.
-      var blob = new Blob([new Uint8Array(plain)]);
-      var reader = new FileReader();
-      reader.onloadend = function() {
-        var response_string = reader.result;
+        var response_string = readerT.result;
         var response = JSON.parse(response_string);
         // Assume that response holds the message and response.id holds the
         // message identifier that corresponds with it.
@@ -105,32 +69,75 @@ function SeashellWebsocket(uri, key) {
         // error message otherwise. 
         var request = self.requests[response.id];
         if (response.success) {
-          request.deferred.resolve(response.result);
+          if (request.deferred) {
+            request.deferred.resolve(response.result, self);
+          }
+          if (request.callback) {
+            response.callback(true, response.result, self);
+          }
         } else {
-          request.deferred.reject(response.result);
+          if (request.deferred) {
+            request.deferred.reject(response.result, self);
+          }
+          if (request.callback) {
+            response.callback(false, response.result, self);
+          }
         }
         if (response.id >= 0)
            delete self.requests[response.id];
-      };
-      reader.readAsText(blob);
-    }
-    readerT.readAsArrayBuffer(message.data);
+    };
+    readerT.readAsText(message.data);
   };
 }
 
 /** Closes the connection.
  */
-SeashellWebsocket.prototype.close = function() {
+SeashellWebsocket.prototype.close = function(self) {
   this.websocket.close();
 };
 
-/** Sends a message along the connection, encrypting as
- * necessary.
+/** Does the client-server mutual authentication.  Internal use only. */
+SeashellWebsocket.prototype._authenticate = function(ignored, self) {
+  /** First send a message so we can test if the server is who he claims
+   *  he is. */
+  self._sendMessage({type : "serverAuth"}).done(
+      function(response) {
+        iv = response[0];
+        coded = response[1];
+        tag = response[2];
+
+        try {
+          /** We don't care that it decrypted.
+           *  We just care that it decrypted properly. */
+          self.coder.decrypt(coded, iv, tag, []);
+          /** OK, now we proceed to authenticate. */
+          self._sendMessage({type : "clientAuth",
+                             data : self.coder.encrypt([80, 42, 64, 90, 45, 32, 98, 87, 67, 25,
+                                                        32, 96, 50, 22, 75, 62, 108, 255, 7, 1],
+                                                        [])}).done(
+            function(result) {
+              self.authenticated = true;
+              self.ready.resolve("Ready!");
+            })
+            .fail(
+              function(result) {
+                self.ready.reject("Authentication error!");
+              });
+        } catch(error) {
+          self.ready.reject("Authentication error!");
+        }
+      }).fail(
+        function(result) {
+          self.ready.reject("Authentication error!");
+        });
+};
+
+/** Sends a message along the connection.  Internal use only.
  *
  * @param {Object} message - JSON message to send (as JavaScript object).
  * @returns {Promise} - jQuery promise.
  */
-SeashellWebsocket.prototype.sendMessage = function(message) {
+SeashellWebsocket.prototype._sendMessage = function(message) {
   var self = this;
   // Reserve a slot for the message.
   var request_id = self.lastRequest++;
@@ -140,42 +147,24 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
   var blob = new Blob([JSON.stringify(message)]);
   // Grab a deferred for the message:
   self.requests[request_id].deferred = $.Deferred();
-  // Send the message:
-  var reader = new FileReader();
-  reader.onloadend = function() {
-    // Keep in mind the framing format:
-    // [CTR - 2 bytes]
-    // [IV - 12 bytes]
-    // [GCM tag - 16 bytes]
-    // [1 byte - Auth Len]
-    // [Auth Plain]
-    // [Encrypted Frame]
-    // Keep this consistent with the server.
-    var ctr = self.write_ctr;
-    self.write_ctr = (self.write_ctr + 1) % 65536;
-        ctr = [(ctr >> 8) & 0xFF, ctr & 0xFF];
-    var frame = new Uint8Array(reader.result);
-    var plain = [];
-    var authenticated = ctr;
-    authenticated.concat(plain);
-    var result = self.coder.encrypt(frame, authenticated);
-    var iv = result[0];
-    var coded = result[1];
-    var tag = result[2];
+  try {
+    // Send the message:
+    self.websocket.send(blob);
+    return self.requests[request_id].deferred.promise();
+  } catch (err) {
+    return self.requests[request_id].deferred.reject(err).promise();
+  }
+};
 
-    if (plain.length > 255) {
-      throw "sendMessage: Too many authenticated plaintext bytes!";
-    }
-
-    var send = [];
-    [ctr, iv, tag, [plain.length], plain, coded].forEach(
-      function (arr) {
-        send = send.concat(arr);
-      });
-    self.websocket.send(new Uint8Array(send));
-  };
-  reader.readAsArrayBuffer(blob);
-  return self.requests[request_id].deferred.promise();
+/** Sends a message along the connection, ensuring that
+ *  the server and client are properly authenticated. */
+SeashellWebsocket.prototype.sendMessage = function(message) {
+  var self = this;
+  if (self.authenticated) {
+    return self._sendMessage(message);
+  } else {
+    return $.Deferred().reject(null).promise();
+  }
 };
 
 /** The following functions are wrappers around sendMessage.
@@ -186,36 +175,36 @@ SeashellWebsocket.prototype.runProgram = function(project) {
   return this.sendMessage({
     type : "runProgram",
     name : project});
-}
+};
 
 SeashellWebsocket.prototype.compileProgram = function(project) {
   return this.sendMessage({
     type : "compileProgram",
     name : project});
-}
+};
 
 SeashellWebsocket.prototype.getProjects = function() {
   return this.sendMessage({
     type : "getProjects"});
-}
+};
 
 SeashellWebsocket.prototype.listProject = function(name) {
   return this.sendMessage({
     type : "listProject",
     project : name});
-} 
+};
 
 SeashellWebsocket.prototype.newProject = function(name) {
   return this.sendMessage({
     type : "newProject",
     project : name});
-}
+};
 
 SeashellWebsocket.prototype.deleteProject = function(name) {
   return this.sendMessage({
     type : "deleteProject",
     project : name});
-}
+};
 
 SeashellWebsocket.prototype.readFile = function(name, file_name) {
   return this.sendMessage({
