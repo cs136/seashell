@@ -165,7 +165,7 @@
        ;; We send some plaintext that is encrypted with the shared secret.
        ;; The client should verify that the message is as expected before proceeding.
        (define-values (iv coded tag)
-         (seashell-encrypt key #"She sells seashells by the seashore." #""))
+         (seashell-encrypt key (bytes->list (seashell-crypt-make-token)) #""))
        `#hash((id . ,id)
               (success . #t)
               (result . (,(bytes->list iv) ,(bytes->list coded) ,(bytes->list tag))))]
@@ -174,7 +174,7 @@
         ('type "clientAuth")
         ('data (list iv coded tag)))
        ;; This does client authentication.
-       ;; Try and decode their encrypted data.
+       ;; Try and decode their encrypted data, and verify integrity.
        ;; If it succeeds, authenticated? <- #t and
        ;; return success.
        ;; Otherwise, fail them.

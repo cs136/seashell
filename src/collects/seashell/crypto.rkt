@@ -78,6 +78,10 @@
                (_fun _bytes ;; key[16]
                      -> (r : _int)
                      -> (enough-bytes r 12 'seashell_make_iv)))
+(define-crypto seashell_make_token
+               (_fun _bytes ;; token[32]
+                     -> (r : _int)
+                     -> (enough-bytes r 32 'seashell_make_iv)))
 
 ;; (seashell-crypt-make-key)
 ;;
@@ -94,6 +98,15 @@
 (define/contract (seashell-crypt-make-iv)
   (contract:-> bytes?)
   (define iv (make-bytes 12))
+  (seashell_make_iv iv)
+  iv)
+
+;; (seashell-crypt-make-token)
+;; 
+;; Returns a new token [32 bytes long]
+(define/contract (seashell-crypt-make-token)
+  (contract:-> bytes?)
+  (define iv (make-bytes 32))
   (seashell_make_iv iv)
   iv)
 
@@ -199,4 +212,5 @@
 (provide seashell-encrypt seashell-decrypt
   seashell-crypt-make-key seashell-crypt-key->client
   seashell-crypt-key->server seashell-crypt-key-server-read
+  seashell-crypt-make-token
   exn:crypto?)

@@ -177,3 +177,13 @@ int seashell_make_key (uint8_t key[16]) {
   return rng_get_bytes(key, len, NULL);
 }
 
+/**
+ * seashell_make_token (uint8_t challenge[32])
+ * Generates a token up to 32 bytes in length.
+ * Returns:
+ *  Number of bytes actually read.
+ */
+int seashell_make_token (uint8_t token[32]) {
+  unsigned long len = 32;
+  return fortuna_read(token, len, &prng);
+}

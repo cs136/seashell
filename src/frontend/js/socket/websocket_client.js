@@ -54,9 +54,6 @@ function SeashellWebsocket(uri, key) {
   self.websocket = new WebSocket(uri);
 
   this.websocket.onmessage = function(message) {
-    // We receive all messages in binary,
-    // then we decrypt and extract out the nice
-    // JSON.
     var readerT = new FileReader();
     console.log(readerT);
     readerT.onloadend = function() {
@@ -112,9 +109,8 @@ SeashellWebsocket.prototype._authenticate = function(ignored, self) {
           self.coder.decrypt(coded, iv, tag, []);
           /** OK, now we proceed to authenticate. */
           self._sendMessage({type : "clientAuth",
-                             data : self.coder.encrypt([80, 42, 64, 90, 45, 32, 98, 87, 67, 25,
-                                                        32, 96, 50, 22, 75, 62, 108, 255, 7, 1],
-                                                        [])}).done(
+                             data : self.coder.encrypt(sjcl.random.randomWords(32),
+                                                       [])}).done(
             function(result) {
               self.authenticated = true;
               self.ready.resolve("Ready!");
