@@ -209,7 +209,7 @@ SeashellWebsocket.prototype.readFile = function(name, file_name) {
     file : file_name});
 };
 
-SeashellWebsocket.prototype.writeFile = function(project, file_name, file_content) {
+SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content) {
   return this.sendMessage({
     type : "writeFile",
     project : name,
@@ -217,9 +217,9 @@ SeashellWebsocket.prototype.writeFile = function(project, file_name, file_conten
     contents : file_content});
 };
 
-SeashellWebsocket.prototype.deleteFile = function(file_name, file_namet) {
+SeashellWebsocket.prototype.deleteFile = function(name, file_name) {
   return this.sendMessage({
-    type : "writeFile",
+    type : "deleteFile",
     project : name,
     file : file_name});
 };

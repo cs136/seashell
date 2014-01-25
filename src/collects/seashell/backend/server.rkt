@@ -145,7 +145,7 @@
         ('file file))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(bytes->string/utf-8 read-file project file)))]
+              (result . ,(bytes->string/utf-8 (read-file project file))))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_
@@ -165,7 +165,7 @@
        ;; We send some plaintext that is encrypted with the shared secret.
        ;; The client should verify that the message is as expected before proceeding.
        (define-values (iv coded tag)
-         (seashell-encrypt key (bytes->list (seashell-crypt-make-token)) #""))
+         (seashell-encrypt key (seashell-crypt-make-token) #""))
        `#hash((id . ,id)
               (success . #t)
               (result . (,(bytes->list iv) ,(bytes->list coded) ,(bytes->list tag))))]
@@ -183,12 +183,14 @@
              (lambda (exn)
                `#hash((id . ,id)
                       (success . #f)))])
-         (seashell-decrypt
+         (logf 'debug
+               "Got authenticated bytes: ~s"
+               (bytes->list (seashell-decrypt
           key
           (apply bytes iv)
           (apply bytes tag)
           (apply bytes coded)
-          #"")
+          #"")))
          ;; We don't actually care what they sent.
          ;; We just care that it decoded properly.
          (set! authenticated? #t)

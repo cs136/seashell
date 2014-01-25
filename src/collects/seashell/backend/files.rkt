@@ -42,7 +42,8 @@
                   (current-continuation-marks)))))]
     (close-output-port (open-output-file
                          (check-and-build-path (read-config 'seashell) project file)
-                         #:exists 'append))))
+                         #:exists 'append)))
+  (void))
 
 ;; (delete-file project file) -> void?
 ;; Deletes a file inside a project.
@@ -61,7 +62,8 @@
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (delete-file (check-and-build-path (read-config 'seashell) project file))))
+    (delete-file (check-and-build-path (read-config 'seashell) project file)))
+  (void))
 
 ;; (read-file project file) -> bytes?
 ;; Reads a file as a Racket bytestring.
@@ -88,7 +90,8 @@
   (-> (and/c project-name? is-project?) path-string? bytes? void?)
   (with-output-to-file (check-and-build-path (read-config 'seashell) project file)
                        (lambda () (write-bytes contents))
-                       #:exists 'truncate/replace))
+                       #:exists 'truncate/replace)
+  (void))
 
 ;; (list-files project)
 ;; Lists all files in a project.
