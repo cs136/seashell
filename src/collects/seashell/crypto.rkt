@@ -23,6 +23,13 @@
 (require (prefix-in contract: racket/contract))
 (require json)
 
+
+(provide seashell-encrypt seashell-decrypt
+  seashell-crypt-make-key seashell-crypt-key->client
+  seashell-crypt-key->server seashell-crypt-key-server-read
+  seashell-crypt-make-token
+  exn:crypto?)
+
 (define-logger crypto)
 (struct exn:crypto exn:fail:user ())
 
@@ -209,8 +216,3 @@
                                  (seashell_crypt_error))
                          (current-continuation-marks))))
 
-(provide seashell-encrypt seashell-decrypt
-  seashell-crypt-make-key seashell-crypt-key->client
-  seashell-crypt-key->server seashell-crypt-key-server-read
-  seashell-crypt-make-token
-  exn:crypto?)

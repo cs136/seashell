@@ -26,8 +26,16 @@
  *  the code written in crypto.rkt [Racket FFI] and 
  *  crypto.js [Client-Side JavaScript]. */
 
-static int err = CRYPT_OK;
+static int tomcrypt_err = CRYPT_OK;
+static int ourerror = 0;
+static char* ourmessage = "No error.";
 static prng_state prng = {0};
+
+void reset_error(void) {
+  ourerror = 0;
+  ourmessage = "No error.";
+  tomcrypt_err = CRYPT_OK;
+}
 
 /**
  * seashell_crypt_setup (void)
@@ -43,28 +51,33 @@ int seashell_crypt_setup(void)
 {
   uint8_t entropy[32] = {0};
 
+  reset_error();
+
   if (register_cipher(&aes_desc) == -1)
     return 1;
 
   if (register_prng(&fortuna_desc) == -1)
     return 1;
 
-  err = rng_make_prng(128, find_prng("fortuna"),
+  tomcrypt_err = rng_make_prng(128, find_prng("fortuna"),
         &prng, NULL);
-  if (err != CRYPT_OK)
+  if (tomcrypt_err != CRYPT_OK)
     return 1;
 
   return 0;
 }
 
 /**
- * seashell_crypt_error (void)
- * Returns the last error that happened.
+ * seashell_crypt_tomcrypt_error (void)
+ * Returns the last tomcrypt_error that happened.
  */
 const char* seashell_crypt_error (void) {
-  if (err == CRYPT_OK)
-    return "No error or unknown error.";
-  return error_to_string(err);
+  if (ourerror != 0)
+    return ourmessage;
+  if (tomcrypt_err != CRYPT_OK)
+    return error_to_string(tomcrypt_err);
+  else
+    return "No error.";
 }
 
 /**
@@ -100,7 +113,9 @@ int seashell_encrypt (
     uint8_t tag[16]) {
 
   unsigned long tag_len = 16;
-  err = gcm_memory(
+  
+  reset_error();
+  tomcrypt_err = gcm_memory(
       find_cipher("aes"),
       key, 16,
       iv, 12,
@@ -110,7 +125,7 @@ int seashell_encrypt (
       tag, &tag_len,
       GCM_ENCRYPT);
 
-  return !(err == CRYPT_OK);
+  return !(tomcrypt_err == CRYPT_OK);
 }
 
 /**
@@ -142,17 +157,28 @@ int seashell_decrypt (
     const uint8_t tag[16]) {
 
   unsigned long tag_len = 16;
-  err = gcm_memory(
+  uint8_t their_tag[16] = {0};
+
+  reset_error();
+  tomcrypt_err = gcm_memory(
       find_cipher("aes"),
       key, 16,
       iv, 12,
       auth, auth_len,
       plain, plain_len,
       (uint8_t*)coded,
-      (uint8_t*)tag, &tag_len,
+      their_tag, &tag_len,
       GCM_DECRYPT);
 
-  return !(err == CRYPT_OK);
+
+  if (tomcrypt_err != CRYPT_OK)
+    return 1;
+  if (memcmp(tag, their_tag, 16) != 0) {
+    ourerror = 1;
+    ourmessage = "Integrity check failed!";
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -163,6 +189,7 @@ int seashell_decrypt (
  */
 int seashell_make_iv (uint8_t iv[12]) {
   unsigned long len = 12;
+  reset_error();
   return fortuna_read(iv, len, &prng);
 }
 
@@ -174,6 +201,7 @@ int seashell_make_iv (uint8_t iv[12]) {
  */
 int seashell_make_key (uint8_t key[16]) {
   unsigned long len = 16;
+  reset_error();
   return rng_get_bytes(key, len, NULL);
 }
 
@@ -185,5 +213,6 @@ int seashell_make_key (uint8_t key[16]) {
  */
 int seashell_make_token (uint8_t token[32]) {
   unsigned long len = 32;
+  reset_error();
   return fortuna_read(token, len, &prng);
 }
