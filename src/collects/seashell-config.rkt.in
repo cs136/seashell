@@ -66,6 +66,9 @@
   ;; Location of Seashell crypto library.
   [seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto")]
 
+  ;; Location of Seashell security library.
+  [seashell-security             (build-path seashell-install-path "lib" "libseashell-security")]
+
   ;; Location of Seashell clang library.
   [seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang")]
 
