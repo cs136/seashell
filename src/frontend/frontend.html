@@ -81,11 +81,19 @@
           </div>
         </div>
         <div class="col-md-10 content-fill" role="main">
+          <!--The editor goes here.-->
           <div class="editor">
             <textarea id="editor-data"> </textarea>
           </div>
           <!--Messages and program output will appear here.-->
           <div id="console" class="console"></div>
+          <!--Interactions are submitted here.-->
+          <div class="console-input input-group">
+            <input type="text" class="form-control editor-input">
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button">&gt;&gt;</button>
+            </span>
+          </div>
         </div>
       </div>
     </div>
