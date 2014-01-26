@@ -117,14 +117,14 @@ SeashellWebsocket.prototype._authenticate = function(ignored, self) {
             })
             .fail(
               function(result) {
-                self.ready.reject("Authentication error!");
+                self.ready.reject("Authentication error - invalid credentials!");
               });
         } catch(error) {
-          self.ready.reject("Authentication error!");
+          self.ready.reject("Authentication error - bad server credentials!");
         }
       }).fail(
         function(result) {
-          self.ready.reject("Authentication error!");
+          self.ready.reject("Authentication error - unknown error!");
         });
 };
 

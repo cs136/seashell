@@ -1,0 +1,195 @@
+<!-- Help dialog -->
+<div class="modal fade" id="help-dialog" tabindex="-1" role="dialog" aria-labelledby="help-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="help-label">Seashell Documentation</h4>
+      </div>
+      <div class="modal-body">
+        <h4>Frequently asked questions.</h4>
+        <dl>
+          <dt>How does Seashell's version control work?</dt>
+          <dd>
+          <p>
+          As Seashell is browser-based and internet connections aren't
+          always reliable, Seashell automatically saves the text in the
+          editor to your account on the school machines once every ten
+          seconds or so, so any unexpected crashes won't hurt you too much.
+          </p>
+
+          <p>
+          This removes your ability to get rid of unwanted changes by
+          closing a file with unsaved modifications however. Seashell's
+          version control lets you have the best of both worlds by
+          allowing you to commit and revert files.
+          </p>
+
+          <p>
+          Seashell's version control uses git in the backend.
+          The user interface currently only understands how to commit and
+          revert to the last commit, but git proper lets you do much,
+          much more than that! You can learn more about git
+          <a href="http://git-scm.com/">here</a>.
+          </p>
+          </dd>
+
+          <dt>What's a commit?</dt>
+          <dd>
+          <p>
+          Commits are a way to make "snapshots" of your files
+          <strike>that you can move back and forth between</strike>.
+          For example, you may wish to commit before you make
+          potentially code-breaking changes to a function.
+          </p>
+          </dd>
+
+          <dt>What does revert do?</dt>
+          <dd>
+          <p>
+          Revert irreversibly destroys all changes you've made in the current
+          file since your last commit. You will be asked to confirm
+          that you actually do want to revert a file, but you should
+          still be careful with this feature.
+          </p>
+          </dd>
+        </dl>
+
+        <hr>
+
+        <h4>Default Editor Shortcuts</h4>
+        These are shortcuts that will work when the editor window is focused
+        (the cursor will be blinking if the window is focused).
+        <ul class="list-group">
+          <li class="list-group-item">
+          <span class="badge">Ctrl-f</span>
+          Start new search.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-g</span>
+          Go to next match.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-G</span>
+          Go to previous match.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-z</span>
+          Undo.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-y</span>
+          Redo.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-s</span>
+          Commit.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-i</span>
+          Indent.
+          <li class="list-group-item">
+          <span class="badge">Ctrl-j</span>
+          Go to line.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-Enter</span>
+          Run.
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Here ends the help dialog. -->
+
+<!-- Big warning dialog -->
+<div class="modal fade" id="warning-dialog" tabindex="-1" role="dialog" aria-labelledby="warning-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="warning-label">
+          <span class="glyphicon glyphicon-warning-sign"></span> 
+          Warning!</h4>
+      </div>
+      <div class="modal-body">
+        <h4>Welcome, testers!</h4>
+        <p>Here is a rough preview of Seashell, an in-browser editing environment. Seashell should work in
+        web browsers that support WebSockets and <a href="www.codemirror.org">CodeMirror</a>. If you're
+        having issues with a browser that you think should work, send us an email with the name and
+        version of your browser as well as what the issue is and how to reproduce it.</p>
+
+        <p>The user interface (especially the left side of the bottom panel) is not set in stone. If you
+        can think of something you'd like to see in the editor that isn't there or if you wish the
+        buttons were arranged a little differently let us know about it.</p>
+
+        <hr>
+
+        <h4>Known bugs and issues</h4>
+        <ul>
+          <li>The interface for commit is there, but it doesn't actually do anything.</li>
+          <li>The console isn't very useful (ideally you'll be able to type stuff into it as well as read from it)</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- Here ends the warning dialog. -->
+
+<!-- Settings dialog -->
+<div class="modal fade" id="settings-dialog" tabindex="-1" role="dialog" aria-labelledby="settings-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="settings-label">
+          <span class="glyphicon glyphicon-cog"></span> 
+          Settings.</h4>
+      </div>
+      <div class="modal-body">
+        <form role="form">
+          <div class="form-group">
+            <label for="editor_font">Font size:</label>
+            <input type="text" id="editor_font" class="form-control" placeholder="(in points)">
+          </div>
+
+          <div class="form-group">
+            <label for="editor_mode">Editor mode:</label>
+            <select id="editor_mode" class="form-control">
+              <option value="standard">Standard</option>
+              <option value="vim">Vim</option>
+              <option value="emacs">Emacs</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tab_width">Tab Width:</label>
+            <select id="tab_width" class="form-control">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input type="checkbox" id="use-spaces" checked="checked" class="form-control"> Use spaces instead of tabs.
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default save-settings">Save</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- Here ends the settings dialog -->

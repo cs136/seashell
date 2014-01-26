@@ -44,4 +44,14 @@ function seashellInit(rest) {
  * Sets up the user interface.
  */
 function setUpUI() {
+  setupEditor();
+}
+
+/** Accessor functions. */
+function getSocket() {
+  return socket;
+}
+
+function getCreds() {
+  return creds;
 }

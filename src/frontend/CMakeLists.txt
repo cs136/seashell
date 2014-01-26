@@ -21,13 +21,26 @@ cmake_minimum_required(VERSION 2.6)
 # Global Definitions
 set(SEASHELL_FRONTEND share/frontend)
 
+# Custom build rules
+function(html_compile filename)
+  get_filename_component(base ${filename} NAME_WE)
+  set(base_abs ${CMAKE_CURRENT_BINARY_DIR}/${base})
+  set(output ${base_abs}.html)
+  add_custom_target(
+    ${base} ALL 
+    COMMAND ${CMAKE_C_COMPILER} -E -x c -P -C -o ${output} ${filename})
+  set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
+endfunction(html_compile filename)
+
+html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
+
 # Files to install.
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
+  DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_BINARY_DIR}/lib/sjcl-prefix/src/sjcl/sjcl.js
   DESTINATION ${SEASHELL_FRONTEND}/sjcl/)
-install(DIRECTORY ./ DESTINATION ${SEASHELL_FRONTEND}
-	FILES_MATCHING PATTERN "*"
-  PATTERN "CMakeLists.txt" EXCLUDE
-  PATTERN "README" EXCLUDE)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/css DESTINATION ${SEASHELL_FRONTEND}/css)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js DESTINATION ${SEASHELL_FRONTEND}/js)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/codemirror/"
   DESTINATION "${SEASHELL_FRONTEND}/codemirror"
   FILES_MATCHING PATTERN "*"
