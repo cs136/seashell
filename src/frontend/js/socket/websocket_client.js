@@ -55,7 +55,6 @@ function SeashellWebsocket(uri, key) {
 
   this.websocket.onmessage = function(message) {
     var readerT = new FileReader();
-    console.log(readerT);
     readerT.onloadend = function() {
         var response_string = readerT.result;
         var response = JSON.parse(response_string);
@@ -65,6 +64,10 @@ function SeashellWebsocket(uri, key) {
         // response.result will hold the result if the API call succeeded,
         // error message otherwise. 
         var request = self.requests[response.id];
+
+        console.log("Received response to message with id: "+response.id+".");
+        console.log(response);
+
         if (response.success) {
           if (request.deferred) {
             request.deferred.resolve(response.result, self);
@@ -97,6 +100,7 @@ SeashellWebsocket.prototype.close = function(self) {
 SeashellWebsocket.prototype._authenticate = function(ignored, self) {
   /** First send a message so we can test if the server is who he claims
    *  he is. */
+  console.log("Asking for server token.");
   self._sendMessage({type : "serverAuth"}).done(
       function(response) {
         iv = response[0];
@@ -112,18 +116,22 @@ SeashellWebsocket.prototype._authenticate = function(ignored, self) {
                              data : self.coder.encrypt(sjcl.random.randomWords(32),
                                                        [])}).done(
             function(result) {
+              console.log("Authenticated!");
               self.authenticated = true;
               self.ready.resolve("Ready!");
             })
             .fail(
               function(result) {
+                console.log("Server failed client token.");
                 self.ready.reject("Authentication error - invalid credentials!");
               });
         } catch(error) {
+          console.log("Client failed server token.");
           self.ready.reject("Authentication error - bad server credentials!");
         }
       }).fail(
         function(result) {
+          console.log("Unknown error in authentication.");
           self.ready.reject("Authentication error - unknown error!");
         });
 };
@@ -146,6 +154,8 @@ SeashellWebsocket.prototype._sendMessage = function(message) {
   try {
     // Send the message:
     self.websocket.send(blob);
+    console.log("Sent message.");
+    console.log(self.requests[request_id]);
     return self.requests[request_id].deferred.promise();
   } catch (err) {
     return self.requests[request_id].deferred.reject(err).promise();

@@ -27,7 +27,8 @@ function seashellInit(rest) {
   creds = read_login_credentials();
   if (creds) {
     socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-    socket.ready.resolve(function() {
+    socket.ready.done(function() {
+      console.log("Seashell socket set up properly.");
       setUpUI();
       if (rest)
         rest();

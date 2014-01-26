@@ -25,7 +25,6 @@ currentProject = null;
  * @param {String} project - Project to switch to.
  */
 function switchToProject(project) {
-  
 }
 
 /**
@@ -35,45 +34,31 @@ function switchToProject(project) {
  *    in a jQuery selector.
  */
 function updateListOfProjects(tag) {
-  let promise = socket.getProjects();
+  promise = socket.getProjects();
+}
 
-  promise.done(function(projects) {
-    tag.empty();
+/**
+ * Creates a new file in this project.
+ */
+function projectNewFile() {
+}
+function newFileDialog() {
+}
 
-    tag.append(
-      $("<a>",
-        {
-          "class": "dropdown-toggle",
-          "data-toggle": "dropdown",
-          "role": "button",
-          "text": "Projects"
-        }));
-    
-    projects_tag = $("<ul>",
-        {
-          "class": "dropdown-menu",
-          "aria-labelledby": "projects",
-          "role": "menu"
-        });
+/**
+ * Runs the project.
+ */
+function projectRun() {
+}
 
-    for(let i = 0; i < projects.length; i++) {
-      projects_tag.append(
-          $("<li>", {"role": "presentation"})
-             .append(
-               $("<a>",
-                 {
-                  "href": "#",
-                  "click": function() {
-                       switchToProject(projects[i]);}
-                  "text": projects[i]})));
-    }
+/**
+ * Switches to the next file.
+ */
+function projectLoadNextFile() {
+}
 
-    projects_tag.append(
-      $("<li>", {"role": "presentation"}).append(
-        $("<div>", {"class": "input-group").append(
-          $("<span>", {"class": "input-group-btn"}).append(
-            $("<button>", {"class":"btn btn-default", "type":"button", "text":"+")))
-        .append("<input>", {"type":"text", "class":"form-control", "id":"new-project-name"})));
-  });
-  promise.fail(seashellError);
+/**
+ * Switches to the previous file.
+ */
+function projectLoadPreviousFile() {
 }
