@@ -170,7 +170,6 @@ int seashell_decrypt (
       their_tag, &tag_len,
       GCM_DECRYPT);
 
-
   if (tomcrypt_err != CRYPT_OK)
     return 1;
   if (memcmp(tag, their_tag, 16) != 0) {

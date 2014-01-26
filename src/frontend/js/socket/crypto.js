@@ -39,7 +39,7 @@ function SeashellCoder(key) {
  */
 SeashellCoder.addEntropy = function(entropy) {
   sjcl.random.addEntropy(entropy);
-}
+};
 
 /** Encrypts an array of bytes.
  * @param {Array} frame - frame of bytes to encrypt.
@@ -56,7 +56,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
   var out = sjcl.mode.gcm.encrypt(this.cipher,
       frameArr,
       ivArr,
-      plainArr,
+      authArr,
       128);
   var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
   var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
