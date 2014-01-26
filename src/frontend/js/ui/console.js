@@ -17,43 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-var socket = null;
-var creds = null;
+var seashell_console = null;
 
-/**
- * Sets up the development environment.
- */
-function seashellInit(rest) {
-  creds = read_login_credentials();
-  if (creds) {
-    socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-    socket.ready.done(function() {
-      console.log("Seashell socket set up properly.");
-      setUpUI();
-      if (rest)
-        rest();
-    });
-    socket.ready.fail(function() {
-      // TODO - some sort of error handling.
-    });
-  } else {
-    window.location.replace("/");
-  }
-}
-
-/**
- * Sets up the user interface.
- */
-function setUpUI() {
-  setupEditor();
-  setupConsole();
-}
-
-/** Accessor functions. */
-function getSocket() {
-  return socket;
-}
-
-function getCreds() {
-  return creds;
+/** Sets up the console. */
+function setupConsole() {
+  var welcomeMessage = '**Welcome to Seashell! Messages and program output will appear here.**\n';
+  seashell_console = CodeMirror($('#console')[0],
+      {value: welcomeMessage,
+       readOnly: true,
+       lineWrapping: true,
+       theme: 'blackboard'});
 }

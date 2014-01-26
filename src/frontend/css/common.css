@@ -23,7 +23,6 @@ body {
 /** Editor and the console.  Make sure width + height <= 100%. */
 .editor {
   height: 75%;
-  background-color: #fff;
   border: 1px solid #ccc;
   clear: both;
 }
@@ -32,15 +31,13 @@ body {
   height: 100%;
 }
 .console {
-  background-color: #333;
-  -webkit-box-shadow: inset 1px 1px 0px 0px #222;
-  box-shadow: inset 1px 1px 0px 0px #222;
-  font-family: monospace;
-  line-height: 1em;
   height: 20%;
-  overflow: auto;
+  border: 1px solid #ccc;
   clear: both;
-  color: #eee;
+}
+.console > .CodeMirror {
+  width: 100%;
+  height: 100%;
 }
 .console-input {
   height: 5%;
@@ -48,7 +45,7 @@ body {
   border: 1px solid #ccc;
   clear: both;
 }
-.console-input input {
+.console-input > input {
   font-family: monospace;
   line-height: 1em;
   padding: 0.4em;

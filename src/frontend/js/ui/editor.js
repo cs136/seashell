@@ -23,9 +23,7 @@ var editor = null;
 function setupEditor() {
   /** Values here are reasonable defaults, and will be overriden
    *  on the next call to loadConfig(); */
-  editor = CodeMirror(function(elt) {
-    $("#editor").append(elt);
-    },{
+  editor = CodeMirror($("#editor")[0],{
     lineNumbers: true,
     tabSize: 2,
     mode: "text/x-csrc",
