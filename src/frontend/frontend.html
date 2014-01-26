@@ -70,9 +70,9 @@
     </header>
 
     <!-- Here begins the body. -->
-    <div class="container">
-      <div class="row">
-        <div class="col-md-3">
+    <div class="container content-fill">
+      <div class="row content-fill">
+        <div class="col-md-2">
           <div class="affix-top" role="navigation">
             <ul class="nav file-navigator">
               <li class="active"><a href="#">foo.c</a></li>
@@ -80,14 +80,12 @@
             </ul>
           </div>
         </div>
-        <div class="col-md-9" role="main">
-          <div id="top">
-            <div class="editor-div">
-              <textarea id="editor" class="editor" rows="19" cols="93" width="100%"> </textarea>
-            </div>
+        <div class="col-md-10 content-fill" role="main">
+          <div class="editor">
+            <textarea id="editor-data"> </textarea>
           </div>
           <!--Messages and program output will appear here.-->
-          <div id="console" class="dark-on-light"></div>
+          <div id="console" class="console"></div>
         </div>
       </div>
     </div>
