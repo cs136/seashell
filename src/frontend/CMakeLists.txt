@@ -33,8 +33,11 @@ function(html_compile filename)
 endfunction(html_compile filename)
 
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
+html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
 
 # Files to install.
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
+  DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
   DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_BINARY_DIR}/lib/sjcl-prefix/src/sjcl/sjcl.js
