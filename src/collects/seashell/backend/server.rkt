@@ -331,7 +331,7 @@
      ((curry conn-dispatch) key)
      #:port 0
      #:tcp@ ssl-unit
-     #:listen-ip "::1"
+     #:listen-ip "localhost"
      #:max-waiting 4
      #:timeout (* 60 60)
      #:confirmation-channel conf-chan))
