@@ -308,14 +308,12 @@
     (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
     (exit 1))
   
-  
+  ;; Directory setup.
+  (init-projects)
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
   (standard-logger-setup)
-  
-  ;; Directory setup.
-  (init-projects)
   
   (logf 'info "Starting up.")
   

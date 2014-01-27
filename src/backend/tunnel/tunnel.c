@@ -105,6 +105,7 @@ void seashell_tunnel_teardown (void) {
  *  error - [optional] denotes error on failure.
  *  remote_addr - Address to which the remote IP address will
  *   be written. Reserve 128 bytes.
+ *  family - Address family.
  *
  * Returns:
  *  Handle to connection object on success, NULL otherwise.
@@ -114,7 +115,8 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     const char* user,
     const char* password,
     int* error,
-    char * remote_addr) {
+    char * remote_addr,
+    int* family) {
   struct addrinfo hints;
   struct addrinfo *results, *rp;
   int sockfd;
@@ -152,6 +154,8 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
    */
 
   if(rp != NULL) {
+    *family = rp->ai_family;
+
     switch(rp->ai_family) {
       case AF_INET:
         if(inet_ntop(rp->ai_family, &((struct sockaddr_in *)rp->ai_addr)->sin_addr, remote_addr, 128) == NULL) {
@@ -451,6 +455,8 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
  *
  * seashell-tunnel will write a single ASCII 'O' (79) denoting handshake success before starting
  * two-way forwarding.
+ *
+ * IP address are also written; IPv4 passed as X.X.X.X, IPv6 as [:X:X::X]
  */
 int main (int argc, char *argv[]) {
   uint32_t length = 0;
@@ -503,9 +509,10 @@ int main (int argc, char *argv[]) {
 
   char remote_addr[128];
   memset(remote_addr, 0, 128);
+  int family;
 
   struct seashell_connection* conn = seashell_tunnel_connect_password(
-      argv[2], argv[1], data, &error, remote_addr);
+      argv[2], argv[1], data, &error, remote_addr, &family);
 
   if (!conn) {
     fprintf(stderr, "%s: Error on opening tunnel to %s: %d\n", argv[1], argv[2], error);
@@ -517,10 +524,27 @@ int main (int argc, char *argv[]) {
     const int8_t success = 'O';
     write(1, &success, 1);
     uint8_t addrlen = strlen(remote_addr);
-    write(1, &addrlen, 1);
-    write(1, remote_addr, addrlen);
 
-    FPRINTF_IF_DEBUG(stderr, "%s: Remote address is '%s' (%d)\n", argv[1], remote_addr, (int)addrlen);
+    /** Write the address, formatted for URI safety. */
+
+    /** IPv6 addresses need to be formatted for safety. */
+    if (family == AF_INET6) {
+      char buffer[130] = {0};
+      int bufferlen = snprintf(buffer, 130, "[%s]", remote_addr);
+          
+      write(1, &bufferlen, 1);
+      write(1, buffer, bufferlen);
+    }
+    /** IPv4 addresses do not need to be formatted. */
+    else if (family == AF_INET) {
+      write(1, &addrlen, 1);
+      write(1, remote_addr, addrlen);
+    } else {
+      fprintf(stderr, "%s: Unknown address family %d!\n", argv[1], family);
+      goto end;
+    }
+
+    FPRINTF_IF_DEBUG(stderr, "%s: Remote address is '%s' (%d) (%d)\n", argv[1], remote_addr, (int)addrlen, family);
   }
   FPRINTF_IF_DEBUG(stderr, "%s: Tunnel launched!\n", argv[1]);
 

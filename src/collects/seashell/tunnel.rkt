@@ -134,6 +134,8 @@
   (define remote-addr-len (read-byte in))
   (define remote-addr-bytes (if (eof-object? remote-addr-len) #f (read-bytes remote-addr-len in)))
 
+  (logf 'debug "Got remote address: ~a (~a)." (bytes->list remote-addr-bytes) remote-addr-len)
+
   (when (or (eof-object? remote-addr-len)
             (eof-object? remote-addr-bytes))
     (subprocess-kill process #t)
