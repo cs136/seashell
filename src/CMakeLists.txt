@@ -24,6 +24,9 @@ else(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(SEASHELL_DEBUG 0)
 endif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
+# (Racket binary location)
+find_program(SEASHELL_RACKET racket)
+
 # Components
 add_subdirectory(backend)
 add_subdirectory(collects)

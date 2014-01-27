@@ -1,5 +1,5 @@
 # Seashell
-# Copyright (C) 2012-2013 The Seashell Maintainers
+# Copyright (C) 2012-2014 The Seashell Maintainers
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,4 +32,4 @@ install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
 	FILES_MATCHING PATTERN "*.rkt")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rkt" DESTINATION
   ${SEASHELL_COLLECTS}/seashell)
-install(CODE "execute_process(COMMAND racket -S ${CMAKE_INSTALL_PREFIX}/${SEASHELL_COLLECTS} -l seashell/compile-collects)")
+install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -S ${CMAKE_INSTALL_PREFIX}/${SEASHELL_COLLECTS} -l seashell/compile-collects)")

@@ -21,9 +21,6 @@ cmake_minimum_required(VERSION 2.6)
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
-# (Racket binary location)
-find_program(SEASHELL_RACKET racket)
-
 # Configuration file
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.h")
