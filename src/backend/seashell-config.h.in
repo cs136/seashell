@@ -24,7 +24,7 @@
 
 #define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
-#define SEASHELL_RACKET "/usr/bin/racket"       // SECURITY NOTE: MUST BE ABSOLUTE PATH.
+#define SEASHELL_RACKET "@SEASHELL_RACKET@"
 #define SEASHELL_USER_LAUNCHER (INSTALL_PREFIX "/bin/seashell-user-launcher")
 #define SEASHELL_USER_BACKEND (INSTALL_PREFIX "/bin/seashell-user-backend")
 
