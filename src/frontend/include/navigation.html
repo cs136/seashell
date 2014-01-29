@@ -3,6 +3,7 @@ in JavaScript, so placeholder entries are put down as a mock-up.
 -->
 <header>
 <nav class="navbar navbar-default navbar-inverse navbar-fixed-top" role="navigation">
+<div class="container">
   <div class="navbar-header">
   <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#seashell-navbar">
     <span class="sr-only">Toggle navigation</span>
@@ -15,30 +16,31 @@ in JavaScript, so placeholder entries are put down as a mock-up.
 
   <div class="collapse navbar-collapse" id="seashell-navbar">      
     <ul class="nav navbar-nav">
-      <li class="dropdown projects-dropdown">
-        <a href="#" class="dropdown-toggle" data-toggle="dropdown">cs136-foo</a>
+      <li class="dropdown">
+        <a href="#" id="project-menu" class="dropdown-toggle" data-toggle="dropdown">No project open</a>
         <ul class="dropdown-menu">
-          <li><a href="#" class="new-project">New project...</a></li>
-          <li><a href="#" class="open">Open project...</a></li>
-          <li class="divider"></li>
-          <li><a href="#" class="commit">Commit</a></li>
-          <li><a href="#" class="revert">Revert</a></li>
-          <li class="divider"></li>
-          <li><a href="#" class="compile">Compile</a></li>
-          <li><a href="#" class="run">Run</a></li>
-          <li class="divider"></li>
-          <li><a href="#" class="submit">Submit</a></li>
+          <li><a href="#new-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-file"></span> New Project</a></li>
+          <li><a href="#open-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-folder-open"></span> Open Project</a></li>
+          <li class="hide-on-null-project"><a href="#delete-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-trash"></span> Delete Project</a></li>
+          <li class="hide-on-null-project divider"></li>
+          <li class="hide-on-null-project"><a href="#" id="menu-commit-project"><span class="text-muted pull-right">Ctrl-s</span><span class="glyphicon glyphicon-floppy-save"></span> Commit</a></li>
+          <li class="hide-on-null-project"><a href="#revert-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-refresh"></span> Revert</a></li>
+          <li class="hide-on-null-project divider"></li>
+          <li class="hide-on-null-project"><a href="#" id="menu-compile"><span class="glyphicon glyphicon-cog"></span> Compile</a></li>
+          <li class="hide-on-null-project"><a href="#" id="menu-run"><span class="text-muted pull-right">Ctrl-Enter</span><span class="glyphicon glyphicon-play"></span> Run</a></li>
+          <li class="hide-on-null-project divider"></li>
+          <li class="hide-on-null-project"><a href="#" id="menu-submit"><span class="glyphicon glyphicon-export"></span> Submit</a></li>
         </ul>
       </li>
-      <li class="dropdown edit-menu">
+      <li class="hide-on-null-project dropdown">
       <a href="#" class="dropdown-toggle" data-toggle="dropdown">Edit</a>
       <ul class="dropdown-menu">
-        <li><a href="#" class="undo">Undo</a></li>
-        <li><a href="#" class="redo">Redo</a></li>
-        <li><a href="#" class="commentLine">Comment lines...</a></li>
-        <li><a href="#" class="commentSelection">Comment selection...</a></li>
+        <li><a href="#" id="menu-undo"><span class="text-muted pull-right">Ctrl-z</span>Undo</a></li>
+        <li><a href="#" id="menu-redo"><span class="text-muted pull-right">Ctrl-y</span>Redo</a></li>
+        <li><a href="#" id="menu-commentLine">Comment lines...</a></li>
+        <li><a href="#" id="menu-commentSelection">Comment selection...</a></li>
         <li class="divider"></li>
-        <li><a href="#" class="autoformat">Autoformat</a></li>
+        <li><a href="#" id="menu-autoformat"><span class="text-muted pull-right">Ctrl-i</span>Autoformat</a></li>
       </ul>       
       </li>
     </ul>
@@ -48,11 +50,12 @@ in JavaScript, so placeholder entries are put down as a mock-up.
       <a href="#" class="dropdown-toggle userid" data-toggle="dropdown">ctdalek</a>
       <ul class="dropdown-menu">
         <li><a href="#settings-dialog" data-toggle="modal">Settings</a></li>
-        <li><a href="#" class="logout">Logout</a></li>
+        <li><a href="#" id="menu-logout">Logout</a></li>
       </ul>
       </li>
       <li><a data-toggle="modal" href="#help-dialog">Help</a></li>
     </ul>
   </div>
+</div>
 </nav>
 </header>

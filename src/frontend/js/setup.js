@@ -45,6 +45,11 @@ function seashellInit(rest) {
  * Sets up the user interface.
  */
 function setUpUI() {
+  /** Clear out everything that can be hidden. */
+  $(".hide-on-null-project").addClass("hide");
+  $(".show-on-null-project").removeClass("hide");
+  $(".userid").text(creds.user);
+  /** OK, set everything up. */
   setupEditor();
   setupConsole();
 }
