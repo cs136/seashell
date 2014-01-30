@@ -29,7 +29,8 @@ function seashellInit(rest) {
     socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
     socket.ready.done(function() {
       console.log("Seashell socket set up properly.");
-      setUpUI();
+      setupUI();
+      console.log("User interface set up properly.");
       if (rest)
         rest();
     });
@@ -44,14 +45,17 @@ function seashellInit(rest) {
 /**
  * Sets up the user interface.
  */
-function setUpUI() {
+function setupUI() {
   /** Clear out everything that can be hidden. */
   $(".hide-on-null-project").addClass("hide");
   $(".show-on-null-project").removeClass("hide");
+  $(".hide-on-null-file").addClass("hide");
+  $(".show-on-null-file").removeClass("hide");
   $(".userid").text(creds.user);
   /** OK, set everything up. */
   setupEditor();
   setupConsole();
+  setupDialogs();
 }
 
 /** Accessor functions. */

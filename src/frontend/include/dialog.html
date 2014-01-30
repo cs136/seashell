@@ -220,6 +220,32 @@
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<!-- New File dialog -->
+<div class="modal fade" id="new-file-dialog" tabindex="-1" role="dialog" aria-labelledby="new-file-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="new-file-label">
+          <span class="glyphicon glyphicon-file"></span> 
+          New File</h4>
+      </div>
+      <div class="modal-body">
+        <form id="new-file-form" role="form">
+          <div class="form-group">
+            <label for="new_file_name">File Name:</label>
+            <input type="text" id="new_file_name" class="form-control" placeholder="">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="button-new-file" class="btn btn-default">Create</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
 <!-- Open Project dialog -->
 <div class="modal fade" id="open-project-dialog" tabindex="-1" role="dialog" aria-labelledby="open-project-label" aria-hidden="true">
   <div class="modal-dialog">
@@ -231,7 +257,7 @@
           Open Project</h4>
       </div>
       <div class="modal-body">
-        <form id="new-project-form" role="form">
+        <form id="open-project-form" role="form">
           <div class="form-group">
             <label for="projects_list">Project Name:</label>
             <select id="projects_list" class="form-control">
@@ -241,7 +267,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" id="button-new-project" class="btn btn-default">Open</button>
+        <button type="button" id="button-open-project" class="btn btn-default">Open</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
@@ -270,6 +296,36 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
         <button type="button" id="button-delete-project" class="btn btn-default">Delete</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Delete File dialog -->
+<div class="modal fade" id="delete-file-dialog" tabindex="-1" role="dialog" aria-labelledby="delete-file-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="delete-file-label">
+          <span class="glyphicon glyphicon-trash"></span> 
+          Delete File</h4>
+      </div>
+      <div class="modal-body">
+        <!-- This holds the name of the file to delete. -->
+        <input type="hidden" id="delete_file_name"></input>
+        <div class="callout callout-warning">
+          <h4>
+            <span class="glyphicon glyphicon-warning-sign"></span>
+            Caution!
+          </h4>
+          Are you sure you want to delete this file?  This process is
+          irreversible.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="button-delete-file" class="btn btn-default">Delete</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->

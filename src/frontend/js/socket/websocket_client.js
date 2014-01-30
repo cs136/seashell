@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Seashell's communications backend.
  * Copyright (C) 2013 The Seashell Maintainers.
@@ -103,9 +104,9 @@ SeashellWebsocket.prototype._authenticate = function(ignored, self) {
   console.log("Asking for server token.");
   self._sendMessage({type : "serverAuth"}).done(
       function(response) {
-        iv = response[0];
-        coded = response[1];
-        tag = response[2];
+        var iv = response[0];
+        var coded = response[1];
+        var tag = response[2];
 
         try {
           /** We don't care that it decrypted.
@@ -154,8 +155,6 @@ SeashellWebsocket.prototype._sendMessage = function(message) {
   try {
     // Send the message:
     self.websocket.send(blob);
-    console.log("Sent message.");
-    console.log(self.requests[request_id]);
     return self.requests[request_id].deferred.promise();
   } catch (err) {
     return self.requests[request_id].deferred.reject(err).promise();

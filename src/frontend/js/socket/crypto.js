@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Seashell's cryptographic communications backend.
  * Copyright (C) 2013 The Seashell Maintainers.
