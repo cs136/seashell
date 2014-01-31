@@ -5,13 +5,14 @@
     <div class="col-md-2">
       <div class="affix-top" role="navigation">
         <ul class="nav" id="file-navigator">
-          <!-- The file list is manipulated JavaScript. -->
-          <li class="active-file file-entry" id="file-foo.c"><a href="#">foo.c</a></li>
-          <li class="file-entry" id="file-bar.c"><a href="#">bar.c</a></li>
-          <!-- This ends the file list. -->
-          <li class="divider hide-on-null-file" id="files-before-here"></li>
-          <li><a href="#new-file-dialog"><span class="text-muted pull-right">Ctrl-n</span>
+          <li><a href="#new-file-dialog" data-toggle="modal"><span class="text-muted pull-right">Ctrl-n</span>
             <span class="glyphicon glyphicon-file"></span> New File</a></li>
+          <li class="hide-on-null-file"><a href="#delete-file-dialog" data-toggle="modal">
+            <span class="glyphicon glyphicon-trash"></span> Delete File</a></li>
+          <!-- The file list is manipulated JavaScript. -->
+          <li class="active-file file-entry"><a href="#">foo.c</a></li>
+          <li class="file-entry"><a href="#">bar.c</a></li>
+          <!-- This ends the file list. -->
         </ul>
       </div>
     </div>
@@ -34,7 +35,7 @@
     </div>
     <div class="col-md-10 content-fill show-on-null-file no-file" role="main">
       <p>
-      Open or <a href="#new-file-dialog" data-toggle="modal">Create</a> a file
+      Open or <a href="#new-file-dialog" class="btn btn-primary btn-lg" data-toggle="modal">Create</a> a file
       to get started!
       </p>
     </div>

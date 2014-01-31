@@ -77,7 +77,7 @@
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? bytes?)
   (with-input-from-file (check-and-build-path (read-config 'seashell) project file)
-                        (lambda () (read-bytes 0))))
+                        port->bytes))
 
 ;; (write-file project file contents) -> void?
 ;; Writes a file from a Racket bytestring.

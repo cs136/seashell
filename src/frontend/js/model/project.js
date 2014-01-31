@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 var currentFiles = null;
+var currentFile = null;
 var currentProject = null;
 
 /**
@@ -56,6 +57,94 @@ function saveProject() {
 }
 
 /**
+ * Saves a file.
+ * @param {String} file Name of file to save. 
+ */
+function saveFile(file) {
+  socket.writeFile(currentProject, file, currentFiles[file].getValue()).fail(function() {
+    // TODO: Error handling.
+  });
+}
+
+
+/**
+ * Closes the project.
+ *
+ * @param {Boolean} save Save project on close or not.
+ */
+function projectClose(save) {
+  if (save)
+    saveProject();
+  currentFiles = null;
+  currentProject = null;
+  /** Delete the list of files. */
+  $(".file-entry").remove();
+  /** OK, hide project - hide files */
+  $(".show-on-null-project").removeClass("hide");
+  $(".hide-on-null-project").addClass("hide");
+  $(".hide-on-null-file").addClass("hide");
+  $(".show-on-null-file").removeClass("hide");
+  $("#project-menu").text("No project open");
+}
+
+/**
+ * Opens a file.
+ * @param {String} file Name of file.
+ */
+function fileOpen(name) {
+  function rest( ) {
+    $(".hide-on-null-file").removeClass("hide");
+    $(".show-on-null-file").addClass("hide");
+    editor.swapDoc(currentFiles[name]);
+    currentFile = name;
+  }
+
+  if (currentFiles[name] == null) {
+    socket.readFile(currentProject, name).done(function (contents) {
+      // TODO: Custom file types that are not C source files.
+      // Consult lib/codemirror/mode and stuff.
+      currentFiles[name] = new CodeMirror.Doc(contents, "text/x-csrc");
+      rest();
+    }).fail(function () {
+     // TODO: Error handling.
+    }); 
+  } else {
+    rest( );
+  }
+}
+
+/**
+ * Creates a file.
+ * @param {String} file Name of file to create.
+ */
+function fileNew(name) {
+  /** (Lazily) create the file. */
+  if (name in currentFiles) {
+    // TODO: Error handling.
+  } else {
+    // TODO: Custom file types.
+    currentFiles[name] = new CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc");
+    saveFile(name);
+    fileNavigationAddEntry(name);
+    fileOpen(name);
+  }
+}
+
+/**
+ * Creates a file entry in the UI.
+ * @param {String} file Name of file for which a navigation link
+ * should be added.
+ */
+function fileNavigationAddEntry(file) {
+  $("#file-navigator").append(
+    $("<li>").addClass("file-entry").append( 
+      $("<a>").text(file).on("click",
+        function () {
+          fileOpen(file);
+        })));
+}
+
+/**
  * Opens and sets the current project.
  * @param {String} project Name of project to open.
  */
@@ -64,13 +153,22 @@ function projectOpen(name) {
 
   /** Update the list of files. */
   promise.done(function(files) {
+    projectClose(true);
     currentFiles = {};
     currentProject = name;
+    $("#project-menu").text(name);
 
     for (var i = 0; i < files.length; i++) {
       /** Lazily load the documents later. */
       currentFiles[files[i]] = null;
+      /** Create a entry for it. */
+      fileNavigationAddEntry(files[i]);
     }
+    /** OK, show project - hide files */
+    $(".show-on-null-project").addClass("hide");
+    $(".hide-on-null-project").removeClass("hide");
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
   }).fail(function(){
     // TODO: error handling.
   });
@@ -99,10 +197,12 @@ function projectDelete(name) {
 
   /** Deal with it. */
   promise.done(function() {
+    projectClose(false);
   }).fail(function() {
     // TODO: error handling.
   });
 }
+
 function projectRun(){}
 function projectLoadNextFile(){}
 function projectLoadPreviousFile(){}

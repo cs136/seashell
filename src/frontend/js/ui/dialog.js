@@ -30,7 +30,7 @@ function handleSaveSettings( ) {
  * handleNewFile
  * This function will handle creating new files. */
 function handleNewFile( ) {
-  projectNewFile($("#new_file_name").val());
+  fileNew($("#new_file_name").val());
   $("#new-file-dialog").modal("hide");
 }
 
@@ -38,7 +38,7 @@ function handleNewFile( ) {
  * handleDeleteFile 
  * This function will handle deleting files. */
 function handleDeleteFile( ) {
-  projectDeleteFile($("#delete_file_name").val());
+  fileDelete();
   $("#delete-file-dialog").modal("hide");
 }
 
@@ -100,4 +100,7 @@ function setupDialogs() {
   /** Set up the delete-file-dialog. */
   $("#button-delete-project").on("click",
       handleDeleteProject);
+  /** Set up the new-file-dialog. */
+  $("#button-new-file").on("click",
+      handleNewFile);
 }
