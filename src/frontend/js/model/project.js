@@ -47,11 +47,8 @@ function updateListOfProjects() {
  */
 function saveProject() {
   for (var file in currentFiles) {
-    if (currentFiles[file] != null) {
-      socket.writeFile(currentProject, file, currentFiles[file].getValue())
-        .fail(function() {
-          // TODO: Error handling.
-        });
+    if ("document" in currentFiles[file]) {
+      saveFile(file);
     }
   }
 }
