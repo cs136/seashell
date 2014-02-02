@@ -73,6 +73,7 @@ function saveFile(file) {
  * @param {Boolean} save Save project on close or not.
  */
 function projectClose(save) {
+  // TODO: Unlock project.
   if (save)
     saveProject();
   currentFiles = null;
@@ -91,10 +92,16 @@ function projectClose(save) {
  * Opens a file.
  * @param {String} file Name of file.
  */
-function fileOpen(name) {
+function fileOpen(name, tag) {
   function rest( ) {
+    /** Show file related stuff. */
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
+    /** Remove the active class from other links. */
+    $(".file-entry").removeClass("active");
+    /** Add the active class to this link. */
+    tag.addClass("active");
+    /** Load the file. */
     editor.swapDoc(currentFiles[name]);
     currentFile = name;
   }
@@ -136,12 +143,19 @@ function fileNew(name) {
  * should be added.
  */
 function fileNavigationAddEntry(file) {
+  var tag = $("<li>");
+
   $("#file-navigator").append(
-    $("<li>").addClass("file-entry").append( 
-      $("<a>").text(file).on("click",
-        function () {
-          fileOpen(file);
-        })));
+    tag.addClass("file-entry")
+      .append(
+        $("<a>").text(file).append(
+            $("<span>").addClass("pull-right").addClass("glyphicon").addClass("glyphicon-trash").on("click", function() {deleteFileDialog(file);}))
+          .on("click",
+          function (event) {
+            /** Only handle click events for the A tag itself, not for the span inside it. */
+            if (event.target == this)
+              fileOpen(file, tag);
+          })));
 }
 
 /**
@@ -153,6 +167,7 @@ function projectOpen(name) {
 
   /** Update the list of files. */
   promise.done(function(files) {
+    // TODO: Lock Project
     projectClose(true);
     currentFiles = {};
     currentProject = name;

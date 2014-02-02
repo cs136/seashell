@@ -38,7 +38,7 @@ function handleNewFile( ) {
  * handleDeleteFile 
  * This function will handle deleting files. */
 function handleDeleteFile( ) {
-  fileDelete();
+  fileDelete($("#delete-file-dialog").data("file"));
   $("#delete-file-dialog").modal("hide");
 }
 
@@ -77,6 +77,17 @@ function handleRevertProject( ) {
  */
 function newFileDialog( ) {
   $("#new-file-dialog").modal("show");
+}
+
+/**
+ * deleteFileDialog
+ * Pops up the Delete File Dialog
+ *
+ * @param {String} file Name of file to delete.
+ */
+function deleteFileDialog(file) {
+  $("#delete-file-name").text(file);
+  $("#delete-file-dialog").data("file", file).modal("show");
 }
 
 /**
