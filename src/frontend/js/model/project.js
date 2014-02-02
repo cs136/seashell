@@ -177,10 +177,6 @@ function fileNew(name) {
 }
 
 /**
- * Deletes a file.
- * @param {String}
-
-/**
  * Creates a file entry in the UI.
  * @param {String} file Name of file for which a navigation link
  * should be added.
@@ -211,9 +207,13 @@ function fileNavigationAddEntry(file) {
 function projectOpen(name) {
   var promise = socket.listProject(name);
 
+  // TODO: Lock Project
+  // This (probably, should) not be a hard lock,
+  // but a soft lock that will warn if the project is possibly
+  // open somewhere else.
+
   /** Update the list of files. */
   promise.done(function(files) {
-    // TODO: Lock Project
     projectClose(true);
     currentFiles = {};
     currentProject = name;
@@ -259,6 +259,19 @@ function projectDelete(name) {
   /** Deal with it. */
   promise.done(function() {
     projectClose(false);
+  }).fail(function() {
+    // TODO: error handling.
+  });
+}
+
+/**
+ * Compiles the current project.
+ */
+function projectCompile() {
+  var promise = socket.compileProgram(currentProject);
+
+  /** Deal with it. */
+  promise.done(function(messages) {
   }).fail(function() {
     // TODO: error handling.
   });
