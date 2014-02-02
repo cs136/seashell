@@ -127,7 +127,9 @@ function fileOpen(name, tag) {
 function fileNew(name) {
   /** (Lazily) create the file. */
   if (name in currentFiles) {
-    // TODO: Error handling.
+    // TODO: Error handling.  This should never happen,
+    // as a project should only be open in one Seashell instance
+    // at any time.  Though that still has to be handled.
   } else {
     // TODO: Custom file types.
     currentFiles[name] = new CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc");
@@ -219,5 +221,3 @@ function projectDelete(name) {
 }
 
 function projectRun(){}
-function projectLoadNextFile(){}
-function projectLoadPreviousFile(){}

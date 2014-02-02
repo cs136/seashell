@@ -38,9 +38,7 @@ function setupEditor() {
       {"Ctrl-N": newFileDialog,
        "Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto,
-       "Ctrl-Enter": projectRun,
-       "Ctrl-Down": projectLoadNextFile,
-       "Ctrl-Up": projectLoadPreviousFile}); 
+       "Ctrl-Enter": projectRun});
 }
 
 /** Editor indent function. */
