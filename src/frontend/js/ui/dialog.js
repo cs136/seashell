@@ -114,4 +114,7 @@ function setupDialogs() {
   /** Set up the new-file-dialog. */
   $("#button-new-file").on("click",
       handleNewFile);
+  /** Set up the delete-file-dialog. */
+  $("#button-delete-file").on("click",
+      handleDeleteFile);
 }

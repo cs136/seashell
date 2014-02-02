@@ -61,7 +61,7 @@ function saveProject() {
  * @param {String} file Name of file to save. 
  */
 function saveFile(file) {
-  socket.writeFile(currentProject, file, currentFiles[file].getValue()).fail(function() {
+  socket.writeFile(currentProject, file, currentFiles[file].document.getValue()).fail(function() {
     // TODO: Error handling.
   });
 }
@@ -89,28 +89,68 @@ function projectClose(save) {
 }
 
 /**
+ * Closes the current file. 
+ *
+ * @param {Boolean} save Save file on close or not.
+ */
+function fileClose(save) {
+  if (currentFile) {
+    if (save)
+      saveFile(currentFile);
+
+    /** Swap out the document. */
+    editor.swapDoc(new CodeMirror.Doc("", "text/x-csrc"));
+    /** Remove the active class from the links. */
+    $(".file-entry").removeClass("active");
+    /** Hide the editor. */
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
+    /** Unset the current file. */
+    currentFile = null;
+  }
+}
+
+/**
+ * Deletes a file.
+ * @param {String} file Name of file.
+ */
+function fileDelete(file) {
+  if (currentFile == file) {
+    fileClose(false);
+  }
+  socket.deleteFile(currentProject, file).done(function () {
+    currentFiles[file].tag.remove();
+  }).fail(function() {
+    // TODO: Error handling.
+  });
+}
+
+
+/**
  * Opens a file.
  * @param {String} file Name of file.
  */
-function fileOpen(name, tag) {
+function fileOpen(name) {
   function rest( ) {
-    /** Show file related stuff. */
+    fileClose();
+    /** Show file related stuff. 
+     *  THIS must happen before documents swap as something
+     *  breaks on rendering (observed on Firefox 26).*/
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
-    /** Remove the active class from other links. */
-    $(".file-entry").removeClass("active");
+    /** OK, set file contents. */
+    editor.swapDoc(currentFiles[name].document);
     /** Add the active class to this link. */
-    tag.addClass("active");
+    currentFiles[name].tag.addClass("active");
     /** Load the file. */
-    editor.swapDoc(currentFiles[name]);
     currentFile = name;
   }
 
-  if (currentFiles[name] == null) {
+  if (! ("document" in currentFiles[name])) {
     socket.readFile(currentProject, name).done(function (contents) {
       // TODO: Custom file types that are not C source files.
       // Consult lib/codemirror/mode and stuff.
-      currentFiles[name] = new CodeMirror.Doc(contents, "text/x-csrc");
+      currentFiles[name].document = new CodeMirror.Doc(contents, "text/x-csrc");
       rest();
     }).fail(function () {
      // TODO: Error handling.
@@ -132,7 +172,7 @@ function fileNew(name) {
     // at any time.  Though that still has to be handled.
   } else {
     // TODO: Custom file types.
-    currentFiles[name] = new CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc");
+    currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
     saveFile(name);
     fileNavigationAddEntry(name);
     fileOpen(name);
@@ -140,24 +180,31 @@ function fileNew(name) {
 }
 
 /**
+ * Deletes a file.
+ * @param {String}
+
+/**
  * Creates a file entry in the UI.
  * @param {String} file Name of file for which a navigation link
  * should be added.
  */
 function fileNavigationAddEntry(file) {
+  // Bind the tag.
   var tag = $("<li>");
-
-  $("#file-navigator").append(
-    tag.addClass("file-entry")
-      .append(
+  tag.addClass("file-entry")
+     .append(
         $("<a>").text(file).append(
-            $("<span>").addClass("pull-right").addClass("glyphicon").addClass("glyphicon-trash").on("click", function() {deleteFileDialog(file);}))
-          .on("click",
-          function (event) {
-            /** Only handle click events for the A tag itself, not for the span inside it. */
-            if (event.target == this)
-              fileOpen(file, tag);
-          })));
+          $("<span>").addClass("pull-right").addClass("glyphicon").addClass("glyphicon-trash").on("click", function() {deleteFileDialog(file);}))
+        .on("click",
+        function (event) {
+          /** Only handle click events for the A tag itself, not for the span inside it. */
+          if (event.target == this)
+            fileOpen(file);
+        }));
+  // Add the tag.
+  $("#file-navigator").append(tag);
+  // Save the tag for easy access.
+  currentFiles[file].tag = tag; 
 }
 
 /**
@@ -177,7 +224,7 @@ function projectOpen(name) {
 
     for (var i = 0; i < files.length; i++) {
       /** Lazily load the documents later. */
-      currentFiles[files[i]] = null;
+      currentFiles[files[i]] = {};
       /** Create a entry for it. */
       fileNavigationAddEntry(files[i]);
     }

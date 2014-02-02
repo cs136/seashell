@@ -124,7 +124,7 @@
         ('type "deleteFile")
         ('project project)
         ('file file))
-       (delete-file project file)
+       (remove-file project file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

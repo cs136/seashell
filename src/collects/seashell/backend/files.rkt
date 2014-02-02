@@ -19,7 +19,7 @@
 (require seashell/backend/project
          seashell/seashell-config)
 
-(provide exn:project:file new-file delete-file read-file write-file list-files)
+(provide exn:project:file new-file remove-file read-file write-file list-files)
 
 (struct exn:project:file exn:project ())
 
@@ -45,7 +45,7 @@
                          #:exists 'append)))
   (void))
 
-;; (delete-file project file) -> void?
+;; (remove-file project file) -> void?
 ;; Deletes a file inside a project.
 ;;
 ;; Arguments:
@@ -54,7 +54,7 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file does not exist.
-(define/contract (delete-file project file)
+(define/contract (remove-file project file)
   (-> (and/c project-name? is-project?) path-string? void?)
   (with-handlers
     [(exn:fail:filesystem?
