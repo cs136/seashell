@@ -56,6 +56,7 @@ function setupUI() {
   setupEditor();
   setupConsole();
   setupDialogs();
+  setupMenu();
 }
 
 /** Accessor functions. */
