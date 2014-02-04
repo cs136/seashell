@@ -26,6 +26,15 @@ function handleSaveSettings( ) {
   // TODO: implement
 }
 
+/**
+ * handleCommit
+ * This function will handle committing projects.
+ */
+function handleCommit( ) {
+  projectCommit($("#project_comment_description").val());
+  $("#commit-project-dialog").modal("hide");
+}
+
 /** 
  * handleNewFile
  * This function will handle creating new files. */

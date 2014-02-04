@@ -45,7 +45,7 @@ function updateListOfProjects() {
 /**
  * Saves everything in the current project.
  */
-function saveProject() {
+function projectSave() {
   for (var file in currentFiles) {
     if ("document" in currentFiles[file]) {
       saveFile(file);
@@ -72,7 +72,7 @@ function saveFile(file) {
 function projectClose(save) {
   // TODO: Unlock project.
   if (save)
-    saveProject();
+    projectSave();
   currentFiles = null;
   currentProject = null;
   /** Delete the list of files. */

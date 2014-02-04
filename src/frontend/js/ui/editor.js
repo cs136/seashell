@@ -50,3 +50,13 @@ function editorIndent() {
 function editorGoto() {
   /** TODO: Write this, and the dialog code that'll go with it. */
 }
+
+/** Editor undo function. */
+function editorUndo() {
+  editor.undo();
+}
+
+/** Editor redo function. */
+function editorRedo() {
+  editor.redo();
+}
