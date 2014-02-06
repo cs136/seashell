@@ -21,6 +21,9 @@ var editor = null;
 
 /** Sets up the editor. */
 function setupEditor() {
+  /** Set up the linter. */
+  CodeMirror.registerHelper("lint", "clike", projectLinter);
+
   /** Values here are reasonable defaults, and will be overriden
    *  on the next call to loadConfig(); */
   editor = CodeMirror($("#editor")[0],{
@@ -29,7 +32,8 @@ function setupEditor() {
     mode: "text/x-csrc",
     gutters: ["CodeMirror-lint-markers"],
     lineWrapping: true,
-    matchBrackets: true});
+    matchBrackets: true,
+    lint: true});
 //    lintWith: {
 //        "getAnnotations": CodeMirror.remoteValidator,
 //        "async": true,
@@ -59,4 +63,15 @@ function editorUndo() {
 /** Editor redo function. */
 function editorRedo() {
   editor.redo();
+}
+
+/** Editor force lint. */
+function editorLint() {
+  CodeMirror.signal(editor, "change", editor);
+}
+
+/** Editor set document. */
+function editorDocument(document) {
+  editor.swapDoc(document);
+  editorLint();
 }

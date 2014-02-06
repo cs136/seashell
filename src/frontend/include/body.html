@@ -15,20 +15,49 @@
       </div>
     </div>
     <div class="col-md-10 content-fill hide-on-null-file" role="main">
-      <!--The editor goes here.-->
-      <div class="editor" id="editor">
-        <noscript>
-          This page requires JavaScript to operate properly.
-        </noscript>
+      <!--The toolbar goes here. -->
+      <div class="btn-toolbar toolbar">
+        <div class="btn-group">
+          <button type="button" class="btn btn-default" id="toolbar-save-project">
+            <span class="glyphicon glyphicon-floppy-save"></span>
+          </button>
+          <button type="button" class="btn btn-default" id="toolbar-commit-project">
+            <span class="glyphicon glyphicon-export"></span>
+          </button>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-default" id="toolbar-compile">
+            <span class="glyphicon glyphicon-cog"></span>
+          </button>
+          <button type="button" class="btn btn-default" id="toolbar-run-project">
+            <span class="glyphicon glyphicon-play"></span>
+          </button>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-default" id="toolbar-undo">
+            Undo
+          </button>
+          <button type="button" class="btn btn-default" id="toolbar-redo">
+            Redo
+          </button>
+        </div>
       </div>
-      <!--Messages and program output will appear here.-->
-      <div id="console" class="console"></div>
-      <!--Interactions are submitted here.-->
-      <div class="console-input input-group">
-        <input type="text" class="form-control editor-input">
-        <span class="input-group-btn">
-          <button class="btn btn-default" type="button">&gt;&gt;</button>
-        </span>
+      <div class="editor-console">
+        <!--The editor goes here.-->
+        <div class="editor" id="editor">
+          <noscript>
+            This page requires JavaScript to operate properly.
+          </noscript>
+        </div>
+        <!--Messages and program output will appear here.-->
+        <div id="console" class="console"></div>
+        <!--Interactions are submitted here.-->
+        <div class="console-input input-group">
+          <input type="text" class="form-control editor-input">
+          <span class="input-group-btn">
+            <button class="btn btn-default" type="button">&gt;&gt;</button>
+          </span>
+        </div>
       </div>
     </div>
     <div class="col-md-10 content-fill show-on-null-file no-file" role="main">
