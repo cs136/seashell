@@ -272,6 +272,7 @@ function projectDelete() {
  * Compiles the current project.
  */
 function projectCompile() {
+  projectSave();
   var promise = socket.compileProgram(currentProject);
 
   /** Deal with it. */
