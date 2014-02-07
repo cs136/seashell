@@ -283,7 +283,7 @@
                 (map
                   (lambda (diagnostic)
                     (list (seashell-diagnostic-error? diagnostic)
-                          (path->string key)
+                          (path->string (file-name-from-path key))
                           (seashell-diagnostic-line diagnostic)
                           (seashell-diagnostic-column diagnostic)
                           (seashell-diagnostic-message diagnostic)))

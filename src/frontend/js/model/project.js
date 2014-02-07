@@ -21,6 +21,7 @@
 var currentFiles = null;
 var currentFile = null;
 var currentProject = null;
+var currentErrors = [];
 
 /**
  * Updates the list of projects.
@@ -75,6 +76,7 @@ function projectClose(save) {
     projectSave();
   currentFiles = null;
   currentProject = null;
+  currentErrors = [];
   /** Delete the list of files. */
   $(".file-entry").remove();
   /** OK, hide project - hide files */
@@ -136,7 +138,7 @@ function fileOpen(name) {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
     /** OK, set file contents. */
-    editor.swapDoc(currentFiles[name].document);
+    editorDocument(currentFiles[name].document);
     /** Add the active class to this link. */
     currentFiles[name].tag.addClass("active");
     /** Load the file. */
@@ -217,6 +219,8 @@ function projectOpen(name) {
     projectClose(true);
     currentFiles = {};
     currentProject = name;
+    currentErrors = [];
+
     $("#project-menu").text(name);
 
     for (var i = 0; i < files.length; i++) {
@@ -253,7 +257,7 @@ function projectNew(name) {
 /**
  * Delete and closes the current project.
  */
-function projectDelete(name) {
+function projectDelete() {
   var promise = socket.deleteProject(currentProject);
 
   /** Deal with it. */
@@ -268,13 +272,55 @@ function projectDelete(name) {
  * Compiles the current project.
  */
 function projectCompile() {
+  projectSave();
   var promise = socket.compileProgram(currentProject);
 
   /** Deal with it. */
   promise.done(function(messages) {
-  }).fail(function() {
-    // TODO: error handling.
+    // Save the messages.
+    currentErrors = messages;
+    editorLint();
+  }).fail(function(result) {
+    if (Array.isArray(result)) {
+      currentErrors = result;
+      editorLint();
+    } else {
+      // TODO: error handling.
+    }
   });
 }
 
-function projectRun(){}
+/**
+ * Linter helper for projects.
+ *
+ * @return {Array of CodeMirror Linter messages} Result of linting the current file.
+ */
+function projectLinter() {
+  var found = [];
+
+  /** Look up the current errors for the current file. */
+  for (var i = 0; i < currentErrors.length; i++) {
+    var error = currentErrors[i][0];
+    var file = currentErrors[i][1];
+    var line = currentErrors[i][2];
+    var column = currentErrors[i][3];
+    var message = currentErrors[i][4];
+
+    /** Correct for off by one errors. */
+    if (line > 0) {
+      line --;
+    }
+
+    if (file == currentFile || file == "final-link-result" ) {
+      found.push({
+        from: CodeMirror.Pos(line, column),
+        to: CodeMirror.Pos(line),
+        message: message,
+        severity: error ? "error" : "warning"});
+    }  
+  }
+
+  return found;
+}
+
+function projectRun() {}

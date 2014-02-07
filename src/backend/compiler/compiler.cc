@@ -555,15 +555,19 @@ public:
         const clang::FileEntry * FE = SM.getFileEntryForID(FID);
         if(FE && FE->getName()) {
           messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
+          return;
         } else {
           messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+          return;
         }
       } else {
         messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+        return;
       }
     } else {
       messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
                                         PLoc.getLine(), PLoc.getColumn()));
+      return;
     }
   }
 };
@@ -756,9 +760,6 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     /* Success. */
-    std::copy(diag_client->messages.begin(), diag_client->messages.end(),
-                std::back_inserter(compile_messages));
-
     return 0;
     #undef PUSH_DIAGNOSTIC
 }

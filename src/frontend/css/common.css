@@ -14,7 +14,6 @@ body {
   display: none;
 }
 
-/** Row padding */
 .row {
   padding: 2px;
 }
@@ -37,7 +36,17 @@ body {
   font-size: 16pt;
 }
 
+/** Toolbar */
+.toolbar {
+  padding: 2px;
+}
+
 /** Editor and the console.  Make sure width + height <= 100%. */
+.editor-console {
+  padding: 2px;
+  height: 100%;
+}
+
 .editor {
   height: 75%;
   border: 1px solid #ccc;
@@ -118,4 +127,9 @@ body {
 
 .footer .footer-text {
   margin: 20px 0;
+}
+
+/** Linter */
+.CodeMirror-lint-tooltip {
+  z-index: 1055;
 }
