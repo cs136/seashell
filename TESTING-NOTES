@@ -1,0 +1,19 @@
+- Common testing harness for the C code and the racket code.
+- Test harness is going to be simple.  Executable that just runs
+  the test cases (and groups them).
+- Each testing module is an executable, one testing module per "component"
+  output from tests is #tests passed/#total, possibly description (standard error)
+
+Environment Modifications:
+  Should probably have functions that setup a test Seashell development
+  environment for our test scripts.  This will probably require modifying
+  the Seashell configuration system.  (seashell-config.rkt.in)
+
+Components to test:
+  WebSockets - make sure we can send/receive messages using the WebSockets code
+               in the repository.  Should be able to launch a listener, a client,
+               and send/receive messages.
+  Project / File Management -  Testing files and directories are correctly setup,
+               Contents are properly written out.
+  Cryptography code - Really should test integrity verification and encrypting/decrypting.
+  Compiler - Test can produce valid executables from source files.
