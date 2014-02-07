@@ -26,9 +26,9 @@
 
 ;; Global definitions and concurrency control primitives.
 (struct program (in-stdin in-stdout in-program-stderr in-runtime-stderr
-                 out-stdin out-stdout out-program-stderr out-runtime-stderr
-                 raw-stdin raw-stdout raw-stderr
-                 handle control exit-status) #:transparent #:mutable)
+                          out-stdin out-stdout out-program-stderr out-runtime-stderr
+                          raw-stdin raw-stdout raw-stderr
+                          handle control exit-status) #:transparent #:mutable)
 (struct exn:project:run exn:project ())
 (define program-table (make-hash))
 
@@ -45,7 +45,7 @@
                          out-stdin out-stdout out-program-stderr out-runtime-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status)
-                pgrm)
+    pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
     (close-input-port raw-stdout)
@@ -56,40 +56,43 @@
     (close-output-port out-runtime-stderr)
     (close-output-port out-stdout)
     (void))
-
+  
   (let loop ()
     (match (sync/timeout 30 handle (thread-receive-evt) in-stdin raw-stderr raw-stdout)
-           [(? (lambda (evt) (eq? handle evt))) ;; Program quit
-            (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
-            (set-program-exit-status! program (subprocess-status handle))
-            (close)]
-           [#f ;; Program timed out (30 seconds pass without any event)
-            (logf 'info "Program with PID ~a timed out." pid)
-            (set-program-exit-status! program 255)
-            (subprocess-kill handle #t)
-            (close)]
-           [(? (lambda (evt) (eq? thread-receive-evt) evt)) ;; Received a signal.
-            (match (thread-receive)
-                   ['kill
-                    (set-program-exit-status! program 254)
-                    (subprocess-kill handle #t)
-                    (close)])]
-           [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-            (define input (make-bytes))
-            (read-bytes-avail! input in-stdin)
-            (write-bytes input raw-stdin)
-            (loop)]
-           [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-            (define output (make-bytes))
-            (read-bytes-avail! output raw-stdout)
-            (write-bytes output out-stdout)
-            (loop)]
-           [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-            ;; TODO: parse AddressSanitizer / Racket error messages and redirect them to runtime-stderr
-            (define output (make-bytes))
-            (read-bytes-avail! output raw-stderr)
-            (write-bytes output out-program-stderr)
-            (loop)])))
+      [(? (lambda (evt) (eq? handle evt))) ;; Program quit
+       (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
+       (set-program-exit-status! pgrm (subprocess-status handle))
+       (close)]
+      [#f ;; Program timed out (30 seconds pass without any event)
+       (logf 'info "Program with PID ~a timed out." pid)
+       (set-program-exit-status! pgrm 255)
+       (subprocess-kill handle #t)
+       (close)]
+      [(? (lambda (evt) (eq? thread-receive-evt evt))) ;; Received a signal.
+       (match (thread-receive)
+         ['kill
+          (set-program-exit-status! program 254)
+          (subprocess-kill handle #t)
+          (close)])]
+      [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
+       (define input (make-bytes 256))
+       (define read (read-bytes-avail! input in-stdin))
+       (when (integer? read)
+         (write-bytes input raw-stdin 0 read))
+       (loop)]
+      [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
+       (define output (make-bytes 256))
+       (define read (read-bytes-avail! output raw-stdout))
+       (when (integer? read)
+         (write-bytes output out-stdout 0 read))
+       (loop)]
+      [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
+       ;; TODO: parse AddressSanitizer / Racket error messages and redirect them to runtime-stderr
+       (define output (make-bytes 256))
+       (define read (read-bytes-avail! output raw-stderr))
+       (when (integer? read)
+         (write-bytes output out-program-stderr 0 read))
+       (loop)])))
 
 ;; (run-project project)
 ;;  Runs a project.
@@ -100,9 +103,9 @@
   (-> (and/c project-name? is-project?) integer?)
   ;; TODO: Racket mode.
   (with-handlers
-    [(exn:fail:filesystem?
-       (lambda (exn)
-         (raise (exn:project:run
+      [(exn:fail:filesystem?
+        (lambda (exn)
+          (raise (exn:project:run
                   (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     ;; Find the binary
