@@ -22,16 +22,23 @@
 (require racket/unit net/tcp-sig openssl/mzssl
          (prefix-in tcp: racket/tcp))
 
+(define (error/network who fmt . args)
+  (raise (make-exn:fail:network
+          (format "~a: ~a" who (apply format fmt args))
+          (current-continuation-marks))))
+
 (define (make-ssl-tcp@
          server-cert-file server-key-file server-root-cert-files
          server-suggest-auth-file
-         client-cert-file client-key-file client-root-cert-files)
+         client-cert-file client-key-file client-root-cert-files
+         mode
+         ciphers)
   (unit
    (import)
    (export tcp^)
 
-   (define ctx (ssl-make-client-context))
-   (define sctx (ssl-make-server-context))
+   (define ctx (ssl-make-client-context mode))
+   (define sctx (ssl-make-server-context mode))
 
    (when server-cert-file
      (ssl-load-certificate-chain! sctx server-cert-file))
@@ -55,6 +62,10 @@
             (ssl-load-verify-root-certificates! ctx f))
           client-root-cert-files))
 
+   (when ciphers
+     (ssl-set-ciphers! ctx ciphers)
+     (ssl-set-ciphers! sctx ciphers))
+
    (define (tcp-abandon-port p)
      (if (input-port? p)
        (close-input-port p)
@@ -72,7 +83,8 @@
      (ports->ssl-ports ip op
                        #:mode 'accept
                        #:context sctx
-                       #:close-original? #t))
+                       #:close-original? #t
+                       #:error/ssl error/network))
 
    ;; accept-ready? doesn't really work for SSL:
    (define (tcp-accept-ready? p)
@@ -85,7 +97,13 @@
        [else
         (ssl-addresses port port-numbers?)]))
 
-   (define tcp-close ssl-close)
+   (define (tcp-close port)
+     (cond
+       [(tcp:tcp-listener? port)
+        (tcp:tcp-close port)]
+       [else
+        (ssl-close port)]))
+
    (define (tcp-connect hostname port-k)
      (ssl-connect hostname port-k ctx))
    (define (tcp-connect/enable-break hostname port-k)

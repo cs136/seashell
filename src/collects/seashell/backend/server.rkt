@@ -301,7 +301,9 @@
     (make-ssl-tcp@
      (read-config 'ssl-cert)
      (read-config 'ssl-key)
-     #f #f #f #f #f))
+     #f #f #f #f #f
+     'tls
+     "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"))
   
   ;; Dropping permissions.
   (unless (= 0 (seashell_drop_permissions))
