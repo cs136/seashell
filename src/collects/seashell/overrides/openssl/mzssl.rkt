@@ -43,6 +43,8 @@ TO DO:
 
 (define protocol-symbol/c
   (or/c 'sslv2-or-v3 'sslv2 'sslv3 'tls 'tls11 'tls12))
+(define curves/c
+  (or/c 'secp521r1))
 
 (define verify-source/c
   (or/c path-string?
@@ -51,6 +53,7 @@ TO DO:
         (list/c 'macosx-keychain path-string?)))
 
 (provide
+ ssl-dh-param-path
  (contract-out
   [ssl-available? boolean?]
   [ssl-load-fail-reason (or/c #f string?)]
@@ -60,6 +63,10 @@ TO DO:
    (c-> ssl-client-context?)]
   [ssl-make-server-context
    (->* () (protocol-symbol/c) ssl-server-context?)]
+  [ssl-server-context-enable-dhe!
+   (->* (ssl-server-context?) (path-string?) void?)]
+  [ssl-server-context-enable-ecdhe!
+   (->* (ssl-server-context?) (curves/c) void?)]
   [ssl-client-context?
    (c-> any/c boolean?)]
   [ssl-server-context?
@@ -357,7 +364,7 @@ TO DO:
 
 (define-mzscheme scheme_make_custodian (_fun _pointer -> _scheme))
 
-(define-runtime-path dh-param-file-path "dh4096.pem")
+(define-runtime-path ssl-dh-param-path "dh4096.pem")
 
 ;; Make this bigger than 4096 to accommodate at least
 ;; 4096 of unencrypted data
@@ -500,25 +507,6 @@ TO DO:
      [else
       (error 'encrypt->method "internal error, unknown encrypt: ~e" e)])))
 
-(define (ssl-context-enable-ecdh ctx)
-  (define key (EC_KEY_new_by_curve_name NID_secp521r1))
-  (check-valid key 'ssl-context-enable-ecdh "Could not enable ECDH(E)")
-  (unless (= 1 (SSL_CTX_ctrl ctx SSL_CTRL_SET_TMP_ECDH 0 key))
-    (error 'ssl-context-enable-ecdh "Could not enable ECDH(E)"))
-  (SSL_CTX_ctrl ctx SSL_CTRL_OPTIONS SSL_OP_SINGLE_ECDH_USE #f))
-
-(define (ssl-context-enable-dhe ctx)
-  (define io-bio (BIO_new_file dh-param-file-path "rb"))
-  (check-valid io-bio 'ssl-context-enable-dhe "Diffie-Hellman parameters")
-  (with-failure
-    (lambda ()
-      (BIO_free io-bio))
-    (define dh (PEM_read_bio_DHparams io-bio #f #f #f))
-    (check-valid dh 'ssl-context-enable-dhe "Diffie-Hellman parameters")
-    (unless (= 1 (SSL_CTX_ctrl ctx SSL_CTRL_SET_TMP_DH 0 dh))
-      (error 'ssl-context-enable-dhe "Could not enable DHE"))
-    (SSL_CTX_ctrl ctx SSL_CTRL_OPTIONS SSL_OP_SINGLE_DH_USE #f)))
-
 (define (make-context who protocol-symbol client?)
   (let ([meth (encrypt->method who protocol-symbol client?)])
     (atomically ;; connect SSL_CTX_new to subsequent check-valid (ERR_get_error)
@@ -526,8 +514,6 @@ TO DO:
        (check-valid ctx who "context creation")
        (SSL_CTX_set_mode ctx (bitwise-ior SSL_MODE_ENABLE_PARTIAL_WRITE
                                           SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER))
-       (ssl-context-enable-dhe ctx)
-       (ssl-context-enable-ecdh ctx)
        ((if client? make-ssl-client-context make-ssl-server-context) ctx #f #f)))))
 
 (define (ssl-make-client-context [protocol-symbol default-encrypt])
@@ -565,6 +551,33 @@ TO DO:
 
 (define (ssl-seal-context! mzctx)
   (set-ssl-context-sealed?! mzctx #t))
+
+(define (ssl-server-context-enable-ecdhe! context [name 'secp521r1])
+  (define (symbol->nid name)
+    (case name
+      ['secp521r1 NID_secp521r1]
+      [else NID_secp521r1]))
+  (define ctx (extract-ctx 'ssl-server-context-enable-ecdhe! #t context))
+  (define key (EC_KEY_new_by_curve_name (symbol->nid name)))
+  (check-valid key 'ssl-server-context-enable-ecdhe! "Could not enable ECDH(E)")
+  (unless (= 1 (SSL_CTX_ctrl ctx SSL_CTRL_SET_TMP_ECDH 0 key))
+    (error 'ssl-server-context-enable-ecdhe! "Could not enable ECDH(E)"))
+  (SSL_CTX_ctrl ctx SSL_CTRL_OPTIONS SSL_OP_SINGLE_ECDH_USE #f)
+  (void))
+
+(define (ssl-server-context-enable-dhe! context [path ssl-dh-param-path])
+  (define io-bio (BIO_new_file ssl-dh-param-path "rb"))
+  (check-valid io-bio 'ssl-server-context-enable-dhe! "Diffie-Hellman parameters")
+  (with-failure
+    (lambda ()
+      (BIO_free io-bio))
+    (define ctx (extract-ctx 'ssl-server-context-enable-dhe! #t context))
+    (define dh (PEM_read_bio_DHparams io-bio #f #f #f))
+    (check-valid dh 'ssl-server-context-enable-dhe "Diffie-Hellman parameters")
+    (unless (= 1 (SSL_CTX_ctrl ctx SSL_CTRL_SET_TMP_DH 0 dh))
+      (error 'ssl-server-context-enable-dhe "Could not enable DHE"))
+    (SSL_CTX_ctrl ctx SSL_CTRL_OPTIONS SSL_OP_SINGLE_DH_USE #f)
+    (void)))
 
 (define (ssl-load-... who load-it ssl-context-or-listener pathname
                       #:try? [try? #f])
@@ -768,7 +781,6 @@ TO DO:
              (cond [(equal? locs c-locs) c-ctx]
                    [else (reset)])]
             [else (reset)]))))
-
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SSL ports

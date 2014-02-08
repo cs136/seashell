@@ -26,7 +26,7 @@
          seashell/git
          racket/async-channel
          seashell/security
-         seashell/websocket/ssl-tcp
+         seashell/overrides/ssl-tcp
          json)
 
 (provide backend-main)
@@ -297,12 +297,12 @@
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
   ;; SSL setup.
+  ;; TODO: DHE keys.
   (define ssl-unit
     (make-ssl-tcp@
      (read-config 'ssl-cert)
      (read-config 'ssl-key)
-     #f #f #f #f #f
-     "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"))
+     #f #f #f #f #f))
   
   ;; Dropping permissions.
   (unless (= 0 (seashell_drop_permissions))

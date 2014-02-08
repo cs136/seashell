@@ -31,7 +31,9 @@
          server-cert-file server-key-file server-root-cert-files
          server-suggest-auth-file
          client-cert-file client-key-file client-root-cert-files
-         ciphers)
+         [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
+         [ecdhe-curve 'secp521r1]
+         [dhe-param-path ssl-dh-param-path])
   (unit
    (import)
    (export tcp^)
@@ -64,6 +66,11 @@
    (when ciphers
      (ssl-set-ciphers! ctx ciphers)
      (ssl-set-ciphers! sctx ciphers))
+
+   (when ecdhe-curve
+     (ssl-server-context-enable-ecdhe! sctx ecdhe-curve))
+   (when dhe-param-path
+     (ssl-server-context-enable-dhe! sctx dhe-param-path))
 
    (define (tcp-abandon-port p)
      (if (input-port? p)
