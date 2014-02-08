@@ -19,7 +19,7 @@
 
 ;; This file was modified from ssl-unit-tcp.rkt in Racket 5.3.6
 (provide make-ssl-tcp@)
-(require racket/unit net/tcp-sig openssl/mzssl
+(require racket/unit net/tcp-sig seashell/overrides/openssl/mzssl
          (prefix-in tcp: racket/tcp))
 
 (define (error/network who fmt . args)
@@ -37,8 +37,8 @@
    (import)
    (export tcp^)
 
-   (define ctx (ssl-make-client-context mode))
-   (define sctx (ssl-make-server-context mode))
+   (define ctx (ssl-make-client-context (if mode mode 'sslv2-or-v3)))
+   (define sctx (ssl-make-server-context (if mode mode 'sslv2-or-v3)))
 
    (when server-cert-file
      (ssl-load-certificate-chain! sctx server-cert-file))
@@ -76,7 +76,8 @@
      (ports->ssl-ports ip op
                        #:mode 'accept
                        #:context sctx
-                       #:close-original? #t))
+                       #:close-original? #t
+                       #:error/ssl error/network))
 
    (define (tcp-accept/enable-break listener)
      (define-values (ip op) (tcp:tcp-accept/enable-break listener))
