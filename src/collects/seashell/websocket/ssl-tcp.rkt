@@ -31,14 +31,13 @@
          server-cert-file server-key-file server-root-cert-files
          server-suggest-auth-file
          client-cert-file client-key-file client-root-cert-files
-         mode
          ciphers)
   (unit
    (import)
    (export tcp^)
 
-   (define ctx (ssl-make-client-context (if mode mode 'sslv2-or-v3)))
-   (define sctx (ssl-make-server-context (if mode mode 'sslv2-or-v3)))
+   (define ctx (ssl-make-client-context))
+   (define sctx (ssl-make-server-context))
 
    (when server-cert-file
      (ssl-load-certificate-chain! sctx server-cert-file))

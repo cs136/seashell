@@ -302,7 +302,6 @@
      (read-config 'ssl-cert)
      (read-config 'ssl-key)
      #f #f #f #f #f
-     #f
      "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"))
   
   ;; Dropping permissions.
