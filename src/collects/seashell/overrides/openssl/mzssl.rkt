@@ -503,7 +503,7 @@ TO DO:
      [(tls11)
       (if client? TLSv1_1_client_method TLSv1_1_server_method)]
      [(tls12)
-      (if client? TLSv1_1_client_method TLSv1_2_server_method)]
+      (if client? TLSv1_2_client_method TLSv1_2_server_method)]
      [else
       (error 'encrypt->method "internal error, unknown encrypt: ~e" e)])))
 
