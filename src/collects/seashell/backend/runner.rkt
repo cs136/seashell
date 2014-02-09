@@ -20,7 +20,7 @@
          seashell/backend/project
          seashell/seashell-config)
 
-(provide run-project program-stdin program-stdout program-stderr
+(provide run-program program-stdin program-stdout program-stderr
          program-runtime-stderr
          program-wait-evt program-kill program-status)
 
@@ -29,7 +29,7 @@
                           out-stdin out-stdout out-program-stderr out-runtime-stderr
                           raw-stdin raw-stdout raw-stderr
                           handle control exit-status) #:transparent #:mutable)
-(struct exn:project:run exn:project ())
+(struct exn:program:run exn:fail:user ())
 (define program-table (make-hash))
 
 ;; (program-control-thread program)
@@ -94,23 +94,21 @@
          (write-bytes output out-program-stderr 0 read))
        (loop)])))
 
-;; (run-project project)
-;;  Runs a project.
+;; (run-project program)
+;;  Runs a program.
 ;;
 ;; Returns:
 ;;  PID of program
-(define/contract (run-project project)
-  (-> (and/c project-name? is-project?) integer?)
-  ;; TODO: Racket mode.
+(define/contract (run-program binary)
+  (-> path-string? integer?)
   (with-handlers
       [(exn:fail:filesystem?
         (lambda (exn)
-          (raise (exn:project:run
+          (raise (exn:program:run
                   (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     ;; Find the binary
-    (define binary (check-and-build-path (read-config 'seashell) (string-append project "-binary")))
-    (logf 'info "Running binary ~a for project ~a." binary project)
+    (logf 'info "Running binary ~a")
     ;; Run it.
     (define-values (handle raw-stdout raw-stdin raw-stderr)
       (subprocess #f #f #f binary))
@@ -129,7 +127,7 @@
     ;; Install it in the hash-table
     (define pid (subprocess-pid handle))
     (hash-set! program-table pid result)
-    (logf 'info "Binary ~a for project ~a running as PID ~a." binary project pid)
+    (logf 'info "Binary ~a running as PID ~a." binary pid)
     pid))
 
 ;; (program-stdin pid)
@@ -179,7 +177,7 @@
 ;; (program-kill pid)
 ;; Kills a program
 ;;
-;; Arguments:
+;; Aguments:
 ;;  pid - PID of program.
 ;; Returns:
 ;;  Nothing

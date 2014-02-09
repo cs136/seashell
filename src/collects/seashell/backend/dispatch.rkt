@@ -38,7 +38,69 @@
 ;;  keepalive-chan - Keepalive channel.
 (define (conn-dispatch key keepalive-chan connection header-resp)
   (define authenticated? #f)
-  
+ 
+  ;; (send-message connection message) -> void?
+  ;; Sends a JSON message, by converting it to a bytestring.
+  ;;
+  ;; Arguments:
+  ;;  connection - Websocket connection.
+  ;;  message - Seashell message, as a JSON expression.
+  (define/contract (send-message connection message)
+    (-> ws-connection? jsexpr? void?)
+    (ws-send connection (jsexpr->bytes message)))
+
+  ;; (project-output-runner-thread)
+  ;; Helper thread for dealing with output from running
+  ;; projects.
+  (define (project-runner-thread pid)
+    (define stdout (program-stdout pid))
+    (define stderr (program-stderr pid))
+    (define runtime-stderr (program-runtime-stderr pid))
+    (define wait-evt (program-wait-evt pid))
+    
+    (let loop ()
+      (match (sync wait-evt stdout stderr runtime-stderr)
+             [(? (lambda (evt) (eq? evt wait-evt)))
+              ;; Program quit
+              (define message
+                `#hash((id . -3)
+                       (pid . ,pid)
+                       (result . 
+                         #hash((type . "done")
+                               (status . (program-status pid))))))
+              (send-message connection message)]
+             [(? (lambda (evt) (eq? evt stdout)))
+              ;; Read line from port, write it back out
+              (define line (read-line stdout))
+              (define message
+                `#hash((id . -3)
+                       (pid . ,pid)
+                       (result .
+                         #hash((type . "stdout")
+                               (message . line)))))
+              (send-message connection message)]
+             [(? (lambda (evt) (eq? evt stderr)))
+              ;; Read line from port, write it back out
+              (define line (read-line stderr))
+              (define message
+                `#hash((id . -3)
+                       (pid . ,pid)
+                       (result .
+                         #hash((type . "stderr")
+                               (message . line)))))
+              (send-message connection message)]
+             [(? (lambda (evt) (eq? evt runtime-stderr)))
+              ;; TODO: Parse messages here and save
+              (define line (read-line runtime-stderr))
+              (define message
+                `#hash((id . -3)
+                       (pid . ,pid)
+                       (result .
+                         #hash((type . "stderr")
+                               (message . line)))))
+              (send-message connection message)]
+      )))
+
   ;; (dispatch-authenticated message)
   ;; Dispatcher in authenticated mode.
   ;;
@@ -54,9 +116,10 @@
         ('id id)
         ('type "runProgram")
         ('name name))
+       (define pid (run-project name))
        `#hash((id . ,id)
               (success . #t)
-              (result . "unimplemented"))]
+              (result . pid))]
       [(hash-table
         ('id id)
         ('type "compileProgram")
@@ -238,16 +301,6 @@
            [else
             (dispatch-unauthenticated message)]
            ))]))
-  
-  ;; (send-message connection message) -> void?
-  ;; Sends a JSON message, by converting it to a bytestring.
-  ;;
-  ;; Arguments:
-  ;;  connection - Websocket connection.
-  ;;  message - Seashell message, as a JSON expression.
-  (define/contract (send-message connection message)
-    (-> ws-connection? jsexpr? void?)
-    (ws-send connection (jsexpr->bytes message)))
   
   ;; Per-connection event loop.
   (define (main-loop)

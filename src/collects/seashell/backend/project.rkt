@@ -36,6 +36,8 @@
 (require seashell/git
          seashell/seashell-config
          seashell/compiler
+         seashell/backend/runner
+         seashell/websocket
          net/url)
 
 ;; (check-path path)
@@ -260,6 +262,7 @@
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
+  ;; TODO: Other languages? (C++, maybe?)
   ;; Get *.c files in project.
   (define c-files
     (filter (lambda (file)
@@ -268,11 +271,16 @@
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages) (seashell-compile-files '() '("-lm") c-files))
+  (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
   (when result
-    (with-output-to-file (check-and-build-path (read-config 'seashell) (format "~a-binary" name))
+    (with-output-to-file output-path
                          #:exists 'replace
                          (thunk
                            (write-bytes result))))
+  (file-or-directory-permissions
+    output-path
+    (bitwise-ior (file-or-directory-permissions output-path 'bits) user-execute-bit))
+
   ;; Messages is a list of seashell-diagnostic(s)
   (values
     (not (not result))
@@ -288,3 +296,19 @@
                           (seashell-diagnostic-column diagnostic)
                           (seashell-diagnostic-message diagnostic)))
                   diagnostics))))))
+
+;; (run-project name)
+;; Runs a project
+;;
+;; Arguments:
+;;  name - Name of project.
+;; Returns:
+;;  pid - Process ID (used as unique identifier for process)
+(define/contract (run-project name)
+  (-> project-name? integer?)
+  (when (not (is-project? name))
+    (raise (exn:project (format "Project ~a does not exist!" name)
+                        (current-continuation-marks))))
+  ;; TODO: Racket mode.
+  (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
+  (run-program output-path))
