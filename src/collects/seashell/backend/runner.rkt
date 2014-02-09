@@ -21,7 +21,6 @@
          seashell/seashell-config)
 
 (provide run-program program-stdin program-stdout program-stderr
-         program-runtime-stderr
          program-wait-evt program-kill program-status)
 
 ;; Global definitions and concurrency control primitives.
@@ -41,8 +40,8 @@
 ;;  Nothing.
 (define (program-control-thread pgrm)
   (-> program? void?)
-  (match-define (program in-stdin in-stdout in-program-stderr in-runtime-stderr
-                         out-stdin out-stdout out-program-stderr out-runtime-stderr
+  (match-define (program in-stdin in-stdout in-stderr
+                         out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status)
     pgrm)
@@ -52,8 +51,7 @@
     (close-input-port raw-stderr)
     (close-input-port in-stdin)
     (close-output-port raw-stdin)
-    (close-output-port out-program-stderr)
-    (close-output-port out-runtime-stderr)
+    (close-output-port out-stderr)
     (close-output-port out-stdout)
     (void))
   
@@ -87,11 +85,10 @@
          (write-bytes output out-stdout 0 read))
        (loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       ;; TODO: parse AddressSanitizer / Racket error messages and redirect them to runtime-stderr
        (define output (make-bytes 256))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
-         (write-bytes output out-program-stderr 0 read))
+         (write-bytes output out-stderr 0 read))
        (loop)])))
 
 ;; (run-project program)
@@ -115,11 +112,10 @@
     ;; Construct the I/O ports.
     (define-values (in-stdout out-stdout) (make-pipe))
     (define-values (in-stdin out-stdin) (make-pipe))
-    (define-values (in-program-stderr out-program-stderr) (make-pipe))
-    (define-values (in-runtime-stderr out-runtime-stderr) (make-pipe))
+    (define-values (in-stderr out-stderr) (make-pipe))
     ;; Construct the control structure.
-    (define result (program in-stdin in-stdout in-program-stderr in-runtime-stderr
-                            out-stdin out-stdout out-program-stderr out-runtime-stderr
+    (define result (program in-stdin in-stdout in-stderr
+                            out-stdin out-stdout out-stderr
                             raw-stdin raw-stdout raw-stderr
                             handle #f #f))
     (define control-thread (thread (thunk (program-control-thread result))))
@@ -161,18 +157,7 @@
 ;;  Port to read from program's standard error.
 (define/contract (program-stderr pid)
   (-> integer? input-port?)
-  (program-in-program-stderr (hash-ref program-table pid)))
-
-;; (program-runtime-stderr pid)
-;; Returns the runtime standard error port for a program.
-;;
-;; Arguments:
-;;  pid - PID of program.
-;; Returns:
-;;  Port to read from program's runtime standard error.
-(define/contract (program-runtime-stderr pid)
-  (-> integer? input-port?)
-  (program-runtime-stderr (hash-ref program-table pid)))
+  (program-in-stderr (hash-ref program-table pid)))
 
 ;; (program-kill pid)
 ;; Kills a program
@@ -208,3 +193,20 @@
 (define/contract (program-status pid)
   (-> integer? (or/c #f integer?))
   (program-exit-status (hash-ref program-table pid)))
+
+;; (program-destroy-handle pid)
+;; Closes the internal-facing half of the I/O ports
+;; and removes the process from the table.
+(define/contract (program-destroy-handle pid)
+  (-> integer? void?)
+  (define pgrm (hash-ref program-table pid))
+  (match-define (program in-stdin in-stdout in-stderr
+                         out-stdin out-stdout out-stderr
+                         raw-stdin raw-stdout raw-stderr
+                         handle control exit-status)
+    pgrm)
+
+  ;; Note: ports are Racket pipes and therefore GC'd.
+  ;; We don't need to close them.
+  (hash-remove! program-table pid))
+

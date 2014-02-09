@@ -89,10 +89,8 @@
                    "Invalid WebSocket request, no Key"       
                    (current-continuation-marks))))
     (define key (header-value keyh))
-    (define proth (headers-assq* #"Sec-WebSocket-Protocol" headers))
-    (define prot (if proth (header-value proth) #f))
-
-    ;; Compute custom headers.
+    
+    ;; Compute custom headers.  This function also handles subprotocols.
     (define-values (conn-headers state) (pre-conn-dispatch cline headers))
 
     ;; Write headers.
@@ -104,11 +102,6 @@
             (make-header #"Server" #"Seashell/0")
             (make-header #"Sec-Websocket-Accept" (handshake-solution-server key))
             conn-headers))
-    ;; ... more headers.
-    (when prot
-      (print-headers
-       op
-       (list (make-header #"Sec-WebSocket-Protocol" prot))))
 
     ;; Flush headers out before:
     (flush-output op)

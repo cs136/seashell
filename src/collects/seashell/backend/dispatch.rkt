@@ -33,10 +33,10 @@
 ;; Dispatch function.
 ;; Arguments:
 ;;  key - Communications key.
-;;  wsc - WebSocket connection.
-;;  header-resp - Headers.
 ;;  keepalive-chan - Keepalive channel.
-(define (conn-dispatch key keepalive-chan connection header-resp)
+;;  wsc - WebSocket connection.
+;;  state - [Unused]
+(define (conn-dispatch key keepalive-chan connection state)
   (define authenticated? #f)
  
   ;; (send-message connection message) -> void?
@@ -55,7 +55,6 @@
   (define (project-runner-thread pid)
     (define stdout (program-stdout pid))
     (define stderr (program-stderr pid))
-    (define runtime-stderr (program-runtime-stderr pid))
     (define wait-evt (program-wait-evt pid))
     
     (let loop ()
@@ -68,6 +67,8 @@
                        (result . 
                          #hash((type . "done")
                                (status . (program-status pid))))))
+              ;; Destroy the process
+              (program-destroy-handle pid)
               (send-message connection message)]
              [(? (lambda (evt) (eq? evt stdout)))
               ;; Read line from port, write it back out
@@ -78,9 +79,11 @@
                        (result .
                          #hash((type . "stdout")
                                (message . line)))))
-              (send-message connection message)]
+              (send-message connection message)
+              (loop)]
              [(? (lambda (evt) (eq? evt stderr)))
               ;; Read line from port, write it back out
+              ;; TODO: Parse output to deal with standard error messages
               (define line (read-line stderr))
               (define message
                 `#hash((id . -3)
@@ -88,18 +91,18 @@
                        (result .
                          #hash((type . "stderr")
                                (message . line)))))
-              (send-message connection message)]
-             [(? (lambda (evt) (eq? evt runtime-stderr)))
-              ;; TODO: Parse messages here and save
-              (define line (read-line runtime-stderr))
-              (define message
-                `#hash((id . -3)
-                       (pid . ,pid)
-                       (result .
-                         #hash((type . "stderr")
-                               (message . line)))))
-              (send-message connection message)]
-      )))
+              (send-message connection message)
+              (loop)])))
+
+  ;; (dispatch-handle-program-input message)
+  ;; Helper function for dealing with program input from user.
+  (define/contract (dispatch-handle-program-input id pid contents)
+    (-> integer? integer? string? jsexpr?)
+    (write-string contents (program-stdin pid))
+    `#hash((id . ,id)
+           (pid . ,pid)
+           (success . #t)
+           (result . #t)))
 
   ;; (dispatch-authenticated message)
   ;; Dispatcher in authenticated mode.
@@ -111,15 +114,23 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
-      ;; Project compilation functions.
+      ;; Project running input
       [(hash-table
         ('id id)
-        ('type "runProgram")
+        ('type "programInput")
+        ('pid pid)
+        ('contents contents))
+       (dispatch-handle-program-input id pid contents)]
+      ;; Project running functions
+      [(hash-table
+        ('id id)
+        ('type "runProject")
         ('name name))
        (define pid (run-project name))
        `#hash((id . ,id)
               (success . #t)
               (result . pid))]
+      ;; Project compilation functions.
       [(hash-table
         ('id id)
         ('type "compileProgram")
