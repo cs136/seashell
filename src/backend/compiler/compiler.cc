@@ -72,6 +72,8 @@
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Linker.h>
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 #include <vector>
@@ -589,6 +591,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   Module* mod = &compiler->module;
   std::string Error;
 
+
   /* Compile LLVM IR to architecture-specific assembly code. */
   SMDiagnostic Err;
   Triple TheTriple;
@@ -750,14 +753,17 @@ static int compile_module (seashell_compiler* compiler,
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
-    Module * mod = Act->takeModule();
+    OwningPtr<Module> mod(Act->takeModule());
     if (!mod) {
       PUSH_DIAGNOSTIC("libseashell-clang: takeModule() failed.");
       return 1;
     }
    
-    /** Link the module into the one we're building. */
-    Success = !llvm::Linker::LinkModules(module, mod, llvm::Linker::PreserveSource, &Error);
+    /** Link the module into the one we're building. 
+     *  NOTE: We destroy the source as we've taken the module
+     *  (and that for some awful reason, copying modules breaks horribly
+     *   LLVM's DWARF emitter.  Someone really ought to file a bug) */
+    Success = !llvm::Linker::LinkModules(module, &*mod, llvm::Linker::DestroySource, &Error);
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: llvm::Linker::LinkModules() failed: " + Error);
       return 1;

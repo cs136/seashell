@@ -105,6 +105,8 @@
           (raise (exn:program:run
                   (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
+    ;; Set the environment variables
+    (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
     ;; Find the binary
     (logf 'info "Running binary ~a" binary)
     ;; Run it.
