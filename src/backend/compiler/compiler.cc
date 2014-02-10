@@ -703,48 +703,51 @@ static int compile_module (seashell_compiler* compiler,
 
     /* Invoke clang to compile file to LLVM IR. */
     clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(new clang::DiagnosticOptions());
-    SeashellDiagnosticClient * diag_client = new SeashellDiagnosticClient(&*diag_opts);
+    SeashellDiagnosticClient diag_client(&*diag_opts);
 
     clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_ID(new clang::DiagnosticIDs());
-    clang::DiagnosticsEngine Diags(diag_ID, &*diag_opts, diag_client);
-    clang::FileManager FM((clang::FileSystemOptions()));
-    clang::SourceManager SM(Diags, FM);
+    clang::DiagnosticsEngine CI_Diags(diag_ID, &*diag_opts, &diag_client, false);
+    clang::FileManager CI_FM((clang::FileSystemOptions()));
+    clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
     OwningPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
-    Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), Diags);
+    Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInvocation::CreateFromArgs() failed.");
-      std::copy(diag_client->messages.begin(), diag_client->messages.end(),
+      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
     }
-
+    
     clang::CompilerInstance Clang;
+    Clang.createDiagnostics(&diag_client, false);
+    Clang.createFileManager();
+    Clang.createSourceManager(Clang.getFileManager());
     Clang.setInvocation(CI.take());
 
+    if (!Clang.hasDiagnostics()) {
+      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
+      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                  std::back_inserter(compile_messages));
+      return 1;
+    }
+    
     /** Set up the default headers */
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
     Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true); 
 
-    if (!Clang.hasDiagnostics()) {
-      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
-      std::copy(diag_client->messages.begin(), diag_client->messages.end(),
-                  std::back_inserter(compile_messages));
-      return 1;
-    }
-
-    OwningPtr<clang::CodeGenAction> Act(new clang::EmitCodeGenOnlyAction(&compiler->context));
+    OwningPtr<clang::CodeGenAction> Act(new clang::EmitLLVMOnlyAction(&compiler->context));
     Success = Clang.ExecuteAction(*Act);
     if (!Success) {
-      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitCodeGenOnlyAction) failed.");
-      std::copy(diag_client->messages.begin(), diag_client->messages.end(),
+      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed.");
+      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                   std::back_inserter(compile_messages));
       return 1;
     }
 
     /** Store the diagnostics. */
-    std::copy(diag_client->messages.begin(), diag_client->messages.end(),
+    std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
     Module * mod = Act->takeModule();
