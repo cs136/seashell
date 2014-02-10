@@ -1,5 +1,5 @@
 "use strict";
-/**
+/*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
@@ -234,6 +234,8 @@ function projectOpen(name) {
     $(".hide-on-null-project").removeClass("hide");
     $(".hide-on-null-file").addClass("hide");
     $(".show-on-null-file").removeClass("hide");
+    /** Refresh the console. */
+    consoleRefresh();
   }).fail(function(){
     // TODO: error handling.
   });
@@ -275,14 +277,37 @@ function projectCompile() {
   projectSave();
   var promise = socket.compileProgram(currentProject);
 
+  /** Helper function for writing errors. */
+  function writeErrors(errors) {
+    for (var i = 0; i < errors.length; i++) {
+      var error = errors[i][0];
+      var file = errors[i][1];
+      var line = errors[i][2];
+      var column = errors[i][3];
+      var message = errors[i][4];
+
+      consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
+          file, line, column,
+          error ? "error" : "warning",
+          message));
+    }
+  }
+
   /** Deal with it. */
   promise.done(function(messages) {
     // Save the messages.
     currentErrors = messages;
+    // Write it to the console
+    writeErrors(currentErrors);
+    // Lint
     editorLint();
   }).fail(function(result) {
     if (Array.isArray(result)) {
+      // Save the messages.
       currentErrors = result;
+      // Write it to the console
+      writeErrors(currentErrors);
+      // Lint
       editorLint();
     } else {
       // TODO: error handling.
@@ -323,4 +348,33 @@ function projectLinter() {
   return found;
 }
 
-function projectRun() {}
+/**
+ * Project runner.
+ */
+function projectRun() {
+  var promise = socket.runProject(currentProject);
+
+  promise.done(function(pid) {
+    consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
+  }).fail(function() {
+    // TODO: error handling.
+  });
+}
+
+/**
+ * Project I/O handler
+ */
+function projectIOHandler(ignored, message) {
+  if (message.type == "stdout" || message.type == "stderr") {
+    consoleWriteRaw(message.message);
+  } else if (message.type == "done") {
+    consoleWrite(sprintf("--- PID %d exited with status %d.", message.pid, message.status));
+  }
+}
+
+/**
+ * Project Setup Function
+ **/
+function setupProjects() {
+  socket.requests[-3].callback = projectIOHandler;
+}

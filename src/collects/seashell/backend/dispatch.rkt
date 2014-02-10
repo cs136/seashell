@@ -52,47 +52,86 @@
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
   ;; projects.
-  (define (project-runner-thread pid)
+  ;;
+  ;; Arguments:
+  ;;  project - Name of project
+  ;;  pid - PID of process
+  ;; Returns:
+  ;;  Thread that is running the I/O processing.
+  (define (project-runner-thread project pid)
     (define stdout (program-stdout pid))
     (define stderr (program-stderr pid))
     (define wait-evt (program-wait-evt pid))
+   
+    ;; Helper function for sending messages
+    ;; Arguments:
+    ;;  name - name of port.
+    ;;  contents - contents to send.
+    (define (send-contents-for name contents)
+      ;; Read line from port, write it back out
+      (unless (eof-object? contents)
+        (define message
+          `#hash((id . -3)
+                 (success . #t)
+                 (result .
+                   #hash((type . ,name)
+                         (pid . ,pid)
+                         (message . ,contents)))))
+        (send-message connection message)))
+
+    ;; Helper function for wrapping events
+    ;; Arguments:
+    ;;  tag - tag to give.
+    ;;  event - name of event.
+    (define (tag-event tag event)
+      (wrap-evt
+        event
+        (lambda (result)
+          (list tag result))))
     
-    (let loop ()
-      (match (sync wait-evt stdout stderr runtime-stderr)
-             [(? (lambda (evt) (eq? evt wait-evt)))
-              ;; Program quit
-              (define message
-                `#hash((id . -3)
-                       (pid . ,pid)
-                       (result . 
-                         #hash((type . "done")
-                               (status . (program-status pid))))))
-              ;; Destroy the process
-              (program-destroy-handle pid)
-              (send-message connection message)]
-             [(? (lambda (evt) (eq? evt stdout)))
-              ;; Read line from port, write it back out
-              (define line (read-line stdout))
-              (define message
-                `#hash((id . -3)
-                       (pid . ,pid)
-                       (result .
-                         #hash((type . "stdout")
-                               (message . line)))))
-              (send-message connection message)
-              (loop)]
-             [(? (lambda (evt) (eq? evt stderr)))
-              ;; Read line from port, write it back out
-              ;; TODO: Parse output to deal with standard error messages
-              (define line (read-line stderr))
-              (define message
-                `#hash((id . -3)
-                       (pid . ,pid)
-                       (result .
-                         #hash((type . "stderr")
-                               (message . line)))))
-              (send-message connection message)
-              (loop)])))
+    (thread
+      (thunk
+        (let loop ()
+          (with-handlers
+            ;; Data connection failure.  Quit.
+            [(exn:websocket? 
+               (lambda (exn)
+                 (logf 'error "Data connection failure: ~a.  Terminating project ~a (PID ~a)." (exn-message exn)
+                       project pid)
+                 (program-kill pid)
+                 (program-destroy-handle pid)))]
+            (match (sync wait-evt 
+                         (tag-event "stdout" stdout)
+                         (tag-event "stderr" stderr))
+                   [(? (lambda (evt) (eq? evt wait-evt)))
+                    ;; Program quit
+                    (define message
+                      `#hash((id . -3)
+                             (success . #t)
+                             (result . 
+                               #hash((type . "done")
+                                     (pid . ,pid)
+                                     (status . ,(program-status pid))))))
+                    ;; Flush ports.  This will work as the writing side
+                    ;; of the pipes will be closed.
+                    (define stdout-flush (port->string stdout))
+                    (define stderr-flush (port->string stderr))
+                    (unless (equal? "" stdout-flush)
+                      (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
+                      (send-contents-for "stdout" stdout-flush))
+                    (unless (equal? "" stderr-flush)
+                      (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
+                      (send-contents-for "stderr" stderr-flush))
+                    ;; Destroy the process
+                    (logf 'debug "Instance (PID ~a) of ~a quit." project pid)
+                    (program-destroy-handle pid)
+                    (send-message connection message)]
+                   [`(,tag ,port)
+                    (define contents (read-string 256 port))
+                    (logf 'debug "Received ~s from ~a of project ~a (PID ~a)." contents tag project pid)
+                    (unless (eof-object? contents)
+                      (send-contents-for tag contents))
+                    (loop)]))))))
 
   ;; (dispatch-handle-program-input message)
   ;; Helper function for dealing with program input from user.
@@ -127,9 +166,10 @@
         ('type "runProject")
         ('name name))
        (define pid (run-project name))
+       (project-runner-thread name pid)
        `#hash((id . ,id)
               (success . #t)
-              (result . pid))]
+              (result . ,pid))]
       ;; Project compilation functions.
       [(hash-table
         ('id id)

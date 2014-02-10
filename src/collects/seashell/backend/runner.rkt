@@ -17,15 +17,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
-         seashell/backend/project
          seashell/seashell-config)
 
 (provide run-program program-stdin program-stdout program-stderr
-         program-wait-evt program-kill program-status)
+         program-wait-evt program-kill program-status program-destroy-handle)
 
 ;; Global definitions and concurrency control primitives.
-(struct program (in-stdin in-stdout in-program-stderr in-runtime-stderr
-                          out-stdin out-stdout out-program-stderr out-runtime-stderr
+(struct program (in-stdin in-stdout in-stderr
+                          out-stdin out-stdout out-stderr
                           raw-stdin raw-stdout raw-stderr
                           handle control exit-status) #:transparent #:mutable)
 (struct exn:program:run exn:fail:user ())
@@ -51,6 +50,8 @@
     (close-input-port raw-stderr)
     (close-input-port in-stdin)
     (close-output-port raw-stdin)
+    ;; These two ports must be closed, despite being pipes.
+    ;; We depend on EOF being sent.
     (close-output-port out-stderr)
     (close-output-port out-stdout)
     (void))
@@ -105,7 +106,7 @@
                   (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     ;; Find the binary
-    (logf 'info "Running binary ~a")
+    (logf 'info "Running binary ~a" binary)
     ;; Run it.
     (define-values (handle raw-stdout raw-stdin raw-stderr)
       (subprocess #f #f #f binary))
@@ -207,6 +208,10 @@
     pgrm)
 
   ;; Note: ports are Racket pipes and therefore GC'd.
-  ;; We don't need to close them.
+  ;; We don't need to close them.  (Closing the input port
+  ;; cause a bit of a race condition with the dispatch code.
+  ;; We don't close out-stdout and out-stderr as clients
+  ;; may still be using them.  Note that in-stdout and in-stderr
+  ;; MUST be closed for EOF to be properly sent).
   (hash-remove! program-table pid))
 

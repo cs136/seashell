@@ -21,10 +21,40 @@ var seashell_console = null;
 
 /** Sets up the console. */
 function setupConsole() {
-  var welcomeMessage = '**Welcome to Seashell! Messages and program output will appear here.**\n';
-  seashell_console = CodeMirror($('#console')[0],
+  var welcomeMessage = '+++ Welcome to Seashell! Messages and program output will appear here. +++';
+  seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
        readOnly: true,
        lineWrapping: true,
        theme: 'blackboard'});
+}
+
+/** Refreshes the console.
+ *  Call after the console is shown after a hide. */
+function consoleRefresh() {
+  seashell_console.refresh();
+}
+
+/** Writes a message to the console.
+ *
+ * @param {String} message Message to write.
+ **/
+function consoleWrite(message) {
+  var value = seashell_console.getValue();
+  value += "\n" + message;
+  seashell_console.setValue(value);
+  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
+                                   ch: 0});
+}
+
+/** Writes a message to the console, in raw mode (no processing done).
+ * 
+ * @param {String} message Message to write.
+ */
+function consoleWriteRaw(message) {
+  var value = seashell_console.getValue();
+  value += message;
+  seashell_console.setValue(value);
+  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
+                                   ch: 0});
 }

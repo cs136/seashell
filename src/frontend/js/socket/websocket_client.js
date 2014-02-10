@@ -51,6 +51,11 @@ function SeashellWebsocket(uri, key) {
     callback : null,
     deferred : null
   };
+  // Program I/O [-3]
+  self.requests[-3] = { 
+    callback : null,
+    deferred : null
+  };
 
   self.websocket = new WebSocket(uri);
 
@@ -74,14 +79,14 @@ function SeashellWebsocket(uri, key) {
             request.deferred.resolve(response.result, self);
           }
           if (request.callback) {
-            response.callback(true, response.result, self);
+            request.callback(true, response.result, self);
           }
         } else {
           if (request.deferred) {
             request.deferred.reject(response.result, self);
           }
           if (request.callback) {
-            response.callback(false, response.result, self);
+            request.callback(false, response.result, self);
           }
         }
         if (response.id >= 0)
@@ -173,12 +178,12 @@ SeashellWebsocket.prototype.sendMessage = function(message) {
 };
 
 /** The following functions are wrappers around sendMessage.
- *  Consult server.rkt for a full list of functions.
+ *  Consult dispatch.rkt for a full list of functions.
  *  These functions take in arguments as specified in server.rkt
  *  and return a JQuery Deferred object. */
-SeashellWebsocket.prototype.runProgram = function(project) {
+SeashellWebsocket.prototype.runProject = function(project) {
   return this.sendMessage({
-    type : "runProgram",
+    type : "runProject",
     name : project});
 };
 

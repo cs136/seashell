@@ -31,7 +31,7 @@ function handleSaveProject() {
  * handleCompileProject( )
  * This function handles the compile project menu item.
  */
-function handleCompileProject( ) {
+function handleCompileProject() {
   projectCompile();
 }
 
@@ -76,6 +76,15 @@ function handleAutoformat() {
 }
 
 /**
+ * handleRunProject()
+ * This function handles running projects.
+ */
+function handleRunProject() {
+  // TODO: Multiple running projects?
+  projectRun();
+}
+
+/**
  * Sets up the menu; attaches actions to each menu item that does not already have
  * an action attached to it. */
 function setupMenu() {
@@ -84,6 +93,9 @@ function setupMenu() {
 
   $("#menu-compile").on("click", handleCompileProject);
   $("#toolbar-compile").on("click", handleCompileProject);
+
+  $("#menu-run").on("click", handleRunProject);
+  $("#toolbar-run").on("click", handleRunProject);
 
   $("#menu-undo").on("click", handleUndo);
   $("#toolbar-undo").on("click", handleUndo);

@@ -31,6 +31,7 @@
          exn:project
          check-path
          check-and-build-path
+         run-project
          compile-project)
 
 (require seashell/git
