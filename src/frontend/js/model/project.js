@@ -279,6 +279,7 @@ function projectCompile() {
 
   /** Helper function for writing errors. */
   function writeErrors(errors) {
+    consoleWrite("*** clang produced the following messages:");
     for (var i = 0; i < errors.length; i++) {
       var error = errors[i][0];
       var file = errors[i][1];
@@ -303,6 +304,8 @@ function projectCompile() {
     editorLint();
   }).fail(function(result) {
     if (Array.isArray(result)) {
+      // Log
+      consoleWrite(sprintf("*** Error compiling %s:", currentProject));
       // Save the messages.
       currentErrors = result;
       // Write it to the console
