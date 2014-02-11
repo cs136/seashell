@@ -153,6 +153,12 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      ;; Program signalling code.
+      [(hash-table
+        ('id id)
+        ('type "programKill")
+        ('pid pid))
+       (program-kill pid)]
       ;; Project running input
       [(hash-table
         ('id id)
@@ -173,7 +179,7 @@
       ;; Project compilation functions.
       [(hash-table
         ('id id)
-        ('type "compileProgram")
+        ('type "compileProject")
         ('name name))
        (define-values (result messages)
          (compile-project name))

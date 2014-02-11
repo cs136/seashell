@@ -187,9 +187,9 @@ SeashellWebsocket.prototype.runProject = function(project) {
     name : project});
 };
 
-SeashellWebsocket.prototype.compileProgram = function(project) {
+SeashellWebsocket.prototype.compileProject = function(project) {
   return this.sendMessage({
-    type : "compileProgram",
+    type : "compileProject",
     name : project});
 };
 

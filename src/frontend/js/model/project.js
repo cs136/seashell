@@ -275,7 +275,7 @@ function projectDelete() {
  */
 function projectCompile() {
   projectSave();
-  var promise = socket.compileProgram(currentProject);
+  var promise = socket.compileProject(currentProject);
 
   /** Helper function for writing errors. */
   function writeErrors(errors) {

@@ -70,6 +70,7 @@
       [(? (lambda (evt) (eq? thread-receive-evt evt))) ;; Received a signal.
        (match (thread-receive)
          ['kill
+          (logf 'info "Program with PID ~a killed." pid (subprocess-status handle))
           (set-program-exit-status! program 254)
           (subprocess-kill handle #t)
           (close)])]
