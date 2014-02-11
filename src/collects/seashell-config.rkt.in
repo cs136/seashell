@@ -84,6 +84,9 @@
   ;; Location of Seashell collects.
   [seashell-collects             (build-path seashell-install-path "share" "collects")]
 
+  ;; Location of LLVM symbolizer.
+  [llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer")]
+
   ;; Timeout in milliseconds after which a per-user backend process, having
   ;; received no new messages, will terminate.
   [backend-client-idle-timeout   1800000]

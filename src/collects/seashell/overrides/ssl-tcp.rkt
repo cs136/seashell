@@ -19,13 +19,21 @@
 
 ;; This file was modified from ssl-unit-tcp.rkt in Racket 5.3.6
 (provide make-ssl-tcp@)
-(require racket/unit net/tcp-sig openssl/mzssl
+(require racket/unit net/tcp-sig seashell/overrides/openssl/mzssl
          (prefix-in tcp: racket/tcp))
+
+(define (error/network who fmt . args)
+  (raise (make-exn:fail:network
+          (format "~a: ~a" who (apply format fmt args))
+          (current-continuation-marks))))
 
 (define (make-ssl-tcp@
          server-cert-file server-key-file server-root-cert-files
          server-suggest-auth-file
-         client-cert-file client-key-file client-root-cert-files)
+         client-cert-file client-key-file client-root-cert-files
+         [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
+         [ecdhe-curve 'secp521r1]
+         [dhe-param-path ssl-dh-param-path])
   (unit
    (import)
    (export tcp^)
@@ -55,6 +63,15 @@
             (ssl-load-verify-root-certificates! ctx f))
           client-root-cert-files))
 
+   (when ciphers
+     (ssl-set-ciphers! ctx ciphers)
+     (ssl-set-ciphers! sctx ciphers))
+
+   (when ecdhe-curve
+     (ssl-server-context-enable-ecdhe! sctx ecdhe-curve))
+   (when dhe-param-path
+     (ssl-server-context-enable-dhe! sctx dhe-param-path))
+
    (define (tcp-abandon-port p)
      (if (input-port? p)
        (close-input-port p)
@@ -65,14 +82,16 @@
      (ports->ssl-ports ip op
                        #:mode 'accept
                        #:context sctx
-                       #:close-original? #t))
+                       #:close-original? #t
+                       #:error/ssl error/network))
 
    (define (tcp-accept/enable-break listener)
      (define-values (ip op) (tcp:tcp-accept/enable-break listener))
      (ports->ssl-ports ip op
                        #:mode 'accept
                        #:context sctx
-                       #:close-original? #t))
+                       #:close-original? #t
+                       #:error/ssl error/network))
 
    ;; accept-ready? doesn't really work for SSL:
    (define (tcp-accept-ready? p)
@@ -85,7 +104,13 @@
        [else
         (ssl-addresses port port-numbers?)]))
 
-   (define tcp-close ssl-close)
+   (define (tcp-close port)
+     (cond
+       [(tcp:tcp-listener? port)
+        (tcp:tcp-close port)]
+       [else
+        (ssl-close port)]))
+
    (define (tcp-connect hostname port-k)
      (ssl-connect hostname port-k ctx))
    (define (tcp-connect/enable-break hostname port-k)

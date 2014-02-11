@@ -30,6 +30,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
 # Do NOT install Racket files from a subdirectory.
 install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
 	FILES_MATCHING PATTERN "*.rkt")
+install(DIRECTORY ./ DESTINATION ${SEASHELL_COLLECTS}
+	FILES_MATCHING PATTERN "*.pem")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-config.rkt" DESTINATION
   ${SEASHELL_COLLECTS}/seashell)
 install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -S ${CMAKE_INSTALL_PREFIX}/${SEASHELL_COLLECTS} -l seashell/compile-collects)")

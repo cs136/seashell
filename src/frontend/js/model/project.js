@@ -1,5 +1,5 @@
 "use strict";
-/**
+/*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
@@ -21,6 +21,7 @@
 var currentFiles = null;
 var currentFile = null;
 var currentProject = null;
+var currentErrors = [];
 
 /**
  * Updates the list of projects.
@@ -75,6 +76,7 @@ function projectClose(save) {
     projectSave();
   currentFiles = null;
   currentProject = null;
+  currentErrors = [];
   /** Delete the list of files. */
   $(".file-entry").remove();
   /** OK, hide project - hide files */
@@ -136,7 +138,7 @@ function fileOpen(name) {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
     /** OK, set file contents. */
-    editor.swapDoc(currentFiles[name].document);
+    editorDocument(currentFiles[name].document);
     /** Add the active class to this link. */
     currentFiles[name].tag.addClass("active");
     /** Load the file. */
@@ -217,6 +219,8 @@ function projectOpen(name) {
     projectClose(true);
     currentFiles = {};
     currentProject = name;
+    currentErrors = [];
+
     $("#project-menu").text(name);
 
     for (var i = 0; i < files.length; i++) {
@@ -230,6 +234,8 @@ function projectOpen(name) {
     $(".hide-on-null-project").removeClass("hide");
     $(".hide-on-null-file").addClass("hide");
     $(".show-on-null-file").removeClass("hide");
+    /** Refresh the console. */
+    consoleRefresh();
   }).fail(function(){
     // TODO: error handling.
   });
@@ -253,7 +259,7 @@ function projectNew(name) {
 /**
  * Delete and closes the current project.
  */
-function projectDelete(name) {
+function projectDelete() {
   var promise = socket.deleteProject(currentProject);
 
   /** Deal with it. */
@@ -268,13 +274,110 @@ function projectDelete(name) {
  * Compiles the current project.
  */
 function projectCompile() {
-  var promise = socket.compileProgram(currentProject);
+  projectSave();
+  var promise = socket.compileProject(currentProject);
+
+  /** Helper function for writing errors. */
+  function writeErrors(errors) {
+    consoleWrite("*** clang produced the following messages:");
+    for (var i = 0; i < errors.length; i++) {
+      var error = errors[i][0];
+      var file = errors[i][1];
+      var line = errors[i][2];
+      var column = errors[i][3];
+      var message = errors[i][4];
+
+      consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
+          file, line, column,
+          error ? "error" : "warning",
+          message));
+    }
+  }
 
   /** Deal with it. */
   promise.done(function(messages) {
+    // Save the messages.
+    currentErrors = messages;
+    // Write it to the console
+    writeErrors(currentErrors);
+    // Lint
+    editorLint();
+  }).fail(function(result) {
+    if (Array.isArray(result)) {
+      // Log
+      consoleWrite(sprintf("*** Error compiling %s:", currentProject));
+      // Save the messages.
+      currentErrors = result;
+      // Write it to the console
+      writeErrors(currentErrors);
+      // Lint
+      editorLint();
+    } else {
+      // TODO: error handling.
+    }
+  });
+}
+
+/**
+ * Linter helper for projects.
+ *
+ * @return {Array of CodeMirror Linter messages} Result of linting the current file.
+ */
+function projectLinter() {
+  var found = [];
+
+  /** Look up the current errors for the current file. */
+  for (var i = 0; i < currentErrors.length; i++) {
+    var error = currentErrors[i][0];
+    var file = currentErrors[i][1];
+    var line = currentErrors[i][2];
+    var column = currentErrors[i][3];
+    var message = currentErrors[i][4];
+
+    /** Correct for off by one errors. */
+    if (line > 0) {
+      line --;
+    }
+
+    if (file == currentFile || file == "final-link-result" ) {
+      found.push({
+        from: CodeMirror.Pos(line, column),
+        to: CodeMirror.Pos(line),
+        message: message,
+        severity: error ? "error" : "warning"});
+    }  
+  }
+
+  return found;
+}
+
+/**
+ * Project runner.
+ */
+function projectRun() {
+  var promise = socket.runProject(currentProject);
+
+  promise.done(function(pid) {
+    consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
   }).fail(function() {
     // TODO: error handling.
   });
 }
 
-function projectRun(){}
+/**
+ * Project I/O handler
+ */
+function projectIOHandler(ignored, message) {
+  if (message.type == "stdout" || message.type == "stderr") {
+    consoleWriteRaw(message.message);
+  } else if (message.type == "done") {
+    consoleWrite(sprintf("--- PID %d exited with status %d.", message.pid, message.status));
+  }
+}
+
+/**
+ * Project Setup Function
+ **/
+function setupProjects() {
+  socket.requests[-3].callback = projectIOHandler;
+}

@@ -19,3 +19,6 @@
 [submodule "lib/sjcl"]
 	path = lib/sjcl
 	url = https://github.com/bitwiseshiftleft/sjcl.git
+[submodule "lib/sprintf.js"]
+	path = lib/sprintf.js
+	url = https://github.com/alexei/sprintf.js.git
