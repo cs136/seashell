@@ -217,7 +217,7 @@ TO DO:
 
 (define-crypto BIO_s_mem (_fun -> _BIO_METHOD*))
 (define-crypto BIO_new (_fun _BIO_METHOD* -> _BIO*/null))
-(define-crypto BIO_new_file (_fun _string _string -> _BIO*))
+(define-crypto BIO_new_mem_buf (_fun _pointer _int -> _BIO*))
 (define-crypto BIO_free (_fun _BIO* -> _void))
 
 (define-crypto BIO_read (_fun _BIO* _bytes _int -> _int))
@@ -555,7 +555,7 @@ TO DO:
 (define (ssl-server-context-enable-ecdhe! context [name 'secp521r1])
   (define (symbol->nid name)
     (case name
-      ['secp521r1 NID_secp521r1]
+      [(secp521r1) NID_secp521r1]
       [else NID_secp521r1]))
   (define ctx (extract-ctx 'ssl-server-context-enable-ecdhe! #t context))
   (define key (EC_KEY_new_by_curve_name (symbol->nid name)))
@@ -566,13 +566,14 @@ TO DO:
   (void))
 
 (define (ssl-server-context-enable-dhe! context [path ssl-dh-param-path])
-  (define io-bio (BIO_new_file ssl-dh-param-path "rb"))
-  (check-valid io-bio 'ssl-server-context-enable-dhe! "Diffie-Hellman parameters")
+  (define params (call-with-input-file path port->bytes))
+  (define params-bio (BIO_new_mem_buf params (bytes-length params)))
+  (check-valid params-bio 'ssl-server-context-enable-dhe! "Diffie-Hellman parameters")
   (with-failure
     (lambda ()
-      (BIO_free io-bio))
+      (BIO_free params-bio))
     (define ctx (extract-ctx 'ssl-server-context-enable-dhe! #t context))
-    (define dh (PEM_read_bio_DHparams io-bio #f #f #f))
+    (define dh (PEM_read_bio_DHparams params-bio #f #f #f))
     (check-valid dh 'ssl-server-context-enable-dhe "Diffie-Hellman parameters")
     (unless (= 1 (SSL_CTX_ctrl ctx SSL_CTRL_SET_TMP_DH 0 dh))
       (error 'ssl-server-context-enable-dhe "Could not enable DHE"))
