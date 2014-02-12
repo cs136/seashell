@@ -22,6 +22,7 @@ var currentFiles = null;
 var currentFile = null;
 var currentProject = null;
 var currentErrors = [];
+var currentPID = null;
 
 /**
  * Updates the list of projects.
@@ -45,21 +46,26 @@ function updateListOfProjects() {
 
 /**
  * Saves everything in the current project.
+ * @return {Promise} JQuery promise when all files are saved.
  */
 function projectSave() {
+  var promises = [];
   for (var file in currentFiles) {
     if ("document" in currentFiles[file]) {
-      saveFile(file);
+      promises.push(saveFile(file));
     }
   }
+
+  return $.when.apply(null, promises);
 }
 
 /**
  * Saves a file.
- * @param {String} file Name of file to save. 
+ * @param {String} file Name of file to save.
+ * @return {Promise} promise JQuery promise when file is saved.
  */
 function saveFile(file) {
-  socket.writeFile(currentProject, file, currentFiles[file].document.getValue()).fail(function() {
+  return socket.writeFile(currentProject, file, currentFiles[file].document.getValue()).fail(function() {
     // TODO: Error handling.
   });
 }
@@ -155,13 +161,14 @@ function fileOpen(name) {
      // TODO: Error handling.
     }); 
   } else {
-    rest( );
+    rest();
   }
 }
 
 /**
  * Creates a file.
  * @param {String} file Name of file to create.
+ * @return {Promise} JQuery promise when the file is created.
  */
 function fileNew(name) {
   /** (Lazily) create the file. */
@@ -172,9 +179,13 @@ function fileNew(name) {
   } else {
     // TODO: Custom file types.
     currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
-    saveFile(name);
-    fileNavigationAddEntry(name);
-    fileOpen(name);
+    // TODO: Proper new file call.
+    saveFile(name).done(function () {;
+      fileNavigationAddEntry(name);
+      fileOpen(name)})
+    .fail(function () {
+      // TODO: Error handling.
+    });
   }
 }
 
@@ -268,54 +279,65 @@ function projectDelete() {
   }).fail(function() {
     // TODO: error handling.
   });
+
+  return promise;
 }
 
 /**
  * Compiles the current project.
  */
 function projectCompile() {
-  projectSave();
-  var promise = socket.compileProject(currentProject);
+  var save_promise = projectSave();
+  var promise = $.Deferred();
 
-  /** Helper function for writing errors. */
-  function writeErrors(errors) {
-    consoleWrite("*** clang produced the following messages:");
-    for (var i = 0; i < errors.length; i++) {
-      var error = errors[i][0];
-      var file = errors[i][1];
-      var line = errors[i][2];
-      var column = errors[i][3];
-      var message = errors[i][4];
+  save_promise.done(function () {
+    socket.compileProject(currentProject, promise);
 
-      consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
-          file, line, column,
-          error ? "error" : "warning",
-          message));
+    /** Helper function for writing errors. */
+    function writeErrors(errors) {
+      consoleWrite("*** clang produced the following messages:");
+      for (var i = 0; i < errors.length; i++) {
+        var error = errors[i][0];
+        var file = errors[i][1];
+        var line = errors[i][2];
+        var column = errors[i][3];
+        var message = errors[i][4];
+
+        consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
+            file, line, column,
+            error ? "error" : "warning",
+            message));
+      }
     }
-  }
 
-  /** Deal with it. */
-  promise.done(function(messages) {
-    // Save the messages.
-    currentErrors = messages;
-    // Write it to the console
-    writeErrors(currentErrors);
-    // Lint
-    editorLint();
-  }).fail(function(result) {
-    if (Array.isArray(result)) {
-      // Log
-      consoleWrite(sprintf("*** Error compiling %s:", currentProject));
+    /** Deal with it. */
+    promise.done(function(messages) {
       // Save the messages.
-      currentErrors = result;
+      currentErrors = messages;
       // Write it to the console
       writeErrors(currentErrors);
       // Lint
       editorLint();
-    } else {
-      // TODO: error handling.
-    }
+    }).fail(function(result) {
+      if (Array.isArray(result)) {
+        // Log
+        consoleWrite(sprintf("*** Error compiling %s:", currentProject));
+        // Save the messages.
+        currentErrors = result;
+        // Write it to the console
+        writeErrors(currentErrors);
+        // Lint
+        editorLint();
+      } else {
+        // TODO: error handling.
+      }
+    });
+  }).fail(function () {
+    // TODO: Better error handling.
+    promise.reject(null);
   });
+
+  return promise;
 }
 
 /**
@@ -355,12 +377,18 @@ function projectLinter() {
  * Project runner.
  */
 function projectRun() {
-  var promise = socket.runProject(currentProject);
+  var compile_promise = projectCompile();
+ 
+  /** We really ought not to run a project without compiling it. */
+  compile_promise.done(function () {
+    var promise = socket.runProject(currentProject);
 
-  promise.done(function(pid) {
-    consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
-  }).fail(function() {
-    // TODO: error handling.
+    promise.done(function(pid) {
+      consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
+      currentPID = pid;
+    }).fail(function() {
+      // TODO: error handling.
+    });
   });
 }
 
