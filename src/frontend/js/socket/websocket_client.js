@@ -51,6 +51,11 @@ function SeashellWebsocket(uri, key) {
     callback : null,
     deferred : null
   };
+  // Program I/O [-3]
+  self.requests[-3] = { 
+    callback : null,
+    deferred : null
+  };
 
   self.websocket = new WebSocket(uri);
 
@@ -74,14 +79,14 @@ function SeashellWebsocket(uri, key) {
             request.deferred.resolve(response.result, self);
           }
           if (request.callback) {
-            response.callback(true, response.result, self);
+            request.callback(true, response.result, self);
           }
         } else {
           if (request.deferred) {
             request.deferred.reject(response.result, self);
           }
           if (request.callback) {
-            response.callback(false, response.result, self);
+            request.callback(false, response.result, self);
           }
         }
         if (response.id >= 0)
@@ -140,9 +145,11 @@ SeashellWebsocket.prototype._authenticate = function(ignored, self) {
 /** Sends a message along the connection.  Internal use only.
  *
  * @param {Object} message - JSON message to send (as JavaScript object).
+ * @param {Deferred|null} - Deferred - deferred chain to hook (optional).
+ *                          If non existent, new deferred is created.
  * @returns {Promise} - jQuery promise.
  */
-SeashellWebsocket.prototype._sendMessage = function(message) {
+SeashellWebsocket.prototype._sendMessage = function(message, deferred) {
   var self = this;
   // Reserve a slot for the message.
   var request_id = self.lastRequest++;
@@ -151,7 +158,7 @@ SeashellWebsocket.prototype._sendMessage = function(message) {
   // Stringify, write out as Array of bytes.
   var blob = new Blob([JSON.stringify(message)]);
   // Grab a deferred for the message:
-  self.requests[request_id].deferred = $.Deferred();
+  self.requests[request_id].deferred = deferred || $.Deferred();
   try {
     // Send the message:
     self.websocket.send(blob);
@@ -163,72 +170,83 @@ SeashellWebsocket.prototype._sendMessage = function(message) {
 
 /** Sends a message along the connection, ensuring that
  *  the server and client are properly authenticated. */
-SeashellWebsocket.prototype.sendMessage = function(message) {
+SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   var self = this;
+  deferred = deferred || $.Deferred();
+
   if (self.authenticated) {
-    return self._sendMessage(message);
+    return self._sendMessage(message, deferred);
   } else {
-    return $.Deferred().reject(null).promise();
+    return deferred.reject(null).promise();
   }
 };
 
 /** The following functions are wrappers around sendMessage.
- *  Consult server.rkt for a full list of functions.
+ *  Consult dispatch.rkt for a full list of functions.
  *  These functions take in arguments as specified in server.rkt
  *  and return a JQuery Deferred object. */
-SeashellWebsocket.prototype.runProgram = function(project) {
+SeashellWebsocket.prototype.runProject = function(project, deferred) {
   return this.sendMessage({
-    type : "runProgram",
-    name : project});
+    type : "runProject",
+    name : project},
+    deferred);
 };
 
-SeashellWebsocket.prototype.compileProgram = function(project) {
+SeashellWebsocket.prototype.compileProject = function(project, deferred) {
   return this.sendMessage({
-    type : "compileProgram",
-    name : project});
+    type : "compileProject",
+    name : project},
+    deferred);
 };
 
-SeashellWebsocket.prototype.getProjects = function() {
+SeashellWebsocket.prototype.getProjects = function(deferred) {
   return this.sendMessage({
-    type : "getProjects"});
+    type : "getProjects"},
+    deferred);
 };
 
-SeashellWebsocket.prototype.listProject = function(name) {
+SeashellWebsocket.prototype.listProject = function(name, deferred) {
   return this.sendMessage({
     type : "listProject",
-    project : name});
+    project : name},
+    deferred);
 };
 
-SeashellWebsocket.prototype.newProject = function(name) {
+SeashellWebsocket.prototype.newProject = function(name, deferred) {
   return this.sendMessage({
     type : "newProject",
-    project : name});
+    project : name},
+    deferred);
 };
 
-SeashellWebsocket.prototype.deleteProject = function(name) {
+SeashellWebsocket.prototype.deleteProject = function(name, deferred) {
   return this.sendMessage({
     type : "deleteProject",
-    project : name});
+    project : name},
+    deferred);
 };
 
-SeashellWebsocket.prototype.readFile = function(name, file_name) {
+SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
   return this.sendMessage({
     type : "readFile",
     project : name,
-    file : file_name});
+    file : file_name},
+    deferred);
 };
 
-SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content) {
+SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, deferred) {
   return this.sendMessage({
     type : "writeFile",
     project : name,
     file : file_name,
-    contents : file_content});
+    contents : file_content},
+    deferred);
 };
 
-SeashellWebsocket.prototype.deleteFile = function(name, file_name) {
+SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
   return this.sendMessage({
     type : "deleteFile",
     project : name,
-    file : file_name});
+    file : file_name},
+    deferred);
 };

@@ -43,7 +43,7 @@ body {
 
 /** Editor and the console.  Make sure width + height <= 100%. */
 .editor-console {
-  padding: 2px;
+  padding-bottom: 50px;
   height: 100%;
 }
 

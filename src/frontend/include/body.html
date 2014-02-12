@@ -1,6 +1,9 @@
 <!-- Here begins the body. -->
 <!-- This is shown when there is an active project -->
 <div class="container content-fill hide-on-null-project">
+  <noscript>
+    This page requires JavaScript to operate properly.
+  </noscript>
   <div class="row content-fill">
     <div class="col-md-2">
       <div class="affix-top" role="navigation">
@@ -14,7 +17,7 @@
         </ul>
       </div>
     </div>
-    <div class="col-md-10 content-fill hide-on-null-file" role="main">
+    <div class="col-md-10 content-fill" role="main">
       <!--The toolbar goes here. -->
       <div class="btn-toolbar toolbar">
         <div class="btn-group">
@@ -29,11 +32,11 @@
           <button type="button" class="btn btn-default" id="toolbar-compile">
             <span class="glyphicon glyphicon-cog"></span>
           </button>
-          <button type="button" class="btn btn-default" id="toolbar-run-project">
+          <button type="button" class="btn btn-default" id="toolbar-run">
             <span class="glyphicon glyphicon-play"></span>
           </button>
         </div>
-        <div class="btn-group">
+        <div class="btn-group hide-on-null-file">
           <button type="button" class="btn btn-default" id="toolbar-undo">
             Undo
           </button>
@@ -43,11 +46,12 @@
         </div>
       </div>
       <div class="editor-console">
+        <p class="show-on-null-file no-file">
+        Open or <a href="#new-file-dialog" class="btn btn-primary btn-lg" data-toggle="modal">Create</a> a file
+        to get started!
+        </p>
         <!--The editor goes here.-->
-        <div class="editor" id="editor">
-          <noscript>
-            This page requires JavaScript to operate properly.
-          </noscript>
+        <div class="editor hide-on-null-file" id="editor">
         </div>
         <!--Messages and program output will appear here.-->
         <div id="console" class="console"></div>
@@ -59,12 +63,6 @@
           </span>
         </div>
       </div>
-    </div>
-    <div class="col-md-10 content-fill show-on-null-file no-file" role="main">
-      <p>
-      Open or <a href="#new-file-dialog" class="btn btn-primary btn-lg" data-toggle="modal">Create</a> a file
-      to get started!
-      </p>
     </div>
   </div>
 </div>

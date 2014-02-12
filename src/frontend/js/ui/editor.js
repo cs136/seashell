@@ -34,10 +34,6 @@ function setupEditor() {
     lineWrapping: true,
     matchBrackets: true,
     lint: true});
-//    lintWith: {
-//        "getAnnotations": CodeMirror.remoteValidator,
-//        "async": true,
-//        "check_cb": checkSyntax }});
   editor.setOption("extraKeys",
       {"Ctrl-N": newFileDialog,
        "Ctrl-I": editorIndent,
@@ -70,8 +66,12 @@ function editorLint() {
   CodeMirror.signal(editor, "change", editor);
 }
 
-/** Editor set document. */
+/** Editor set document.
+ *  Sets the current document, and refreshes the
+ *  CodeMirror instance to make sure nothing funny has happened.
+ **/
 function editorDocument(document) {
   editor.swapDoc(document);
+  editor.refresh();
   editorLint();
 }

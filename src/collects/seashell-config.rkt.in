@@ -98,6 +98,9 @@
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
 
+      ;; Location of LLVM symbolizer.
+      (cons 'llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer"))
+
       ;; Default binary to invoke when linking.
       (cons 'system-linker                 "/usr/bin/cc")
 

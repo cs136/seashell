@@ -18,9 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/server
          seashell/backend/project
-         seashell/backend/files
-         seashell/backend/execute)
+         seashell/backend/files)
 (provide (all-from-out seashell/backend/server
                        seashell/backend/project
-                       seashell/backend/files
-                       seashell/backend/execute))
+                       seashell/backend/files))
