@@ -1,0 +1,46 @@
+Licenses and Authours
+---------------------
+Seashell is Copyright (C) 2012-2014 The Seashell Maintainers, which is short form
+for the following list of current and past developers and contributors:
+
+  Current Developers    Email                     Role                  Tenure
+  Kaleb Paul Alway      <kpalway@uwaterloo.ca>    Developer             Winter 2014 - current.
+  Bryan Coutts          <b2coutts@uwaterloo.ca>   Developer             Winter 2014 - current.
+  Edward Lee            <e45lee@uwaterloo.ca>     Lead Developer        Spring 2013 - current.  Semi-active Fall 2013.
+  Jacob Pollack         <jpollack@uwaterloo.ca>   Developer             Winter 2014 - current.
+
+  Developers, in supporting role:
+  Marc Burns            <m4burns@uwaterloo.ca>    Backend Developer     Fall 2012 - current.  Active, Joint Lead from Fall 2012 to Winter 2013. 
+
+  Past Developers:
+  Marianna Rapoport     <mrapoport@uwaterloo.ca>  Frontend Developer    Spring 2013.
+  Jennifer Yeelam Wong  <jy2wong@uwaterloo.ca>    Joint Lead Developer  Fall 2012 - Winter 2013.  Contributed in Spring 2013, Fall 2013.
+
+Consult the version control history and blame for accurate copyright details
+on each file.
+
+Seashell is licensed under the GNU General Public License, version 3 or later.  Consult
+LICENSE for further details.
+
+---------------------
+
+Seashell includes the following libraries, which are licensed under the following licenses.  Full
+licensing information will be located in that library's subdirectory / submodule.
+
+  Project               URL                               License
+  LLVM                  llvm.org                          University of Illinois/NCSA Open Source License
+  Clang                 clang.llvm.org                    University of Illinois/NCSA Open Source License
+  compiler-rt           compiler-rt.llvm.org              University of Illinois/NCSA Open Source License
+  libgit2 (unmodified)  libgit2.github.com                GNU General Public License version 2 only + linking exception
+  libtomcrypt           libtom.org                        Public Domain
+  SJCL                  bitwiseshiftleft.github.io/sjcl   2-clause BSD or GNU General Public License version 2 or later
+  sprintf.js            github.com/alexei/sprintf.js      3-clause BSD
+  Racket*               racket-lang.org                   GNU Lesser General Public License, version 3 (or later?)
+
+* Modified collections found in src/collects/seashell/overrides/openssl.
+
+Seashell links against the following libraries, which are not included by Seashell, but provided
+by your distribution:
+
+  Project               URL                               License
+  libssh2               www.libssh2.org                   3-clause BSD

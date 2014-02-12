@@ -1,0 +1,24 @@
+The following people have contributed to Seashell since its inception in the following roles:
+
+  Current Developers    Email                     Role                  Tenure
+  Kaleb Paul Alway      <kpalway@uwaterloo.ca>    Developer             Winter 2014 - current.
+  Bryan Coutts          <b2coutts@uwaterloo.ca>   Developer             Winter 2014 - current.
+  Edward Lee            <e45lee@uwaterloo.ca>     Lead Developer        Spring 2013 - current.  Semi-active Fall 2013.
+  Jacob Pollack         <jpollack@uwaterloo.ca>   Developer             Winter 2014 - current.
+
+  Inactive Developers, in supporting role:
+  Marc Burns            <m4burns@uwaterloo.ca>    Backend Developer     Fall 2012 - current.  Active, Joint Lead from Fall 2012 to Winter 2013. 
+
+  Past Developers:
+  Marianna Rapoport     <mrapoport@uwaterloo.ca>  Frontend Developer    Spring 2013.
+  Jennifer Yeelam Wong  <jy2wong@uwaterloo.ca>    Joint Lead Developer  Fall 2012 - Winter 2013.  Contributed in Spring 2013, Fall 2013.
+
+In addition, the following people have provided support to Seashell, without whom this project would not
+have existed, nor would the developers have been fed.
+
+  Dave Tompkins         <dtompkins@uwaterloo.ca>  Lecturer, School of Computer Science, University of Waterloo
+ `Olga Zorin            <ozorin@uwaterloo.ca>     Instructional Support Coordinator, University of Waterloo
+
+Seashell would not be possible without the co-operation of the Computer Science Computing Facility at
+the School of Computer Science, University of Waterloo, who graciously provided 4 servers on which
+Seashell was developed on.
