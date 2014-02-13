@@ -272,7 +272,7 @@
             (directory-list (check-and-build-path (read-config 'seashell) name) #:build? #t)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
-  (define-values (result messages) (seashell-compile-files '("-Wall" "-g") '("-lm") c-files))
+  (define-values (result messages) (seashell-compile-files '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files))
   (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path

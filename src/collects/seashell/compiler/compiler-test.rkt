@@ -3,7 +3,7 @@
 
 (define-values (bin diag)
                (seashell-compile-files/place
-                                       '("-Wall" "-g")
+                                       '("-Wall" "-gdwarf-4")
                                        '()
                                        `(,(string->path "foo.c") ,(string->path "bar.c"))))
 
