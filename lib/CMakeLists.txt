@@ -35,16 +35,14 @@ execute_process(COMMAND ln -sf "../../clang" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/t
 execute_process(COMMAND ln -sf "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/llvm/projects")
 
 # Build our dependencies.
-# Global overrides
-set(CMAKE_BUILD_TYPE "MinSizeRel")
 
-# llvm/clang/compiler-rt (no overrides).
-add_subdirectory(llvm)
+# ZLIB library (libssh2)
+find_package(ZLIB)
 
-# libgit2 overrides.
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
-add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
+# OpenSSL (libssh2)
+find_package(OpenSSL)
 
+# External projects (not CMake based)
 # libtomcrypt - note that we need to call with -fPIC
 ExternalProject_Add(
   libtomcrypt
@@ -63,13 +61,32 @@ ExternalProject_Add(
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
 
-# OpenSSL libraries for libgit2 (On OS/X, Linux).
-if (MINGW OR NOT WIN32)
-  find_package(OpenSSL)
-endif ()
+# libssh2 - libssh2 SSH library
+ExternalProject_Add(
+  libssh2
+  URL ${CMAKE_CURRENT_SOURCE_DIR}/libssh2
+  PATCH_COMMAND <SOURCE_DIR>/buildconf
+  CONFIGURE_COMMAND <SOURCE_DIR>/configure --with-openssl --enable-static --disable-shared
+  BUILD_COMMAND make -j
+  INSTALL_COMMAND "")
+# (Libraries) - the set of libraries needs to stay in sync with libssh2.
+set(LIBSSH2_LIBRARIES ${CMAKE_DL_LIBS} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} ssh2 PARENT_SCOPE)
+set(LIBSSH2_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/ PARENT_SCOPE)
+set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/ PARENT_SCOPE)
+set(LIBSSH2_LIBRARY true)
+set(LIBSSH2_FOUND true)
 
-# Optional zlib dependency for libgit2.
-find_package(zlib QUIET)
+# External projects (CMake based)
+# Global overrides 
+set(CMAKE_BUILD_TYPE "MinSizeRel")
+
+# llvm/clang/compiler-rt (no overrides).
+add_subdirectory(llvm)
+
+# libgit2 overrides.
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
+add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
+add_dependencies(git2 libssh2)
 
 # Set include paths.
 set(LLVM_SOURCE_INCLUDE_DIRS
@@ -89,9 +106,10 @@ set(LIBGIT2_INCLUDE_DIRS
     PARENT_SCOPE)
 set(LIBGIT2_LINK_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libgit2
+    ${LIBSSH2_LINK_DIRS}
     PARENT_SCOPE)
 set(LIBGIT2_LIBRARIES
-    git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES}
+  git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBSSH2_LIBRARIES}
     PARENT_SCOPE)
 set(LTC_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers

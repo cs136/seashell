@@ -22,3 +22,6 @@
 [submodule "lib/sprintf.js"]
 	path = lib/sprintf.js
 	url = https://github.com/alexei/sprintf.js.git
+[submodule "lib/libssh2"]
+	path = lib/libssh2
+	url = git://git.libssh2.org/libssh2.git

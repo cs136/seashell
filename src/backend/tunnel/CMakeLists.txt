@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+link_directories(${LIBSSH2_LINK_DIRS})
+include_directories(${LIBSSH2_INCLUDE_DIR})
+
 # Main library: seashell-tunnel
 add_executable(seashell-tunnel tunnel.c)
-
-# Dependency: libssh2
-find_package(LIBSSH2 REQUIRED)
-include_directories(${LIBSSH2_INCLUDE_DIR})
+add_dependencies(seashell-tunnel libssh2)
 target_link_libraries(seashell-tunnel ${LIBSSH2_LIBRARIES})
 
 install(TARGETS seashell-tunnel RUNTIME DESTINATION bin)
