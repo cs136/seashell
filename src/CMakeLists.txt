@@ -1,5 +1,5 @@
 # Seashell
-# Copyright (C) 2012-2013 The Seashell Maintainers
+# Copyright (C) 2012-2014 The Seashell Maintainers.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
