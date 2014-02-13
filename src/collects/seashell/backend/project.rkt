@@ -193,12 +193,13 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
+;;  message - Message to tag the commit with.
 ;;
 ;; Raises:
 ;;  exn:project if project does not exist.
 ;;  libgit2 errors if git errors happen.
-(define/contract (save-project name)
-  (-> project-name? void?)
+(define/contract (save-project name message)
+  (-> project-name? string? void?)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -234,7 +235,7 @@
   (for-each (curry seashell-git-commit-delete-file commit)
             files-delete)
 
-  (seashell-git-commit commit)
+  (seashell-git-commit commit message)
   (void))
 
 ;; (is-project? name)

@@ -257,7 +257,7 @@ extern "C" void seashell_git_commit_delete (struct seashell_git_update* update, 
  * Returns:
  *  0 on success, nonzero otherwise.  Consult seashell_git_error.
  */
-extern "C" int seashell_git_commit (struct seashell_git_update* update) {
+extern "C" int seashell_git_commit (struct seashell_git_update* update, const char* message) {
   int ret = 0;
   git_repository* repo = NULL;
   git_index* index = NULL;
@@ -339,7 +339,7 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update) {
       authour,
       committer,
       NULL,
-      "Automatically generated Seashell commit.",
+      message,
       tree,
       1,
       parent);

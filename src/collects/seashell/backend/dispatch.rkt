@@ -219,8 +219,9 @@
       [(hash-table
         ('id id)
         ('type  "saveProject")
-        ('project project))
-       (save-project project)
+        ('project project)
+        ('message message))
+       (save-project project message)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

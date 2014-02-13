@@ -62,7 +62,7 @@
 (define-git seashell_git_commit_init (_fun _path -> _seashell_git_update)
             #:wrap (allocator seashell_git_commit_free))
 (define-git seashell_git_commit_add (_fun _seashell_git_update _path -> _void))
-(define-git seashell_git_commit (_fun _seashell_git_update -> (r : _int)
+(define-git seashell_git_commit (_fun _seashell_git_update _string -> (r : _int)
                                      -> (check r 'seashell_git_commit)))
 (define-git seashell_git_commit_delete (_fun _seashell_git_update _path -> _void))
 
@@ -184,13 +184,14 @@
   (contract:-> seashell-git-update? path? any/c)
   (guard seashell_git_commit_delete (seashell-git-update-update update) file))
 
-;; (seashell-git-commit update)
+;; (seashell-git-commit update message)
 ;; Commits an update.
 ;;
 ;; Arguments:
 ;;  update - Update to commit.
-(define/contract (seashell-git-commit update)
-  (contract:-> seashell-git-update? any/c)
+;;  message - Message to commit.
+(define/contract (seashell-git-commit update message)
+  (contract:-> seashell-git-update? string? any/c)
   (guard seashell_git_commit (seashell-git-update-update update)))
 
 ;; Flag test functions.  Make sure these
