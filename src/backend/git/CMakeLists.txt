@@ -17,8 +17,8 @@
 project(seashell-git)
 
 # Now set the header and library paths:
-include_directories( ${LIBGIT2_INCLUDE_DIRS})
-link_directories( ${LIBGIT2_LINK_DIRS})
+include_directories(${LIBGIT2_INCLUDE_DIRS})
+link_directories(${LIBGIT2_LINK_DIRS})
 
 # C++ 11 mode.
 set(CMAKE_CXX_FLAGS "-std=c++0x" ${CMAKE_CXX_FLAGS})

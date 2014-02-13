@@ -69,26 +69,38 @@ ExternalProject_Add(
   CONFIGURE_COMMAND <SOURCE_DIR>/configure --with-openssl --enable-static --disable-shared
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
-# (Libraries) - the set of libraries needs to stay in sync with libssh2.
-set(LIBSSH2_LIBRARIES ${CMAKE_DL_LIBS} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} ssh2 PARENT_SCOPE)
-set(LIBSSH2_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/ PARENT_SCOPE)
-set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/ PARENT_SCOPE)
-set(LIBSSH2_LIBRARY true)
-set(LIBSSH2_FOUND true)
 
 # External projects (CMake based)
 # Global overrides 
-set(CMAKE_BUILD_TYPE "MinSizeRel")
+set(CMAKE_BUILD_TYPE "Release")
 
 # llvm/clang/compiler-rt (no overrides).
 add_subdirectory(llvm)
 
 # libgit2 overrides.
+# (Libraries) - the set of libraries needs to stay in sync with libssh2.  Theser are overrides
+# for libgit2.
+set(LIBSSH2_LIBRARIES ${CMAKE_DL_LIBS} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} ssh2)
+set(LIBSSH2_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/)
+set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
+set(LIBSSH2_LIBRARY true)
+set(LIBSSH2_FOUND true)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 add_dependencies(git2 libssh2)
 
 # Set include paths.
+set(LIBSSH2_LIBRARIES 
+    ${CMAKE_DL_LIBS}
+    ${OPENSSL_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ssh2
+    PARENT_SCOPE)
+set(LIBSSH2_LINK_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/
+    PARENT_SCOPE)
+set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/
+    PARENT_SCOPE)
 set(LLVM_SOURCE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include
     PARENT_SCOPE)
@@ -109,7 +121,7 @@ set(LIBGIT2_LINK_DIRS
     ${LIBSSH2_LINK_DIRS}
     PARENT_SCOPE)
 set(LIBGIT2_LIBRARIES
-  git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBSSH2_LIBRARIES}
+    git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBSSH2_LIBRARIES}
     PARENT_SCOPE)
 set(LTC_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers
