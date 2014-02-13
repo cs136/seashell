@@ -349,3 +349,29 @@
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<!-- Commit Project dialog -->
+<div class="modal fade" id="commit-project-dialog" tabindex="-1" role="dialog" aria-labelledby="open-project-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="commit-project-label">
+          <span class="glyphicon glyphicon-export"></span> 
+          Commit Project</h4>
+      </div>
+      <div class="modal-body">
+        <form id="commit-project-form" role="form">
+          <div class="form-group">
+            <label for="commit_descr">Commit Description:</label>
+            <textarea id="commit_descr" cols="40"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="button-commit-project" class="btn btn-primary">Commit</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

@@ -4,7 +4,6 @@ html {
 }
 body {
   position: relative; /* For scrollyspy */
-  padding-bottom: 60px; /** Account for fixed navbar. */
   padding-top: 50px; /* Account for fixed navbar */
   height: 100%;
 }
@@ -22,6 +21,11 @@ body {
 .content-fill {
   height: 100%;
   min-height: 100%;
+}
+.content {
+  min-height: 100%;
+  height: 100%;
+  padding-bottom: 50px; /* Account for fixed navbar */
 }
 
 /** No project display. */
@@ -43,7 +47,6 @@ body {
 
 /** Editor and the console.  Make sure width + height <= 100%. */
 .editor-console {
-  padding-bottom: 50px;
   height: 100%;
 }
 
@@ -117,16 +120,6 @@ body {
 }
 .callout-info h4 {
   color: #3A87AD;
-}
-
-/** Footer */
-.footer {
-  height: 60px;
-  background-color: rgb(245, 245, 245);
-}
-
-.footer .footer-text {
-  margin: 20px 0;
 }
 
 /** Linter */
