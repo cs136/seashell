@@ -379,10 +379,12 @@ function projectLinter() {
 function projectRun() {
   var compile_promise = projectCompile();
   var promise = $.Deferred();
- 
+
+  // TODO: If current PID is set, kill it.
+
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(function () {
-    promise = socket.runProject(currentProject, deferred);
+    socket.runProject(currentProject, promise);
 
     promise.done(function(pid) {
       consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
@@ -406,6 +408,9 @@ function projectIOHandler(ignored, message) {
     consoleWriteRaw(message.message);
   } else if (message.type == "done") {
     consoleWrite(sprintf("--- PID %d exited with status %d.", message.pid, message.status));
+    if (currentPID == message.pid) {
+      currentPID = null;
+    }
   }
 }
 
@@ -435,4 +440,17 @@ function projectCommit(description) {
  **/
 function setupProjects() {
   socket.requests[-3].callback = projectIOHandler;
+}
+
+/**
+ * Project input handler
+ * @param {String} input Input to send to project.
+ */
+function projectInput(input) {
+  // TODO: Error handling and PID
+  var promise = socket.programInput(currentPID, input);
+  promise.fail(function () {
+    // TODO: Error handling
+  });
+  return promise;
 }

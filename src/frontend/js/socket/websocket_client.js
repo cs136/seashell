@@ -258,3 +258,11 @@ SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
     file : file_name},
     deferred);
 };
+
+SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
+  return this.sendMessage({
+    type : "programInput",
+    pid : pid,
+    contents : contents,
+    deferred : deferred});
+}

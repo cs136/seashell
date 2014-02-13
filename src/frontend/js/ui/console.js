@@ -27,6 +27,8 @@ function setupConsole() {
        readOnly: true,
        lineWrapping: true,
        theme: 'blackboard'});
+  // Hook the input button
+  $("#submit-console-input").on("click", consoleInput);
 }
 
 /** Refreshes the console.
@@ -57,4 +59,11 @@ function consoleWriteRaw(message) {
   seashell_console.setValue(value);
   seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
                                    ch: 0});
+}
+
+/** Handles input on the console */
+function consoleInput() {
+  var input = $("#input-line").val() + "\n";
+  $("#input-line").val("");
+  projectInput(input);
 }
