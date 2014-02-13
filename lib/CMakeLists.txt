@@ -67,6 +67,7 @@ ExternalProject_Add(
   URL ${CMAKE_CURRENT_SOURCE_DIR}/libssh2
   PATCH_COMMAND <SOURCE_DIR>/buildconf
   CONFIGURE_COMMAND <SOURCE_DIR>/configure --with-openssl --enable-static --disable-shared
+                    CFLAGS=-fPIC
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
 
