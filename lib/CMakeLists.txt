@@ -91,17 +91,17 @@ add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 add_dependencies(git2 libssh2)
 
 # Set include paths.
-set(LIBSSH2_LIBRARIES 
+set(LIBSSH2_LIBRARIES
+    ssh2 
     ${CMAKE_DL_LIBS}
     ${OPENSSL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    ssh2
     PARENT_SCOPE)
-set(LIBSSH2_LIBRARIES 
+set(LIBSSH2_LIBRARIES
+    ssh2 
     ${CMAKE_DL_LIBS}
     ${OPENSSL_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    ssh2)
+    ${ZLIB_LIBRARIES})
 set(LIBSSH2_LINK_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/
     PARENT_SCOPE)
