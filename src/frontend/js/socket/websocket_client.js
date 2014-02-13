@@ -202,7 +202,7 @@ SeashellWebsocket.prototype.compileProject = function(project, deferred) {
 SeashellWebsocket.prototype.saveProject = function(project, message, deferred) {
   return this.sendMessage({
     type : "saveProject",
-    name : project,
+    project: project,
     message: message},
     deferred);
 };

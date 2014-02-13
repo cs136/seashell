@@ -378,10 +378,11 @@ function projectLinter() {
  */
 function projectRun() {
   var compile_promise = projectCompile();
+  var promise = $.Deferred();
  
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(function () {
-    var promise = socket.runProject(currentProject);
+    promise = socket.runProject(currentProject, deferred);
 
     promise.done(function(pid) {
       consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
@@ -389,7 +390,12 @@ function projectRun() {
     }).fail(function() {
       // TODO: error handling.
     });
+  }).fail(function () {
+    // TODO: Better error handling.
+    promise.reject(null);
   });
+
+  return promise;
 }
 
 /**
@@ -401,6 +407,27 @@ function projectIOHandler(ignored, message) {
   } else if (message.type == "done") {
     consoleWrite(sprintf("--- PID %d exited with status %d.", message.pid, message.status));
   }
+}
+
+/**
+ * Project commit.
+ * @param {String} description - Description to tag commit with.
+ */
+function projectCommit(description) {
+  var save_promise = projectSave();
+  var promise = $.Deferred();
+
+  save_promise.done(function() {
+    promise = socket.saveProject(currentProject, description);
+    promise.fail(function() {
+      // TODO: error handling
+    });
+  }).fail(function() {
+    promise.reject(null);
+    // TODO: better error handling.
+  });
+
+  return promise;
 }
 
 /**

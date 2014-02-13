@@ -70,6 +70,8 @@ extern "C" struct seashell_git_status* seashell_git_get_status(const char* repos
   struct seashell_git_status* status = NULL;
   git_repository* repo = NULL;
   git_status_options opt = GIT_STATUS_OPTIONS_INIT;
+  opt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+  opt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED;
   git_status_list* list = NULL;
   int result = 0;
 
@@ -92,6 +94,7 @@ cleanup:
   git_status_list_free(list);
   git_repository_free(repo);
   delete status;
+  status = NULL;
 end:
   return status;
 }
@@ -296,12 +299,13 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update, const ch
 
   /** Query for the last commit. */
   ret = git_reference_name_to_id(&oid, repo, "HEAD");
-  if (ret)
-    goto end;
+  if (ret) 
+    goto no_parent;
   ret = git_commit_lookup(&parent, repo, &oid);
   if (ret)
     goto end;
 
+no_parent:
   /** Create new commit. */
   ret = git_repository_index(&index, repo);
   if (ret)
@@ -332,17 +336,30 @@ extern "C" int seashell_git_commit (struct seashell_git_update* update, const ch
     goto end;
 
   /** Write the commit. */
-  ret = git_commit_create_v(
-      &oid,
-      repo,
-      "HEAD",
-      authour,
-      committer,
-      NULL,
-      message,
-      tree,
-      1,
-      parent);
+  if (parent) {
+    ret = git_commit_create_v(
+        &oid,
+        repo,
+        "HEAD",
+        authour,
+        committer,
+        NULL,
+        message,
+        tree,
+        1,
+        parent);
+  } else {
+    ret = git_commit_create_v(
+        &oid,
+        repo,
+        "HEAD",
+        authour,
+        committer,
+        NULL,
+        message,
+        tree,
+        0);
+  }
 
   if (ret)
     goto end;

@@ -100,6 +100,16 @@ function deleteFileDialog(file) {
 }
 
 /**
+ * handleCommitProject
+ * This function will handle committing projects */
+function handleCommitProject( ) {
+  var description = $("#commit_descr").text();
+  $("#commit_descr").text("");
+  projectCommit(description);
+  $("#commit-project-dialog").modal("hide");
+}
+
+/**
  * setupDialogs()
  * Sets up and attaches actions to all the dialogs. */
 function setupDialogs() {

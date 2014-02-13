@@ -35,6 +35,7 @@
          compile-project)
 
 (require seashell/git
+         seashell/log
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
@@ -203,6 +204,7 @@
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
+  (define repo (check-and-build-path (read-config 'seashell) name))
   ;; Here's what we do -
   ;;  1. Grab the status of the repository.
   ;;  2. Add 'adds' to each of the files that
@@ -210,7 +212,7 @@
   ;;  3. Add 'deletes' to each of the files that
   ;;     have been deleted from the working tree.
   ;;  4. Run the commit.
-  (define status (seashell-git-get-status (check-and-build-path (read-config 'seashell) name)))
+  (define status (seashell-git-get-status repo))
   (define entries (seashell-git-status-entrycount status))
 
   (define files-add
@@ -219,7 +221,7 @@
            (lambda (index)
              (define flags (seashell-git-status-flags status index))
              (or (seashell-git-flag-new? flags) (seashell-git-flag-modified? flags)))
-           (build-list values entries))))
+           (build-list entries values))))
 
   (define files-delete
     (map (curry seashell-git-status-path status)
@@ -227,9 +229,12 @@
            (lambda (index)
              (define flags (seashell-git-status-flags status index))
              (seashell-git-flag-deleted? flags))
-           (build-list values entries))))
+           (build-list entries values))))
 
-  (define commit (seashell-git-make-commit))
+  (logf 'info "Adding files to project ~a: ~a" name files-add)
+  (logf 'info "Deleting files from project ~a: ~a" name files-delete)
+
+  (define commit (seashell-git-make-commit repo))
   (for-each (curry seashell-git-commit-add-file commit)
             files-add)
   (for-each (curry seashell-git-commit-delete-file commit)

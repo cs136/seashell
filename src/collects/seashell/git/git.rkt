@@ -162,7 +162,7 @@
 ;;  A seashell-git-update? object that can be used to batch updates.
 (define/contract (seashell-git-make-commit repo)
   (contract:-> path? seashell-git-update?)
-  (seashell-git-update (guard seashell_git_commit_init)))
+  (seashell-git-update (guard seashell_git_commit_init repo)))
 
 ;; (seashell-git-commit-add-file update file)
 ;; Adds a file to the git commit object.
@@ -192,7 +192,7 @@
 ;;  message - Message to commit.
 (define/contract (seashell-git-commit update message)
   (contract:-> seashell-git-update? string? any/c)
-  (guard seashell_git_commit (seashell-git-update-update update)))
+  (guard seashell_git_commit (seashell-git-update-update update) message))
 
 ;; Flag test functions.  Make sure these
 ;; remain consistent with libgit2.
