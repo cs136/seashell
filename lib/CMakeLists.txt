@@ -79,10 +79,10 @@ set(CMAKE_BUILD_TYPE "Release")
 add_subdirectory(llvm)
 
 # libgit2 overrides.
-# (Libraries) - the set of libraries needs to stay in sync with libssh2.  Theser are overrides
+# (Libraries) - the set of libraries needs to stay in sync with libssh2.  These are overrides
 # for libgit2.
-set(LIBSSH2_LIBRARIES ${CMAKE_DL_LIBS} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} ssh2)
-set(LIBSSH2_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/)
+# (Note: As we compile libgit2 as a static library, we don't actually need to pass along the library
+# directories).
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
 set(LIBSSH2_LIBRARY true)
 set(LIBSSH2_FOUND true)
@@ -97,9 +97,16 @@ set(LIBSSH2_LIBRARIES
     ${ZLIB_LIBRARIES}
     ssh2
     PARENT_SCOPE)
+set(LIBSSH2_LIBRARIES 
+    ${CMAKE_DL_LIBS}
+    ${OPENSSL_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ssh2)
 set(LIBSSH2_LINK_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/
     PARENT_SCOPE)
+set(LIBSSH2_LINK_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/)
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/
     PARENT_SCOPE)
 set(LLVM_SOURCE_INCLUDE_DIRS
