@@ -44,7 +44,11 @@ TO DO:
 (define protocol-symbol/c
   (or/c 'sslv2-or-v3 'sslv2 'sslv3 'tls 'tls11 'tls12))
 (define curves/c
-  (or/c 'secp521r1))
+  (or/c 'sect163r1 'sect163r2 'sect193r1 'sect233k1 'sect233r1 'sect239k1
+        'sect283k1 'sect409k1 'sect409r1 'sect571k1 'sect571r1
+        'secp160k1 'secp160r1 'secp160r2 'secp192k1 'secp224k1 'secp224r1
+        'secp256k1 'secp384r1 'secp521r1
+        'prime192v1 'prime256v1))
 
 (define verify-source/c
   (or/c path-string?
@@ -360,7 +364,33 @@ TO DO:
 (define SSL_OP_SINGLE_ECDH_USE #x00080000)
 (define SSL_OP_SINGLE_DH_USE #x00100000)
 
+(define NID_sect163k1 721)
+(define NID_sect163r1 722)
+(define NID_sect163r2 723)
+(define NID_sect193r1 724)
+(define NID_sect193r2 725)
+(define NID_sect233k1 726)
+(define NID_sect233r1 727)
+(define NID_sect239k1 728)
+(define NID_sect283k1 729)
+(define NID_sect283r1 730)
+(define NID_sect409k1 731)
+(define NID_sect409r1 732)
+(define NID_sect571k1 733)
+(define NID_sect571r1 734)
+
+(define NID_secp160k1 708)
+(define NID_secp160r1 709)
+(define NID_secp160r2 710)
+(define NID_secp192k1 711)
+(define NID_secp224k1 712)
+(define NID_secp224r1 713)
+(define NID_secp256k1 714)
+(define NID_secp384r1 715)
 (define NID_secp521r1 716)
+
+(define NID_prime192v1 409)
+(define NID_prime256v1 415)
 
 (define-mzscheme scheme_make_custodian (_fun _pointer -> _scheme))
 
@@ -555,7 +585,30 @@ TO DO:
 (define (ssl-server-context-enable-ecdhe! context [name 'secp521r1])
   (define (symbol->nid name)
     (case name
+      [(sect163k1) NID_sect163k1]
+      [(sect163r1) NID_sect163r1]
+      [(sect163r2) NID_sect163r2]
+      [(sect193r1) NID_sect193r1]
+      [(sect193r2) NID_sect193r2]
+      [(sect233k1) NID_sect233k1]
+      [(sect233r1) NID_sect233r1]
+      [(sect239k1) NID_sect239k1]
+      [(sect283k1) NID_sect283k1]
+      [(sect283r1) NID_sect283r1]
+      [(sect409k1) NID_sect409k1]
+      [(sect409r1) NID_sect409r1]
+      [(sect571k1) NID_sect571k1]
+      [(secp160k1) NID_secp160k1]
+      [(secp160r1) NID_secp160r1]
+      [(secp160r2) NID_secp160r2]
+      [(secp192k1) NID_secp192k1]
+      [(secp224k1) NID_secp224k1]
+      [(secp224r1) NID_secp224r1]
+      [(secp256k1) NID_secp256k1]
+      [(secp384r1) NID_secp384r1]
       [(secp521r1) NID_secp521r1]
+      [(prime192v1) NID_prime192v1]
+      [(prime256v1) NID_prime256v1]
       [else NID_secp521r1]))
   (define ctx (extract-ctx 'ssl-server-context-enable-ecdhe! #t context))
   (define key (EC_KEY_new_by_curve_name (symbol->nid name)))
