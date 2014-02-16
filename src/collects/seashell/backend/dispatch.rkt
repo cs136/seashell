@@ -368,7 +368,7 @@
         ([exn:websocket?
           (lambda (exn)
             (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
-      (logf 'debug "In main loop.")
+      (logf 'debug "In main loop - current memory usage ~a." (current-memory-use))
       
       (match (sync/timeout (/ (read-config 'backend-client-connection-timeout) 1000) connection)
         [#f
