@@ -20,7 +20,6 @@
 
 (provide project-name?
          url-string?
-         init-projects
          list-projects
          is-project?
          new-project
@@ -92,14 +91,6 @@
     ([url-exception? (lambda (exn) #f)])
     (string->url str)
     #t))
-
-
-;; init-projects -> void?
-;; Sets up the Seashell project environment
-(define/contract (init-projects)
-  (-> void?)
-  (when (not (directory-exists? (read-config 'seashell)))
-    (make-directory (read-config 'seashell))))
 
 ;; list-projects -> (listof project-name?)
 ;; Lists existing Seashell projects.

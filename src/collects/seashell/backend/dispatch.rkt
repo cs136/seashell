@@ -100,9 +100,13 @@
                        project pid)
                  (program-kill pid)
                  (program-destroy-handle pid)))]
-            (match (sync wait-evt 
-                         (tag-event "stdout" stdout)
-                         (tag-event "stderr" stderr))
+            (match (sync wait-evt
+                         ;; Well, this is rather inefficient.  JavaScript
+                         ;; only supports UTF-8 (and we don't support any
+                         ;; fancy encodings), so unless we want to cause
+                         ;; any unexpected character breaks...
+                         (tag-event "stdout" (read-string-evt 1 stdout))
+                         (tag-event "stderr" (read-string-evt 1 stderr)))
                    [(? (lambda (evt) (eq? evt wait-evt)))
                     ;; Program quit
                     (define message
@@ -126,9 +130,7 @@
                     (logf 'debug "Instance (PID ~a) of ~a quit." project pid)
                     (program-destroy-handle pid)
                     (send-message connection message)]
-                   [`(,tag ,port)
-                    (define contents (read-string 256 port))
-                    (logf 'debug "Received ~s from ~a of project ~a (PID ~a)." contents tag project pid)
+                   [`(,tag ,contents)
                     (unless (eof-object? contents)
                       (send-contents-for tag contents))
                     (loop)]))))))

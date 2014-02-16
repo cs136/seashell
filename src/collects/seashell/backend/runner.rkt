@@ -75,19 +75,19 @@
           (subprocess-kill handle #t)
           (close)])]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-       (define input (make-bytes 256))
+       (define input (make-bytes 4096))
        (define read (read-bytes-avail! input in-stdin))
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
        (loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-       (define output (make-bytes 256))
+       (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stdout))
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
        (loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       (define output (make-bytes 256))
+       (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
@@ -117,6 +117,10 @@
     (define-values (in-stdout out-stdout) (make-pipe))
     (define-values (in-stdin out-stdin) (make-pipe))
     (define-values (in-stderr out-stderr) (make-pipe))
+    ;; Set buffering modes
+    (file-stream-buffer-mode raw-stdout 'none)
+    (file-stream-buffer-mode raw-stdin 'none)
+    (file-stream-buffer-mode raw-stderr 'none)
     ;; Construct the control structure.
     (define result (program in-stdin in-stdout in-stderr
                             out-stdin out-stdout out-stderr

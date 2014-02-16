@@ -32,6 +32,12 @@
 ;; Channel used to keep process alive.
 (define keepalive-chan (make-async-channel))
 
+;; init-environment -> void?
+;; Sets up the Seashell project environment
+(define/contract (init-environment)
+  (-> void?)
+  (when (not (directory-exists? (read-config 'seashell)))
+    (make-directory (read-config 'seashell))))
 
 ;; (backend/main)
 ;; Entry point to the backend server.
@@ -52,7 +58,8 @@
     (exit 1))
   
   ;; Directory setup.
-  (init-projects)
+  (init-environment)
+
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                         #:exists 'append))
@@ -63,6 +70,7 @@
   ;; Unbuffered mode for I/O ports
   (file-stream-buffer-mode (current-input-port) 'none)
   (file-stream-buffer-mode (current-output-port) 'none)
+  (file-stream-buffer-mode (current-error-port) 'none)
   
   ;; Read encryption key.
   (define key (seashell-crypt-key-server-read (current-input-port)))
