@@ -380,7 +380,13 @@ function projectRun() {
   var compile_promise = projectCompile();
   var promise = $.Deferred();
 
-  // TODO: If current PID is set, kill it.
+  // TODO: If current PID is set, kill it.  This _is_
+  // a bit of a race condition, but the side effects
+  // (in JavaScript) are negligible, and it shouldn't
+  // happen that often anyways.
+  // 
+  // This can, and will happen whenever handles are reused.
+  // Oh well. 
 
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(function () {
