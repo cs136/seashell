@@ -26,9 +26,13 @@
 (struct program (in-stdin in-stdout in-stderr
                           out-stdin out-stdout out-stderr
                           raw-stdin raw-stdout raw-stderr
-                          handle control exit-status) #:transparent #:mutable)
+                          handle control exit-status
+                          destroyed-semaphore) #:transparent #:mutable)
 (struct exn:program:run exn:fail:user ())
+
 (define program-table (make-hash))
+(define program-new-semaphore (make-semaphore 1))
+(define program-destroy-semaphore (make-semaphore 1))
 
 ;; (program-control-thread program)
 ;; Control thread helper for a running program.
@@ -42,7 +46,8 @@
   (match-define (program in-stdin in-stdout in-stderr
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
-                         handle control exit-status)
+                         handle control exit-status
+                         destroyed-semaphore)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -100,39 +105,54 @@
 ;;  PID of program
 (define/contract (run-program binary)
   (-> path-string? integer?)
-  (with-handlers
-      [(exn:fail:filesystem?
-        (lambda (exn)
-          (raise (exn:program:run
-                  (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
-                  (current-continuation-marks)))))]
-    ;; Set the environment variables
-    (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
-    ;; Find the binary
-    (logf 'info "Running binary ~a" binary)
-    ;; Run it.
-    (define-values (handle raw-stdout raw-stdin raw-stderr)
-      (subprocess #f #f #f binary))
-    ;; Construct the I/O ports.
-    (define-values (in-stdout out-stdout) (make-pipe))
-    (define-values (in-stdin out-stdin) (make-pipe))
-    (define-values (in-stderr out-stderr) (make-pipe))
-    ;; Set buffering modes
-    (file-stream-buffer-mode raw-stdout 'none)
-    (file-stream-buffer-mode raw-stdin 'none)
-    (file-stream-buffer-mode raw-stderr 'none)
-    ;; Construct the control structure.
-    (define result (program in-stdin in-stdout in-stderr
-                            out-stdin out-stdout out-stderr
-                            raw-stdin raw-stdout raw-stderr
-                            handle #f #f))
-    (define control-thread (thread (thunk (program-control-thread result))))
-    (set-program-control! result control-thread)
-    ;; Install it in the hash-table
-    (define pid (subprocess-pid handle))
-    (hash-set! program-table pid result)
-    (logf 'info "Binary ~a running as PID ~a." binary pid)
-    pid))
+  (call-with-semaphore
+    program-new-semaphore
+    (thunk
+      (with-handlers
+          [(exn:fail:filesystem?
+            (lambda (exn)
+              (raise (exn:program:run
+                      (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
+                      (current-continuation-marks)))))]
+        ;; Set the environment variables
+        (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
+        ;; Find the binary
+        (logf 'info "Running binary ~a" binary)
+        ;; Run it.
+        (define-values (handle raw-stdout raw-stdin raw-stderr)
+          (subprocess #f #f #f binary))
+        ;; Construct the I/O ports.
+        (define-values (in-stdout out-stdout) (make-pipe))
+        (define-values (in-stdin out-stdin) (make-pipe))
+        (define-values (in-stderr out-stderr) (make-pipe))
+        ;; Set buffering modes
+        (file-stream-buffer-mode raw-stdout 'none)
+        (file-stream-buffer-mode raw-stdin 'none)
+        (file-stream-buffer-mode raw-stderr 'none)
+        ;; Construct the destroyed-semaphore
+        (define destroyed-semaphore (make-semaphore 0))
+        ;; Construct the control structure.
+        (define result (program in-stdin in-stdout in-stderr
+                                out-stdin out-stdout out-stderr
+                                raw-stdin raw-stdout raw-stderr
+                                handle #f #f destroyed-semaphore))
+        (define control-thread (thread (thunk (program-control-thread result))))
+        (set-program-control! result control-thread)
+        ;; Install it in the hash-table
+        (define pid (subprocess-pid handle))
+        ;; Block if there's still a PID in there.  This is to prevent
+        ;; nasty race-conditions in which a process which is started
+        ;; has the same PID as a process which is just about to be destroyed.
+        (define block-semaphore
+          (call-with-semaphore
+            program-destroy-semaphore
+            (thunk
+              (define handle (hash-ref program-table pid #f))
+              (if handle (program-destroy-semaphore handle) #f))))
+        (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
+        (hash-set! program-table pid result)
+        (logf 'info "Binary ~a running as PID ~a." binary pid)
+        pid))))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
@@ -202,23 +222,35 @@
   (-> integer? (or/c #f integer?))
   (program-exit-status (hash-ref program-table pid)))
 
-;; (program-destroy-handle pid)
+;; (program-destroy-handle pid) -> void?
+;;
+;; Arguments:
+;;  pid - PID of program.
+;;
 ;; Closes the internal-facing half of the I/O ports
-;; and removes the process from the table.
+;; for the process.
+;; Also posts the process destroyed semaphore,
+;; which will free up the PID entry in the table.
 (define/contract (program-destroy-handle pid)
   (-> integer? void?)
-  (define pgrm (hash-ref program-table pid))
-  (match-define (program in-stdin in-stdout in-stderr
-                         out-stdin out-stdout out-stderr
-                         raw-stdin raw-stdout raw-stderr
-                         handle control exit-status)
-    pgrm)
+  (call-with-semaphore
+    program-destroy-semaphore
+    (thunk 
+      (define pgrm (hash-ref program-table pid))
+      (match-define (program in-stdin in-stdout in-stderr
+                             out-stdin out-stdout out-stderr
+                             raw-stdin raw-stdout raw-stderr
+                             handle control exit-status
+                             destroyed-semaphore)
+        pgrm)
 
-  ;; Note: ports are Racket pipes and therefore GC'd.
-  ;; We don't need to close them.  (Closing the input port
-  ;; cause a bit of a race condition with the dispatch code.
-  ;; We don't close out-stdout and out-stderr as clients
-  ;; may still be using them.  Note that in-stdout and in-stderr
-  ;; MUST be closed for EOF to be properly sent).
-  (hash-remove! program-table pid))
+      ;; Note: ports are Racket pipes and therefore GC'd.
+      ;; We don't need to close them.  (Closing the input port
+      ;; cause a bit of a race condition with the dispatch code.
+      ;; We don't close out-stdout and out-stderr as clients
+      ;; may still be using them.  Note that in-stdout and in-stderr
+      ;; MUST be closed for EOF to be properly sent).
+      (hash-remove! program-table pid)
 
+      ;; Post the destroyed semaphore
+      (semaphore-post destroyed-semaphore))))
