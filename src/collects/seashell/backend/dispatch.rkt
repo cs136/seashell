@@ -20,7 +20,6 @@
          seashell/websocket
          seashell/log
          seashell/seashell-config
-         seashell/format-trace
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner

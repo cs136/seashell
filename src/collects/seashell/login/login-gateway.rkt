@@ -20,7 +20,6 @@
          net/url
          seashell/seashell-config
          seashell/log
-         seashell/format-trace
          seashell/tunnel
          seashell/crypto
          racket/sandbox

@@ -46,7 +46,9 @@
 ;; the data that would be read from ws-recv invoked on itself,
 ;; <eof>, or an exception object.
 (require racket/async-channel
-         seashell/log)
+         seashell/log
+         web-server/http/request-structs
+         net/url)
 
 (provide ws-connection?
          make-ws-connection
@@ -78,7 +80,7 @@
    [in-thread #:mutable]
    [out-thread #:mutable]
    in-port out-port in-chan out-chan
-   cline headers
+   method uri headers
    control mask?
    [last-ping #:mutable]
    [last-pong #:mutable]
@@ -105,8 +107,8 @@
 ;; and a control function for dealing with control frames.
 ;;
 ;; See above for arguments details.
-(define/contract (make-ws-connection in-port out-port control cline headers mask?)
-  (-> port? port? (-> ws-connection? (or/c ws-frame? exn?) any/c) any/c any/c boolean? ws-connection?)
+(define/contract (make-ws-connection in-port out-port control method uri headers mask?)
+  (-> port? port? (-> ws-connection? (or/c ws-frame? exn?) any/c) bytes? url? (listof header?) boolean? ws-connection?)
   (define in-chan (make-async-channel))
   (define out-chan (make-async-channel))
   (define conn (ws-connection (make-semaphore 0)
@@ -114,7 +116,7 @@
                                  #f
                                  in-port out-port
                                  in-chan out-chan
-                                 cline headers
+                                 method uri headers
                                  control
                                  mask?
                                  0 0

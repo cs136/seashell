@@ -167,7 +167,7 @@
     (cond
       [(directory-exists? path)
        (map recursive-delete-tree
-            (directory-list path #:build #t))
+            (directory-list path #:build? #t))
        (delete-directory path)]
       [else
         (delete-file path)]))

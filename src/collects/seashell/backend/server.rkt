@@ -16,16 +16,24 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/websocket
+(require net/url
+         racket/async-channel
+         seashell/websocket
          seashell/log
          seashell/seashell-config
-         seashell/format-trace
-         racket/async-channel
          seashell/security
          seashell/overrides/ssl-tcp
          seashell/backend/dispatch
          seashell/backend/project
-         seashell/crypto)
+         seashell/backend/http-dispatchers
+         seashell/crypto
+         web-server/web-server
+         web-server/http/xexpr
+         web-server/http/request-structs
+         web-server/dispatchers/dispatch
+         (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
+         (prefix-in filter: web-server/dispatchers/dispatch-filter))
+         
 
 (provide backend-main)
 
@@ -74,17 +82,23 @@
   
   ;; Read encryption key.
   (define key (seashell-crypt-key-server-read (current-input-port)))
-  
+
+  ;; Global dispatcher.
+  (define seashell-dispatch
+    (sequence:make
+      request-logging-dispatcher
+      (filter:make #rx"^/$" (make-websocket-dispatcher 
+                             (curry conn-dispatch key keepalive-chan)))
+      standard-error-dispatcher))
+
   ;; Start the server.
   (define conf-chan  (make-async-channel))
   (define shutdown-server
-    (ws-serve
-     (curry conn-dispatch key keepalive-chan)
+    (serve
+     #:dispatch seashell-dispatch
      #:port 0
      #:tcp@ ssl-unit
      #:listen-ip "localhost"
-     #:max-waiting 4
-     #:timeout (* 60 60)
      #:confirmation-channel conf-chan))
   (define start-result (async-channel-get conf-chan))
   (when (exn? start-result)
