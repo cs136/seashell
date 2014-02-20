@@ -31,7 +31,8 @@
          check-path
          check-and-build-path
          run-project
-         compile-project)
+         compile-project
+         export-project)
 
 (require seashell/git
          seashell/log
@@ -39,7 +40,8 @@
          seashell/compiler
          seashell/backend/runner
          seashell/websocket
-         net/url)
+         net/url
+         file/zip)
 
 ;; (check-path path)
 ;; Makes sure nothing funny is in a path.  Currently deals with .. ('up)
@@ -310,3 +312,21 @@
   ;; TODO: Racket mode.
   (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
   (run-program output-path))
+
+;; (export-project name) -> bytes?
+;; Exports a project to a ZIP file.
+;;
+;; Arguments:
+;;  name - Name of project.
+;; Returns:
+;;  zip - ZIP file as a bytestring.
+(define/contract (export-project name)
+  (-> project-name? bytes?)
+  (when (not (is-project? name))
+    (raise (exn:project (format "Project ~a does not exist!" name)
+                        (current-continuation-marks))))
+  (parameterize
+    ([current-directory (check-and-build-path (read-config 'seashell) name)])
+    (with-output-to-bytes
+      (thunk
+        (zip->output (pathlist-closure `(".")))))))
