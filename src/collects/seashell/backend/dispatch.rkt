@@ -345,12 +345,14 @@
                `#hash((id . ,id)
                       (success . #f)
                       (result . ,(format "Bad argument: ~a." (exn-message exn)))))]
-            [exn:git?
+            [exn?
              (lambda (exn)
+               (logf 'debug "Internal server error: ~a.\n~a" (exn-message exn)
+                     (format-stack-trace (exn-continuation-marks exn)))
                `#hash((id . ,id)
                       (success . #f)
                       (result .
-                              ,(format "Internal [git] error: ~s." (exn-message exn)))))])
+                              ,(format "Internal server error: ~a." (exn-message exn)))))])
          (cond
            [authenticated?
             (dispatch-authenticated message)]
