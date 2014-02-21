@@ -16,8 +16,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/crypto seashell/log)
-(provide exn:authenticate? authenticate install-server-key! make-nonce make-authenticate-response)
+(require seashell/crypto seashell/log racket/serialize)
+(provide exn:authenticate? authenticate install-server-key! make-nonce make-authenticate-response make-download-token check-download-token)
 
 ;; Authentication error exception.
 (struct exn:authenticate exn:fail ())
@@ -74,3 +74,36 @@
 ;; Returns:
 ;;  Bytestring that can be used as a nonce.
 (define make-nonce seashell-crypt-make-token)
+
+;; (make-download-token project-name?) -> (values bytes? bytes? bytes?)
+;; Creates and encrypts a download token
+(define/contract (make-download-token project)
+  (-> (and/c project-name? is-project?) (values bytes? bytes? bytes?))
+  (make-authenticate-response
+    (with-output-to-bytes (thunk (write (serialize (list project
+      (+ 1000 (current-milliseconds)))))))))
+
+;; (check-download-token bytes? bytes? bytes?) -> bytes?
+;;  Checks the validity of a download token
+;;
+;; Params:
+;;  iv, coded, tag - encryption data
+;;
+;; Returns:
+;;  Project name
+;;
+;; Raises exn:authenticate if token is expired
+;; Raises exn:project if project does not exist
+(define/contract (check-download-token iv coded tag)
+  (-> bytes? bytes? bytes? bytes? bytes?)
+  (define dtoken (seashell-decrypt server-key iv tag coded #""))
+  (define vals (with-input-from-bytes
+    dtoken (thunk (deserialize (read)))))
+  (if (and (project-name? (first vals))
+           (is-project? (first vals)))
+      (if (<= (current-milliseconds) (second vals))
+          (first vals)
+          (raise (exn:authenticate "Download token expired."
+            (current-continuation-marks))))
+      (raise (exn:project "Token for non-existent project."
+        (current-continuation-marks)))))

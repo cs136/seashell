@@ -226,6 +226,17 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "downloadProject")
+        ('project project)
+        (define-values (iv coded tag)
+          (make-download-token project))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(list (bytes->list iv)
+                               (bytes->list coded)
+                               (bytes->list tag))))]
       ;; File functions.
       [(hash-table
         ('id id)
