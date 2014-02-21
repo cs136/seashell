@@ -19,9 +19,14 @@
 (require
   net/url
   seashell/log
-  seashell/seashell-goncifg
+  seashell/backend/authenticate
+  seashell/backend/project
+  seashell/seashell-config
   web-server/http/xexpr
+  web-server/http/response-structs
   web-server/http/request-structs
+  web-server/dispatchers/dispatch
+  web-server/private/connection-manager
   (prefix-in lift: web-server/dispatchers/dispatch-lift))
 
 (provide request-logging-dispatcher standard-error-dispatcher)
@@ -55,7 +60,7 @@
 
 ;; (standard-unauthenticated-page request?) -> response?
 ;; Sends the standard Seashell unauthenticated page.
-(define/contract (standard-unauthenticated-page request)
+(define/contract (standard-unauthorized-page request)
   (-> request? response?)
   (response/xexpr
      `(html
@@ -70,19 +75,18 @@
     #:code 400
     #:message "Unauthorized"
     #:preamble #"<!DOCTYPE HTML>"))
-(define standard-unauthorized-dispatcher (lift:make standard-unauthorized-page))
 
 ;; (standard-server-error-page exn request?) -> response?
 ;; Sends the standard Seashell server error page.
 (define/contract (standard-server-error-page exn request)
-  (-> request? response?)
+  (-> exn? request? response?)
   (response/xexpr
      `(html
         (head
           (title "500 Internal Server Error"))
         (body
           (h1 "Internal Server Error")
-          (p ,(format "An internal server error was encountered while processing your request for URL ~a." (url->string (request->uri request))))
+          (p ,(format "An internal server error was encountered while processing your request for URL ~a." (url->string (request-uri request))))
           (code 
             ,(if (and (read-config 'debug) exn)
               (format-stack-trace (exn-continuation-marks exn))
@@ -93,7 +97,6 @@
     #:code 500
     #:message "Internal Server Error"
     #:preamble #"<!DOCTYPE HTML>"))
-(define standard-unauthorized-dispatcher (lift:make standard-unauthorized-page))
 
 ;; (project-export-page request?) -> response?
 ;; Downloads a project as a ZIP file.
@@ -101,12 +104,12 @@
   (-> request? response?)
   (with-handlers
     ([exn:project? (lambda (exn) (standard-error-page request))]
-     [exn:authenticate? (lambda (exn) (standard-unauthenticated-page request))]
+     [exn:authenticate? (lambda (exn) (standard-unauthorized-page request))]
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
-    (match-define (binding:form iv) (bindings-assq "iv" bindings))
-    (match-define (binding:form coded) (bindings-assq "coded" bindings))
-    (match-define (binding:form tag) (bindings-assq "tag" bindings))
-    #t
+    (match-define (binding:form _ iv) (bindings-assq "iv" bindings))
+    (match-define (binding:form _ coded) (bindings-assq "coded" bindings))
+    (match-define (binding:form _ tag) (bindings-assq "tag" bindings))
+    (authenticate iv coded tag)
     ))
 

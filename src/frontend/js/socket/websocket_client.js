@@ -41,6 +41,7 @@ function SeashellWebsocket(uri, key) {
   self.requests = {};
   self.ready = $.Deferred();
   self.authenticated = false;
+  self.server_nonce = null;
 
   // Ready to authenticate [-1]
   self.requests[-1] = {
@@ -103,23 +104,40 @@ SeashellWebsocket.prototype.close = function(self) {
 };
 
 /** Does the client-server mutual authentication.  Internal use only. */
-SeashellWebsocket.prototype._authenticate = function(ignored, self) {
+SeashellWebsocket.prototype._authenticate = function(server_nonce, self) {
   /** First send a message so we can test if the server is who he claims
    *  he is. */
   console.log("Asking for server token.");
-  self._sendMessage({type : "serverAuth"}).done(
+
+  var client_nonce = sjcl.random.randomWords(32);
+  for (var i = 0; i < client_nonce.length; i++) {
+    client_nonce[i] = client_nonce[i] & 0xFF;
+  }
+
+  self._sendMessage({type : "serverAuth", nonce: client_nonce}).done(
       function(response) {
         var iv = response[0];
         var coded = response[1];
         var tag = response[2];
 
         try {
-          /** We don't care that it decrypted.
-           *  We just care that it decrypted properly. */
-          self.coder.decrypt(coded, iv, tag, []);
+          /** Decrypt, make sure it's equal to the client nonce.*/
+          var result = self.coder.decrypt(coded, iv, tag, []);
+
+          if (client_nonce.length != result.length) {
+            console.log("Server did not respond with correct token!")
+            throw "";
+          }
+          for (var i = 0; i < client_nonce.length; i++) {
+            if (client_nonce[i] != result[i]) {
+              console.log("Server did not respond with correct token!")
+              throw "";
+            }
+          }
+          
           /** OK, now we proceed to authenticate. */
           self._sendMessage({type : "clientAuth",
-                             data : self.coder.encrypt(sjcl.random.randomWords(32),
+                             data : self.coder.encrypt(server_nonce,
                                                        [])}).done(
             function(result) {
               console.log("Authenticated!");

@@ -16,28 +16,61 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/crypto)
-(provide exn:authenticate? authenticate)
+(require seashell/crypto seashell/log)
+(provide exn:authenticate? authenticate install-server-key! make-nonce make-authenticate-response)
 
 ;; Authentication error exception.
 (struct exn:authenticate exn:fail ())
 
-;; (authenticate key iv coded tag) -> (void)
+;; Current session key.
+(define server-key (void))
+
+;; (install-server-key! key) -> (void)
+;; Installs the server key.
+;;
+;; Arguments:
+;;  key - Secret shared key.
+(define/contract (install-server-key! key)
+  (-> bytes? void?)
+  (set! server-key key))
+
+;; (authenticate iv coded tag expected) -> (void)
 ;; Attempts to authenticate given some encrypted data.
 ;; Throws an exception if authentication fails.
 ;;
 ;; Arguments:
-;;  key - Secret shared key.
 ;;  iv, coded, tag - Bytes representing the authentication request.
-(define/contract (authenticate key iv coded tag)
+(define/contract (authenticate iv tag coded expected)
   (-> bytes? bytes? bytes? bytes? void?)
   (with-handlers
     ([exn:crypto?
-       (raise (exn:authenticate "Authentication error!" (current-continuation-marks)))])
-    (seashell-decrypt
-      key
-      (apply bytes iv)
-      (apply bytes tag)
-      (apply bytes coded)
-      #""))
+       (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
+    (unless
+      (equal?
+        (seashell-decrypt
+          server-key
+          iv
+          tag
+          coded
+          #"")
+        expected)
+      (raise (exn:authenticate "Authentication error!" (current-continuation-marks)))))
   (void))
+
+;; (make-authenticate-response plain) -> iv coded tag
+;; Makes a response to an authentication challenge.
+;;
+;; Arguments:
+;;  plain - Authentication challenge.
+;; Returns:
+;;  iv, coded, tag - GCM coded data that represents the response.
+(define/contract (make-authenticate-response plain)
+  (-> bytes? (values bytes? bytes? bytes?))
+  (seashell-encrypt server-key plain #""))
+
+;; (make-nonce) -> nonce
+;; Makes a nonce.
+;; 
+;; Returns:
+;;  Bytestring that can be used as a nonce.
+(define make-nonce seashell-crypt-make-token)

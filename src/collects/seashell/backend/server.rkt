@@ -26,6 +26,7 @@
          seashell/backend/dispatch
          seashell/backend/project
          seashell/backend/http-dispatchers
+         seashell/backend/authenticate
          seashell/crypto
          web-server/web-server
          web-server/http/xexpr
@@ -80,15 +81,16 @@
   (file-stream-buffer-mode (current-output-port) 'none)
   (file-stream-buffer-mode (current-error-port) 'none)
   
-  ;; Read encryption key.
+  ;; Read encryption key, and set it.
   (define key (seashell-crypt-key-server-read (current-input-port)))
+  (install-server-key! key)
 
   ;; Global dispatcher.
   (define seashell-dispatch
     (sequence:make
       request-logging-dispatcher
       (filter:make #rx"^/$" (make-websocket-dispatcher 
-                             (curry conn-dispatch key keepalive-chan)))
+                             (curry conn-dispatch keepalive-chan)))
       standard-error-dispatcher))
 
   ;; Start the server.

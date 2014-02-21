@@ -31,12 +31,12 @@
 
 ;; Dispatch function.
 ;; Arguments:
-;;  key - Communications key.
 ;;  keepalive-chan - Keepalive channel.
 ;;  wsc - WebSocket connection.
 ;;  state - [Unused]
-(define (conn-dispatch key keepalive-chan connection state)
+(define (conn-dispatch keepalive-chan connection state)
   (define authenticated? #f)
+  (define our-nonce (make-nonce))
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -277,12 +277,13 @@
     (match message
       [(hash-table
         ('id id)
-        ('type "serverAuth"))
+        ('type "serverAuth")
+        ('nonce nonce))
        ;; This does server authentication.
        ;; We send some plaintext that is encrypted with the shared secret.
        ;; The client should verify that the message is as expected before proceeding.
        (define-values (iv coded tag)
-         (seashell-encrypt key (seashell-crypt-make-token) #""))
+         (make-authenticate-response (apply bytes nonce)))
        `#hash((id . ,id)
               (success . #t)
               (result . (,(bytes->list iv) ,(bytes->list coded) ,(bytes->list tag))))]
@@ -301,11 +302,10 @@
                `#hash((id . ,id)
                       (success . #f)))])
           (authenticate
-            key
             (apply bytes iv)
             (apply bytes tag)
             (apply bytes coded)
-            #"")
+            our-nonce)
          ;; We don't actually care what they sent.
          ;; We just care that it decoded properly.
          (set! authenticated? #t)
@@ -315,6 +315,7 @@
        `#hash((id . ,(hash-ref message 'id))
               (success . #f)
               (result . ,(format "Unknown message: ~s" message)))]))
+
   ;; (handle-message message)
   ;;
   ;; Given a message, passes it on to the appropriate function.
@@ -354,8 +355,7 @@
            [authenticated?
             (dispatch-authenticated message)]
            [else
-            (dispatch-unauthenticated message)]
-           ))]))
+            (dispatch-unauthenticated message)]))]))
   
   ;; Per-connection event loop.
   (define (main-loop)
@@ -391,5 +391,5 @@
   (logf 'info "Received new connection.")
   (send-message connection `#hash((id . -1)
                                   (success . #t)
-                                  (result . "Hello from Seashell/0!")))
+                                  (result . ,(bytes->list our-nonce))))
   (main-loop))
