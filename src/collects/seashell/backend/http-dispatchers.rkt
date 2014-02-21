@@ -13,7 +13,7 @@
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-;;
+;a;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require
@@ -29,7 +29,9 @@
   web-server/private/connection-manager
   (prefix-in lift: web-server/dispatchers/dispatch-lift))
 
-(provide request-logging-dispatcher standard-error-dispatcher)
+(provide request-logging-dispatcher
+         standard-error-dispatcher
+         project-export-dispatcher)
 
 ;; (request-logging-dispatcher) -> (void?)
 ;; Dispatcher that logs all incoming requests to the standard log.
@@ -110,6 +112,11 @@
     (match-define (binding:form _ iv) (bindings-assq "iv" bindings))
     (match-define (binding:form _ coded) (bindings-assq "coded" bindings))
     (match-define (binding:form _ tag) (bindings-assq "tag" bindings))
-    (authenticate iv coded tag)
-    ))
+    (define project (check-download-token iv coded tag))
+    (response/full 200 #"Okay"
+      (current-seconds)
+      #"application/zip, application/octet-stream"
+      empty
+      (export-project project))))
 
+(define project-export-dispatcher (lift:make project-export-page))
