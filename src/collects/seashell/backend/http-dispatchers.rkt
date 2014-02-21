@@ -28,14 +28,16 @@
 
 ;; (request-logging-dispatcher) -> (void?)
 ;; Dispatcher that logs all incoming requests to the standard log.
-(define (request-logging-dispatcher connection request)
+(define/contract (request-logging-dispatcher connection request)
+  (-> connection? request? void?)
   (logf 'info "~a ~a from ~a." (request-method request) (url->string (request-uri request))
         (request-client-ip request))
   (next-dispatcher))
 
 ;; (standard-error-page request?) -> response?
 ;; Sends the standard Seashell error page.
-(define (standard-error-page request)
+(define/contract (standard-error-page request)
+  (-> request? response?)
   (response/xexpr
      `(html
         (head
@@ -51,9 +53,10 @@
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-error-dispatcher (lift:make standard-error-page))
 
-;; (standard-unauthenticated-page request)
+;; (standard-unauthenticated-page request?) -> response?
 ;; Sends the standard Seashell unauthenticated page.
-(define (standard-unauthenticated-page request)
+(define/contract (standard-unauthenticated-page request)
+  (-> request? response?)
   (response/xexpr
      `(html
         (head
@@ -64,7 +67,46 @@
           (hr)
           (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
                             (version) (request-host-ip request)))))
-    #:code 404
-    #:message "Not Found"
+    #:code 400
+    #:message "Unauthorized"
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-unauthorized-dispatcher (lift:make standard-unauthorized-page))
+
+;; (standard-server-error-page exn request?) -> response?
+;; Sends the standard Seashell server error page.
+(define/contract (standard-server-error-page exn request)
+  (-> request? response?)
+  (response/xexpr
+     `(html
+        (head
+          (title "500 Internal Server Error"))
+        (body
+          (h1 "Internal Server Error")
+          (p ,(format "An internal server error was encountered while processing your request for URL ~a." (url->string (request->uri request))))
+          (code 
+            ,(if (and (read-config 'debug) exn)
+              (format-stack-trace (exn-continuation-marks exn))
+              ""))
+          (hr)
+          (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
+                            (version) (request-host-ip request)))))
+    #:code 500
+    #:message "Internal Server Error"
+    #:preamble #"<!DOCTYPE HTML>"))
+(define standard-unauthorized-dispatcher (lift:make standard-unauthorized-page))
+
+;; (project-export-page request?) -> response?
+;; Downloads a project as a ZIP file.
+(define/contract (project-export-page request)
+  (-> request? response?)
+  (with-handlers
+    ([exn:project? (lambda (exn) (standard-error-page request))]
+     [exn:authenticate? (lambda (exn) (standard-unauthenticated-page request))]
+     [exn? (lambda (exn) (standard-server-error-page exn request))])
+    (define bindings (request-bindings/raw request))
+    (match-define (binding:form iv) (bindings-assq "iv" bindings))
+    (match-define (binding:form coded) (bindings-assq "coded" bindings))
+    (match-define (binding:form tag) (bindings-assq "tag" bindings))
+    #t
+    ))
+

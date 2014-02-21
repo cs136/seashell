@@ -17,7 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/seashell-config)
-(provide logf make-port-logger standard-logger-setup)
+(provide logf make-port-logger standard-logger-setup format-stack-trace)
 
 (define logger (make-logger 'seashell))
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")

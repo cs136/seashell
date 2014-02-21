@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/crypto
+(require seashell/backend/authenticate
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -296,18 +296,16 @@
        ;; return success.
        ;; Otherwise, fail them.
        (with-handlers
-           ([exn:crypto?
+           ([exn:authenticate?
              (lambda (exn)
                `#hash((id . ,id)
                       (success . #f)))])
-         (logf 'debug
-               "Got authenticated bytes: ~s"
-               (bytes->list (seashell-decrypt
-          key
-          (apply bytes iv)
-          (apply bytes tag)
-          (apply bytes coded)
-          #"")))
+          (authenticate
+            key
+            (apply bytes iv)
+            (apply bytes tag)
+            (apply bytes coded)
+            #"")
          ;; We don't actually care what they sent.
          ;; We just care that it decoded properly.
          (set! authenticated? #t)
@@ -316,9 +314,7 @@
       [_
        `#hash((id . ,(hash-ref message 'id))
               (success . #f)
-              (result . ,(format "Unknown message: ~s" message)))]
-      )
-    )
+              (result . ,(format "Unknown message: ~s" message)))]))
   ;; (handle-message message)
   ;;
   ;; Given a message, passes it on to the appropriate function.
