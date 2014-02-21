@@ -54,7 +54,7 @@
           (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
                             (version) (request-host-ip request)))))
     #:code 404
-    #:message "Not Found"
+    #:message #"Not Found"
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-error-dispatcher (lift:make standard-error-page))
 
@@ -65,15 +65,15 @@
   (response/xexpr
      `(html
         (head
-          (title "400 Unauthorized"))
+          (title "403 Forbidden"))
         (body
-          (h1 "Unauthorized")
+          (h1 "Forbidden")
           (p  ,(format "You are not authorized to view the request URL ~a." (url->string (request-uri request))))
           (hr)
           (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
                             (version) (request-host-ip request)))))
-    #:code 400
-    #:message "Unauthorized"
+    #:code 403
+    #:message #"Forbidden"
     #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (standard-server-error-page exn request?) -> response?
@@ -95,7 +95,7 @@
           (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
                             (version) (request-host-ip request)))))
     #:code 500
-    #:message "Internal Server Error"
+    #:message #"Internal Server Error"
     #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (project-export-page request?) -> response?
