@@ -343,7 +343,7 @@
 </div><!-- /.modal -->
 
 <!-- Commit Project dialog -->
-<div class="modal fade" id="commit-project-dialog" tabindex="-1" role="dialog" aria-labelledby="open-project-label" aria-hidden="true">
+<div class="modal fade" id="commit-project-dialog" tabindex="-1" role="dialog" aria-labelledby="commit-project-label" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -361,6 +361,32 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
         <button type="button" id="button-commit-project" class="btn btn-primary">Commit</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Upload File dialog -->
+<div class="modal fade" id="upload-file-dialog" tabindex="-1" role="dialog" aria-labelledby="upload-file-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="upload-file-label">
+          <span class="glyphicon glyphicon-cloud-upload"></span> 
+          Upload File</h4>
+      </div>
+      <div class="modal-body">
+        <form id="upload-file-form">
+          <div class="form-group">
+            <label for="file-to-upload">File to upload:</label>
+            <input type="file" name="file-to-upload" id="file-to-upload"></input>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="button-commit-project" class="btn btn-primary">Upload</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
