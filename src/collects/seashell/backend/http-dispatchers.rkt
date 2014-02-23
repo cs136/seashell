@@ -28,7 +28,8 @@
   web-server/http/request-structs
   web-server/dispatchers/dispatch
   web-server/private/connection-manager
-  (prefix-in lift: web-server/dispatchers/dispatch-lift))
+  (prefix-in lift: web-server/dispatchers/dispatch-lift)
+  (prefix-in log: web-server/dispatchers/dispatch-log))
 
 (provide request-logging-dispatcher
          standard-error-dispatcher
@@ -63,8 +64,7 @@
 ;; Dispatcher that logs all incoming requests to the standard log.
 (define/contract (request-logging-dispatcher connection request)
   (-> connection? request? void?)
-  (logf 'info "~a ~a from ~a." (request-method request) (url->string (request-uri request))
-        (request-client-ip request))
+  (logf 'info (string-trim (log:apache-default-format request)))
   (next-dispatcher))
 
 ;; (standard-error-page request?) -> response?
@@ -106,6 +106,8 @@
 ;; Sends the standard Seashell server error page.
 (define/contract (standard-server-error-page exn request)
   (-> exn? request? response?)
+  (logf 'error "Error in handling ~a ~a: ~a." (request-method request)
+        (url->string (request-uri request)) (exn-message exn))
   (response/xexpr
      `(html
         (head
@@ -113,10 +115,12 @@
         (body
           (h1 "Internal Server Error")
           (p ,(format "An internal server error was encountered while processing your request for URL ~a." (url->string (request-uri request))))
-          (code 
-            ,(if (and (read-config 'debug) exn)
-              (format-stack-trace (exn-continuation-marks exn))
-              ""))
+          ,@(if (and (read-config 'debug) exn)
+              `((hr)
+                (pre
+                  ,(format "Message: ~a\n" (exn-message exn))
+                  (format-stack-trace (exn-continuation-marks exn))))
+              '(""))
           ,@(make-default-footer request)))
     #:code 500
     #:message #"Internal Server Error"
@@ -130,10 +134,11 @@
   (with-handlers
     ([exn:project? (lambda (exn) (standard-error-page request))]
      [exn:misc:match? (lambda (exn) (standard-error-page request))]
+     [exn:fail:contract? (lambda (exn) (standard-error-page request))]
      [exn:authenticate? (lambda (exn) (standard-unauthorized-page request))]
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
-    (match-define (binding:form _ raw-token) (bindings-assq "token" bindings))
+    (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
     (define project (check-download-token (bytes->jsexpr raw-token)))
     (response/full 200 #"Okay"
       (current-seconds)

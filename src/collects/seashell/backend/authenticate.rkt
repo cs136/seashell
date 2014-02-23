@@ -113,16 +113,19 @@
 ;; Raises exn:project if project does not exist
 (define/contract (check-download-token token)
   (-> download-token/c bytes?)
-  (match-define `(,iv ,coded ,tag)
-                (map (compose base64-decode string->bytes/utf-8) token))
-  (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
-  (define vals (with-input-from-bytes
-    decrypted-token (thunk (deserialize (read)))))
-  (if (and (project-name? (first vals))
-           (is-project? (first vals)))
-      (if (<= (current-milliseconds) (second vals))
-          (first vals)
-          (raise (exn:authenticate "Download token expired."
-            (current-continuation-marks))))
-      (raise (exn:project "Token for non-existent project."
-        (current-continuation-marks)))))
+  (with-handlers
+    ([exn:crypto?
+       (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
+    (match-define `(,iv ,coded ,tag)
+                  (map (compose base64-decode string->bytes/utf-8) token))
+    (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
+    (define vals (with-input-from-bytes
+      decrypted-token (thunk (deserialize (read)))))
+    (if (and (project-name? (first vals))
+             (is-project? (first vals)))
+        (if (<= (current-milliseconds) (second vals))
+            (first vals)
+            (raise (exn:authenticate "Download token expired."
+              (current-continuation-marks))))
+        (raise (exn:project "Token for non-existent project."
+          (current-continuation-marks))))))
