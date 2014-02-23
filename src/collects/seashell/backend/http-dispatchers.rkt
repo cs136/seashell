@@ -34,6 +34,24 @@
          standard-error-dispatcher
          project-export-dispatcher)
 
+;; Default headers.
+(define default-headers
+  `(,(make-header #"Server" #"Seashell")))
+
+;; (make-headers name value ...)
+;; Creates the HTTP response headers.
+;;
+;; Arguments:
+;;  headers -> List of pairs of name/value bytes.
+;; Returns:
+;;  List of HTTP headers.
+(define make-headers
+  (case-lambda
+    [(name value . rest)
+     (cons (make-header name value) (apply make-headers rest))]
+    [()
+     default-headers]))
+
 ;; (request-logging-dispatcher) -> (void?)
 ;; Dispatcher that logs all incoming requests to the standard log.
 (define/contract (request-logging-dispatcher connection request)
@@ -57,6 +75,7 @@
           (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
                             (version) (request-host-ip request)))))
     #:code 404
+    #:headers (make-headers)
     #:message #"Not Found"
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-error-dispatcher (lift:make standard-error-page))
@@ -77,6 +96,7 @@
                             (version) (request-host-ip request)))))
     #:code 403
     #:message #"Forbidden"
+    #:headers (make-headers)
     #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (standard-server-error-page exn request?) -> response?
@@ -99,6 +119,7 @@
                             (version) (request-host-ip request)))))
     #:code 500
     #:message #"Internal Server Error"
+    #:headers (make-headers)
     #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (project-export-page request?) -> response?
@@ -116,7 +137,8 @@
     (response/full 200 #"Okay"
       (current-seconds)
       #"application/zip, application/octet-stream"
-      empty
+      (make-headers
+        #"Content-Disposition" #"attachment; filename=\"project.zip\"")
       (export-project project))))
 
 (define project-export-dispatcher (lift:make project-export-page))
