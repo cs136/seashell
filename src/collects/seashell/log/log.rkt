@@ -56,15 +56,26 @@
 
 ;; make-log-reader: type-regexp -> evt?
 ;; Creates a log receiver that receives all messages at level or higher.
+;;
+;; Arguments:
+;;  level - 'fatal, 'error, 'warning, 'info, 'debug
+;; Returns:
+;;  A log receiver.
 (define/contract (make-log-reader level)
   (-> (or/c 'fatal 'error 'warning 'info 'debug) log-receiver?)
   (make-log-receiver logger level))
 
 ;; format-stack-trace
-;; Formats a stack trace.
-(define (format-stack-trace trace)
+;; Formats a stack trace (continuation-mark-set).
+;;
+;; Arguments:
+;;  trace - Continuation mark set.
+;; Returns:
+;;  String representing a prettified stack trace.
+(define/contract (format-stack-trace trace)
+  (-> continuation-mark-set? string?)
   (string-join
-    `(,@(for/list ([item (in-list trace)])
+    `(,@(for/list ([item (in-list (continuation-mark-set->context trace))])
          (format "~a at:\n  ~a\n"
                   (if (car item)
                       (car item)
@@ -92,7 +103,7 @@
              [(and (read-config 'debug) (or (equal? level 'fatal) (equal? level 'error)))
               (fprintf port "~a~n***Stacktrace follows***~n~a~n***End Stacktrace***~n" 
                        message
-                       (format-stack-trace (continuation-mark-set->context marks)))]
+                       (format-stack-trace marks))]
              [else
               (fprintf port "~a~n" message)])
            (flush-output port)]
