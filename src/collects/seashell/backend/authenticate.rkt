@@ -33,6 +33,7 @@
 
 ;; Contracts
 (define download-token/c (and/c jsexpr? (list/c string? string? string?)))
+(define authenticate-token/c (and/c jsexpr? (list/c (listof byte?) (listof byte?) (listof byte?))))
 
 ;; (install-server-key! key) -> (void)
 ;; Installs the server key.
@@ -43,14 +44,19 @@
   (-> bytes? void?)
   (set! server-key key))
 
-;; (authenticate iv coded tag expected) -> (void)
-;; Attempts to authenticate given some encrypted data.
+;; (authenticate token expected) -> (void)
+;; Attempts to authenticate given an authentication token.
 ;; Throws an exception if authentication fails.
 ;;
 ;; Arguments:
-;;  iv, coded, tag - Bytes representing the authentication request.
-(define/contract (authenticate iv tag coded expected)
-  (-> bytes? bytes? bytes? bytes? void?)
+;;  token - Authentication token.
+;;  expected - Expected decrypted bytestring.
+;; Returns:
+;;  (void) 
+;; Raises exn:authenticate if an error occurred.
+(define/contract (authenticate token expected)
+  (-> authenticate-token/c bytes? void?)
+  (match-define `(,iv ,coded ,tag) (map (curry apply bytes) token))
   (with-handlers
     ([exn:crypto?
        (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
@@ -66,16 +72,17 @@
       (raise (exn:authenticate "Authentication error!" (current-continuation-marks)))))
   (void))
 
-;; (make-authenticate-response plain) -> iv coded tag
+;; (make-authenticate-response plain) -> authenticate-token/c
 ;; Makes a response to an authentication challenge.
 ;;
 ;; Arguments:
 ;;  plain - Authentication challenge.
 ;; Returns:
-;;  iv, coded, tag - GCM coded data that represents the response.
+;;  token - Authentication token satisfying the challenge.
 (define/contract (make-authenticate-response plain)
-  (-> bytes? (values bytes? bytes? bytes?))
-  (seashell-encrypt server-key plain #""))
+  (-> bytes? authenticate-token/c)
+  (define-values (iv coded tag) (seashell-encrypt server-key plain #""))
+  (map bytes->list `(,iv ,coded ,tag)))
 
 ;; (make-nonce) -> nonce
 ;; Makes a nonce.
@@ -95,9 +102,10 @@
   (-> (and/c project-name? is-project?) download-token/c)
   (define-values
     (iv coded tag)
-    (make-authenticate-response
+    (seashell-encrypt server-key
       (with-output-to-bytes (thunk (write (serialize (list project
-        (+ 1000 (current-milliseconds)))))))))
+        (+ 1000 (current-milliseconds)))))))
+      #""))
   (map (compose bytes->string/utf-8 base64-encode) `(,iv ,coded ,tag)))
 
 ;; (check-download-token bytes? bytes? bytes?) -> bytes?

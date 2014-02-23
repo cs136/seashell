@@ -289,15 +289,13 @@
        ;; This does server authentication.
        ;; We send some plaintext that is encrypted with the shared secret.
        ;; The client should verify that the message is as expected before proceeding.
-       (define-values (iv coded tag)
-         (make-authenticate-response (apply bytes nonce)))
        `#hash((id . ,id)
               (success . #t)
-              (result . (,(bytes->list iv) ,(bytes->list coded) ,(bytes->list tag))))]
+              (result . ,(make-authenticate-response (apply bytes nonce))))]
       [(hash-table
         ('id id)
         ('type "clientAuth")
-        ('data (list iv coded tag)))
+        ('data token))
        ;; This does client authentication.
        ;; Try and decode their encrypted data, and verify integrity.
        ;; If it succeeds, authenticated? <- #t and
@@ -309,12 +307,8 @@
                `#hash((id . ,id)
                       (success . #f)))])
           (authenticate
-            (apply bytes iv)
-            (apply bytes tag)
-            (apply bytes coded)
+            token
             our-nonce)
-         ;; We don't actually care what they sent.
-         ;; We just care that it decoded properly.
          (set! authenticated? #t)
          `#hash((id . ,id)
                 (success . #t)))]
