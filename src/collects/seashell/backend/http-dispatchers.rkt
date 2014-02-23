@@ -36,7 +36,14 @@
 
 ;; Default headers.
 (define default-headers
-  `(,(make-header #"Server" #"Seashell")))
+  `(,(make-header #"Server" #"Seashell/1.0")))
+
+;; Default footer.
+(define (make-default-footer request)
+  `((hr)
+    (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
+                      (version) (request-host-ip request)))))
+ 
 
 ;; (make-headers name value ...)
 ;; Creates the HTTP response headers.
@@ -71,9 +78,7 @@
         (body
           (h1 "Not Found")
           (p  ,(format "The requested URL ~a was not found on this server." (url->string (request-uri request))))
-          (hr)
-          (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
-                            (version) (request-host-ip request)))))
+          ,@(make-default-footer request)))
     #:code 404
     #:headers (make-headers)
     #:message #"Not Found"
@@ -91,9 +96,7 @@
         (body
           (h1 "Forbidden")
           (p  ,(format "You are not authorized to view the request URL ~a." (url->string (request-uri request))))
-          (hr)
-          (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
-                            (version) (request-host-ip request)))))
+          ,@(make-default-footer request)))
     #:code 403
     #:message #"Forbidden"
     #:headers (make-headers)
@@ -114,9 +117,7 @@
             ,(if (and (read-config 'debug) exn)
               (format-stack-trace (exn-continuation-marks exn))
               ""))
-          (hr)
-          (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
-                            (version) (request-host-ip request)))))
+          ,@(make-default-footer request)))
     #:code 500
     #:message #"Internal Server Error"
     #:headers (make-headers)
