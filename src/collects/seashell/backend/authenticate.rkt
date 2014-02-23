@@ -16,14 +16,23 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/crypto seashell/log racket/serialize)
-(provide exn:authenticate? authenticate install-server-key! make-nonce make-authenticate-response make-download-token check-download-token)
+(require seashell/crypto
+         seashell/log
+         seashell/backend/project
+         racket/serialize
+         net/base64
+         json)
+(provide exn:authenticate? authenticate install-server-key! make-nonce
+         make-authenticate-response make-download-token check-download-token)
 
 ;; Authentication error exception.
 (struct exn:authenticate exn:fail ())
 
 ;; Current session key.
 (define server-key (void))
+
+;; Contracts
+(define download-token/c (and/c jsexpr? (list/c string? string? string?)))
 
 ;; (install-server-key! key) -> (void)
 ;; Installs the server key.
@@ -75,30 +84,40 @@
 ;;  Bytestring that can be used as a nonce.
 (define make-nonce seashell-crypt-make-token)
 
-;; (make-download-token project-name?) -> (values bytes? bytes? bytes?)
+;; (make-download-token project-name?) -> (list/c bytes? bytes? bytes?)
 ;; Creates and encrypts a download token
+;;
+;; Arguments:
+;;  project - Name of project.
+;; Returns
+;;  JSON expression representing the download token.
 (define/contract (make-download-token project)
-  (-> (and/c project-name? is-project?) (values bytes? bytes? bytes?))
-  (make-authenticate-response
-    (with-output-to-bytes (thunk (write (serialize (list project
-      (+ 1000 (current-milliseconds)))))))))
+  (-> (and/c project-name? is-project?) download-token/c)
+  (define-values
+    (iv coded tag)
+    (make-authenticate-response
+      (with-output-to-bytes (thunk (write (serialize (list project
+        (+ 1000 (current-milliseconds)))))))))
+  (map (compose bytes->string/utf-8 base64-encode) `(,iv ,coded ,tag)))
 
 ;; (check-download-token bytes? bytes? bytes?) -> bytes?
 ;;  Checks the validity of a download token
 ;;
 ;; Params:
-;;  iv, coded, tag - encryption data
+;;  token - Token created from make-download-token.
 ;;
 ;; Returns:
 ;;  Project name
 ;;
 ;; Raises exn:authenticate if token is expired
 ;; Raises exn:project if project does not exist
-(define/contract (check-download-token iv coded tag)
-  (-> bytes? bytes? bytes? bytes? bytes?)
-  (define dtoken (seashell-decrypt server-key iv tag coded #""))
+(define/contract (check-download-token token)
+  (-> download-token/c bytes?)
+  (match-define `(,iv ,coded ,tag)
+                (map (compose base64-decode string->bytes/utf-8) token))
+  (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
   (define vals (with-input-from-bytes
-    dtoken (thunk (deserialize (read)))))
+    decrypted-token (thunk (deserialize (read)))))
   (if (and (project-name? (first vals))
            (is-project? (first vals)))
       (if (<= (current-milliseconds) (second vals))

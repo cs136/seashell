@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require
+  json
   net/url
   seashell/log
   seashell/backend/authenticate
@@ -106,13 +107,12 @@
   (-> request? response?)
   (with-handlers
     ([exn:project? (lambda (exn) (standard-error-page request))]
+     [exn:misc:match? (lambda (exn) (standard-error-page request))]
      [exn:authenticate? (lambda (exn) (standard-unauthorized-page request))]
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
-    (match-define (binding:form _ iv) (bindings-assq "iv" bindings))
-    (match-define (binding:form _ coded) (bindings-assq "coded" bindings))
-    (match-define (binding:form _ tag) (bindings-assq "tag" bindings))
-    (define project (check-download-token iv coded tag))
+    (match-define (binding:form _ raw-token) (bindings-assq "token" bindings))
+    (define project (check-download-token (bytes->jsexpr raw-token)))
     (response/full 200 #"Okay"
       (current-seconds)
       #"application/zip, application/octet-stream"
