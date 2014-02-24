@@ -26,6 +26,7 @@
          web-server/http/request-structs
          web-server/http/response
          web-server/private/connection-manager
+         web-server/private/timer
          racket/async-channel
          unstable/contract
          seashell/websocket/connection
@@ -78,8 +79,11 @@
     ;; Flush headers out before:
     (flush-output op)
 
+    ;; Kill the connection timer.
+    (cancel-timer! (connection-timer connection))
+
     ;; Starting output.
-    (define conn
+    (define ws-conn
       (make-ws-connection
         ip op
         (make-ws-control)
@@ -89,7 +93,7 @@
         #f))
 
     ;; Drop to the real dispatch function.
-    (dispatch conn state)))
+    (dispatch ws-conn state)))
 
 ;; (ws-serve conn-dispatch ...)
 ;; Starts a dispatching WebSocket server compliant with

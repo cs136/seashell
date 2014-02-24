@@ -32,7 +32,7 @@
 ;;   in-chan - Input (read) channel.
 ;;   out-chan - Output (write) channel.
 ;;
-;;   cline - Connection line.
+;;   uri - HTTP request URL.
 ;;   headers - HTTP request headers.
 ;;
 ;;   control - Control function which deals with control frames.
