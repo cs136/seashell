@@ -206,14 +206,14 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
 SeashellWebsocket.prototype.runProject = function(project, deferred) {
   return this.sendMessage({
     type : "runProject",
-    name : project},
+    project : project},
     deferred);
 };
 
 SeashellWebsocket.prototype.compileProject = function(project, deferred) {
   return this.sendMessage({
     type : "compileProject",
-    name : project},
+    project : project},
     deferred);
 };
 
@@ -284,3 +284,10 @@ SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
     contents : contents,
     deferred : deferred});
 }
+
+SeashellWebsocket.prototype.getExportToken = function(project, deferred) {
+  return this.sendMessage({
+    type : "getExportToken",
+    project : project},
+    deferred);
+};

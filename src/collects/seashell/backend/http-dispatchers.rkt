@@ -133,8 +133,8 @@
   (-> request? response?)
   (with-handlers
     ([exn:project? (lambda (exn) (standard-error-page request))]
-     [exn:misc:match? (lambda (exn) (standard-error-page request))]
-     [exn:fail:contract? (lambda (exn) (standard-error-page request))]
+     [exn:misc:match? (lambda (exn) (standard-server-error-page exn request))]
+     [exn:fail:contract? (lambda (exn) (standard-server-error-page exn request))]
      [exn:authenticate? (lambda (exn) (standard-unauthorized-page request))]
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
@@ -146,5 +146,4 @@
       (make-headers
         #"Content-Disposition" #"attachment; filename=\"project.zip\"")
       (export-project project))))
-
 (define project-export-dispatcher (lift:make project-export-page))

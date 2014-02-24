@@ -171,7 +171,7 @@
       [(hash-table
         ('id id)
         ('type "runProject")
-        ('name name))
+        ('project name))
        (define pid (run-project name))
        (project-runner-thread name pid)
        `#hash((id . ,id)
@@ -181,7 +181,7 @@
       [(hash-table
         ('id id)
         ('type "compileProject")
-        ('name name))
+        ('project name))
        (define-values (result messages)
          (compile-project name))
        `#hash((id . ,id)
@@ -270,6 +270,14 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(bytes->string/utf-8 (read-file project file))))]
+      ;; Download/Upload token functions:
+      [(hash-table
+        ('id id)
+        ('type "getExportToken")
+        ('project project))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(make-download-token project)))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_
