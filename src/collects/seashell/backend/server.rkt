@@ -22,7 +22,7 @@
          seashell/log
          seashell/seashell-config
          seashell/security
-         seashell/overrides/ssl-tcp
+         seashell/overrides/ssl-unit-tcp
          seashell/backend/dispatch
          seashell/backend/project
          seashell/backend/http-dispatchers
