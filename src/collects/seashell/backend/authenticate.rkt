@@ -23,7 +23,8 @@
          net/base64
          json)
 (provide exn:authenticate? authenticate install-server-key! make-nonce
-         make-authenticate-response make-download-token check-download-token)
+         make-authenticate-response make-download-token check-download-token
+         make-challenge)
 
 ;; Authentication error exception.
 (struct exn:authenticate exn:fail ())
@@ -31,9 +32,30 @@
 ;; Current session key.
 (define server-key (void))
 
-;; Contracts
+;; Contracts.
 (define download-token/c (and/c jsexpr? (list/c string? string? string?)))
-(define authenticate-token/c (and/c jsexpr? (list/c (listof byte?) (listof byte?) (listof byte?))))
+(define authenticate-token/c (and/c jsexpr?
+                                    (list/c (listof byte?)
+                                            (listof byte?)
+                                            (listof byte?)
+                                            (listof byte?))))
+(define challenge/c (and/c jsexpr? (listof byte?)))
+
+;; (make-nonce/challenge) -> nonce
+;; Makes a nonce.
+;; 
+;; Returns:
+;;  Bytestring that can be used as a nonce.
+(define make-nonce seashell-crypt-make-token)
+
+;; (make-challenge) -> challenge/c
+;; Makes an authentication challenge.
+;;
+;; Returns:
+;;  An authentication challenge.
+(define/contract (make-challenge)
+  (-> challenge/c)
+  (bytes->list (seashell-crypt-make-token)))
 
 ;; (install-server-key! key) -> (void)
 ;; Installs the server key.
@@ -44,19 +66,21 @@
   (-> bytes? void?)
   (set! server-key key))
 
-;; (authenticate token expected) -> (void)
+;; (authenticate token challenge) -> (void)
 ;; Attempts to authenticate given an authentication token.
 ;; Throws an exception if authentication fails.
 ;;
 ;; Arguments:
 ;;  token - Authentication token.
-;;  expected - Expected decrypted bytestring.
+;;  challenge - Challenge that the token is a response for.
 ;; Returns:
 ;;  (void) 
 ;; Raises exn:authenticate if an error occurred.
-(define/contract (authenticate token expected)
-  (-> authenticate-token/c bytes? void?)
-  (match-define `(,iv ,coded ,tag) (map (curry apply bytes) token))
+(define/contract (authenticate token challenge)
+  (-> authenticate-token/c challenge/c void?)
+  (match-define `(,iv ,coded ,tag ,nonce) (map (curry apply bytes) token))
+  (define challenge-bytes (apply bytes challenge))
+  
   (with-handlers
     ([exn:crypto?
        (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
@@ -68,7 +92,7 @@
           tag
           coded
           #"")
-        expected)
+        (bytes-append nonce challenge-bytes))  
       (raise (exn:authenticate "Authentication error!" (current-continuation-marks)))))
   (void))
 
@@ -79,17 +103,14 @@
 ;;  plain - Authentication challenge.
 ;; Returns:
 ;;  token - Authentication token satisfying the challenge.
-(define/contract (make-authenticate-response plain)
-  (-> bytes? authenticate-token/c)
-  (define-values (iv coded tag) (seashell-encrypt server-key plain #""))
-  (map bytes->list `(,iv ,coded ,tag)))
-
-;; (make-nonce) -> nonce
-;; Makes a nonce.
-;; 
-;; Returns:
-;;  Bytestring that can be used as a nonce.
-(define make-nonce seashell-crypt-make-token)
+(define/contract (make-authenticate-response challenge)
+  (-> challenge/c authenticate-token/c)
+  (define nonce (make-nonce))
+  (define challenge-bytes (apply bytes challenge))
+  (define-values (iv coded tag) (seashell-encrypt server-key
+                                                  (bytes-append nonce challenge-bytes)
+                                                  #""))
+  (map bytes->list `(,iv ,coded ,tag ,nonce)))
 
 ;; (make-download-token project-name?) -> (list/c bytes? bytes? bytes?)
 ;; Creates and encrypts a download token

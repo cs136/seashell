@@ -104,41 +104,58 @@ SeashellWebsocket.prototype.close = function(self) {
 };
 
 /** Does the client-server mutual authentication.  Internal use only. */
-SeashellWebsocket.prototype._authenticate = function(server_nonce, self) {
+SeashellWebsocket.prototype._authenticate = function(server_challenge, self) {
   /** First send a message so we can test if the server is who he claims
    *  he is. */
   console.log("Asking for server token.");
 
+  var client_challenge = sjcl.random.randomWords(32);
   var client_nonce = sjcl.random.randomWords(32);
+
+  for (var i = 0; i < client_challenge.length; i++) {
+    client_challenge[i] = client_challenge[i] & 0xFF;
+  }
   for (var i = 0; i < client_nonce.length; i++) {
     client_nonce[i] = client_nonce[i] & 0xFF;
   }
 
-  self._sendMessage({type : "serverAuth", nonce: client_nonce}).done(
+
+  self._sendMessage({type : "serverAuth", challenge: client_challenge}).done(
       function(response) {
         var iv = response[0];
         var coded = response[1];
         var tag = response[2];
+        var server_nonce = response[3];
 
         try {
           /** Decrypt, make sure it's equal to the client nonce.*/
           var result = self.coder.decrypt(coded, iv, tag, []);
 
-          if (client_nonce.length != result.length) {
+          if (server_nonce.length + client_challenge.length != result.length) {
             console.log("Server did not respond with correct token!")
             throw "";
           }
-          for (var i = 0; i < client_nonce.length; i++) {
-            if (client_nonce[i] != result[i]) {
+
+          for (var i = 0; i < server_nonce.length; i++) {
+            if (server_nonce[i] != result[i]) {
+              console.log("Server did not respond with correct token!")
+              throw "";
+            }
+          }
+          for (var i = server_nonce.length; i < result.length; i++) {
+            if (client_challenge[i - server_nonce.length] != result[i]) {
               console.log("Server did not respond with correct token!")
               throw "";
             }
           }
           
           /** OK, now we proceed to authenticate. */
+          var raw_response = [].concat(client_nonce, server_challenge);
+          var iv_coded_tag = self.coder.encrypt(raw_response, []);
+          var response = [iv_coded_tag[0], iv_coded_tag[1], iv_coded_tag[2], client_nonce]; 
+
           self._sendMessage({type : "clientAuth",
-                             data : self.coder.encrypt(server_nonce,
-                                                       [])}).done(
+                             response : response}).done(
             function(result) {
               console.log("Authenticated!");
               self.authenticated = true;

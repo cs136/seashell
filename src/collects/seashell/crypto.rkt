@@ -113,9 +113,9 @@
 ;; Returns a new token [32 bytes long]
 (define/contract (seashell-crypt-make-token)
   (contract:-> bytes?)
-  (define iv (make-bytes 32))
-  (seashell_make_iv iv)
-  iv)
+  (define token (make-bytes 32))
+  (seashell_make_token token)
+  token)
 
 ;; (seashell-encrypt key frame plain) -> (values iv coded tag)
 ;; Encrypts frame (a sequence of bytes) using AES128-GCM

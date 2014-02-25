@@ -36,7 +36,7 @@
 ;;  state - [Unused]
 (define (conn-dispatch keepalive-chan connection state)
   (define authenticated? #f)
-  (define our-nonce (make-nonce))
+  (define our-challenge (make-challenge))
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -293,17 +293,17 @@
       [(hash-table
         ('id id)
         ('type "serverAuth")
-        ('nonce nonce))
+        ('challenge challenge))
        ;; This does server authentication.
        ;; We send some plaintext that is encrypted with the shared secret.
        ;; The client should verify that the message is as expected before proceeding.
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(make-authenticate-response (apply bytes nonce))))]
+              (result . ,(make-authenticate-response challenge)))]
       [(hash-table
         ('id id)
         ('type "clientAuth")
-        ('data token))
+        ('response token))
        ;; This does client authentication.
        ;; Try and decode their encrypted data, and verify integrity.
        ;; If it succeeds, authenticated? <- #t and
@@ -316,7 +316,7 @@
                       (success . #f)))])
           (authenticate
             token
-            our-nonce)
+            our-challenge)
          (set! authenticated? #t)
          `#hash((id . ,id)
                 (success . #t)))]
@@ -402,5 +402,5 @@
   (logf 'info "Received new connection.")
   (send-message connection `#hash((id . -1)
                                   (success . #t)
-                                  (result . ,(bytes->list our-nonce))))
+                                  (result . ,our-challenge)))
   (main-loop))
