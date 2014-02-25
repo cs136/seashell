@@ -257,17 +257,19 @@
   (-> ws-connection? void?)
   (call-with-semaphore (ws-connection-close-semaphore conn)
     (thunk
-      (unless (ws-connection-closed? conn)
-        (semaphore-post (ws-connection-closed-semaphore conn))
-        (kill-thread (ws-connection-in-thread conn))
-        (kill-thread (ws-connection-out-thread conn))
-        (send-frame (ws-frame #t 0 8 #"")
-                    (ws-connection-out-port conn)
-                    #:mask?
-                    (ws-connection-mask? conn))
-        (close-input-port (ws-connection-in-port conn))
-        (close-output-port (ws-connection-out-port conn))
-        (void)))))
+      (with-handlers
+        ([exn:fail:network? void])
+        (unless (ws-connection-closed? conn)
+          (semaphore-post (ws-connection-closed-semaphore conn))
+          (kill-thread (ws-connection-in-thread conn))
+          (kill-thread (ws-connection-out-thread conn))
+          (send-frame (ws-frame #t 0 8 #"")
+                      (ws-connection-out-port conn)
+                      #:mask?
+                      (ws-connection-mask? conn))
+          (close-input-port (ws-connection-in-port conn))
+          (close-output-port (ws-connection-out-port conn))
+          (void))))))
 
 ;; Handy syntax rule for EOF checking
 (define-syntax-rule (check-eof x)
@@ -310,56 +312,65 @@
 ;;  WebSocket frame.
 (define/contract (read-frame port)
   (-> port? ws-frame?)
-  ;; Read the framing byte.
-  (define framing-byte (read-byte port))
-  (check-eof framing-byte)
+  (with-handlers
+    ([exn:fail:network? (lambda (exn)
+                          (raise (exn:websocket (exn-message exn)
+                                                (current-continuation-marks))))])
+    ;; Read the framing byte.
+    (define framing-byte (read-byte port))
+    (check-eof framing-byte)
 
-  ;; Extract bit information
-  (define final?
-    (bitwise-bit-set? framing-byte 7))
-  (define rsv-field
-    (bitwise-bit-field framing-byte 4 7))
-  (define opcode
-    (bitwise-bit-field framing-byte 0 4))
+    ;; Extract bit information
+    (define final?
+      (bitwise-bit-set? framing-byte 7))
+    (define rsv-field
+      (bitwise-bit-field framing-byte 4 7))
+    (define opcode
+      (bitwise-bit-field framing-byte 0 4))
 
-  ;; Read first byte of length and masking information
-  (define length/mask-byte (read-byte port))
-  (check-eof length/mask-byte)
+    ;; Read first byte of length and masking information
+    (define length/mask-byte (read-byte port))
+    (check-eof length/mask-byte)
 
-  (define masked?
-    (bitwise-bit-set? length/mask-byte 7))
-  (define length
-    (bitwise-bit-field length/mask-byte 0 7))
+    (define masked?
+      (bitwise-bit-set? length/mask-byte 7))
+    (define length
+      (bitwise-bit-field length/mask-byte 0 7))
 
-  ;; Interpret the length field
-  (cond
-    ;; Read the next two bytes, and interpret it as
-    ;; a big-endian integer
-    [(equal? length 126)
-     (define length-bs (read-bytes 2 port))
-     (check-eof length-bs)
-     (set! length (integer-bytes->integer length-bs #f #t))]
-    [(equal? length 127)
-     (define length-bs (read-bytes 8 port))
-     (check-eof length-bs)
-     (set! length (integer-bytes->integer length-bs #f #t))]
-    [else void])
+    ;; Interpret the length field
+    (cond
+      ;; Read the next two bytes, and interpret it as
+      ;; a big-endian integer
+      [(equal? length 126)
+       (define length-bs (read-bytes 2 port))
+       (check-eof length-bs)
+       (set! length (integer-bytes->integer length-bs #f #t))]
+      [(equal? length 127)
+       (define length-bs (read-bytes 8 port))
+       (check-eof length-bs)
+       (set! length (integer-bytes->integer length-bs #f #t))]
+      [else void])
 
-  ;; Read the mask if it's set.
-  (define masking
-    (if masked?
-        (let ([mask-bs (read-bytes 4 port)])
-          (check-eof mask-bs)
-          mask-bs)
-        #"\0\0\0\0"))
+    ;; Read the mask if it's set.
+    (define masking
+      (if masked?
+          (let ([mask-bs (read-bytes 4 port)])
+            (check-eof mask-bs)
+            mask-bs)
+          #"\0\0\0\0"))
 
-  ;; Read data, and unmask - note XOR is symmetric.
-  (define data
-    (if masked? (mask (read-bytes length port) masking)
-        (read-bytes length port)))
+    ;; Read data, and unmask - note XOR is symmetric.
+    (define data
+      (if masked? (mask (read-bytes length port) masking)
+          (read-bytes length port)))
+    ;; Make sure that we actually got the right amount of data!
+    (check-eof data)
+    (unless (equal? (bytes-length data) length)
+      (raise (exn:websocket (format "read-frame: Unexpected end of frame!")
+                            (current-continuation-marks))))
 
-  ;; Return the frame.
-  (ws-frame final? rsv-field opcode data))
+    ;; Return the frame.
+    (ws-frame final? rsv-field opcode data)))
 
 ;; (send-frame frame port #:mask) -> void?
 ;; Sends a WebSocket frame along the port.
@@ -411,12 +422,17 @@
   (when mask?
     (set! data (mask data masking)))
 
-  ;; Write everything out
-  (write-byte framing-byte port)
-  (write-bytes length-bstr port)
-  (when mask? (write-bytes masking port))
-  (write-bytes data port)
-  (flush-output port))
+  ;; Write everything out - making sure that any network errors
+  ;; get reported correctly.
+  (with-handlers
+    ([exn:fail:network? (lambda (exn)
+                          (raise (exn:websocket (exn-message exn)
+                                                (current-continuation-marks))))])
+    (write-byte framing-byte port)
+    (write-bytes length-bstr port)
+    (when mask? (write-bytes masking port))
+    (write-bytes data port)
+    (flush-output port)))
 
 ;; (in-thread conn)
 ;; Starts the input thread which reads frames off of the input port
@@ -460,13 +476,13 @@
      (let loop ()
        (define sync-result (sync port))
        (with-handlers
-           ;; Got an exception - report it,
-           ;; and then quit immediately.
-           ;; This will be an unclean shutdown in all cases.
-           [(exn:websocket?
-             (lambda (exn)
-               (control conn exn)
-               (async-channel-put channel exn)))]
+         ;; Got an exception - report it,
+         ;; and then quit immediately.
+         ;; This will be an unclean shutdown in all cases.
+         ([exn:websocket?
+           (lambda (exn)
+             (control conn exn)
+             (async-channel-put channel exn))])
          (define frame (read-frame port))
          (cond
            ;; Case 0 - Control frame.
@@ -524,7 +540,9 @@
   (-> ws-connection? thread?)
   (define port (ws-connection-out-port conn))
   (define channel (ws-connection-out-chan conn))
+  (define report-channel (ws-connection-in-chan conn))
   (define mask? (ws-connection-mask? conn))
+  (define control (ws-connection-control conn))
 
   ;; Internal fragmentation state.
   ;; TODO handle sending fragmented frames. (A sequence of non-final frames followed by a final frame)
@@ -533,15 +551,23 @@
   (thread
    (lambda ()
      (let loop ()
-       (define alrm (alarm-evt (+ (ws-connection-last-ping conn) 30000)))
-       (define sync-result (sync channel alrm))
-       (cond
-         ;; Ping alarm went off. Send ping, reset alarm, repeat.
-         [(eq? sync-result alrm)
-          (send-frame (ws-frame #t 0 9 #"") port #:mask? mask?)
-          (set-ws-connection-last-ping! conn (current-inexact-milliseconds))
-          (loop)]
-         [else
-          ;; Send the frame, repeat
-          (send-frame sync-result port #:mask? mask?)
-          (loop)])))))
+       (with-handlers
+         ;; Got an exception - report it,
+         ;; and then quit immediately.
+         ;; This will be an unclean shutdown in all cases.
+         ([exn:websocket?
+           (lambda (exn)
+             (control conn exn)
+             (async-channel-put report-channel exn))])
+         (define alrm (alarm-evt (+ (ws-connection-last-ping conn) 30000)))
+         (define sync-result (sync channel alrm))
+         (cond
+           ;; Ping alarm went off. Send ping, reset alarm, repeat.
+           [(eq? sync-result alrm)
+            (send-frame (ws-frame #t 0 9 #"") port #:mask? mask?)
+            (set-ws-connection-last-ping! conn (current-inexact-milliseconds))
+            (loop)]
+           [else
+            ;; Send the frame, repeat
+            (send-frame sync-result port #:mask? mask?)
+            (loop)]))))))
