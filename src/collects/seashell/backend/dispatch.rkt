@@ -278,6 +278,14 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(make-download-token project)))]
+      [(hash-table
+        ('id id)
+        ('type "getUploadFileToken")
+        ('project project)
+        ('file file))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(make-file-upload-token project file)))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_

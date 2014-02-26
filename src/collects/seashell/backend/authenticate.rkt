@@ -24,7 +24,7 @@
          json)
 (provide exn:authenticate? authenticate install-server-key! make-nonce
          make-authenticate-response make-download-token check-download-token
-         make-challenge)
+         make-challenge make-file-upload-token check-upload-token)
 
 ;; Authentication error exception.
 (struct exn:authenticate exn:fail ())
@@ -33,6 +33,9 @@
 (define server-key (void))
 
 ;; Contracts.
+(define upload-token/c (and/c jsexpr? (list/c (listof byte?)
+                                              (listof byte?)
+                                              (listof byte?))))
 (define download-token/c (and/c jsexpr? (list/c (listof byte?)
                                                 (listof byte?)
                                                 (listof byte?))))
@@ -157,6 +160,55 @@
         (if (<= (current-milliseconds) (second vals))
             (first vals)
             (raise (exn:authenticate "Download token expired."
+              (current-continuation-marks))))
+        (raise (exn:project "Token for non-existent project."
+          (current-continuation-marks))))))
+
+;; (make-file-upload-token project filename) -> iv coded tag
+;; Creates a file upload token from a client request
+;;
+;; Arguments:
+;;  project - name of the project to which the file is being uploaded
+;;  filename - name of the file being uploaded
+;; Returns:
+;;  iv, coded, tag - GCM coded data that represents the upload token
+(define/contract (make-file-upload-token project filename)
+  (-> string? string? upload-token/c)
+  (define validity (+ current-milliseconds 1000))
+  (define-values (iv coded tag)
+    (seashell-encrypt
+      server-key
+      (with-output-to-bytes (lambda () (write (serialize (list project filename validity)))))
+      #""))
+  (map bytes->list (list iv coded tag)))
+
+
+;; (check-upload-token upload-token/c) -> (list/c project? string?)
+;;  Checks the validity of a upload token
+;;
+;; Params:
+;;  token - Token created from make-upload-token.
+;;
+;; Returns:
+;;  Project name and filename
+;;
+;; Raises exn:authenticate if token is expired
+;; Raises exn:project if project does not exist
+(define/contract (check-upload-token token)
+  (-> upload-token/c (list/c (and/c project-name? is-project?) string?))
+  (with-handlers
+    ([exn:crypto?
+       (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
+    (match-define `(,iv ,coded ,tag)
+                  (map list->bytes token))
+    (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
+    (define vals (with-input-from-bytes
+      decrypted-token (thunk (deserialize (read)))))
+    (if (and (project-name? (first vals))
+             (is-project? (first vals)))
+        (if (<= (current-milliseconds) (third vals))
+            (list (first vals) (second vals))
+            (raise (exn:authenticate "Upload token expired."
               (current-continuation-marks))))
         (raise (exn:project "Token for non-existent project."
           (current-continuation-marks))))))
