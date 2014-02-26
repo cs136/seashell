@@ -113,4 +113,6 @@ function setupMenu() {
   $("#menu-commentLine").on("click", handleCommentLines);
   $("#menu-commentSelection").on("click", handleCommentSelection);
   $("#menu-autoformat").on("click", handleAutoformat);
+
+  $("#menu-download").on("click", handleDownloadProject);
 }
