@@ -292,16 +292,6 @@
     (match message
       [(hash-table
         ('id id)
-        ('type "serverAuth")
-        ('challenge challenge))
-       ;; This does server authentication.
-       ;; We send some plaintext that is encrypted with the shared secret.
-       ;; The client should verify that the message is as expected before proceeding.
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(make-authenticate-response challenge)))]
-      [(hash-table
-        ('id id)
         ('type "clientAuth")
         ('response token))
        ;; This does client authentication.
