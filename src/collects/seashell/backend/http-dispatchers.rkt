@@ -85,17 +85,19 @@
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-error-dispatcher (lift:make standard-error-page))
 
-;; (standard-unauthenticated-page request?) -> response?
+;; (standard-unauthenticated-page exn request?) -> response?
 ;; Sends the standard Seashell unauthenticated page.
-(define/contract (standard-unauthorized-page request)
-  (-> request? response?)
+(define/contract (standard-unauthorized-page exn request)
+  (-> exn? request? response?)
   (response/xexpr
      `(html
         (head
           (title "403 Forbidden"))
         (body
           (h1 "Forbidden")
-          (p  ,(format "You are not authorized to view the request URL ~a." (url->string (request-uri request))))
+          (p  ,(format "You are not authorized to view the request URL ~a.
+                        The reason provided was: ~a" (url->string (request-uri request))
+                        (exn-message exn)))
           ,@(make-default-footer request)))
     #:code 403
     #:message #"Forbidden"
@@ -119,7 +121,7 @@
               `((hr)
                 (pre
                   ,(format "Message: ~a\n" (exn-message exn))
-                  (format-stack-trace (exn-continuation-marks exn))))
+                  ,(format-stack-trace (exn-continuation-marks exn))))
               '(""))
           ,@(make-default-footer request)))
     #:code 500
@@ -135,7 +137,7 @@
     ([exn:project? (lambda (exn) (standard-error-page request))]
      [exn:misc:match? (lambda (exn) (standard-server-error-page exn request))]
      [exn:fail:contract? (lambda (exn) (standard-server-error-page exn request))]
-     [exn:authenticate? (lambda (exn) (standard-unauthorized-page request))]
+     [exn:authenticate? (lambda (exn) (standard-unauthorized-page exn request))]
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
     (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
@@ -145,5 +147,5 @@
       #"application/zip, application/octet-stream"
       (make-headers
         #"Content-Disposition" #"attachment; filename=\"project.zip\"")
-      (export-project project))))
+      `(,(export-project project)))))
 (define project-export-dispatcher (lift:make project-export-page))

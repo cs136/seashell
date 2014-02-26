@@ -33,7 +33,9 @@
 (define server-key (void))
 
 ;; Contracts.
-(define download-token/c (and/c jsexpr? (list/c string? string? string?)))
+(define download-token/c (and/c jsexpr? (list/c (listof byte?)
+                                                (listof byte?)
+                                                (listof byte?))))
 (define authenticate-token/c (and/c jsexpr?
                                     (list/c (listof byte?)
                                             (listof byte?)
@@ -127,7 +129,7 @@
       (with-output-to-bytes (thunk (write (serialize (list project
         (+ 1000 (current-milliseconds)))))))
       #""))
-  (map (compose bytes->string/utf-8 base64-encode) `(,iv ,coded ,tag)))
+  (map bytes->list `(,iv ,coded ,tag)))
 
 ;; (check-download-token bytes? bytes? bytes?) -> bytes?
 ;;  Checks the validity of a download token
@@ -141,12 +143,12 @@
 ;; Raises exn:authenticate if token is expired
 ;; Raises exn:project if project does not exist
 (define/contract (check-download-token token)
-  (-> download-token/c bytes?)
+  (-> download-token/c (and/c project-name? is-project?))
   (with-handlers
     ([exn:crypto?
        (lambda (exn) (raise (exn:authenticate "Authentication error!" (current-continuation-marks))))])
     (match-define `(,iv ,coded ,tag)
-                  (map (compose base64-decode string->bytes/utf-8) token))
+                  (map list->bytes token))
     (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
     (define vals (with-input-from-bytes
       decrypted-token (thunk (deserialize (read)))))

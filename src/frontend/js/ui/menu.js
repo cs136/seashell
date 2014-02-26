@@ -85,6 +85,14 @@ function handleRunProject() {
 }
 
 /**
+ * handleDownloadProject()
+ * This function handles downloading projects.
+ */
+function handleDownloadProject() {
+  projectDownload();
+}
+
+/**
  * Sets up the menu; attaches actions to each menu item that does not already have
  * an action attached to it. */
 function setupMenu() {

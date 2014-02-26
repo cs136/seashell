@@ -460,3 +460,20 @@ function projectInput(input) {
   });
   return promise;
 }
+
+/**
+ * Project download handler.
+ */
+function projectDownload() {
+  return socket.getExportToken(currentProject).done(
+      function(token) {
+        var raw = JSON.stringify(token);
+        // There will be no error handling here.
+        $("body").append(
+          $("<iframe>").attr("src", "https://" + creds.host + ":" + creds.port + "/export?token=" + raw)
+                       .attr("style", "display: none"));
+      })
+  .fail(function() {
+    // TODO: Error handling
+  });
+}
