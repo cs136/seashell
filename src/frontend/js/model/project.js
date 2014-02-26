@@ -470,7 +470,8 @@ function projectDownload() {
         var raw = JSON.stringify(token);
         // There will be no error handling here.
         $("body").append(
-          $("<iframe>").attr("src", "https://" + creds.host + ":" + creds.port + "/export?token=" + raw)
+          $("<iframe>").attr("src",
+                             sprintf("https://%s:%d/export/%s.zip?token=%s", creds.host, creds.port, currentProject, token)
                        .attr("style", "display: none"));
       })
   .fail(function() {

@@ -144,8 +144,9 @@
     (define project (check-download-token (bytes->jsexpr raw-token)))
     (response/full 200 #"Okay"
       (current-seconds)
-      #"application/zip, application/octet-stream"
+      #"application/zip"
       (make-headers
-        #"Content-Disposition" #"attachment; filename=\"project.zip\"")
+        #"Content-Disposition"
+        #"attachment")
       `(,(export-project project)))))
 (define project-export-dispatcher (lift:make project-export-page))

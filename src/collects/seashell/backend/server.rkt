@@ -91,7 +91,7 @@
       request-logging-dispatcher
       (filter:make #rx"^/$" (make-websocket-dispatcher 
                              (curry conn-dispatch keepalive-chan)))
-      (filter:make #rx"^/export$" project-export-dispatcher)
+      (filter:make #rx"^/export/" project-export-dispatcher)
       standard-error-dispatcher))
 
   ;; Start the server.
