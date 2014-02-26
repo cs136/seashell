@@ -22,6 +22,7 @@
   seashell/log
   seashell/backend/authenticate
   seashell/backend/project
+  seashell/backend/files
   seashell/seashell-config
   web-server/http/xexpr
   web-server/http/response-structs
@@ -33,7 +34,8 @@
 
 (provide request-logging-dispatcher
          standard-error-dispatcher
-         project-export-dispatcher)
+         project-export-dispatcher
+         upload-file-dispatcher)
 
 ;; Default headers.
 (define default-headers
@@ -66,6 +68,22 @@
   (-> connection? request? void?)
   (logf 'info (string-trim (log:apache-default-format request)))
   (next-dispatcher))
+
+;; (standard-empty-response request?) -> response?
+;; Sends the standard Seashell empty response.
+(define/contract (standard-empty-response request)
+  (-> request? response?)
+  (response/xexpr
+     `(html
+        (head
+          (title "Nothing here."))
+        (body
+          (h1 "So down")
+          ,@(make-default-footer request)))
+    #:code 200
+    #:headers (make-headers)
+    #:message #"So down"
+    #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (standard-error-page request?) -> response?
 ;; Sends the standard Seashell error page.
@@ -150,3 +168,21 @@
         #"attachment")
       `(,(export-project project)))))
 (define project-export-dispatcher (lift:make project-export-page))
+
+;; (upload-file-page request?) -> response?
+;; Uploads a file from the user to a project
+(define/contract (upload-file-page request)
+  (-> request? response?)
+  (with-handlers
+    ([exn:project? (lambda (exn) (standard-error-page request))]
+     [exn:misc:match? (lambda (exn) (standard-server-error-page exn request))]
+     [exn:fail:contract? (lambda (exn) (standard-server-error-page exn request))]
+     [exn:authenticate? (lambda (exn) (standard-unauthorized-page exn request))]
+     [exn? (lambda (exn) (standard-server-error-page exn request))])
+    (define bindings (request-bindings/raw request))
+    (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
+    (match-define (binding:file _ _ _ content) (bindings-assq #"token" bindings))
+    (match-define (list project filename) (check-upload-token raw-token))
+    (write-file project filename content)
+    (standard-empty-response request)))
+(define upload-file-dispatcher (lift:make upload-file-page))

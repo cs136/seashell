@@ -92,6 +92,7 @@
       (filter:make #rx"^/$" (make-websocket-dispatcher 
                              (curry conn-dispatch keepalive-chan)))
       (filter:make #rx"^/export/" project-export-dispatcher)
+      (filter:make #rx"^/upload$" upload-file-dispatcher)
       standard-error-dispatcher))
 
   ;; Start the server.
