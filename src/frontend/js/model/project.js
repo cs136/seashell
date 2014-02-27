@@ -471,7 +471,7 @@ function projectDownload() {
         // There will be no error handling here.
         $("body").append(
           $("<iframe>").attr("src",
-                             sprintf("https://%s:%d/export/%s.zip?token=%s", creds.host, creds.port, currentProject, token)
+                             sprintf("https://%s:%s/export/%s.zip?token=%s", creds.host, creds.port, currentProject, raw))
                        .attr("style", "display: none"));
       })
   .fail(function() {
