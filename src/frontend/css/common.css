@@ -45,6 +45,14 @@ body {
   padding: 2px;
 }
 
+/** Downloads */
+#download-iframe {
+  zoom: 0.60;
+  width: 99.6%;
+  border: none;
+  height: 20%;
+}
+
 /** Editor and the console.  Make sure width + height <= 100%. */
 .editor-console {
   height: 100%;

@@ -467,12 +467,21 @@ function projectInput(input) {
 function projectDownload() {
   return socket.getExportToken(currentProject).done(
       function(token) {
+        /** Clear out any existing iframes. */
+        $("#download-iframe").remove();
+
+        /** Create a new one. */
         var raw = JSON.stringify(token);
-        // There will be no error handling here.
-        $("body").append(
-          $("<iframe>").attr("src",
-                             sprintf("https://%s:%s/export/%s.zip?token=%s", creds.host, creds.port, currentProject, raw))
-                       .attr("style", "display: none"));
+        var frame =  $("<iframe>").attr("src",
+                                        sprintf("https://%s:%s/export/%s.zip?token=%s",
+                                          creds.host, creds.port,
+                                          encodeURIComponent(currentProject),
+                                          encodeURIComponent(raw)))
+                                  .attr("id", "download-iframe");
+
+        /** Errors will be shown below. */
+        $("#download-project-body").append(frame);
+        $("#download-project-dialog").modal("show");
       })
   .fail(function() {
     // TODO: Error handling
