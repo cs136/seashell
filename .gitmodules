@@ -25,3 +25,6 @@
 [submodule "lib/libssh2"]
 	path = lib/libssh2
 	url = git://git.libssh2.org/libssh2.git
+[submodule "lib/form"]
+	path = lib/form
+	url = https://github.com/malsup/form.git
