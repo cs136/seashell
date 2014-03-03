@@ -261,3 +261,11 @@ SeashellWebsocket.prototype.getExportToken = function(project, deferred) {
     project : project},
     deferred);
 };
+
+SeashellWebsocket.prototype.getUploadFileToken = function(project, file, deferred) {
+  return this.sendMessage({
+    type : "getUploadFileToken",
+    project : project,
+    file: file},
+    deferred);
+};

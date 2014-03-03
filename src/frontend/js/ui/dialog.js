@@ -110,6 +110,14 @@ function handleCommitProject( ) {
 }
 
 /**
+ * handleUploadFile
+ * This handles uploading files.
+ */
+function handleUploadFile() {
+  projectUploadHandler();
+}
+
+/**
  * setupDialogs()
  * Sets up and attaches actions to all the dialogs. */
 function setupDialogs() {
@@ -139,4 +147,7 @@ function setupDialogs() {
   /** Set up the commit-project-dialog */
   $("#button-commit-project").on("click",
       handleCommitProject);
+  /** Set up the upload-file-dialog */
+  $("#button-upload-file").on("click",
+      handleUploadFile);
 }

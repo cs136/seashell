@@ -130,7 +130,7 @@
     (iv coded tag)
     (seashell-encrypt server-key
       (with-output-to-bytes (thunk (write (serialize (list project
-        (+ 1000 (current-milliseconds)))))))
+        (+ 60000 (current-milliseconds)))))))
       #""))
   (map bytes->list `(,iv ,coded ,tag)))
 
@@ -174,7 +174,7 @@
 ;;  iv, coded, tag - GCM coded data that represents the upload token
 (define/contract (make-file-upload-token project filename)
   (-> string? string? upload-token/c)
-  (define validity (+ current-milliseconds 1000))
+  (define validity (+ (current-milliseconds) 60000))
   (define-values (iv coded tag)
     (seashell-encrypt
       server-key

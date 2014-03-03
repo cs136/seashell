@@ -442,9 +442,43 @@ function projectCommit(description) {
 }
 
 /**
+ * Project upload file form handler
+ */
+function projectUploadHandler() {
+  /** Hide the modal. */
+  $("#upload-file-dialog").modal("hide");
+  /** Get the filename. */
+  var filename = $("#file-to-upload").val().replace(/.*(\/|\\)/, '');
+  /** Get the ticket. */
+  var promise = socket.getUploadFileToken(currentProject, filename);
+  promise.done(function (token) {
+    var raw = JSON.stringify(token);
+    var options = {
+      target: null,
+      dataType: null,
+      error: function() {
+        /** TODO: better error handling. */
+      },
+      success: function() {
+        currentFiles[filename] = {};
+        fileNavigationAddEntry(filename);
+      },
+      data: {token: raw},
+      url: sprintf("https://%s:%s/upload", creds.host, creds.port)
+    };
+    /** Submit the form */
+    $("#upload-file-form").ajaxSubmit(options);
+  }).fail(function() {
+    // TODO: better error handling.
+  });
+  return false;
+}
+
+/**
  * Project Setup Function
  **/
 function setupProjects() {
+  /** Install the I/O handler. */
   socket.requests[-3].callback = projectIOHandler;
 }
 

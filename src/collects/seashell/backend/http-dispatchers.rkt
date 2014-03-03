@@ -39,7 +39,8 @@
 
 ;; Default headers.
 (define default-headers
-  `(,(make-header #"Server" #"Seashell/1.0")))
+  `(,(make-header #"Server" #"Seashell/1.0")
+    ,(make-header #"Access-Control-Allow-Origin" #"*")))
 
 ;; Default footer.
 (define (make-default-footer request)
@@ -82,7 +83,7 @@
           ,@(make-default-footer request)))
     #:code 200
     #:headers (make-headers)
-    #:message #"So down"
+    #:message #"OK"
     #:preamble #"<!DOCTYPE HTML>"))
 
 ;; (standard-error-page request?) -> response?
@@ -160,7 +161,7 @@
     (define bindings (request-bindings/raw request))
     (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
     (define project (check-download-token (bytes->jsexpr raw-token)))
-    (response/full 200 #"Okay"
+    (response/full 200 #"OK"
       (current-seconds)
       #"application/zip"
       (make-headers
@@ -181,8 +182,8 @@
      [exn? (lambda (exn) (standard-server-error-page exn request))])
     (define bindings (request-bindings/raw request))
     (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
-    (match-define (binding:file _ _ _ content) (bindings-assq #"token" bindings))
-    (match-define (list project filename) (check-upload-token raw-token))
+    (match-define (binding:file _ _ _ content) (bindings-assq #"file-to-upload" bindings))
+    (match-define (list project filename) (check-upload-token (bytes->jsexpr raw-token)))
     (write-file project filename content)
     (standard-empty-response request)))
 (define upload-file-dispatcher (lift:make upload-file-page))
