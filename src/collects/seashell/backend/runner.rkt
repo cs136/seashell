@@ -116,6 +116,8 @@
                       (current-continuation-marks)))))]
         ;; Set the environment variables
         (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
+        ; TODO: need ASAN_OPTIONS="detect_leaks=1" ./a.out, not export ASAN_OPTIONS="detect_leaks=1"; ./a.out
+        (putenv "ASAN_OPTIONS" "detect_leaks=1")
         ;; Find the binary
         (logf 'info "Running binary ~a" binary)
         ;; Run it.

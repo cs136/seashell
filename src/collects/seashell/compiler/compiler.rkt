@@ -53,7 +53,7 @@
   ;; Might be worth writing stripped down C standard headers.
   (define cflags
     (list*
-      "-fsanitize=address"
+      "-fsanitize=address,leak"
       user-cflags))
 
   ;; Set up the compiler instance.
