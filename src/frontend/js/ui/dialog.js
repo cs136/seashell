@@ -151,3 +151,12 @@ function setupDialogs() {
   $("#button-upload-file").on("click",
       handleUploadFile);
 }
+
+/**
+* diplayErrorMessage
+* Displays a small dialogue box to show a user an error has occured
+*   on the front end */
+function displayErrorMessage(msg) {
+  $("#error-message-body").text(msg);
+  $("#error-message-modal").modal("show");
+}

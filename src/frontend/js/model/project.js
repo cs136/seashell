@@ -40,7 +40,7 @@ function updateListOfProjects() {
         $("<option>").attr("value", projects[i]).text(projects[i]));
     }
   }).fail(function(){
-    // TODO: Error handling.
+    displayErrorMessage("List of projects could not be updated.");
   });
 }
 
@@ -66,7 +66,7 @@ function projectSave() {
  */
 function saveFile(file) {
   return socket.writeFile(currentProject, file, currentFiles[file].document.getValue()).fail(function() {
-    // TODO: Error handling.
+    displayErrorMessage(file+" could not be saved.");
   });
 }
 
@@ -126,7 +126,7 @@ function fileDelete(file) {
   socket.deleteFile(currentProject, file).done(function () {
     currentFiles[file].tag.remove();
   }).fail(function() {
-    // TODO: Error handling.
+    displayErrorMessage(file+" could not be deleted.");
   });
 }
 
@@ -158,7 +158,7 @@ function fileOpen(name) {
       currentFiles[name].document = new CodeMirror.Doc(contents, "text/x-csrc");
       rest();
     }).fail(function () {
-     // TODO: Error handling.
+      displayErrorMessage(name+" could not be read.");
     }); 
   } else {
     rest();
@@ -173,9 +173,10 @@ function fileOpen(name) {
 function fileNew(name) {
   /** (Lazily) create the file. */
   if (name in currentFiles) {
-    // TODO: Error handling.  This should never happen,
+    // This should never happen,
     // as a project should only be open in one Seashell instance
     // at any time.  Though that still has to be handled.
+    displayErrorMessage(name+" already exists.");
   } else {
     // TODO: Custom file types.
     currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
@@ -248,7 +249,7 @@ function projectOpen(name) {
     /** Refresh the console. */
     consoleRefresh();
   }).fail(function(){
-    // TODO: error handling.
+    displayErrorMessage("Project "+name+" could not be opened.");
   });
 }
 
@@ -263,7 +264,7 @@ function projectNew(name) {
   promise.done(function() {
     projectOpen(name);
   }).fail(function() {
-    // TODO: error handling.
+    displayErrorMessage("Project "+name+" could not be created.");
   });
 }
 
@@ -277,7 +278,7 @@ function projectDelete() {
   promise.done(function() {
     projectClose(false);
   }).fail(function() {
-    // TODO: error handling.
+    displayErrorMessage("Project could not be deleted.");
   });
 
   return promise;
@@ -329,12 +330,13 @@ function projectCompile() {
         // Lint
         editorLint();
       } else {
-        // TODO: error handling.
+        displayErrorMessage("Project could not be compiled.");
       }
     });
   }).fail(function () {
     // TODO: Better error handling.
     promise.reject(null);
+    displayErrorMessage("Compilation failed because project could not be saved.");
   });
 
   return promise;
@@ -396,11 +398,11 @@ function projectRun() {
       consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
       currentPID = pid;
     }).fail(function() {
-      // TODO: error handling.
+      displayErrorMessage("Project could not be run.");
     });
   }).fail(function () {
-    // TODO: Better error handling.
     promise.reject(null);
+    displayErrorMessage("Project compilation failed.");
   });
 
   return promise;
@@ -431,11 +433,11 @@ function projectCommit(description) {
   save_promise.done(function() {
     promise = socket.saveProject(currentProject, description);
     promise.fail(function() {
-      // TODO: error handling
+      displayErrorMessage("Commit failed because project could not be saved.");
     });
   }).fail(function() {
     promise.reject(null);
-    // TODO: better error handling.
+    displayErrorMessage("Project could not be committed.");
   });
 
   return promise;
@@ -457,7 +459,7 @@ function projectUploadHandler() {
       target: null,
       dataType: null,
       error: function() {
-        /** TODO: better error handling. */
+        displayErrorMessage("File could not be successfully uploaded.");
       },
       success: function() {
         currentFiles[filename] = {};
@@ -469,7 +471,7 @@ function projectUploadHandler() {
     /** Submit the form */
     $("#upload-file-form").ajaxSubmit(options);
   }).fail(function() {
-    // TODO: better error handling.
+    displayErrorMessage("Error retrieving file upload ticket.");
   });
   return false;
 }
@@ -490,7 +492,7 @@ function projectInput(input) {
   // TODO: Error handling and PID
   var promise = socket.programInput(currentPID, input);
   promise.fail(function () {
-    // TODO: Error handling
+    displayErrorMessage("Input was not successfully sent.");
   });
   return promise;
 }
@@ -518,6 +520,6 @@ function projectDownload() {
         $("#download-project-dialog").modal("show");
       })
   .fail(function() {
-    // TODO: Error handling
+    displayErrorMessage("Error retrieving project download token.");
   });
 }
