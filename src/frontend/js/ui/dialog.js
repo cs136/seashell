@@ -133,11 +133,8 @@ function setupDialogs() {
   $("#button-delete-project").on("click",
       handleDeleteProject);
   /** Set up the revert-project-dialg. */
-  $("#button-delete-project").on("click",
+  $("#button-revert-project").on("click",
       handleRevertProject);
-  /** Set up the delete-file-dialog. */
-  $("#button-delete-project").on("click",
-      handleDeleteProject);
   /** Set up the new-file-dialog. */
   $("#button-new-file").on("click",
       handleNewFile);
