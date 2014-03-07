@@ -54,7 +54,6 @@
   (define cflags
     (list*
       "-fsanitize=address"
-      "-fno-omit-frame-pointer"
       user-cflags))
 
   ;; Set up the compiler instance.
