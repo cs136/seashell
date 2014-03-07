@@ -66,6 +66,13 @@
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
+       ;; Flush the ports!
+       (define read-stdout (port->bytes raw-stdout))
+       (unless (eof-object? read-stdout)
+         (write-bytes read-stdout out-stdout))
+       (define read-stderr (port->bytes raw-stderr))
+       (unless (eof-object? read-stderr)
+         (write-bytes read-stderr out-stderr))
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
@@ -117,7 +124,7 @@
         ;; Set the environment variables
         (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
         ; TODO: need ASAN_OPTIONS="detect_leaks=1" ./a.out, not export ASAN_OPTIONS="detect_leaks=1"; ./a.out
-        (putenv "ASAN_OPTIONS" "detect_leaks=1")
+        (putenv "ASAN_OPTIONS" "atexit=1:print_stats=1:detect_leaks=1")
         ;; Find the binary
         (logf 'info "Running binary ~a" binary)
         ;; Run it.

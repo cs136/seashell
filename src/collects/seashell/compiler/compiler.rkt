@@ -53,7 +53,8 @@
   ;; Might be worth writing stripped down C standard headers.
   (define cflags
     (list*
-      "-fsanitize=address,leak"
+      "-fsanitize=address"
+      "-fno-omit-frame-pointer"
       user-cflags))
 
   ;; Set up the compiler instance.
