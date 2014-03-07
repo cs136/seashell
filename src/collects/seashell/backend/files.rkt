@@ -17,7 +17,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project
-         seashell/seashell-config)
+         seashell/seashell-config
+         seashell/log)
 
 (provide exn:project:file new-file remove-file read-file write-file list-files)
 
@@ -62,6 +63,7 @@
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
+    (logf 'info "Deleting file ~a!" (path->string (check-and-build-path (read-config 'seashell) project file)))
     (delete-file (check-and-build-path (read-config 'seashell) project file)))
   (void))
 
