@@ -102,7 +102,7 @@
       (cons 'llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer"))
 
       ;; Default binary to invoke when linking.
-      (cons 'system-linker                 "/usr/bin/cc")
+      (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
 
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")

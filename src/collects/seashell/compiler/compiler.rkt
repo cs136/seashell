@@ -92,24 +92,7 @@
   (cond
     [(zero? compiler-res)
       ;; Set up the linker flags.
-      (define ldflags
-        (list*
-          "-whole-archive"
-          ;; CAUTION: This here is very clang-specific code - as we need to simulate the final link step
-          ;; of -fsanitize=address.  Make sure that this pulls in the right version of clang's
-          ;; AddressSanitizer code.
-          (path->string
-            (build-path (read-config 'seashell-install) "lib" "clang"
-                        (seashell_clang_version)
-                        "lib"
-                        (seashell_compiler_object_os compiler)
-                        (format "libclang_rt.asan-~a.a" (seashell_compiler_object_arch compiler))))
-          "-no-whole-archive"
-          "-lm"
-          "-ldl"
-          "-lrt"
-          "-lpthread"
-          user-ldflags))
+      (define ldflags user-ldflags)
 
       ;; Invoke the final link step on the object file - if it exists.
       (define object (seashell_compiler_get_object compiler))
@@ -122,6 +105,7 @@
       (define-values (linker linker-output linker-input linker-error)
         (apply subprocess #f #f #f (read-config 'system-linker)
                (list* "-o" (path->string result-file) (path->string object-file)
+                      "-fsanitize=address"
                       (map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
       ;; Close unused port.
       (close-output-port linker-input)
