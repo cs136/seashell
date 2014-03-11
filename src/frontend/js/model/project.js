@@ -125,6 +125,7 @@ function fileDelete(file) {
   }
   socket.deleteFile(currentProject, file).done(function () {
     currentFiles[file].tag.remove();
+    delete currentFiles[file];
   }).fail(function() {
     displayErrorMessage(file+" could not be deleted.");
   });
