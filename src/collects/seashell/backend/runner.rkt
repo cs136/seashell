@@ -121,15 +121,15 @@
               (raise (exn:program:run
                       (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                       (current-continuation-marks)))))]
-        ;; Set the environment variables
-        (putenv "ASAN_SYMBOLIZER_PATH" (path->string (read-config 'llvm-symbolizer)))
-        ; TODO: need ASAN_OPTIONS="detect_leaks=1" ./a.out, not export ASAN_OPTIONS="detect_leaks=1"; ./a.out
-        (putenv "ASAN_OPTIONS" "atexit=1:print_stats=1:detect_leaks=1")
-        ;; Find the binary
         (logf 'info "Running binary ~a" binary)
-        ;; Run it.
         (define-values (handle raw-stdout raw-stdin raw-stderr)
-          (subprocess #f #f #f binary))
+          ;; Behaviour is inconsistent if we just exec directly.
+          ;; This seems to work.  (why: who knows?)
+          (subprocess #f #f #f (read-config 'system-shell) "-c"
+                      (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
+                              (path->string (read-config 'llvm-symbolizer))
+                              "atexit=1:print_stats_1:detect_leaks=1"
+                               binary)))
         ;; Construct the I/O ports.
         (define-values (in-stdout out-stdout) (make-pipe))
         (define-values (in-stdin out-stdin) (make-pipe))

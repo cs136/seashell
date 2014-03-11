@@ -104,6 +104,9 @@
       ;; Default binary to invoke when linking.
       (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
 
+      ;; Default shell
+      (cons 'system-shell                  (string->path "/bin/sh"))
+
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
     )))
