@@ -70,6 +70,16 @@ function saveFile(file) {
   });
 }
 
+/**
+ * Creates a new file.
+ * @param {String} file Name of file to create.
+ * @return {Promise} promise JQuery promise when file is saved.
+ */
+function createFile(file) {
+  return socket.newFile(currentProject, file).fail(function() {
+    displayErrorMessage(file+" could not be created.");
+  });
+}
 
 /**
  * Closes the project.
@@ -182,7 +192,7 @@ function fileNew(name) {
     // TODO: Custom file types.
     currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
     // TODO: Proper new file call.
-    saveFile(name).done(function () {;
+    createFile(name).done(function () {;
       fileNavigationAddEntry(name);
       fileOpen(name)})
     .fail(function () {

@@ -230,6 +230,14 @@ SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.newFile = function(name, file_name, deferred) {
+  return this.sendMessage({
+    type : "newFile",
+    project : name,
+    file : file_name},
+    deferred);
+};
+
 SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, deferred) {
   return this.sendMessage({
     type : "writeFile",
