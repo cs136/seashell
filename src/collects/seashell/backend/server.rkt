@@ -68,6 +68,7 @@
   
   ;; Directory setup.
   (init-environment)
+  (init-projects)
 
   ;; Log / handlers setup.
   (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")

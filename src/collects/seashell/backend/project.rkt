@@ -29,7 +29,11 @@
          exn:project?
          exn:project
          check-path
+         init-projects
          check-and-build-path
+         build-project-path
+         project-base-path
+         runtime-files-path
          run-project
          compile-project
          export-project)
@@ -77,8 +81,7 @@
 ;; Predicate for testing if a string is a valid project name.
 (define (project-name? name)
   (cond
-    [(not (string? name)) #f]
-    [(not (path-string? name)) #f]
+    [(not (or (path-string? name) (string? name))) #f]
     [(let-values ([(base suffix _) (split-path name)])
       (and (equal? base 'relative) (path-for-some-system? suffix)))
      #t]
@@ -94,13 +97,39 @@
     (string->url str)
     #t))
 
+;; (project-base-path)
+;; Gets the base path where projects are located
+(define/contract (project-base-path)
+  (-> path?)
+  (build-path (read-config 'seashell) "projects"))
+
+;; (build-project-path project)
+;; Gets the path where project is stored
+(define/contract (build-project-path project)
+  (-> project-name? path?)
+  (check-and-build-path (project-base-path) project))
+
+;; (runtime-files-path)
+;; Gets the path where runtime files are stored.
+(define/contract (runtime-files-path)
+  (-> path?)
+  (build-path (read-config 'seashell) "runtime-files"))
+
+;; (init-projects)
+;; Creates the directories for projects
+(define/contract (init-projects)
+  (-> void?)
+  (make-directory* (runtime-files-path))
+  (make-directory* (project-base-path))
+  (void))
+
 ;; list-projects -> (listof project-name?)
 ;; Lists existing Seashell projects.
 (define/contract (list-projects)
   (-> (listof project-name?))
   (map path->string
-       (filter (compose directory-exists? (curry build-path (read-config 'seashell)))
-               (directory-list (read-config 'seashell)))))
+       (filter (compose directory-exists? build-project-path)
+               (directory-list (project-base-path)))))
 
 ;; (new-project name) -> void?
 ;; Creates a new project.
@@ -119,7 +148,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init (check-and-build-path (read-config 'seashell) name)))
+    (seashell-git-init (build-project-path name)))
   (void))
 
 ;; (new-project-from name source)
@@ -145,7 +174,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone source (check-and-build-path (read-config 'seashell) name)))
+    (seashell-git-clone source (build-project-path name)))
   (void))
 
 ;; (delete-project name)
@@ -179,7 +208,7 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (recursive-delete-tree (check-and-build-path (read-config 'seashell) name)))
+    (recursive-delete-tree (build-project-path name)))
   (void))
 
 ;; (save-project name)
@@ -197,7 +226,7 @@
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
-  (define repo (check-and-build-path (read-config 'seashell) name))
+  (define repo (build-project-path name))
   ;; Here's what we do -
   ;;  1. Grab the status of the repository.
   ;;  2. Add 'adds' to each of the files that
@@ -244,7 +273,7 @@
 ;; Returns: #t if it does, #f otherwise.
 (define/contract (is-project? name)
   (-> project-name? boolean?)
-  (directory-exists? (check-and-build-path (read-config 'seashell) name)))
+  (directory-exists? (build-project-path name)))
 
 ;; (compile-project name)
 ;; Compiles a project.
@@ -267,19 +296,19 @@
   (define c-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"c"))
-            (directory-list (check-and-build-path (read-config 'seashell) name) #:build? #t)))
+            (directory-list (build-project-path name) #:build? #t)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages) (seashell-compile-files '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files))
-  (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
+  (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
                          #:exists 'replace
                          (thunk
-                           (write-bytes result))))
-  (file-or-directory-permissions
-    output-path
-    (bitwise-ior (file-or-directory-permissions output-path 'bits) user-execute-bit))
+                           (write-bytes result)))
+    (file-or-directory-permissions
+      output-path
+      (bitwise-ior (file-or-directory-permissions output-path 'bits) user-execute-bit)))
 
   ;; Messages is a list of seashell-diagnostic(s)
   (values
@@ -310,7 +339,7 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
   ;; TODO: Racket mode.
-  (define output-path (check-and-build-path (read-config 'seashell) (format "~a-binary" name)))
+  (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (run-program output-path))
 
 ;; (export-project name) -> bytes?
@@ -326,7 +355,7 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
   (parameterize
-    ([current-directory (check-and-build-path (read-config 'seashell) name)])
+    ([current-directory (build-project-path name)])
     (with-output-to-bytes
       (thunk
         (zip->output (pathlist-closure `(".")))))))

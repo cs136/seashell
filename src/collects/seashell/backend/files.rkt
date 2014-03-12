@@ -42,7 +42,7 @@
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (close-output-port (open-output-file
-                         (check-and-build-path (read-config 'seashell) project file)
+                         (check-and-build-path (build-project-path project) file)
                          #:exists 'append)))
   (void))
 
@@ -63,8 +63,8 @@
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (logf 'info "Deleting file ~a!" (path->string (check-and-build-path (read-config 'seashell) project file)))
-    (delete-file (check-and-build-path (read-config 'seashell) project file)))
+    (logf 'info "Deleting file ~a!" (path->string (check-and-build-path (build-project-path project) file)))
+    (delete-file (check-and-build-path (build-project-path project) file)))
   (void))
 
 ;; (read-file project file) -> bytes?
@@ -78,7 +78,7 @@
 ;;  Contents of the file as a bytestring.
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (check-and-build-path (read-config 'seashell) project file)
+  (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
 
 ;; (write-file project file contents) -> void?
@@ -90,7 +90,7 @@
 ;;  contents - contents of file.
 (define/contract (write-file project file contents)
   (-> (and/c project-name? is-project?) path-string? bytes? void?)
-  (with-output-to-file (check-and-build-path (read-config 'seashell) project file)
+  (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'truncate/replace)
   (void))
@@ -108,7 +108,7 @@
 ;;  We will have to rework Seashell if this assumption does not hold in the future.
 (define/contract (list-files project)
   (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
-  (define project-path (check-and-build-path (read-config 'seashell) project))
+  (define project-path (check-and-build-path (build-project-path project)))
   (map path->string
     (filter
       (lambda (path)
