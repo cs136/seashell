@@ -18,6 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require net/url
          racket/async-channel
+         racket/serialize
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -92,11 +93,14 @@
     (file-stream-buffer-mode (current-input-port) 'none)
     (file-stream-buffer-mode (current-output-port) 'none)
     (file-stream-buffer-mode (current-error-port) 'none)
-    
-    ;; Read encryption key, and set it.
-    (define key (seashell-crypt-key-server-read (current-input-port)))
-    (install-server-key! key)
 
+    ;; If another instance of the server is running, send credentials for that instance and exit
+    (when (file-exists? (build-path (read-config 'seashell) "creds"))
+        (logf 'info "Found existing seashell instance lock file; using existing credentials.")
+        (with-input-from-file (build-path (read-config 'seashell) "creds") (thunk
+          (write (read))))
+        (exit 0))
+    
     ;; Global dispatcher.
     (define seashell-dispatch
       (sequence:make
@@ -119,6 +123,15 @@
     (define start-result (async-channel-get conf-chan))
     (when (exn? start-result)
       (raise start-result))
+
+    ;; Generate and send credentials, write lock file
+    (define host "localhost")
+    (logf 'debug (sprintf "Read hostname '~a' from login server" host))
+    (define key (seashell-crypt-make-key))
+    (install-server-key! key)
+    (define creds `#hash((key . ,key) (host . ,host) (port . ,start-result)))
+    (write (serialize creds))
+    (with-output-to-file (build-path (read-config 'seashell) "creds") (thunk (write (serialize creds))))
     
     ;; Write out the listening port
     (printf "~a~n" start-result)
@@ -131,6 +144,9 @@
         (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
           [#f (void)]
           [else (loop)])))
+
+    ;; Delete lock file
+    (delete-file (build-path (read-config 'seashell) "creds"))
     
     ;; Shutdown.
     (logf 'info "Shutting down...")

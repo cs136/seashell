@@ -23,6 +23,7 @@
          seashell/tunnel
          seashell/crypto
          racket/sandbox
+         racket/serialize
          json)
 
 (provide gateway-main)
@@ -96,22 +97,18 @@
 
       (set! tun-proc (tunnel-process tun))
 
-      ;; Key generation
-      (define shared-key (seashell-crypt-make-key))
-
       (logf 'debug "Tunnel hostname is ~a" (tunnel-hostname tun))
-      (logf 'debug "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
 
-      ;; Send key to backend process
-      (write-bytes shared-key (tunnel-out tun))
+      ;; Send hostname to backend process
+      (write (tunnel-hostname tun) (tunnel-out tun))
       (flush-output (tunnel-out tun))
 
-      (logf 'debug "Waiting for tunnel port.")
-      ;; Get initialization info from backend process
-      (define be-host (tunnel-hostname tun))
-      (define be-port (read-line (tunnel-in tun)))
+      (logf 'debug "Waiting for tunnel credentials.")
 
-      (when (eof-object? be-port)
+      ;; Get initialization info from backend process
+      (define be-creds (read (tunnel-in tun)))
+
+      (when (eof-object? be-creds)
         (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
 
       (logf 'debug "Waiting for tunnel shutdown.")
@@ -128,10 +125,7 @@
 
       ;; Send key, address, and port to client.
       ;; This duplicates some code in seashell/crypto.
-      (response/json
-        `#hash((key . ,(seashell-crypt-key->client shared-key))
-               (host . ,be-host)
-               (port . ,be-port)))))
+      (response/json (deserialize be-creds))))
 
   (exit 0))
 
