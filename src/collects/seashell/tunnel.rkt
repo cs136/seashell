@@ -27,12 +27,12 @@
  tunnel-process
  tunnel-in
  tunnel-out
- tunnel-remote-addr
+ tunnel-hostname
  tunnel-close
  exn:tunnel
  exn:tunnel?)
 
-(struct tunnel (process in out status-thread remote-addr))
+(struct tunnel (process in out status-thread hostname))
 (struct exn:tunnel exn:fail:user (status-code))
 
 ;; (tunnel-close tunnel)
@@ -71,12 +71,15 @@
 (define/contract (tunnel-launch user password)
   (-> string? string? tunnel?)
 
+  ;; Randomly select a host
+  (define host (first (shuffle (read-config 'host))))
+
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
                 (read-config 'tunnel-binary)
                 user
-                (read-config 'host)))
+                host))
   ;; And the logger thread
   (define status-thread
     (thread
@@ -84,7 +87,7 @@
        (let loop ()
          (define line (read-line error))
          (when (not (eq? line eof))
-           (logf 'debug "tunnel stderr (~a@~a): ~a" user (read-config 'host) line)
+           (logf 'debug "tunnel stderr (~a@~a): ~a" user host line)
            (loop))
          ;; EOF received - die.
          (close-input-port error))
@@ -146,4 +149,4 @@
                        (subprocess-status process))))
 
   ;; All good.
-  (tunnel process in out status-thread (bytes->string/utf-8 remote-addr-bytes)))
+  (tunnel process in out status-thread host))

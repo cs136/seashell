@@ -55,7 +55,7 @@
 
       ;; Backend target host. The gateway will attempt to start user sessions on this host
       ;; via SSH.
-      (cons 'host                          "localhost")
+      (cons 'host                          '("localhost"))
 
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))

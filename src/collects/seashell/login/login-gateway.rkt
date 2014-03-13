@@ -99,7 +99,7 @@
       ;; Key generation
       (define shared-key (seashell-crypt-make-key))
 
-      (logf 'debug "Remote address is ~a" (tunnel-remote-addr tun))
+      (logf 'debug "Tunnel hostname is ~a" (tunnel-hostname tun))
       (logf 'debug "Key is ~a bytes: ~s" (bytes-length shared-key) shared-key)
 
       ;; Send key to backend process
@@ -108,7 +108,7 @@
 
       (logf 'debug "Waiting for tunnel port.")
       ;; Get initialization info from backend process
-      (define be-address (tunnel-remote-addr tun))
+      (define be-host (tunnel-hostname tun))
       (define be-port (read-line (tunnel-in tun)))
 
       (when (eof-object? be-port)
@@ -130,7 +130,7 @@
       ;; This duplicates some code in seashell/crypto.
       (response/json
         `#hash((key . ,(seashell-crypt-key->client shared-key))
-               (host . ,be-address)
+               (host . ,be-host)
                (port . ,be-port)))))
 
   (exit 0))
