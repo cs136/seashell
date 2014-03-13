@@ -126,7 +126,7 @@
 
     ;; Generate and send credentials, write lock file
     (define host "localhost")
-    (logf 'debug (sprintf "Read hostname '~a' from login server" host))
+    (logf 'debug "Read hostname '~a' from login server" host)
     (define key (seashell-crypt-make-key))
     (install-server-key! key)
     (define creds `#hash((key . ,key) (host . ,host) (port . ,start-result)))
@@ -134,7 +134,6 @@
     (with-output-to-file (build-path (read-config 'seashell) "creds") (thunk (write (serialize creds))))
     
     ;; Write out the listening port
-    (printf "~a~n" start-result)
     (logf 'info "Listening on port ~a." start-result)
     
     ;; Loop and serve requests.
