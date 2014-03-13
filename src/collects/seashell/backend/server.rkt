@@ -66,63 +66,74 @@
     (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
     (exit 1))
   
-  ;; Directory setup.
-  (init-environment)
-  (init-projects)
-
-  ;; Log / handlers setup.
-  (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
-                                        #:exists 'append))
-  (standard-logger-setup)
-  
-  (logf 'info "Starting up.")
-  
-  ;; Unbuffered mode for I/O ports
-  (file-stream-buffer-mode (current-input-port) 'none)
-  (file-stream-buffer-mode (current-output-port) 'none)
-  (file-stream-buffer-mode (current-error-port) 'none)
-  
-  ;; Read encryption key, and set it.
-  (define key (seashell-crypt-key-server-read (current-input-port)))
-  (install-server-key! key)
-
-  ;; Global dispatcher.
-  (define seashell-dispatch
-    (sequence:make
-      request-logging-dispatcher
-      (filter:make #rx"^/$" (make-websocket-dispatcher 
-                             (curry conn-dispatch keepalive-chan)))
-      (filter:make #rx"^/export/" project-export-dispatcher)
-      (filter:make #rx"^/upload$" upload-file-dispatcher)
-      standard-error-dispatcher))
-
-  ;; Start the server.
-  (define conf-chan  (make-async-channel))
-  (define shutdown-server
-    (serve
-     #:dispatch seashell-dispatch
-     #:port 0
-     #:tcp@ ssl-unit
-     #:listen-ip "localhost"
-     #:confirmation-channel conf-chan))
-  (define start-result (async-channel-get conf-chan))
-  (when (exn? start-result)
-    (raise start-result))
-  
-  ;; Write out the listening port
-  (printf "~a~n" start-result)
-  (logf 'info "Listening on port ~a." start-result)
-  
-  ;; Loop and serve requests.
   (with-handlers
-      ([exn:break? (lambda(e) (logf 'error "Terminating on break."))])
-    (let loop ()
-      (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
-        [#f (void)]
-        [else (loop)])))
+    ([exn? (lambda (exn)
+             (fprintf (current-error-port) "Exception raised in startup code: ~a~n" (exn-message exn))
+             (exit 1))])
+
+    ;; Directory setup.
+    (init-environment)
+    (init-projects)
+
+    ;; Log / handlers setup.
+    (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
+                                          #:exists 'append))
+    (standard-logger-setup))
+
+  (with-handlers
+    ([exn? (lambda (exn)
+             (logf 'error "Exception raised in Seashell!  Exiting...")
+             ;; TODO: cleanup code
+             (exit 1))])
   
-  ;; Shutdown.
-  (logf 'info "Shutting down...")
-  (shutdown-server)
-  (logf 'info "Graceful shutdown.")
-  (exit 0))
+    (logf 'info "Starting up.")
+    
+    ;; Unbuffered mode for I/O ports
+    (file-stream-buffer-mode (current-input-port) 'none)
+    (file-stream-buffer-mode (current-output-port) 'none)
+    (file-stream-buffer-mode (current-error-port) 'none)
+    
+    ;; Read encryption key, and set it.
+    (define key (seashell-crypt-key-server-read (current-input-port)))
+    (install-server-key! key)
+
+    ;; Global dispatcher.
+    (define seashell-dispatch
+      (sequence:make
+        request-logging-dispatcher
+        (filter:make #rx"^/$" (make-websocket-dispatcher 
+                               (curry conn-dispatch keepalive-chan)))
+        (filter:make #rx"^/export/" project-export-dispatcher)
+        (filter:make #rx"^/upload$" upload-file-dispatcher)
+        standard-error-dispatcher))
+
+    ;; Start the server.
+    (define conf-chan  (make-async-channel))
+    (define shutdown-server
+      (serve
+       #:dispatch seashell-dispatch
+       #:port 0
+       #:tcp@ ssl-unit
+       #:listen-ip "localhost"
+       #:confirmation-channel conf-chan))
+    (define start-result (async-channel-get conf-chan))
+    (when (exn? start-result)
+      (raise start-result))
+    
+    ;; Write out the listening port
+    (printf "~a~n" start-result)
+    (logf 'info "Listening on port ~a." start-result)
+    
+    ;; Loop and serve requests.
+    (with-handlers
+        ([exn:break? (lambda(e) (logf 'error "Terminating on break."))])
+      (let loop ()
+        (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
+          [#f (void)]
+          [else (loop)])))
+    
+    ;; Shutdown.
+    (logf 'info "Shutting down...")
+    (shutdown-server)
+    (logf 'info "Graceful shutdown.")
+    (exit 0)))
