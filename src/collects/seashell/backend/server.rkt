@@ -125,7 +125,7 @@
       (raise start-result))
 
     ;; Generate and send credentials, write lock file
-    (define host "localhost")
+    (define host (read))
     (logf 'debug "Read hostname '~a' from login server" host)
     (define key (seashell-crypt-make-key))
     (install-server-key! key)
@@ -135,7 +135,7 @@
     
     ;; Write out the listening port
     (logf 'info "Listening on port ~a." start-result)
-    
+
     ;; Loop and serve requests.
     (with-handlers
         ([exn:break? (lambda(e) (logf 'error "Terminating on break."))])
