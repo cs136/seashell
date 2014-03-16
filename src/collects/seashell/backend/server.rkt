@@ -76,6 +76,8 @@
 ;;
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
+  (define ssl-unit #f)
+
   (with-handlers
       ([exn:fail? 
         (lambda (exn)
@@ -85,8 +87,7 @@
     (config-refresh!)
     
     ;; Install SSL keys.
-    ;; TODO: DHE keys.
-    (define ssl-unit
+    (set! ssl-unit
       (make-ssl-tcp@
        (read-config 'ssl-cert)
        (read-config 'ssl-key)
