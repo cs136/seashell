@@ -25,6 +25,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -55,5 +59,20 @@ int seashell_drop_permissions(void) {
     return 1;
   }
 
+  return 0;
+}
+
+/**
+ * seashell_create_secret_file(char* file)
+ * Creates a file with only user RW set, fails if the file already exists.
+ * This is to deal with the fact that Racket doesn't allow setting permissions
+ * on file create.
+ */
+int seashell_create_secret_file(char* file) {
+  int fd = open(file, O_CREAT | O_EXCL | O_WRONLY, S_IRUSR | S_IWUSR);
+  if (fd < 0) {
+    return 1;
+  }
+  close(fd);
   return 0;
 }

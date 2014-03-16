@@ -22,10 +22,15 @@
 (require seashell/seashell-config)
 
 (provide seashell_drop_permissions
+         seashell_create_secret_file
          seashell_signal_detach)
 
 (define-ffi-definer define-support 
                     (ffi-lib (read-config 'seashell-support)))
 
+;; These functions return 0 on success and 1 on failure if they return anything.
+;; Manually check the result of these functions - as failure can indicate there's
+;; an underlying security issue that needs to be addressed.
 (define-support seashell_drop_permissions (_fun -> _int))
 (define-support seashell_signal_detach (_fun -> _void))
+(define-support seashell_create_secret_file (_fun _path -> _int))

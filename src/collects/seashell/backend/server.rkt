@@ -65,10 +65,10 @@
   (current-output-port (open-output-nowhere))
   (unless (port-closed? old-output-port)
     (close-output-port old-output-port))
-
+  
   (unless (port-closed? (current-input-port))
     (close-input-port (current-input-port)))
-
+  
   (seashell_signal_detach))
 
 ;; (backend/main)
@@ -94,6 +94,8 @@
         (lambda (exn)
           (fprintf (current-error-port) "Exception raised in startup code: ~a~n" (exn-message exn))
           (exit-from-seashell 2))])
+    ;; Load configuration.
+    (config-refresh!)
     
     ;; Directory setup.
     (init-environment)
@@ -140,6 +142,7 @@
                 (define repeat (make-continuation-prompt-tag))
                 (call-with-continuation-prompt
                  (thunk
+                  ;; Try to read the file...
                   (with-handlers
                       ([exn:fail:filesystem? (lambda (exn) (void))])
                     (with-input-from-file
@@ -153,17 +156,21 @@
                            (write result))))
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
-                  (with-handlers
-                      ([exn:fail:filesystem? (lambda (exn) 
-                                               (abort-current-continuation repeat))])
-                    (open-output-file credentials-file)))
+                  ;; If it does not exist, create it mode 600 and get a port to it.
+                  ;; This can lead to a race condition with the above code, so if we can't create it,
+                  ;; we loop again (up to a certain number of times)
+                  (when (not (= 0 (seashell_create_secret_file credentials-file)))
+                    (abort-current-continuation repeat))
+                  (with-handlers*
+                   ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
+                   (open-output-file credentials-file #:exists 'must-truncate)))
                  repeat
                  (thunk (loop (add1 tries))))))
         ;; Set permissions on the file.
         (file-or-directory-permissions
-          credentials-file
-          user-read-bit)
-
+         credentials-file
+         user-read-bit)
+        
         ;; Global dispatcher.
         (define seashell-dispatch
           (sequence:make
@@ -204,7 +211,7 @@
         ;; Detach from backend, and close the credentials port.
         (close-output-port credentials-port)
         (detach)
-
+        
         ;; Write out the listening port
         (logf 'info "Listening on port ~a." start-result)
         
