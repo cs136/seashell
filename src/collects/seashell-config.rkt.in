@@ -24,11 +24,15 @@
 (define (read-config k)
   (hash-ref config-hash k (lambda () (error 'read-config "Configuration key `~a' not found" k))))
 
+;; Can we override these flags?
+(define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git)))
+
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
 ;; updates the value it points to; if it isn't there, it creates a new
 ;; key/value pair in the hash
-(define (config-set! key val)
+(define/contract (config-set! key val)
+  (-> override? any/c)
   (hash-set! config-hash key val))
 
 ;; (config-refresh!) Rereads the config file, and resets the current
@@ -50,68 +54,50 @@
   (define config-hash 
     (make-hash 
      (list
+      ;; These flags cannot be overridden by any configuration file.
+      ;; Location of Seashell crypto library.
+      (cons 'seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto"))
+      ;; Location of Seashell (native) support library.
+      (cons 'seashell-support              (build-path seashell-install-path "lib" "libseashell-support"))
+      ;; Location of Seashell clang library.
+      (cons 'seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang"))
+      ;; Location of Seashell git library.
+      (cons 'seashell-git                  (build-path seashell-install-path "lib" "libseashell-git"))
+      ;; Location of Seashell collects.
+      (cons 'seashell-collects             (build-path seashell-install-path "share" "collects"))
+
+      ;; These flags can be overridden by the configuration file.
       ;; Enable debug mode execution (corresponds to seashell-numeric-debug value by default)
       (cons 'debug                         (= seashell-numeric-debug 1))
-      
       ;; Backend target host. The gateway will attempt to start user sessions on this host
       ;; via SSH.
       (cons 'host                          '("localhost"))
-      
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
-      
       ;; Location of install path.
       (cons 'seashell-install              (build-path seashell-install-path))
-      
       ;; Location of SSL key.
       (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
-      
       ;; Location of SSL certificate.
       (cons 'ssl-cert                      (build-path seashell-install-path "etc" "keys" "server.pem"))
-      
       ;; Location of SSH tunnel binary.
       (cons 'tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel"))
-      
-      ;; Location of Seashell crypto library.
-      (cons 'seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto"))
-      
-      ;; Location of Seashell (native) support library.
-      (cons 'seashell-support              (build-path seashell-install-path "lib" "libseashell-support"))
-      
-      ;; Location of Seashell clang library.
-      (cons 'seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang"))
-      
-      ;; Location of Seashell git library.
-      (cons 'seashell-git                  (build-path seashell-install-path "lib" "libseashell-git"))
-      
-      ;; Location of Seashell collects.
-      (cons 'seashell-collects             (build-path seashell-install-path "share" "collects"))
-      
       ;; Timeout in milliseconds after which a per-user backend process, having
       ;; received no new messages, will terminate.
       (cons 'backend-client-idle-timeout   1800000)
-      
       ;; Timeout in milliseconds after which a per-user backend connection,
       ;; having received no new messages, will quit.
       (cons 'backend-client-connection-timeout 900000)
-      
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
-      
       ;; Location of LLVM symbolizer.
       (cons 'llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer"))
-      
       ;; Default binary to invoke when linking.
       (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
-      
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
-      
       ;; Prefix on linker flags.
-      (cons 'linker-flag-prefix            "-Wl,")
-      )))
-  
-  
+      (cons 'linker-flag-prefix            "-Wl,"))))
   config-hash)
 
 ;; The hash table holding the configuration
@@ -129,7 +115,7 @@
                (define cfg (read handle))
                (when (not (list? cfg)) (error 'load-config "~a: config file should be an association list" config-file))
                (map (lambda (x) (match x
-                                  [(list key val) (hash-set! config-hash key val)]
+                                  [(list key val) (config-set! key val)]
                                   [e (error (format 'load-config "~a: element `~s' is not a key-value pair" config-file e))]))
                     cfg)
                (void)])))))

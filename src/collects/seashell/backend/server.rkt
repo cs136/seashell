@@ -76,19 +76,6 @@
 ;;
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
-  ;; SSL setup.
-  ;; TODO: DHE keys.
-  (define ssl-unit
-    (make-ssl-tcp@
-     (read-config 'ssl-cert)
-     (read-config 'ssl-key)
-     #f #f #f #f #f))
-  
-  ;; Dropping permissions.
-  (unless (= 0 (seashell_drop_permissions))
-    (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
-    (exit-from-seashell 1))
-  
   (with-handlers
       ([exn:fail? 
         (lambda (exn)
@@ -96,6 +83,19 @@
           (exit-from-seashell 2))])
     ;; Load configuration.
     (config-refresh!)
+    
+    ;; Install SSL keys.
+    ;; TODO: DHE keys.
+    (define ssl-unit
+      (make-ssl-tcp@
+       (read-config 'ssl-cert)
+       (read-config 'ssl-key)
+       #f #f #f #f #f))
+    
+    ;; Dropping permissions.
+    (unless (= 0 (seashell_drop_permissions))
+      (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
+      (exit-from-seashell 1))
     
     ;; Directory setup.
     (init-environment)
