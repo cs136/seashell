@@ -45,6 +45,7 @@
   (->* ((or/c 'fatal 'error 'warning 'info 'debug) string?)
        #:rest (listof any/c) 
        void?)
+  (define block (make-semaphore))
   (log-message logger
                category
                #f
@@ -52,7 +53,9 @@
                   ,@(log-ts-args)
                   ,category
                   ,@args))
-               (current-continuation-marks)))
+               (list (current-continuation-marks) block))
+  (semaphore-wait block)
+  (void))
 
 ;; make-log-reader: type-regexp -> evt?
 ;; Creates a log receiver that receives all messages at level or higher.
@@ -98,7 +101,7 @@
     (thunk
       (let loop ()
         (match (sync reader)
-          [(vector level message marks _)
+          [(vector level message (list marks block) _)
            (cond
              [(and (read-config 'debug) (or (equal? level 'fatal) (equal? level 'error)))
               (fprintf port "~a~n***Stacktrace follows***~n~a~n***End Stacktrace***~n" 
@@ -106,7 +109,8 @@
                        (format-stack-trace marks))]
              [else
               (fprintf port "~a~n" message)])
-           (flush-output port)]
+           (flush-output port)
+           (semaphore-post block)]
           [anything
            (fprintf port "warning: unknown message ~a~n" anything)])
         (loop)))))

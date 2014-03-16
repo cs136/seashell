@@ -51,9 +51,9 @@
 ;; exit-from-seashell return -> any/c
 ;; Seashell-specific exit function.
 ;;
-;; Currently waits a few seconds (to deal with the log not flushing properly)
+;; Currently does nothing.  Add code here that you would
+;; like to run on exit (from below).
 (define (exit-from-seashell return)
-  (sleep 3)
   (exit return))
 
 ;; (backend/main)
