@@ -342,7 +342,6 @@ void seashell_tunnel_free (struct seashell_connection* conn) {
  * loop_and_copy (int infd, int outfd, struct seashell_connection* conn)
  * Copies data to/from the file descriptors and socket.
  *
- * Expects reads and writes will block.
  *
  * Arguments:
  *  infd, outfd - input/output file descriptors.
@@ -377,7 +376,14 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
        *  but it really doesn't matter.
        */
       if (FD_ISSET(conn->sockfd, &readfds)) {
+        /** Do our reads in nonblocking mode as we may get payload data for
+         *  some other stream. */
+        seashell_set_nonblocking(conn);
         len = libssh2_channel_read(conn->channel, buffer, sizeof(buffer));
+        seashell_set_blocking(conn);
+
+        if (len == LIBSSH2_ERROR_EAGAIN) {
+        }
         if (len < 0) {
           return len;
         } else if (len > 0) {
@@ -392,8 +398,6 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
             len -= rc;
             start += rc;
           }
-        } else if(len == 0) {
-          return 0;
         }
       }
 
