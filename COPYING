@@ -36,6 +36,7 @@ licensing information will be located in that library's subdirectory / submodule
   SJCL                  bitwiseshiftleft.github.io/sjcl   2-clause BSD or GNU General Public License version 2 or later
   sprintf.js            github.com/alexei/sprintf.js      3-clause BSD
   Racket*               racket-lang.org                   GNU Lesser General Public License, version 3 (or later?)
+  libssh2               www.libssh2.org                   3-clause BSD
 
 * Modified collections found in src/collects/seashell/overrides/openssl.
 
@@ -43,4 +44,3 @@ Seashell links against the following libraries, which are not included by Seashe
 by your distribution:
 
   Project               URL                               License
-  libssh2               www.libssh2.org                   3-clause BSD
