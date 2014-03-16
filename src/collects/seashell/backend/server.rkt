@@ -51,10 +51,27 @@
 ;; exit-from-seashell return -> any/c
 ;; Seashell-specific exit function.
 ;;
-;; Currently does nothing.  Add code here that you would
-;; like to run on exit (from below).
+;; Currently just exits.
 (define (exit-from-seashell return)
   (exit return))
+
+;; detach any/c
+;; Detaches backend.
+;;
+;; Currently closes stdout + stdin if they're open
+;; and then signals to detach. 
+;; This is because SSH does not seem to detach properly if they're not closed.
+(define (detach)
+  (define old-output-port (current-output-port))
+  (current-output-port (open-output-nowhere))
+  (unless (port-closed? old-output-port)
+    (close-output-port old-output-port))
+
+  (unless (port-closed? (current-input-port))
+    (close-input-port (current-input-port)))
+
+  (seashell_signal_detach))
+
 
 ;; (backend/main)
 ;; Entry point to the backend server.
@@ -85,10 +102,10 @@
     (init-projects)
     
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
-    (define old-error-port (current-error-port))
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                           #:exists 'append))
-    (close-output-port old-error-port)
+    ;; Note: tunnel.c does not loop until EOF on stderr, so it's OK to leave the old file descriptor
+    ;;  open.
     
     ;; Unbuffered mode for output ports.
     (file-stream-buffer-mode (current-output-port) 'none)
@@ -181,17 +198,9 @@
         (write (serialize creds))
         (write (serialize creds) credentials-port)
         
-        ;; Close ports to parent...
-        (define old-output-port (current-output-port))
-        (define old-input-port (current-input-port))
-        (current-output-port (open-output-nowhere))
-        (close-output-port old-output-port)
-        (close-input-port old-input-port)
-        ;; Close the credentials port
+        ;; Detach from backend, and close the credentials port.
         (close-output-port credentials-port)
-
-        ;; Detach from backend
-        (seashell_signal_detach)
+        (detach)
 
         ;; Write out the listening port
         (logf 'info "Listening on port ~a." start-result)

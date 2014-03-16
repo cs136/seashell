@@ -30,6 +30,14 @@
 #include <signal.h>
 #include "seashell-config.h"
 
+/** 
+ * Dummy signal handler that does nothing.
+ */
+void dummy_signal_action(int signal, siginfo_t* info, void* context) {
+  (void) signal;
+  (void) info;
+  (void) context;
+}
 /**
  * int main()
  *
@@ -37,15 +45,20 @@
  * and then quits. 
  */
 int main() {
-  /** Ignore SIGUSR1, SIGCHLD */
-  signal(SIGUSR1, SIG_IGN);
-  signal(SIGCHLD, SIG_IGN);
-
   /** Block SIGUSR1, SIGCHLD until we can handle them. */
   sigset_t waitset;
+  sigemptyset(&waitset);
   sigaddset(&waitset, SIGUSR1);
   sigaddset(&waitset, SIGCHLD);
   sigprocmask(SIG_BLOCK, &waitset, NULL);
+  
+  /** Install signal handlers for those signals. */
+  struct sigaction actions;
+  sigemptyset(&actions.sa_mask);
+  actions.sa_flags = SA_SIGINFO;
+  actions.sa_sigaction = dummy_signal_action;
+  sigaction(SIGUSR1, &actions, NULL);
+  sigaction(SIGCHLD, &actions, NULL);
   
   /** Fork the child */
   pid_t childpid = fork();
