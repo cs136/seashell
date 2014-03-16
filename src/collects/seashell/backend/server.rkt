@@ -58,9 +58,8 @@
 ;; detach any/c
 ;; Detaches backend.
 ;;
-;; Currently closes stdout + stdin if they're open
-;; and then signals to detach. 
-;; This is because SSH does not seem to detach properly if they're not closed.
+;; Currently closes stdout + stdin if they're open and then signals to detach. 
+;; This is because SSH does not detach properly if they're not closed.
 (define (detach)
   (define old-output-port (current-output-port))
   (current-output-port (open-output-nowhere))
@@ -71,7 +70,6 @@
     (close-input-port (current-input-port)))
 
   (seashell_signal_detach))
-
 
 ;; (backend/main)
 ;; Entry point to the backend server.
@@ -161,6 +159,11 @@
                     (open-output-file credentials-file)))
                  repeat
                  (thunk (loop (add1 tries))))))
+        ;; Set permissions on the file.
+        (file-or-directory-permissions
+          credentials-file
+          user-read-bit)
+
         ;; Global dispatcher.
         (define seashell-dispatch
           (sequence:make
