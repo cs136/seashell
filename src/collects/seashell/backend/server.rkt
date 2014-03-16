@@ -22,7 +22,7 @@
          seashell/websocket
          seashell/log
          seashell/seashell-config
-         seashell/security
+         seashell/support-native
          seashell/overrides/ssl-unit-tcp
          seashell/backend/dispatch
          seashell/backend/project
@@ -85,10 +85,10 @@
     (init-projects)
     
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
-    ;; (define old-error-port (current-error-port))
-    ;; (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
-    ;;                                      #:exists 'append))
-    ;; (close-output-port old-error-port)
+    (define old-error-port (current-error-port))
+    (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
+                                          #:exists 'append))
+    (close-output-port old-error-port)
     
     ;; Unbuffered mode for output ports.
     (file-stream-buffer-mode (current-output-port) 'none)
@@ -169,10 +169,13 @@
         
         ;; Generate and send credentials, write lock file
         (define host (read))
-        (logf 'debug "Read hostname '~a' from login server" host)
+        (logf 'debug "Read hostname '~a' from login server." host)
         (define key (seashell-crypt-make-key))
         (install-server-key! key)
-        (define creds `#hash((key . ,key) (host . ,host) (port . ,start-result)))
+        (define creds 
+          `#hash((key . ,(seashell-crypt-key->client key))
+                 (host . ,host)
+                 (port . ,start-result)))
         
         ;; Write credentials back to file and to tunnel.
         (write (serialize creds))
@@ -186,7 +189,10 @@
         (close-input-port old-input-port)
         ;; Close the credentials port
         (close-output-port credentials-port)
-        
+
+        ;; Detach from backend
+        (seashell_signal_detach)
+
         ;; Write out the listening port
         (logf 'info "Listening on port ~a." start-result)
         

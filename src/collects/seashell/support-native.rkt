@@ -1,5 +1,5 @@
 #lang racket 
-;; Seashell's security helpers.
+;; Seashell's (native/OS dependant) support functions.
 ;; Copyright (C) 2013-2014 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -21,14 +21,11 @@
 (require racket/runtime-path)
 (require seashell/seashell-config)
 
-(provide seashell_drop_permissions)
+(provide seashell_drop_permissions
+         seashell_signal_detach)
 
-(define-logger crypto)
-(struct exn:crypto exn:fail:user ())
+(define-ffi-definer define-support 
+                    (ffi-lib (read-config 'seashell-support)))
 
-;; Load the crypto library
-(define-ffi-definer define-crypto 
-                    (ffi-lib (read-config 'seashell-security)))
-
-;; Setup and Error functions
-(define-crypto seashell_drop_permissions (_fun -> _int))
+(define-support seashell_drop_permissions (_fun -> _int))
+(define-support seashell_signal_detach (_fun -> _void))

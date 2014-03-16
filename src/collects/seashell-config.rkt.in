@@ -75,8 +75,8 @@
       ;; Location of Seashell crypto library.
       (cons 'seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto"))
 
-      ;; Location of Seashell security library.
-      (cons 'seashell-security             (build-path seashell-install-path "lib" "libseashell-security"))
+      ;; Location of Seashell (native) support library.
+      (cons 'seashell-support              (build-path seashell-install-path "lib" "libseashell-support"))
 
       ;; Location of Seashell clang library.
       (cons 'seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang"))
