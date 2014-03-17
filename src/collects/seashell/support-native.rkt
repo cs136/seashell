@@ -23,6 +23,7 @@
 
 (provide seashell_drop_permissions
          seashell_create_secret_file
+         seashell_uw_check_remote_user
          seashell_signal_detach)
 
 (define-ffi-definer define-support 
@@ -34,3 +35,4 @@
 (define-support seashell_drop_permissions (_fun -> _int))
 (define-support seashell_signal_detach (_fun -> _void))
 (define-support seashell_create_secret_file (_fun _path -> _int))
+(define-support seashell_uw_check_remote_user (_fun -> _int))

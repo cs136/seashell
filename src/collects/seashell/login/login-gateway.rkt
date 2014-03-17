@@ -21,6 +21,7 @@
          net/cookie
          net/uri-codec
          seashell/seashell-config
+         seashell/support-native
          seashell/log
          seashell/tunnel
          seashell/crypto
@@ -161,6 +162,10 @@
   (define tun-proc #f)
   (define tun #f)
 
+  ;; Check the user id
+  (unless (= 0 (seashell_uw_check_remote_user))
+    (report-error/html 1 "Invalid credentials!"))
+
   ;; Timeout the login process.
   (with-handlers
     ([exn:fail:resource? (lambda(e)
@@ -216,8 +221,8 @@
 ;; gateway-main
 ;; Main login function.
 (define (gateway-main)
-  ;; Redirect stderr to some other file.
-  ;; (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell-config.log") #:exists 'append))
+  ;; Install configuration.
+  (config-refresh!)
 
   ;; Check that HTTPS was set.
   (unless
