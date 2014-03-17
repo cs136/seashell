@@ -18,13 +18,16 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require net/cgi
          net/url
+         net/cookie
+         net/uri-codec
          seashell/seashell-config
          seashell/log
          seashell/tunnel
          seashell/crypto
          racket/sandbox
          racket/serialize
-         json)
+         json
+         xml)
 
 (provide gateway-main)
 
@@ -41,6 +44,25 @@
 ;; Runs response/json to send the error message, and then quits.
 (define (report-error/json code desc)
   (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
+  (exit 1))
+
+;; report-error/html message traceback -> void
+;; Reports the error as an HTML message.
+(define (report-error/html code message [traceback ""])
+  (printf "Content-Type: text/html\r\n\r\n")
+  (display (xexpr->string
+             `(html
+                (head
+                  (title "500 Internal Server Error"))
+                (body
+                  (h1 "Internal Server Error")
+                  (p ,(format "An internal server error was encountered while prcessing your request: (~a) ~a." code message))
+                  ,@(if (and (read-config 'debug) exn)
+                      `((hr)
+                        (pre ,traceback))
+                      '(""))
+                  (hr)
+                  (address ,(format "Seashell-Login/1.0 running on Racket ~a" (version)))))))
   (exit 1))
 
 ;; password-based-login/ajax
@@ -125,6 +147,72 @@
       ;; This duplicates some code in seashell/crypto.
       (response/json (deserialize be-creds)))))
 
+;; uw-login/redirect
+;; UW-based login system + redirect.
+(define (uw-login/redirect)
+  ;; Set up the standard logger for uw-login/redirect
+  ;; Write to the user's log file. 
+  (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell-config.log") #:exists 'append))
+  (file-stream-buffer-mode (current-error-port) 'none)
+  (standard-logger-setup)
+  (define bdgs (get-bindings))
+
+  ;; Binding for tunnel process outside scope of with-limits.
+  (define tun-proc #f)
+  (define tun #f)
+
+  ;; Timeout the login process.
+  (with-handlers
+    ([exn:fail:resource? (lambda(e)
+                           (when tun-proc
+                             (subprocess-kill tun-proc #t))
+                           (when tun
+                             (tunnel-close tun))
+                           (report-error/html 7 "Login timed out."))])
+    (with-limits (read-config 'backend-login-timeout) #f
+      ;; Spawn backend process on backend host.
+      (set! tun (uw:tunnel-launch))
+      (set! tun-proc (tunnel-process tun))
+
+      (logf 'debug "Tunnel hostname is ~a" (tunnel-hostname tun))
+
+      ;; Send hostname to backend process
+      (write (tunnel-hostname tun) (tunnel-out tun))
+      (flush-output (tunnel-out tun))
+
+      (logf 'debug "Waiting for tunnel credentials.")
+
+      ;; Get initialization info from backend process
+      (define be-creds (read (tunnel-in tun)))
+
+      (when (eof-object? be-creds)
+        (report-error/html 4 (format "Session could not be started; tunnel unexpectedly died!")))
+
+      (logf 'debug "Waiting for tunnel shutdown.")
+      ;; Wait for tunnel shutdown.
+      (subprocess-wait (tunnel-process tun))
+
+      ;; Check for graceful exit.
+      (when (not (= 0 (subprocess-status (tunnel-process tun))))
+        (report-error/html 4 (format "Session could not be started (internal error, code=~a)."
+                                (subprocess-status (tunnel-process tun)))))
+
+      ;; Close the tunnel
+      (tunnel-close tun)
+
+      ;; Credential handling + cookie.
+      (define creds (deserialize be-creds))
+      (define credentials-cookie
+        (cookie:secure
+          (cookie:add-path
+            "/~cs136/seashell/"
+            (set-cookie (uri-encode "seashell-session") (uri-encode (jsexpr->string creds))))
+          #t))
+
+      ;; Write response back.
+      (printf "Set-Cookie: ~a\r\n" (print-cookie credentials-cookie))
+      (printf "Location: /~cs136/seashell/frontend.html\r\n\r\n"))))
+
 ;; gateway-main
 ;; Main login function.
 (define (gateway-main)
@@ -139,6 +227,6 @@
   ;; Check which mode we're running as.
   (if (equal? (get-cgi-method) "POST")
     (password-based-login/ajax)
-    (void))
+    (uw-login/redirect))
   (exit 0))
 
