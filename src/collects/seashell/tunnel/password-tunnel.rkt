@@ -57,7 +57,8 @@
     (subprocess #f #f #f
                 (read-config 'tunnel-binary)
                 user
-                host))
+                host
+                (read-config 'seashell-backend-remote)))
   ;; And the logger thread
   (define status-thread
     (thread

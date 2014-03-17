@@ -26,6 +26,5 @@
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
 #define SEASHELL_RACKET "@SEASHELL_RACKET@"
 #define SEASHELL_USER_LAUNCHER (INSTALL_PREFIX "/bin/seashell-user-launcher")
-#define SEASHELL_USER_BACKEND (INSTALL_PREFIX "/bin/seashell-user-backend")
 
 #endif
