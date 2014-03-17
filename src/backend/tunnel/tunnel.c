@@ -489,6 +489,8 @@ int main (int argc, char *argv[]) {
   uint8_t method = 0;
   int8_t* data = NULL;
   int i = 0;
+  char stderr_buffer[4096];
+  ssize_t stderr_read = 0;
 
   if (argc < 4) {
     fprintf(stderr, "usage: %s [username] [host] [target]\n", argv[0]);
@@ -580,7 +582,7 @@ int main (int argc, char *argv[]) {
 
   if (error) {
     fprintf(stderr, "%s: I/O error on copy: %d\n", argv[1], error);
-    goto end;
+    goto report_errors;
   }
 
   /** Make sure the remote end hung up cleanly. */
@@ -593,7 +595,11 @@ int main (int argc, char *argv[]) {
   if (exitsignal) {
     error = OTHER_ERROR;
   }
-
+report_errors:
+  /** Drain stderr on the SSH connection. */
+  while ((stderr_read = libssh2_channel_read_stderr(conn->channel, stderr_buffer, sizeof(char)*4096)) > 0) {
+    fwrite(stderr_buffer, sizeof(char), stderr_read, stderr);
+  }
 end:
   seashell_tunnel_free(conn);
   seashell_tunnel_teardown();
