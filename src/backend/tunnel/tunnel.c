@@ -385,7 +385,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
 
         if (len == LIBSSH2_ERROR_EAGAIN) {
         }
-        if (len < 0) {
+        else if (len < 0) {
           return len;
         } else if (len > 0) {
 
@@ -407,7 +407,7 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
         seashell_set_blocking(conn);
         if (len == LIBSSH2_ERROR_EAGAIN) {
         }
-        if (len < 0) {
+        else if (len < 0) {
           return len;
         } else if (len > 0) {
           start = 0;
