@@ -93,7 +93,7 @@
                 (report-error 6 "Invalid host key. See server log.")]
                [(exn:tunnel message marks code)
                 (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
-          (tunnel-launch uname passwd)))
+          (password:tunnel-launch uname passwd)))
 
       (set! tun-proc (tunnel-process tun))
 

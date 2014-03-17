@@ -17,12 +17,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/tunnel/structs
-         seashell/tunnel/password-tunnel)
+         (prefix-in password: seashell/tunnel/password-tunnel)
+         (prefix-in uw: seashell/tunnel/uw-tunnel))
 (provide
   tunnel?
   (struct-out exn:tunnel)
   tunnel-close
-  tunnel-launch
+  password:tunnel-launch
+  uw:tunnel-launch
   tunnel-process
   tunnel-in
   tunnel-out
