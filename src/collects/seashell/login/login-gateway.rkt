@@ -28,45 +28,43 @@
 
 (provide gateway-main)
 
-;; The gateway CGI expects a username 'u' and password 'p' argument
-;; as POST data. It will only run when the webserver reports an SSL
-;; connection.
-;;  (this is to ensure user has correct Apache config; only SSL
-;;   requests should be permitted to this script).
-(define (gateway-main)
-  (define (response/json jsexpr)
-    (printf "Access-Control-Allow-Origin: *\r\n")
-    (printf "Content-Type: application/json\r\n\r\n")
-    (write-json jsexpr)
-    (printf "\r\n")
-    (flush-output))
-  (define (report-error code desc)
-    (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
-    (exit 0))
+;; response/json jsexpr -> void
+;; Sends CGI output as a JSON expression.
+(define (response/json jsexpr)
+  (printf "Access-Control-Allow-Origin: *\r\n")
+  (printf "Content-Type: application/json\r\n\r\n")
+  (write-json jsexpr)
+  (printf "\r\n")
+  (flush-output))
 
+;; report-error/json code desc -> void
+;; Runs response/json to send the error message, and then quits.
+(define (report-error/json code desc)
+  (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
+  (exit 1))
+
+;; password-based-login/ajax
+;; AJAX-based password login.
+;;
+;; Required bindings:
+;;  u - Username
+;;  p - Password
+(define (password-based-login/ajax)
+  ;; Set up the standard logger for password-based-login/ajax
+  ;; (Logs to stderr).
   (standard-logger-setup)
-
-  (unless
-    (equal? (getenv "HTTPS") "on")
-    (logf 'warning "Refusing to operate over a non-SSL connection.")
-    (report-error 1 "Requires SSL."))
-
-  (unless
-    (equal? (get-cgi-method) "POST")
-    (report-error 2 "Requires POST request method."))
-
   (define bdgs (get-bindings))
 
   (define uname
     (let ((l (extract-bindings 'u bdgs)))
       (unless (= (length l) 1)
-        (report-error 3 "Bad username provided."))
+        (report-error/json 3 "Bad username provided."))
       (first l)))
 
   (define passwd
     (let ((l (extract-bindings 'p bdgs)))
       (unless (= (length l) 1)
-        (report-error 3 "Bad password provided."))
+        (report-error/json 3 "Bad password provided."))
       (first l)))
 
   ;; Binding for tunnel process outside scope of with-limits.
@@ -80,7 +78,7 @@
                              (subprocess-kill tun-proc #t))
                            (when tun
                              (tunnel-close tun))
-                           (report-error 7 "Login timed out."))])
+                           (report-error/json 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Spawn backend process on backend host.
       (set! tun
@@ -88,11 +86,11 @@
           ([exn:tunnel?
              (match-lambda
                [(exn:tunnel message marks 7)
-                (report-error 5 "Invalid credentials.")]
+                (report-error/json 5 "Invalid credentials.")]
                [(exn:tunnel message marks 6)
-                (report-error 6 "Invalid host key. See server log.")]
+                (report-error/json 6 "Invalid host key. See server log.")]
                [(exn:tunnel message marks code)
-                (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
+                (report-error/json 4 (format "Session could not be started (internal error, code=~a)." code))])])
           (password:tunnel-launch uname passwd)))
 
       (set! tun-proc (tunnel-process tun))
@@ -109,7 +107,7 @@
       (define be-creds (read (tunnel-in tun)))
 
       (when (eof-object? be-creds)
-        (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
+        (report-error/json 4 (format "Session could not be started; tunnel unexpectedly died!")))
 
       (logf 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
@@ -117,7 +115,7 @@
 
       ;; Check for graceful exit.
       (when (not (= 0 (subprocess-status (tunnel-process tun))))
-        (report-error 4 (format "Session could not be started (internal error, code=~a)."
+        (report-error/json 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
 
       ;; Close the tunnel
@@ -125,7 +123,22 @@
 
       ;; Send key, address, and port to client.
       ;; This duplicates some code in seashell/crypto.
-      (response/json (deserialize be-creds))))
+      (response/json (deserialize be-creds)))))
 
+;; gateway-main
+;; Main login function.
+(define (gateway-main)
+  ;; Redirect stderr to some other file.
+  ;; (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell-config.log") #:exists 'append))
+
+  ;; Check that HTTPS was set.
+  (unless
+    (equal? (getenv "HTTPS") "on")
+    (report-error/json 1 "Requires SSL."))
+  
+  ;; Check which mode we're running as.
+  (if (equal? (get-cgi-method) "POST")
+    (password-based-login/ajax)
+    (void))
   (exit 0))
 
