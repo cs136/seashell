@@ -400,6 +400,27 @@ int loop_and_copy(int infd, int outfd, struct seashell_connection* conn) {
             start += rc;
           }
         }
+
+        /** Drain stderr. */
+        seashell_set_nonblocking(conn);
+        len = libssh2_channel_read_stderr(conn->channel, buffer, sizeof(buffer));
+        seashell_set_blocking(conn);
+        if (len == LIBSSH2_ERROR_EAGAIN) {
+        }
+        if (len < 0) {
+          return len;
+        } else if (len > 0) {
+          start = 0;
+
+          while (len) {
+            rc = write(2, buffer + start, len);
+            if (rc < 0) {
+              return rc;
+            }
+            len -= rc;
+            start += rc;
+          }
+        }
       }
 
       /**
@@ -571,13 +592,6 @@ int main (int argc, char *argv[]) {
 
   if (exitsignal) {
     error = OTHER_ERROR;
-  }
-
-  /** Drain stderr on the SSH connection. */
-  char stderr_buffer[4096];
-  ssize_t read = 0;
-  while ((read = libssh2_channel_read_stderr(conn->channel, stderr_buffer, sizeof(char)*4096)) > 0) {
-    fwrite(stderr_buffer, sizeof(char), read, stderr);
   }
 
 end:
