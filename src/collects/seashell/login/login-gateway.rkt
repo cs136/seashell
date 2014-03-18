@@ -221,9 +221,6 @@
 ;; gateway-main
 ;; Main login function.
 (define (gateway-main)
-  ;; Install configuration.
-  (config-refresh!)
-
   ;; Check that HTTPS was set.
   (unless
     (equal? (getenv "HTTPS") "on")
@@ -231,6 +228,8 @@
   
   (with-handlers
     ([exn:fail? (lambda (exn) (report-error/html 1 (exn-message exn)))])
+    ;; Install configuration.
+    (config-refresh!)
     ;; Check which mode we're running as.
     (if (equal? (get-cgi-method) "POST")
       (password-based-login/ajax)
