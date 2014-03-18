@@ -96,3 +96,15 @@ int seashell_uw_check_remote_user(void) {
   }
   return 0;
 }
+
+/**
+ * seashell_get_username()
+ * Gets the name of the user running Seashell.
+ */
+const char* seashell_get_username(void) {
+  struct passwd *p = getpwuid(getuid());
+  if (!p) {
+    return "(unknown user)";
+  }
+  return p->pw_name;
+}

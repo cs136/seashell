@@ -188,6 +188,9 @@
         (define start-result (async-channel-get conf-chan))
         (when (exn? start-result)
           (raise start-result))
+
+        ;; Get current username
+        (define username (or (seashell_get_username) "unknown_user"))
         
         ;; Generate and send credentials, write lock file
         (define host (read))
@@ -197,7 +200,8 @@
         (define creds 
           `#hash((key . ,(seashell-crypt-key->client key))
                  (host . ,host)
-                 (port . ,start-result)))
+                 (port . ,start-result)
+                 (user . ,username)))
         
         ;; Write credentials back to file and to tunnel.
         (write (serialize creds))
