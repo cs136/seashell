@@ -34,43 +34,44 @@
          [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
          [ecdhe-curve 'secp521r1]
          [dhe-param-path ssl-dh-param-path])
+ ;; Load contexts first.
+ (define ctx (ssl-make-client-context))
+ (define sctx (ssl-make-server-context))
+
+ (when server-cert-file
+   (ssl-load-certificate-chain! sctx server-cert-file))
+ (when server-key-file
+   (ssl-load-private-key! sctx server-key-file))
+ (when server-root-cert-files
+   (ssl-set-verify! sctx #t)
+   (map (lambda (f)
+          (ssl-load-verify-root-certificates! sctx f))
+        server-root-cert-files))
+ (when server-suggest-auth-file
+   (ssl-load-suggested-certificate-authorities! sctx server-suggest-auth-file))
+
+ (when client-cert-file
+   (ssl-load-certificate-chain! ctx client-cert-file))
+ (when client-key-file
+   (ssl-load-private-key! ctx client-key-file))
+ (when client-root-cert-files
+   (ssl-set-verify! ctx #t)
+   (map (lambda (f)
+          (ssl-load-verify-root-certificates! ctx f))
+        client-root-cert-files))
+
+ (when ciphers
+   (ssl-set-ciphers! ctx ciphers)
+   (ssl-set-ciphers! sctx ciphers))
+
+ (when ecdhe-curve
+   (ssl-server-context-enable-ecdhe! sctx ecdhe-curve))
+ (when dhe-param-path
+   (ssl-server-context-enable-dhe! sctx dhe-param-path))
+
   (unit
    (import)
    (export tcp^)
-
-   (define ctx (ssl-make-client-context))
-   (define sctx (ssl-make-server-context))
-
-   (when server-cert-file
-     (ssl-load-certificate-chain! sctx server-cert-file))
-   (when server-key-file
-     (ssl-load-private-key! sctx server-key-file))
-   (when server-root-cert-files
-     (ssl-set-verify! sctx #t)
-     (map (lambda (f)
-            (ssl-load-verify-root-certificates! sctx f))
-          server-root-cert-files))
-   (when server-suggest-auth-file
-     (ssl-load-suggested-certificate-authorities! sctx server-suggest-auth-file))
-
-   (when client-cert-file
-     (ssl-load-certificate-chain! ctx client-cert-file))
-   (when client-key-file
-     (ssl-load-private-key! ctx client-key-file))
-   (when client-root-cert-files
-     (ssl-set-verify! ctx #t)
-     (map (lambda (f)
-            (ssl-load-verify-root-certificates! ctx f))
-          client-root-cert-files))
-
-   (when ciphers
-     (ssl-set-ciphers! ctx ciphers)
-     (ssl-set-ciphers! sctx ciphers))
-
-   (when ecdhe-curve
-     (ssl-server-context-enable-ecdhe! sctx ecdhe-curve))
-   (when dhe-param-path
-     (ssl-server-context-enable-dhe! sctx dhe-param-path))
 
    (define (tcp-abandon-port p)
      (if (input-port? p)
