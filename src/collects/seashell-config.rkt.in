@@ -25,7 +25,8 @@
   (hash-ref config-hash k (lambda () (error 'read-config "Configuration key `~a' not found" k))))
 
 ;; Can we override these flags?
-(define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git)))
+(define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
+                               'seashell-known-hosts)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
@@ -65,6 +66,8 @@
       (cons 'seashell-git                  (build-path seashell-install-path "lib" "libseashell-git"))
       ;; Location of Seashell collects.
       (cons 'seashell-collects             (build-path seashell-install-path "share" "collects"))
+      ;; Location of SSH known hosts file.
+      (cons 'seashell-known-hosts          (build-path seashell-install-path "etc" "seashell_hosts"))
 
       ;; These flags can be overridden by the configuration file.
       ;; Enable debug mode execution (corresponds to seashell-numeric-debug value by default)
@@ -98,6 +101,8 @@
       (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
+      ;; Default system SSH binary
+      (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,"))))
   config-hash)

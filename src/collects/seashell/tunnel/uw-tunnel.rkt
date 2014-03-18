@@ -56,6 +56,7 @@
     (subprocess #f #f #f
                 (read-config 'ssh-binary)
                 "-o" "PreferredAuthentications hostbased"
+                "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
                 host
                 (read-config 'seashell-backend-remote)))
 
