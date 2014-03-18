@@ -55,7 +55,12 @@
 |#
 
   ;; Get the hostname.
-  (define host (string-append (getenv "HOSTNAME") ".hosts.seashell.student.cs.uwaterloo.ca"))
+  (define short-hostname
+    (string-trim
+      (with-output-to-string
+        (thunk
+          (system "/bin/hostname")))))
+  (define host (string-append short-hostname ".hosts.seashell.student.cs.uwaterloo.ca"))
 
   ;; Launch the process
   (define-values (process in out error)
