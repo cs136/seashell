@@ -183,7 +183,7 @@
                #:dispatch seashell-dispatch
                #:port 0
                #:tcp@ ssl-unit
-               #:listen-ip "localhost"
+               #:listen-ip #f
                #:confirmation-channel conf-chan))
         (define start-result (async-channel-get conf-chan))
         (when (exn? start-result)
