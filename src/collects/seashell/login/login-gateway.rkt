@@ -215,6 +215,7 @@
           #t))
 
       ;; Write response back.
+      (printf "Status: 303 See Other\r\n")
       (printf "Set-Cookie: ~a\r\n" (print-cookie credentials-cookie))
       (printf "Location: /~cs136/seashell/frontend.html\r\n\r\n"))))
 
