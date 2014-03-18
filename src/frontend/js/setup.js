@@ -35,7 +35,7 @@ function seashellInit(rest) {
         rest();
     });
     socket.ready.fail(function() {
-      // TODO - some sort of error handling.
+      displayErrorMessage("Seashell socket could not be set up.");
     });
   } else {
     window.location.replace("/");
