@@ -153,7 +153,7 @@
 (define (uw-login/redirect)
   ;; Set up the standard logger for uw-login/redirect
   ;; Write to the user's log file. 
-  (current-error-port (open-output-file (build-path (find-system-path 'homedir) ".seashell-cgi.log") #:exists 'append))
+  (current-error-port (open-output-file (build-path (find-system-path 'home-dir) ".seashell-cgi.log") #:exists 'append))
   (file-stream-buffer-mode (current-error-port) 'none)
   (standard-logger-setup)
   (define bdgs (get-bindings))
