@@ -219,6 +219,30 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "lockProject")
+        ('project project))
+       (define locked (lock-project project))
+       `#hash((id . ,id)
+              (success . ,locked)
+              (result . ,(if locked #t "locked")))]
+      [(hash-table
+        ('id id)
+        ('type "forceLockProject")
+        ('project project))
+       (force-lock-project project)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "unlockProject")
+        ('project project))
+       (unlock-project project)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
         ('type  "saveProject")
         ('project project)
         ('message message))
