@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 #include "seashell-config.h"
 
 int main () {
