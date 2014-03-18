@@ -128,7 +128,7 @@
           (subprocess #f #f #f (read-config 'system-shell) "-c"
                       (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
                               (path->string (read-config 'llvm-symbolizer))
-                              "atexit=1:print_stats_1:detect_leaks=1"
+                              "detect_leaks=1"
                                binary)))
         ;; Construct the I/O ports.
         (define-values (in-stdout out-stdout) (make-pipe))
