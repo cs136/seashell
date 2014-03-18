@@ -33,6 +33,7 @@
          web-server/http/xexpr
          web-server/http/request-structs
          web-server/dispatchers/dispatch
+         ffi/unsafe/atomic
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
          (prefix-in filter: web-server/dispatchers/dispatch-filter))
 
@@ -57,19 +58,12 @@
 
 ;; detach any/c
 ;; Detaches backend.
-;;
-;; Currently closes stdout + stdin if they're open and then signals to detach. 
-;; This is because SSH does not detach properly if they're not closed.
 (define (detach)
-  (define old-output-port (current-output-port))
-  (current-output-port (open-output-nowhere))
-  (unless (port-closed? old-output-port)
-    (close-output-port old-output-port))
-  
-  (unless (port-closed? (current-input-port))
-    (close-input-port (current-input-port)))
-  
-  (seashell_signal_detach))
+  (call-as-atomic
+    (thunk
+      (flush-output (current-output-port))
+      (unless (= 0 (seashell_signal_detach))
+        (exit-from-seashell 5)))))
 
 ;; (backend/main)
 ;; Entry point to the backend server.
