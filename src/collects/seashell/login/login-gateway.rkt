@@ -227,7 +227,8 @@
     (report-error/html 1 "Requires SSL."))
   
   (with-handlers
-    ([exn:fail? (lambda (exn) (report-error/html 1 (exn-message exn)))])
+    ([exn:fail? (lambda (exn) (report-error/html 1 (exn-message exn) (format-stack-trace
+                                                                       (exn-continuation-marks exn))))])
     ;; Install configuration.
     (config-refresh!)
     ;; Check which mode we're running as.

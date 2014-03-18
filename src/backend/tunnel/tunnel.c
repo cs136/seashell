@@ -524,7 +524,7 @@ int main (int argc, char *argv[]) {
     fprintf(stderr, "%s: Couldn't read authentication data!\n", argv[1]);
     return IO_ERROR;
   }
-  FPRINTF_IF_DEBUG(stderr, "%s: Read authentication data (%d).\n", argv[1], length);
+  FPRINTF_IF_DEBUG(stderr, "%s: Read authentication data.\n", argv[1]);
 
   /** This is where we need to handle extra authentication methods. */
   int error; char* exitsignal;
