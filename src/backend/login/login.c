@@ -30,5 +30,7 @@ int main () {
                     "(gateway-main)", NULL };
 
   execv(SEASHELL_RACKET, argv);
+  printf("Content-Type: text/plain\r\n\r\n");
+  printf("Launching Seashell [execv, racket=%s] failed with %d!\r\n", SEASHELL_RACKET, errno);
   return 1;
 }
