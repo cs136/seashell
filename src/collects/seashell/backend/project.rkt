@@ -25,6 +25,9 @@
          new-project
          new-project-from
          delete-project
+         lock-project
+         force-lock-project
+         unlock-project
          save-project
          exn:project?
          exn:project
@@ -46,6 +49,30 @@
          seashell/websocket
          net/url
          file/zip)
+
+;; global variable, which is a set of currently locked projects
+(define locked-projects (make-hash))
+
+;; (project-name? name) -> bool?
+;; Predicate for testing if a string is a valid project name.
+(define (project-name? name)
+  (cond
+    [(not (or (path-string? name) (string? name))) #f]
+    [(let-values ([(base suffix _) (split-path name)])
+      (and (equal? base 'relative) (path-for-some-system? suffix)))
+     #t]
+    [else #f]))
+
+
+;; (is-project? name)
+;; Checks if name is a project that exists.
+;;
+;; Arguments:
+;;  name - Name of project.
+;; Returns: #t if it does, #f otherwise.
+(define/contract (is-project? name)
+  (-> project-name? boolean?)
+  (directory-exists? (build-project-path name)))
 
 ;; (check-path path)
 ;; Makes sure nothing funny is in a path.  Currently deals with .. ('up)
@@ -75,17 +102,6 @@
   path)
 (define-syntax-rule (check-and-build-path args ...)
   (check-path (build-path args ...)))
-
-
-;; (project-name? name) -> bool?
-;; Predicate for testing if a string is a valid project name.
-(define (project-name? name)
-  (cond
-    [(not (or (path-string? name) (string? name))) #f]
-    [(let-values ([(base suffix _) (split-path name)])
-      (and (equal? base 'relative) (path-for-some-system? suffix)))
-     #t]
-    [else #f]))
 
 
 ;; (url-string? str) -> bool?
@@ -211,6 +227,53 @@
     (recursive-delete-tree (build-project-path name)))
   (void))
 
+;; (lock-project name)
+;; Locks a project.
+;;
+;; Arguments:
+;;  name - Name of the project.
+;;
+;; Raises:
+;;  exn:project if the project does not exist.
+;;
+;; Returns:
+;;  #t if the project was successfully locked, #f otherwise
+(define/contract (lock-project name)
+  (-> (and/c project-name? is-project?) boolean?)
+  (cond
+    [(hash-has-key? locked-projects name) #f]
+    [else (hash-set! locked-projects name #t) #t]))
+
+;; (force-lock-project name)
+;; Forcibly locks a project, even if it is already locked
+;;
+;; Arguments:
+;;  name - Name of the project.
+;;
+;; Raises:
+;;  exn:project if the project does not exist.
+(define/contract (force-lock-project name)
+  (-> (and/c project-name? is-project?) void?)
+  (hash-set! locked-projects name #t))
+
+;; (unlock-project name)
+;; Unlocks a project.
+;;
+;; Arguments:
+;;  name - Name of the project.
+;;
+;; Raises:
+;;  exn:project if the project does not exist.
+;;
+;; Returns:
+;;  #t if the project was successfully unlocked, #f otherwise
+(define/contract (unlock-project name)
+  (-> (and/c project-name? is-project?) boolean?)
+  (cond
+    [(hash-has-key? locked-projects name)
+      (hash-remove! locked-projects name) #t]
+    [else #f]))
+
 ;; (save-project name)
 ;; Commits the current state of a project to Git.
 ;;
@@ -264,16 +327,6 @@
 
   (seashell-git-commit commit message)
   (void))
-
-;; (is-project? name)
-;; Checks if name is a project that exists.
-;;
-;; Arguments:
-;;  name - Name of project.
-;; Returns: #t if it does, #f otherwise.
-(define/contract (is-project? name)
-  (-> project-name? boolean?)
-  (directory-exists? (build-project-path name)))
 
 ;; (compile-project name)
 ;; Compiles a project.

@@ -222,6 +222,27 @@ SeashellWebsocket.prototype.deleteProject = function(name, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.lockProject = function(name, deferred) {
+  return this.sendMessage({
+    type : "lockProject",
+    project : name},
+    deferred);
+};
+
+SeashellWebsocket.prototype.forceLockProject = function(name, deferred) {
+  return this.sendMessage({
+    type : "forceLockProject",
+    project : name},
+    deferred);
+};
+
+SeashellWebsocket.prototype.unlockProject = function(name, deferred) {
+  return this.sendMessage({
+    type : "unlockProject",
+    project : name},
+    deferred);
+};
+
 SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
   return this.sendMessage({
     type : "readFile",

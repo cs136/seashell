@@ -157,3 +157,20 @@ function displayErrorMessage(msg) {
   $("#error-message-body").text(msg);
   $("#error-message-modal").modal("show");
 }
+
+/**
+* diplayConfirmationMessage
+* Displays a small dialogue box which allows the user to press OK or cancel */
+function displayConfirmationMessage(title, msg, okCallback, cancelCallback) {
+  $("#confirmation-message-title").text(title);
+  $("#confirmation-message-body").text(msg);
+  $("#confirmation-message-modal").modal("show");
+  $("#confirmation-message-ok").click(function(){
+    $("#confirmation-message-modal").modal("hide");
+    okCallback();
+  });
+  $("#confirmation-message-cancel,#confirmation-message-x").click(function(){
+    $("#confirmation-message-modal").modal("hide");
+    if(cancelCallback) cancelCallback();
+  });
+}

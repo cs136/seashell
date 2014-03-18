@@ -87,7 +87,7 @@ function createFile(file) {
  * @param {Boolean} save Save project on close or not.
  */
 function projectClose(save) {
-  // TODO: Unlock project.
+  socket.unlockProject(currentProject);
   if (save)
     projectSave();
   currentFiles = null;
@@ -226,16 +226,34 @@ function fileNavigationAddEntry(file) {
 }
 
 /**
- * Opens and sets the current project.
+ * Locks a new project, opens it, and sets the current project.
  * @param {String} project Name of project to open.
  */
 function projectOpen(name) {
-  var promise = socket.listProject(name);
+  var lockPromise = socket.lockProject(name);
+  var openNoLock = function(){ projectOpenNoLock(name); };
+  lockPromise.done(openNoLock).fail(function(res){
+    if(res == "locked"){
+        displayConfirmationMessage("Project is locked by another browser instance",
+            "Press OK to forcibly unlock the project, or Cancel to abort.",
+            function(){
+                var forceLockPromise = socket.forceLockProject(name);
+                forceLockPromise.done(openNoLock).fail(function(){
+                    displayErrorMessage("Project "+name+" could not be unlocked.");
+                });
+            });
+    }else{
+        displayErrorMessage("Project "+name+" failed to lock.");
+    }
+  });
+}
 
-  // TODO: Lock Project
-  // This (probably, should) not be a hard lock,
-  // but a soft lock that will warn if the project is possibly
-  // open somewhere else.
+/**
+ * Opens a new project and sets the current project (without locking).
+ * @param {String} project Name of project to open.
+ */
+function projectOpenNoLock(name) {
+  var promise = socket.listProject(name);
 
   /** Update the list of files. */
   promise.done(function(files) {
