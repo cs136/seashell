@@ -32,7 +32,7 @@
 ;; updates the value it points to; if it isn't there, it creates a new
 ;; key/value pair in the hash
 (define/contract (config-set! key val)
-  (-> override? symbol? any/c)
+  (-> override? any/c any/c)
   (hash-set! config-hash key val))
 
 ;; (config-refresh!) Rereads the config file, and resets the current
