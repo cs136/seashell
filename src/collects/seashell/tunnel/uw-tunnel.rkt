@@ -54,11 +54,15 @@
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
+                (read-config 'seashell-backend-remote)))
+#|
+                Turned off until CSCF updates the Linux environment.
                 (read-config 'ssh-binary)
                 "-o" "PreferredAuthentications hostbased"
                 "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
                 host
                 (read-config 'seashell-backend-remote)))
+|#
 
   ;; And the logger thread
   (define status-thread
