@@ -153,7 +153,7 @@
 (define (uw-login/redirect)
   ;; Set up the standard logger for uw-login/redirect
   ;; Write to the user's log file. 
-  (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell-config.log") #:exists 'append))
+  (current-error-port (open-output-file (build-path (find-system-path 'homedir) ".seashell-cgi.log") #:exists 'append))
   (file-stream-buffer-mode (current-error-port) 'none)
   (standard-logger-setup)
   (define bdgs (get-bindings))
@@ -227,11 +227,13 @@
   ;; Check that HTTPS was set.
   (unless
     (equal? (getenv "HTTPS") "on")
-    (report-error/json 1 "Requires SSL."))
+    (report-error/html 1 "Requires SSL."))
   
-  ;; Check which mode we're running as.
-  (if (equal? (get-cgi-method) "POST")
-    (password-based-login/ajax)
-    (uw-login/redirect))
+  (with-handlers
+    ([exn:fail? (lambda (exn) (report-error/html 1 (exn-message exn)))])
+    ;; Check which mode we're running as.
+    (if (equal? (get-cgi-method) "POST")
+      (password-based-login/ajax)
+      (uw-login/redirect)))
   (exit 0))
 
