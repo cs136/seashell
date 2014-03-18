@@ -216,7 +216,7 @@
 
       ;; Write response back.
       (printf "Set-Cookie: ~a\r\n" (print-cookie credentials-cookie))
-      (printf "Location: /~cs136/seashell/frontend.html\r\n\r\n"))))
+      (printf "Location: /~~cs136/seashell/frontend.html\r\n\r\n"))))
 
 ;; gateway-main
 ;; Main login function.
