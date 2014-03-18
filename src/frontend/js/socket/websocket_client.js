@@ -31,7 +31,7 @@
  *  ws = new SeashellWebsocket( ... )
  *
  * Code should not attempt to use the socket until after the ready Deferred
- * can be resolved.
+  can be resolved.
  */
 function SeashellWebsocket(uri, key) {
   var self = this;
@@ -49,7 +49,9 @@ function SeashellWebsocket(uri, key) {
   };
   // Failure [-2]
   self.requests[-2] = {
-    callback : null,
+    callback : function(s, msg) {
+      displayErrorMessage(msg);
+    },
     deferred : null
   };
   // Program I/O [-3]
@@ -59,6 +61,10 @@ function SeashellWebsocket(uri, key) {
   };
 
   self.websocket = new WebSocket(uri);
+
+  self.websocket.onerror = function() {
+    self.requests[-2].callback(false, "An error has occurred with the websocket.");
+  };
 
   this.websocket.onmessage = function(message) {
     var readerT = new FileReader();
@@ -125,7 +131,6 @@ SeashellWebsocket.prototype._authenticate = function(server_challenge, self) {
     })
     .fail(
       function(result) {
-        console.log("Server failed client token.");
         self.ready.reject("Authentication error - invalid credentials!");
       });
 };
