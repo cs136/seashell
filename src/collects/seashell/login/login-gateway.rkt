@@ -210,8 +210,8 @@
       (define credentials-cookie
         (cookie:secure
           (cookie:add-path
-            "/~cs136/seashell/"
-            (set-cookie (uri-encode "seashell-session") (uri-encode (jsexpr->string creds))))
+            (set-cookie (uri-encode "seashell-session") (uri-encode (jsexpr->string creds)))
+            "/~cs136/seashell")
           #t))
 
       ;; Write response back.
