@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pwd.h>
 #include "seashell-config.h"
 
 /** This file provides a few auxiliary helper functions for
@@ -74,5 +75,24 @@ int seashell_create_secret_file(char* file) {
     return 1;
   }
   close(fd);
+  return 0;
+}
+
+/**
+ * seashell_uw_check_remote_user()
+ * Ensures that ${REMOTE_USER} == ${USER}
+ */
+int seashell_uw_check_remote_user(void) {
+  struct passwd *p = getpwuid(getuid());
+  if (!p) {
+    return 1;
+  }
+  char* remote_user = getenv("REMOTE_USER");
+  if (!remote_user) {
+    return 1;
+  }
+  if (strcmp(remote_user, p->pw_name) != 0) {
+    return 1;
+  }
   return 0;
 }

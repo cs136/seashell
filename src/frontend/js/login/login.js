@@ -32,7 +32,7 @@ function createCookie(name, value, days) {
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
         var expires = "; expires=" + date.toGMTString();
     } else var expires = "";
-    document.cookie = escape(name) + "=" + escape(value) + expires + "; path=/; secure";
+    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + expires + "; secure";
 }
 
 /**
@@ -44,12 +44,12 @@ function createCookie(name, value, days) {
  * @return {String/null} Value of the cookie, null if not found.
  */
 function readCookie(name) {
-    var nameEQ = escape(name) + "=";
+    var nameEQ = encodeURIComponent(name) + "=";
     var ca = document.cookie.split(';');
     for (var i = 0; i < ca.length; i++) {
         var c = ca[i];
         while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) == 0) return unescape(c.substring(nameEQ.length, c.length));
+        if (c.indexOf(nameEQ) == 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
     }
     return null;
 }
@@ -116,7 +116,7 @@ function submit_login() {
                /** Set additional fields. */
                data["user"] = user;
 
-               createCookie("seashell-session", JSON.stringify(data), 365);
+               createCookie("seashell-session", JSON.stringify(data));
                console.log("All done login.");
                top.location = "frontend.html";
              } else {
