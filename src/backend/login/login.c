@@ -26,7 +26,7 @@
 #include "seashell-config.h"
 
 int main () {
-  char * argv[] = { "racket", "-S", INSTALL_PREFIX "/share/collects",
+  char * argv[] = { SEASHELL_RACKET, "-S", INSTALL_PREFIX "/share/collects",
                     "-l", "racket/base", "-l", "seashell/login", "-e",
                     "(gateway-main)", NULL };
 

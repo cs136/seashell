@@ -42,7 +42,7 @@ int main(void) {
     return 1;
   }
 
-  char * argv[] = { "racket", "-S", INSTALL_PREFIX "/share/collects",
+  char * argv[] = { SEASHELL_RACKET, "-S", INSTALL_PREFIX "/share/collects",
                     "-l", "racket/base", "-l", "seashell/backend", "-e",
                     "(backend-main)", NULL };
   // SECURITY NOTE:
