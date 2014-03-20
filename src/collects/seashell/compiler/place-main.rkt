@@ -29,6 +29,7 @@
   (define cflags (place-channel-get channel))
   (define ldflags (place-channel-get channel))
   (define source (place-channel-get channel))
-  (define-values (result data) (seashell-compile-files cflags ldflags source))
+  (define objects (place-channel-get channel))
+  (define-values (result data) (seashell-compile-files cflags ldflags source objects))
   (place-channel-put channel result)
   (place-channel-put channel data))

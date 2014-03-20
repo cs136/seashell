@@ -34,6 +34,7 @@
 ;;  cflags - List of flags to pass to the compiler.
 ;;  ldflags - List of flags to pass to the linker.
 ;;  source - List of source paths to compile.
+;;  objects - List of object paths to compile.
 ;; Returns:
 ;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
 ;;    returns no binary and the list of messages produced.
@@ -45,8 +46,8 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(define/contract (seashell-compile-files user-cflags user-ldflags sources)
-  (-> (listof string?) (listof string?) (listof path?)
+(define/contract (seashell-compile-files user-cflags user-ldflags sources objects)
+  (-> (listof string?) (listof string?) (listof path?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   
   ;; Check that we're not compiling an empty set of sources.
@@ -111,9 +112,11 @@
           #:exists 'truncate)
         (define-values (linker linker-output linker-input linker-error)
           (apply subprocess #f #f #f (read-config 'system-linker)
-                 (list* "-o" (path->string result-file) (path->string object-file)
-                        "-fsanitize=address"
-                        (map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
+                 `("-o" ,(path->string result-file)
+                   ,(path->string object-file)
+                   ,@(map path->string objects)
+                   "-fsanitize=address"
+                   ,@(map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
         ;; Close unused port.
         (close-output-port linker-input)
         (close-input-port linker-output)

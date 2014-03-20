@@ -26,14 +26,15 @@
 ;;
 ;; Caution: There is some nasty behaviour with places and the FFI.
 ;; Until this is resolved, do not use this function.
-(define/contract (seashell-compile-files/place user-cflags user-ldflags sources)
-  (-> (listof string?) (listof string?) (listof path?)
+(define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
+  (-> (listof string?) (listof string?) (listof path?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   (define compiler-place (dynamic-place 'seashell/compiler/place-main
                                         'seashell-compiler-place))
   (place-channel-put compiler-place user-cflags)
   (place-channel-put compiler-place user-ldflags)
   (place-channel-put compiler-place sources)
+  (place-channel-put compiler-place objects)
   (define result (place-channel-get compiler-place))
   (define data (place-channel-get compiler-place))
   (values result data))

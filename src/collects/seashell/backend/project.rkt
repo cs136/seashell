@@ -350,9 +350,14 @@
     (filter (lambda (file)
               (equal? (filename-extension file) #"c"))
             (directory-list (build-project-path name) #:build? #t)))
+  (define o-files
+    (filter (lambda (file)
+              (equal? (filename-extension file) #"o"))
+            (directory-list (build-project-path name) #:build? #t)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
-  (define-values (result messages) (seashell-compile-files '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files))
+  (define-values (result messages)
+    (seashell-compile-files/place '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files o-files))
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
