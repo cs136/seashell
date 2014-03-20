@@ -47,6 +47,12 @@
 ;; seashell-compile-place/init
 ;; Sets up the place for compilation.
 (define (seashell-compile-place/init)
-  (set! compiler-place
-    (dynamic-place 'seashell/compiler/place-main
-                   'seashell-compiler-place)))
+  ;; Make sure that we don't use current-output-port
+  ;; or the detach will fail.
+  (define-values (place in out err)
+    (dynamic-place* 'seashell/compiler/place-main
+                    'seashell-compiler-place
+                    #:out (current-error-port)
+                    #:err (current-error-port)))
+  (set! compiler-place place)
+  (close-output-port in))
