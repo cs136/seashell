@@ -203,28 +203,13 @@
 ;;  exn:project if the project does not exist.
 (define/contract (delete-project name)
   (-> project-name? void?)
-
-  ;; (recursive-delete-tree path)
-  ;; Recursively deletes a directory tree.
-  ;;
-  ;; Arguments:
-  ;;  path - path to delete.
-  (define/contract (recursive-delete-tree path)
-    (-> path? void?)
-    (cond
-      [(directory-exists? path)
-       (map recursive-delete-tree
-            (directory-list path #:build? #t))
-       (delete-directory path)]
-      [else
-        (delete-file path)]))
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (recursive-delete-tree (build-project-path name)))
+    (delete-directory/files (build-project-path name)))
   (void))
 
 ;; (lock-project name)
