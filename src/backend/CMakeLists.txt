@@ -25,6 +25,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.h.in"
 # Make it visible.
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+# Set RPATH
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
 # Components
 add_subdirectory(compiler)
 add_subdirectory(git)

@@ -17,64 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <clang/Basic/Version.h>
-#include <clang/Basic/Diagnostic.h>
-#include <clang/Basic/DiagnosticOptions.h>
-#include <clang/Basic/FileManager.h>
-#include <clang/Basic/LLVM.h>
-#include <clang/Basic/SourceManager.h>
-#include <clang/CodeGen/CodeGenAction.h>
-#include <clang/Driver/Compilation.h>
-#include <clang/Driver/Driver.h>
-#include <clang/Driver/Options.h>
-#include <clang/Driver/Tool.h>
-#include <clang/Frontend/CompilerInstance.h>
-#include <clang/Frontend/CompilerInvocation.h>
-#include <clang/Frontend/FrontendDiagnostic.h>
-#include <clang/Frontend/TextDiagnostic.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <clang/Frontend/Utils.h>
-#include <clang/FrontendTool/Utils.h>
-#include <clang/Lex/Lexer.h>
-#include <llvm/ADT/IntrusiveRefCntPtr.h>
-#include <llvm/ADT/OwningPtr.h>
-#include <llvm/ADT/SmallString.h>
-#include <llvm/ADT/Triple.h>
-#include <llvm/Assembly/PrintModulePass.h>
-#include <llvm/CodeGen/CommandFlags.h>
-#include <llvm/CodeGen/LinkAllAsmWriterComponents.h>
-#include <llvm/CodeGen/LinkAllCodegenComponents.h>
-#include <llvm/IR/DataLayout.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/MC/SubtargetFeature.h>
-#include <llvm/Option/ArgList.h>
-#include <llvm/Pass.h>
-#include <llvm/PassManager.h>
-#include <llvm/Support/Debug.h>
-#include <llvm/Support/ErrorHandling.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/FormattedStream.h>
-#include <llvm/Support/Host.h>
-#include <llvm/Support/ManagedStatic.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/PluginLoader.h>
-#include <llvm/Support/PrettyStackTrace.h>
-#include <llvm/Support/Signals.h>
-#include <llvm/Support/SourceMgr.h>
-#include <llvm/Support/TargetRegistry.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/raw_os_ostream.h>
-#include <llvm/Target/TargetLibraryInfo.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Linker.h>
-#include <llvm/DebugInfo.h>
-#include <llvm/DIBuilder.h>
-#include <llvm/Transforms/Utils/Cloning.h>
+#include "compiler.h"
 
 #include <vector>
 #include <string>
@@ -93,53 +36,6 @@
 
 #include <seashell-config.h>
 
-/** Data structure for compiler diagnostic messages.
- * Opaque to Racket - C accessor functions described below.
- */
-struct seashell_diag {
-  public:
-    seashell_diag(bool e, std::string f, std::string m, int l = 0, int c = 0)
-      : error(e), file(f), mesg(m), line(l), col(c), loc_known(true) { }
-  public:
-    /** Diagnostic location information: */
-
-    /** Is error? */
-    bool error;
-
-    /** File, message */
-    std::string file, mesg;
-
-    /** Line and column. */
-    int line, col;
-
-    /** Location known? */
-    bool loc_known;
-};
-
-/** Seashell's compiler data structure.
- * Opaque to Racket - make sure to pass a cleanup function
- * to the FFI so garbage collection works properly.
- */
-struct seashell_compiler {
-  /** Control flags to the compiler.*/
-  std::vector<std::string> compiler_flags;
-  std::vector<std::string> source_paths;
-
-  /** Module compilation messages. */
-  std::vector<std::vector<seashell_diag>> module_messages;
-
-  /** Linking messages. */
-  std::string linker_messages;
-
-  /** Outputs. */
-  llvm::LLVMContext context;
-  llvm::Module module;
-  std::vector<char> output_object;
-
-  /** Default constructor. */
-  seashell_compiler() :
-    module("seashell-compiler-output", context) {}
-};
 
 /**
  * seashell_llvm_setup (void)
@@ -714,7 +610,7 @@ static int compile_module (seashell_compiler* compiler,
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    OwningPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+    clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -728,7 +624,7 @@ static int compile_module (seashell_compiler* compiler,
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
-    Clang.setInvocation(CI.take());
+    Clang.setInvocation(CI.getPtr());
 
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
@@ -741,8 +637,8 @@ static int compile_module (seashell_compiler* compiler,
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
     Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true); 
 
-    OwningPtr<clang::CodeGenAction> Act(new clang::EmitLLVMOnlyAction(&compiler->context));
-    Success = Clang.ExecuteAction(*Act);
+    clang::EmitLLVMOnlyAction Act(&compiler->context);
+    Success = Clang.ExecuteAction(Act);
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed.");
       std::copy(diag_client.messages.begin(), diag_client.messages.end(),
@@ -754,7 +650,7 @@ static int compile_module (seashell_compiler* compiler,
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
-    OwningPtr<Module> mod(Act->takeModule());
+    OwningPtr<Module> mod(Act.takeModule());
     if (!mod) {
       PUSH_DIAGNOSTIC("libseashell-clang: takeModule() failed.");
       return 1;
