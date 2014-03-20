@@ -17,7 +17,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/compiler/compiler)
-
+(require seashell/log)
+(require seashell/seashell-config)
 (provide seashell-compiler-place)
 
 ;; (seashell-compiler-place channel)
@@ -26,10 +27,14 @@
 ;;
 ;; This is the main function for the place.
 (define (seashell-compiler-place channel)
-  (define cflags (place-channel-get channel))
-  (define ldflags (place-channel-get channel))
-  (define source (place-channel-get channel))
-  (define objects (place-channel-get channel))
-  (define-values (result data) (seashell-compile-files cflags ldflags source objects))
-  (place-channel-put channel result)
-  (place-channel-put channel data))
+  ;; These two things should not fail.
+  (config-refresh!)
+  (standard-logger-setup)
+  (let loop ()
+    (with-handlers
+      ([exn:fail?
+        (lambda (exn) (logf 'error "Exception received in compilation place: ~a" (exn-message exn)))])
+      (define args (place-channel-get channel))
+      (define-values (result data) (apply seashell-compile-files args))
+      (place-channel-put channel (list result data))
+    (loop))))

@@ -28,6 +28,7 @@
          seashell/backend/project
          seashell/backend/http-dispatchers
          seashell/backend/authenticate
+         seashell/compiler
          seashell/crypto
          web-server/web-server
          web-server/http/xexpr
@@ -175,6 +176,9 @@
            (filter:make #rx"^/export/" project-export-dispatcher)
            (filter:make #rx"^/upload$" upload-file-dispatcher)
            standard-error-dispatcher))
+
+        ;; Start our places.
+        (seashell-compile-place/init)
         
         ;; Start the server.
         (define conf-chan  (make-async-channel))

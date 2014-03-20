@@ -1,6 +1,7 @@
 #lang racket
 (require seashell/compiler)
 
+(seashell-compile-place/init)
 (define-values (bin diag)
                (seashell-compile-files/place
                                        '("-Wall" "-gdwarf-4")

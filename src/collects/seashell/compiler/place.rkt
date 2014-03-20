@@ -17,8 +17,11 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/compiler/compiler)
+(provide seashell-compile-files/place
+         seashell-compile-place/init)
 
-(provide seashell-compile-files/place)
+(define compiler-place #f)
+(define compiler-place-lock (make-semaphore 44))
 
 ;; seashell-compile-files/place 
 ;; Invokes seashell-compile-files in a separate place,
@@ -29,12 +32,21 @@
 (define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
   (-> (listof string?) (listof string?) (listof path?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
-  (define compiler-place (dynamic-place 'seashell/compiler/place-main
-                                        'seashell-compiler-place))
-  (place-channel-put compiler-place user-cflags)
-  (place-channel-put compiler-place user-ldflags)
-  (place-channel-put compiler-place sources)
-  (place-channel-put compiler-place objects)
-  (define result (place-channel-get compiler-place))
-  (define data (place-channel-get compiler-place))
-  (values result data))
+  (if (and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
+    (call-with-semaphore
+      compiler-place-lock
+      (thunk
+        (place-channel-put compiler-place 
+                           (list user-cflags user-ldflags sources objects))
+        (match-define 
+          (list result data)
+          (place-channel-get compiler-place))
+        (values result data)))
+    (values #f (make-hash))))
+
+;; seashell-compile-place/init
+;; Sets up the place for compilation.
+(define (seashell-compile-place/init)
+  (set! compiler-place
+    (dynamic-place 'seashell/compiler/place-main
+                   'seashell-compiler-place)))
