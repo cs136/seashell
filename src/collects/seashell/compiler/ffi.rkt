@@ -40,15 +40,10 @@
          seashell_compiler_get_object
          seashell_clang_version
          seashell_compiler_object_arch
-         seashell_compiler_object_os
-         seashell_llvm_setup
-         seashell_llvm_cleanup)
-
+         seashell_compiler_object_os)
 
 (define-ffi-definer define-clang (ffi-lib (read-config 'seashell-clang)))
 (define _seashell_compiler-ptr (_cpointer 'seashell_compiler))
-(define-clang seashell_llvm_setup (_fun -> _void))
-(define-clang seashell_llvm_cleanup (_fun -> _void))
 (define-clang seashell_clang_version (_fun -> _string))
 (define-clang seashell_compiler_free (_fun _seashell_compiler-ptr -> _void)
               #:wrap (deallocator))

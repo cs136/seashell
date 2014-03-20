@@ -144,12 +144,8 @@ struct seashell_compiler {
 /**
  * seashell_llvm_setup (void)
  * Performs necessary LLVM setup.
- *
- * Notes:
- *  This function *must* be called *exactly once* before any calls
- *  to seashell_compiler_run.
  */
-extern "C" void seashell_llvm_setup() {
+static void seashell_llvm_setup() {
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
@@ -166,14 +162,19 @@ extern "C" void seashell_llvm_setup() {
 /**
  * seashell_llvm_cleanup (void)
  * Performs necessary LLVM cleanup.
- *
- * Notes:
- *  This function *may* be called at most *once* after any calls
- *  to seashell_compiler_run.
  */
-extern "C" void seashell_llvm_cleanup() {
+static void seashell_llvm_cleanup() {
   llvm_shutdown();
 }
+
+/** Helper class for making sure LLVM
+ *  gets started up and cleaned up properly.
+ */
+class LLVMSetup {
+  public:
+    LLVMSetup() {seashell_llvm_setup();}
+    ~LLVMSetup() {seashell_llvm_cleanup();}
+} LLVMSetupObject;
 
 /**
  * seashell_clang_version (void)
