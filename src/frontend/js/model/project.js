@@ -87,7 +87,7 @@ function createFile(file) {
  * @param {Boolean} save Save project on close or not.
  */
 function projectClose(save) {
-  socket.unlockProject(currentProject);
+  if(currentProject) socket.unlockProject(currentProject);
   if (save)
     projectSave();
   currentFiles = null;
