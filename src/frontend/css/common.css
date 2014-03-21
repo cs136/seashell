@@ -134,3 +134,10 @@ body {
 .CodeMirror-lint-tooltip {
   z-index: 1055;
 }
+
+/** Tooltip */
+div.tooltip-inner {
+  /*min-width: 175px;*/
+  max-width: 200px;    /* maximum width of the tooltip */
+  white-space: nowrap; /* stop wrapping on whitespace */
+}
