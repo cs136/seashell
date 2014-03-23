@@ -22,6 +22,9 @@ on each file.
 Seashell is licensed under the GNU General Public License, version 3 or later.  Consult
 LICENSE for further details.
 
+Seashell's user support runtime library is licensed under the GNU Lesser General Public License,
+version 3 or later.  Consult LICENSE.LESSER for further details.
+
 ---------------------
 
 Seashell includes the following libraries, which are licensed under the following licenses.  Full
