@@ -135,9 +135,7 @@
         (define-values (in-stdin out-stdin) (make-pipe))
         (define-values (in-stderr out-stderr) (make-pipe))
         ;; Set buffering modes
-        (file-stream-buffer-mode raw-stdout 'none)
         (file-stream-buffer-mode raw-stdin 'none)
-        (file-stream-buffer-mode raw-stderr 'none)
         ;; Construct the destroyed-semaphore
         (define destroyed-semaphore (make-semaphore 0))
         ;; Construct the control structure.

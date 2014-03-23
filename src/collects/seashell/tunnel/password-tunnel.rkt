@@ -73,7 +73,6 @@
        )))
 
   ;; Set unbuffered mode for the ports, so nothing funny happens.
-  (file-stream-buffer-mode in 'none)
   (file-stream-buffer-mode out 'none)
 
   ;; Write out the authentication details
