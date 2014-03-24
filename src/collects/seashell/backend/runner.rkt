@@ -204,7 +204,8 @@
 (define/contract (program-kill pid)
   (-> integer? void?)
   (thread-send (program-control (hash-ref program-table pid))
-               'kill)
+               'kill
+               #f)
   (void))
 
 ;; (program-wait-evt pid)
