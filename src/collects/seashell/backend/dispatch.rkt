@@ -140,14 +140,14 @@
                       (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
                       (send-contents-for "stdout" stdout-flush))
                     (unless (eof-object? stderr-flush)
-                      (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
+                      (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stderr-flush "stderr" project pid)
                       (send-contents-for "stderr" stderr-flush))
                     ;; Destroy the process
                     (logf 'debug "Instance (PID ~a) of ~a quit." project pid)
                     (program-destroy-handle pid)
                     (send-message connection message)]
                    [`(,tag ,contents)
-                    (if (eof-object? contents)
+                    (if (not (eof-object? contents))
                       (send-contents-for tag contents)
                       (if (equal? tag "stdout")
                         (close-input-port stdout)
