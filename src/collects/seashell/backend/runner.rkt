@@ -51,9 +51,12 @@
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
-    (close-input-port raw-stdout)
-    (close-input-port raw-stderr)
-    (close-input-port in-stdin)
+    (unless (port-closed? raw-stdout)
+      (close-input-port raw-stdout))
+    (unless (port-closed? raw-stderr)
+      (close-input-port raw-stderr))
+    (unless (port-closed? in-stdin)
+      (close-input-port in-stdin))
     (unless (port-closed? raw-stdin)
       (close-output-port raw-stdin))
     ;; These two ports must be closed, despite being pipes.
@@ -65,7 +68,18 @@
     (void))
   
   (let loop ()
-    (match (sync/timeout 30 handle (thread-receive-evt) in-stdin raw-stderr raw-stdout)
+    (match (sync/timeout 30
+                         handle 
+                         (thread-receive-evt) 
+                         (if (port-closed? in-stdin)
+                           never-evt
+                           in-stdin)
+                         (if (port-closed? raw-stderr)
+                           never-evt
+                           raw-stderr)
+                         (if (port-closed? raw-stdout)
+                           never-evt
+                           raw-stdout))
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
@@ -95,6 +109,7 @@
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
        (when (eof-object? read)
+         (close-input-port in-stdin)
          (close-output-port raw-stdin))
        (loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
@@ -103,6 +118,7 @@
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
        (when (eof-object? read)
+         (close-input-port raw-stdout)
          (close-output-port out-stdout))
        (loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
@@ -111,7 +127,8 @@
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
        (when (eof-object? read)
-         (close-output-port raw-stderr))
+         (close-input-port raw-stderr)
+         (close-output-port out-stderr))
        (loop)])))
 
 ;; (run-project program)
