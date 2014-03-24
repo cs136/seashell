@@ -58,6 +58,8 @@
   ;; Returns:
   ;;  Thread that is running the I/O processing.
   (define (project-runner-thread project pid)
+    ;; These ports do not need to be closed; they
+    ;; are Racket pipes and automatically garbage collected.
     (define stdout (program-stdout pid))
     (define stderr (program-stderr pid))
     (define wait-evt (program-wait-evt pid))
@@ -100,12 +102,17 @@
                  (program-kill pid)
                  (program-destroy-handle pid)))]
             (match (sync wait-evt
+                         (ws-connection-closed-evt connection)
                          ;; Well, this is rather inefficient.  JavaScript
                          ;; only supports UTF-8 (and we don't support any
                          ;; fancy encodings), so unless we want to cause
                          ;; any unexpected character breaks...
                          (tag-event "stdout" (read-string-evt 1 stdout))
                          (tag-event "stderr" (read-string-evt 1 stderr)))
+                   [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+                    ;; Connection died.
+                    (program-kill pid)
+                    (program-destroy-handle pid)]
                    [(? (lambda (evt) (eq? evt wait-evt)))
                     ;; Program quit
                     (define message
