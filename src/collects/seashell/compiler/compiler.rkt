@@ -116,6 +116,11 @@
                    ,(path->string object-file)
                    ,@(map path->string objects)
                    "-fsanitize=address"
+                   ,@(map
+                       (curry string-append (read-config 'linker-flag-prefix))
+                       (list "--whole-archive"
+                             (path->string (read-config 'seashell-runtime-library))
+                             "--no-whole-archive"))
                    ,@(map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
         ;; Close unused port.
         (close-output-port linker-input)
