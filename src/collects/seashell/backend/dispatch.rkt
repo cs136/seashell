@@ -107,8 +107,12 @@
                          ;; only supports UTF-8 (and we don't support any
                          ;; fancy encodings), so unless we want to cause
                          ;; any unexpected character breaks...
-                         (tag-event "stdout" (read-string-evt 1 stdout))
-                         (tag-event "stderr" (read-string-evt 1 stderr)))
+                         (if (port-closed? stdout)
+                           never-evt
+                           (tag-event "stdout" (read-string-evt 1 stdout)))
+                         (if (port-closed? stderr)
+                           never-evt
+                           (tag-event "stderr" (read-string-evt 1 stderr))))
                    [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
                     ;; Connection died.
                     (program-kill pid)
@@ -124,12 +128,18 @@
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.
-                    (define stdout-flush (port->string stdout))
-                    (define stderr-flush (port->string stderr))
-                    (unless (equal? "" stdout-flush)
+                    (define stdout-flush
+                      (if (port-closed? stdout)
+                        eof
+                        (port->string stdout)))
+                    (define stderr-flush
+                      (if (port-closed? stderr)
+                        eof
+                        (port->string stderr)))
+                    (unless (eof-object? (stdout-flush))
                       (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
                       (send-contents-for "stdout" stdout-flush))
-                    (unless (equal? "" stderr-flush)
+                    (unless (eof-object? (stderr-flush))
                       (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
                       (send-contents-for "stderr" stderr-flush))
                     ;; Destroy the process
@@ -137,8 +147,11 @@
                     (program-destroy-handle pid)
                     (send-message connection message)]
                    [`(,tag ,contents)
-                    (unless (eof-object? contents)
-                      (send-contents-for tag contents))
+                    (if (eof-object? contents)
+                      (send-contents-for tag contents)
+                      (if (equal? tag "stdout")
+                        (close-input-port stdout)
+                        (close-input-port stderr)))
                     (loop)]))))))
 
   ;; (dispatch-handle-program-input message)
