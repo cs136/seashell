@@ -54,11 +54,14 @@
     (close-input-port raw-stdout)
     (close-input-port raw-stderr)
     (close-input-port in-stdin)
-    (close-output-port raw-stdin)
+    (unless (port-closed? raw-stdin)
+      (close-output-port raw-stdin))
     ;; These two ports must be closed, despite being pipes.
     ;; We depend on EOF being sent.
-    (close-output-port out-stderr)
-    (close-output-port out-stdout)
+    (unless (port-closed? out-stderr)
+      (close-output-port out-stderr))
+    (unless (port-closed? out-stdout)
+      (close-output-port out-stdout))
     (void))
   
   (let loop ()
@@ -91,18 +94,24 @@
        (define read (read-bytes-avail! input in-stdin))
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
+       (when (eof-object? read)
+         (close-output-port raw-stdin))
        (loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
        (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stdout))
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
+       (when (eof-object? read)
+         (close-output-port out-stdout))
        (loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
        (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
+       (when (eof-object? read)
+         (close-output-port raw-stderr))
        (loop)])))
 
 ;; (run-project program)
