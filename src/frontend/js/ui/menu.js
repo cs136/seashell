@@ -115,6 +115,4 @@ function setupMenu() {
   $("#menu-autoformat").on("click", handleAutoformat);
 
   $("#menu-download").on("click", handleDownloadProject);
-
-  $("[rel='tooltip']").tooltip();
 }
