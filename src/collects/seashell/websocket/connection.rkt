@@ -56,6 +56,8 @@
          ws-send
          ws-recv
          ws-close
+         ws-connection-closed-evt
+         ws-connection-closed?
          exn:websocket?
          exn:websocket)
 
@@ -125,6 +127,17 @@
   (set-ws-connection-out-thread! conn (out-thread conn))
   conn)
 
+;; (ws-connection-closed-evt conn)
+;; Gets an event that is ready when the connection is closed.
+;;
+;; Arguments:
+;;  conn - Connection.
+;; Returns:
+;;  Event.
+(define/contract (ws-connection-closed-evt conn)
+  (-> ws-connection? evt?)
+  (semaphore-peek-evt (ws-connection-closed-semaphore conn)))
+
 ;; (ws-connection-closed? conn)
 ;; Tests if a connection is closed.
 ;;
@@ -135,8 +148,7 @@
 (define/contract (ws-connection-closed? conn)
   (-> ws-connection? boolean?)
   (if (sync/timeout 0
-                    (semaphore-peek-evt
-                      (ws-connection-closed-semaphore conn)))
+                    (ws-connection-closed-evt conn))
     #t #f))
 
 ;; (make-ws-control) ->
