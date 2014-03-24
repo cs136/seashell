@@ -136,10 +136,10 @@
                       (if (port-closed? stderr)
                         eof
                         (port->string stderr)))
-                    (unless (eof-object? (stdout-flush))
+                    (unless (eof-object? stdout-flush)
                       (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
                       (send-contents-for "stdout" stdout-flush))
-                    (unless (eof-object? (stderr-flush))
+                    (unless (eof-object? stderr-flush)
                       (logf 'debug "Flushing ~s from ~a of project ~a (PID ~a)." stdout-flush "stdout" project pid)
                       (send-contents-for "stderr" stderr-flush))
                     ;; Destroy the process
