@@ -84,10 +84,16 @@
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
        ;; Flush the ports!
-       (define read-stdout (port->bytes raw-stdout))
+       (define read-stdout 
+         (if (port-closed? raw-stdout)
+           eof
+           (port->bytes raw-stdout)))
        (unless (eof-object? read-stdout)
          (write-bytes read-stdout out-stdout))
-       (define read-stderr (port->bytes raw-stderr))
+       (define read-stderr 
+         (if (port-closed? raw-stderr)
+           eof
+           (port->bytes raw-stderr)))
        (unless (eof-object? read-stderr)
          (write-bytes read-stderr out-stderr))
        (close)]
