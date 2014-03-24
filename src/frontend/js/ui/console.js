@@ -29,11 +29,19 @@ function setupConsole() {
        lineWrapping: true,
        theme: 'blackboard'});
   
+  // Debugging state for the console.
+  seashell_console.debug = false;
+ 
   // Store the welcome message in seashell_console.
   seashell_console.welcomeMessage = welcomeMessage;
 
   // Hook the input button
   $("#submit-console-input").on("click", consoleInput);
+}
+
+/** Determines if the console is in a debugging state. */
+function consoleDebug() {
+  return seashell_console && seashell_console.debug;
 }
 
 /** Refreshes the console.

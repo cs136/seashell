@@ -425,7 +425,12 @@ function projectRun() {
 
     promise.done(function(pid) {
       consoleClear();
-      consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
+      if (consoleDebug()) {
+        consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", currentProject, pid));
+      } else {
+        consoleWrite(sprintf("--- Running project '%s' ---\n", currentProject));
+      }
+      
       currentPID = pid;
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
@@ -445,7 +450,12 @@ function projectIOHandler(ignored, message) {
   if (message.type == "stdout" || message.type == "stderr") {
     consoleWriteRaw(message.message);
   } else if (message.type == "done") {
-    consoleWrite(sprintf("--- PID %d exited with status %d.", message.pid, message.status));
+    if (consoleDebug()) {
+      consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
+    } else {
+      consoleWrite("--- Terminated ---\n");
+    }
+    
     if (currentPID == message.pid) {
       currentPID = null;
     }
