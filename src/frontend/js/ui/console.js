@@ -22,11 +22,16 @@ var seashell_console = null;
 /** Sets up the console. */
 function setupConsole() {
   var welcomeMessage = '+++ Welcome to Seashell! Messages and program output will appear here. +++';
+  
   seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
        readOnly: true,
        lineWrapping: true,
        theme: 'blackboard'});
+  
+  // Store the welcome message in seashell_console.
+  seashell_console.welcomeMessage = welcomeMessage;
+
   // Hook the input button
   $("#submit-console-input").on("click", consoleInput);
 }
@@ -35,6 +40,11 @@ function setupConsole() {
  *  Call after the console is shown after a hide. */
 function consoleRefresh() {
   seashell_console.refresh();
+}
+
+/** Clears the contents of the output console. */
+function consoleClear() {
+  seashell_console.setValue(seashell_console.welcomeMessage);
 }
 
 /** Writes a message to the console.

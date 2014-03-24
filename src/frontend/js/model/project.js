@@ -424,6 +424,7 @@ function projectRun() {
     socket.runProject(currentProject, promise);
 
     promise.done(function(pid) {
+      consoleClear();
       consoleWrite(sprintf("--- Launching project %s - PID %d.\n", currentProject, pid));
       currentPID = pid;
     }).fail(function() {
