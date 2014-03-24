@@ -392,37 +392,37 @@
   
   ;; Per-connection event loop.
   (define (main-loop)
-    (with-handlers
-        ([exn:websocket?
-          (lambda (exn)
-            (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
-      (logf 'debug "In main loop - current memory usage ~aM." (/ (current-memory-use) #i1048576))
-      
-      (match (sync/timeout (/ (read-config 'backend-client-connection-timeout) 1000) connection)
-        [#f
-         ;; Alarm - write out a message and close the connection.
-         (logf 'info (format "Client timed out."))
-         (send-message connection `#hash((id . -2) (error . #t) (result . "Timeout!")))
-         (ws-close connection)]
-        [(? eof-object?)
-         ;; CLOSE frame.  Default control function handles this automatically,
-         ;; so just quit.
-         (logf 'info (format "Client connection closed gracefully."))
-         (void)]
-        [(var data)
-         ;; Plain old data.
-         ;; This needs to run in blocking mode.
-         (define message (bytes->jsexpr data))
-         (thread
-          (lambda ()
-            (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
-            (define result (handle-message message))
-            (logf 'debug "Result of handling message ~s: ~s" message result)
-            (send-message connection result)))
-         (main-loop)])))
+    (logf 'debug "In main loop - current memory usage ~aM." (/ (current-memory-use) #i1048576))
+    
+    (match (sync/timeout (/ (read-config 'backend-client-connection-timeout) 1000) connection)
+      [#f
+       ;; Alarm - write out a message and close the connection.
+       (logf 'info (format "Client timed out."))
+       (send-message connection `#hash((id . -2) (error . #t) (result . "Timeout!")))
+       (ws-close connection)]
+      [(? eof-object?)
+       ;; CLOSE frame.  Default control function handles this automatically,
+       ;; so just quit.
+       (logf 'info (format "Client connection closed gracefully."))
+       (void)]
+      [(var data)
+       ;; Plain old data.
+       ;; This needs to run in blocking mode.
+       (define message (bytes->jsexpr data))
+       (thread
+        (lambda ()
+          (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
+          (define result (handle-message message))
+          (logf 'debug "Result of handling message ~s: ~s" message result)
+          (send-message connection result)))
+       (main-loop)]))
   
-  (logf 'info "Received new connection.")
-  (send-message connection `#hash((id . -1)
-                                  (success . #t)
-                                  (result . ,our-challenge)))
-  (main-loop))
+  (with-handlers
+      ([exn:websocket?
+        (lambda (exn)
+          (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
+    (logf 'info "Received new connection.")
+    (send-message connection `#hash((id . -1)
+                                    (success . #t)
+                                    (result . ,our-challenge)))
+    (main-loop)))
