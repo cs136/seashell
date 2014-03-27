@@ -383,7 +383,8 @@
                         (current-continuation-marks))))
   ;; TODO: Racket mode.
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
-  (run-program output-path))
+  (run-program output-path
+               (check-and-build-path (build-project-path name))))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
@@ -401,4 +402,4 @@
     ([current-directory (build-project-path name)])
     (with-output-to-bytes
       (thunk
-        (zip->output (pathlist-closure `(".")))))))
+        (zip->output (pathlist-closure (directory-list)))))))
