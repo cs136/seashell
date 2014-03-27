@@ -23,6 +23,7 @@ var currentFile = null;
 var currentProject = null;
 var currentErrors = [];
 var currentPID = null;
+var saveTimeout = null;
 
 /**
  * Updates the list of projects.
@@ -56,7 +57,11 @@ function projectSave() {
     }
   }
 
-  return $.when.apply(null, promises);
+  return $.when.apply(null, promises)
+    .done(function () {
+      window.clearTimeout(saveTimeout);
+      saveTimeout = window.setTimeout(projectSave, 10000);
+    });
 }
 
 /**
@@ -90,6 +95,8 @@ function projectClose(save) {
   if(currentProject) socket.unlockProject(currentProject);
   if (save)
     projectSave();
+  window.clearTimeout(saveTimeout);
+  saveTimeout = null;
   currentFiles = null;
   currentProject = null;
   currentErrors = [];
@@ -269,6 +276,7 @@ function projectOpenNoLock(name) {
     currentFiles = {};
     currentProject = name;
     currentErrors = [];
+    saveTimeout = window.setTimeout(projectSave, 10000);
 
     $("#project-menu").text(name);
 
