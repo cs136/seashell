@@ -137,13 +137,13 @@
          (close-output-port out-stderr))
        (loop)])))
 
-;; (run-project program)
+;; (run-project program [directory "/"])
 ;;  Runs a program.
 ;;
 ;; Returns:
 ;;  PID of program
-(define/contract (run-program binary)
-  (-> path-string? integer?)
+(define/contract (run-program binary [directory "/"])
+  (->* (path-string?) (path-string?) integer?)
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -155,13 +155,15 @@
                       (current-continuation-marks)))))]
         (logf 'info "Running binary ~a" binary)
         (define-values (handle raw-stdout raw-stdin raw-stderr)
-          ;; Behaviour is inconsistent if we just exec directly.
-          ;; This seems to work.  (why: who knows?)
-          (subprocess #f #f #f (read-config 'system-shell) "-c"
-                      (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
-                              (path->string (read-config 'llvm-symbolizer))
-                              "detect_leaks=1"
-                               binary)))
+          (parameterize
+            ([current-directory directory])
+            ;; Behaviour is inconsistent if we just exec directly.
+            ;; This seems to work.  (why: who knows?)
+            (subprocess #f #f #f (read-config 'system-shell) "-c"
+                        (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
+                                (path->string (read-config 'llvm-symbolizer))
+                                "detect_leaks=1"
+                                 binary))))
         ;; Construct the I/O ports.
         (define-values (in-stdout out-stdout) (make-pipe))
         (define-values (in-stdin out-stdin) (make-pipe))
