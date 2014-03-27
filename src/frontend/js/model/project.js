@@ -167,6 +167,10 @@ function fileOpen(name) {
       // TODO: Custom file types that are not C source files.
       // Consult lib/codemirror/mode and stuff.
       currentFiles[name].document = new CodeMirror.Doc(contents, "text/x-csrc");
+      currentFiles[name].document.on("change",
+        function () {
+          currentErrors = currentErrors.filter(function (error) {return error[1] != name;});
+        });
       rest();
     }).fail(function () {
       displayErrorMessage(name+" could not be read.");
@@ -191,6 +195,10 @@ function fileNew(name) {
   } else {
     // TODO: Custom file types.
     currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
+    currentFiles[name].document.on("change",
+        function () {
+          currentErrors = currentErrors.filter(function (error) {return error[1] != name;});
+        });
     // TODO: Proper new file call.
     createFile(name).done(function () {;
       fileNavigationAddEntry(name);
