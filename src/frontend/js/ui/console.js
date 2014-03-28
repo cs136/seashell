@@ -37,6 +37,10 @@ function setupConsole() {
 
   // Hook the input button
   $("#submit-console-input").on("click", consoleInput);
+  $("#input-line").keydown(function(e) {
+      if(e.which == 13) consoleInput();
+  });
+
 }
 
 /** Determines if the console is in a debugging state. */
