@@ -164,7 +164,8 @@ function fileOpen(name) {
     /** OK, set file contents. */
     editorDocument(currentFiles[name].document);
     /** Add the active class to this link. */
-    currentFiles[name].tag.addClass("active");
+    currentFiles[name].tag.addClass("active")
+      .children().click(fileRename);
     /** Load the file. */
     currentFile = name;
   }
@@ -578,4 +579,33 @@ function projectDownload() {
   .fail(function() {
     displayErrorMessage("Error retrieving project download token.");
   });
+}
+
+/* Handles the UI aspect of renaming files, and attaches a handler
+  to make a websocket request when user presses enter or clicks away.
+  Parameter ev is the click event that began the rename. */
+function fileRename(ev) {
+  var lnk = $(ev.target);
+  lnk.unbind("click");
+  var inp = $("<input type='text' class='form-control' value='"+lnk.text()+"' />");
+  lnk.hide().parent().prepend(inp);
+  inp.focus().select();
+
+  var saveRename = function() {
+    socket.renameFile(currentProject, lnk.text(), inp.val())
+      .done(function() {
+        lnk.text(inp.val());
+        inp.remove();
+        lnk.show().click(fileRename);
+      })
+      .fail(function() {
+        displayErrorMessage("File could not be renamed.");
+      });
+  };
+
+  inp.keydown(function(e) {
+    if(e.which==13) saveRename();
+  }).click(function(e) {
+    e.stopPropagation();
+  }).focusout(saveRename);
 }

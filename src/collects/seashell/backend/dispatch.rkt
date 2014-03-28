@@ -330,6 +330,16 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(make-file-upload-token project file)))]
+      ;; Renaming file dispatch
+      [(hash-table
+        ('id id)
+        ('type "renameFile")
+        ('project project)
+        ('oldName old-file)
+        ('newName new-file))
+        #hash((id . ,id)
+              (success . #t)
+              (result . ,(rename-file project old-file new-file)))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_

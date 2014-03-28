@@ -20,7 +20,13 @@
          seashell/seashell-config
          seashell/log)
 
-(provide exn:project:file new-file remove-file read-file write-file list-files)
+(provide exn:project:file
+         new-file
+         remove-file
+         read-file
+         write-file
+         list-files
+         rename-file)
 
 (struct exn:project:file exn:project ())
 
@@ -114,3 +120,21 @@
       (lambda (path)
         (file-exists? (build-path project-path path)))
       (directory-list project-path))))
+
+;; (rename-file project old-file new-file)
+;; Renames a file.
+;;
+;; Args:
+;;  project - Project the file is in
+;;  old-file - The original name of the file
+;;  new-file - The desired new name of the file
+;; Returns:
+;;  void?
+(define/contract (rename-file project old-file new-file)
+  (-> (and/c project-name? is-project?) path-string? path-string? void?)
+  (define proj-path (check-and-build-path (build-project-path project)))
+  (with-handlers
+    [(exn:fail:filesystem? (lambda (e)
+      (raise (exn:project "File could not be renamed."))))]
+    (rename-file-or-directory old-file new-file)))
+

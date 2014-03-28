@@ -303,3 +303,12 @@ SeashellWebsocket.prototype.getUploadFileToken = function(project, file, deferre
     file: file},
     deferred);
 };
+
+SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, deferred) {
+  return this.sendMessage({
+    type: "renameFile",
+    project: project,
+    oldName: oldName,
+    newName: newName},
+  deferred);
+};
