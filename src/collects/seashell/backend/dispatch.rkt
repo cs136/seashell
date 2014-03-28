@@ -337,9 +337,10 @@
         ('project project)
         ('oldName old-file)
         ('newName new-file))
-        #hash((id . ,id)
+       (rename-file project old-file new-file)
+       `#hash((id . ,id)
               (success . #t)
-              (result . ,(rename-file project old-file new-file)))]
+              (result . #t))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_

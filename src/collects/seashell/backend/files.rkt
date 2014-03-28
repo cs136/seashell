@@ -135,6 +135,8 @@
   (define proj-path (check-and-build-path (build-project-path project)))
   (with-handlers
     [(exn:fail:filesystem? (lambda (e)
-      (raise (exn:project "File could not be renamed."))))]
-    (rename-file-or-directory old-file new-file)))
+      (raise (exn:project "File could not be renamed." (current-continuation-marks)))))]
+    (unless (equal? old-file new-file)
+      (rename-file-or-directory (check-and-build-path proj-path old-file)
+                                (check-and-build-path proj-path new-file)))))
 
