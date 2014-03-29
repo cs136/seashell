@@ -124,6 +124,9 @@ function fileClose(save) {
 
     /** Swap out the document. */
     editor.swapDoc(new CodeMirror.Doc("", "text/x-csrc"));
+    // remove rename click event and attach file open click event
+    $(".active").children().unbind("click")
+      .click(fileNavigationClickHandler);
     /** Remove the active class from the links. */
     $(".file-entry").removeClass("active");
     /** Hide the editor. */
@@ -231,16 +234,18 @@ function fileNavigationAddEntry(file) {
      .append(
         $("<a>").text(file).append(
           $("<span>").addClass("pull-right").addClass("glyphicon").addClass("glyphicon-trash").on("click", function() {deleteFileDialog(file);}))
-        .on("click",
-        function (event) {
-          /** Only handle click events for the A tag itself, not for the span inside it. */
-          if (event.target == this)
-            fileOpen(file);
-        }));
+        .click(fileNavigationClickHandler));
   // Add the tag.
   $("#file-navigator").append(tag);
   // Save the tag for easy access.
   currentFiles[file].tag = tag; 
+}
+
+/* click event handler for file navigation items */
+function fileNavigationClickHandler(event) {
+  /** Only handle click events for the A tag itself, not for the span inside it. */
+  if(event.target == this)
+    fileOpen($(this).text());
 }
 
 /**
@@ -590,15 +595,23 @@ function fileRename(ev) {
   var lnk = $(ev.target);
   lnk.unbind("click");
   var inp = $("<input type='text' class='form-control' value='"+lnk.text()+"' />");
+  var trash = lnk.children().last();
   lnk.hide().parent().prepend(inp);
   inp.focus().select();
 
   var saveRename = function() {
     socket.renameFile(currentProject, lnk.text(), inp.val())
       .done(function() {
-        lnk.text(inp.val());
+        var newname = inp.val();
+        var oldname = lnk.text();
+        lnk.text(newname);
         inp.remove();
+        lnk.append(trash);
         lnk.show().click(fileRename);
+
+        currentFile = newname;
+        currentFiles[newname] = currentFiles[oldname];
+        delete currentFiles[oldname];
       })
       .fail(function() {
         displayErrorMessage("File could not be renamed.");
@@ -607,8 +620,6 @@ function fileRename(ev) {
 
   inp.keydown(function(e) {
     if(e.which==13) saveRename();
-  }).click(function(e) {
-    e.stopPropagation();
   }).focusout(saveRename);
 }
 
