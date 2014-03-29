@@ -148,7 +148,7 @@
 ;; Arguments:
 ;;  settings - JSON object representing the user's settings
 (define/contract (write-settings settings)
-  (-> any/c void?)
+  (-> jsexpr? void?)
   (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
     (thunk (write settings)) #:exists 'truncate))
 
@@ -161,7 +161,7 @@
 ;;  settings - JSON object representing the user's settings, or "notexists" if
 ;;             the settings file doesn't exist
 (define/contract (read-settings)
-  (-> any/c)
+  (-> jsexpr?)
   (cond
     [(file-exists? (build-path (read-config 'seashell) "settings.txt"))
       (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
