@@ -312,3 +312,16 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, def
     newName: newName},
   deferred);
 };
+
+SeashellWebsocket.prototype.saveSettings = function(settings, deferred) {
+  return this.sendMessage({
+    type : "saveSettings",
+    settings : settings},
+    deferred);
+};
+
+SeashellWebsocket.prototype.getSettings = function(deferred) {
+  return this.sendMessage({
+    type : "getSettings"},
+    deferred);
+};

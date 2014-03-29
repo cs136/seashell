@@ -341,6 +341,21 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "saveSettings")
+        ('settings settings))
+       (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
+         (thunk (write settings)) #:exists 'truncate)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getSettings"))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(read-settings)))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_

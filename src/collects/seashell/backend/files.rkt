@@ -26,7 +26,9 @@
          read-file
          write-file
          list-files
-         rename-file)
+         rename-file
+         read-settings
+         write-settings)
 
 (struct exn:project:file exn:project ())
 
@@ -140,3 +142,28 @@
       (rename-file-or-directory (check-and-build-path proj-path old-file)
                                 (check-and-build-path proj-path new-file)))))
 
+;; (write-settings font-size editor-mode tab-width use-spaces)
+;; Writes the user's seashell settings to ~/.seashell/settings.txt
+;;
+;; Arguments:
+;;  settings - JSON object representing the user's settings
+(define/contract (write-settings settings)
+  (-> any/c void?)
+  (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
+    (thunk (write settings)) #:exists 'truncate))
+
+;; (read-settings)
+;; Reads the user's seashell settings from ~/.seashell/settings.txt. If the
+;; file does not exist, a new file is created with the default settings, and
+;; its contents are used.
+;;
+;; Returns:
+;;  settings - JSON object representing the user's settings, or "notexists" if
+;;             the settings file doesn't exist
+(define/contract (read-settings)
+  (-> any/c)
+  (cond
+    [(file-exists? (build-path (read-config 'seashell) "settings.txt"))
+      (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
+        (thunk (read)))]
+    [else "notexists"]))

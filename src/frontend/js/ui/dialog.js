@@ -23,7 +23,23 @@
  * handleSaveSettings
  * This function will handle saving settings. */
 function handleSaveSettings( ) {
-  // TODO: implement
+  if($("font_size") < 6 || $("font_size") > 40){
+    displayErrorMessage("Font size must be an integer between 6 and 40");
+    return;
+  }
+
+  writeSettings({
+    font_size : $("#editor_font").val(),
+    edit_mode : $("#editor_mode").val(),
+    tab_width : $("#tab_width").val(),
+    use_space : $("#use-spaces").val()
+  });
+
+  refreshSettings(function (){
+    $("#settings-dialog").modal("hide");
+  }, function (){
+    displayErrorMessage("Failed to apply settings.");
+  });
 }
 
 /**

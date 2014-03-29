@@ -1,4 +1,5 @@
 "use strict";
+
 /*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
@@ -24,6 +25,7 @@ var currentProject = null;
 var currentErrors = [];
 var currentPID = null;
 var saveTimeout = null;
+var settings = null;
 
 /**
  * Updates the list of projects.
@@ -608,4 +610,45 @@ function fileRename(ev) {
   }).click(function(e) {
     e.stopPropagation();
   }).focusout(saveRename);
+}
+
+/**
+ * Writes user settings to their homedir on backend
+ */
+function writeSettings(settings){
+  socket.saveSettings(settings);
+}
+
+/**
+ * Reads user settings from their homedir on backend (uses defaults if they
+ * don't exist), updates the global settings variable, and applies the settings
+ *
+ * Parameters:
+ *  succ, a callback which is called when settings are successfully refreshed
+ *  fail, a callback which is called when settings fail to be refreshed
+ */
+function refreshSettings(succ, fail){
+  var promise = socket.getSettings();
+  promise.done(function (res){
+    settings = res;
+    if(succ) succ();
+  }).fail(function (res){
+    if(res == "notexists"){
+      console.log("User settings file does not exist; creating new one with defaults.");
+      var defaults = {
+        font_size : 10,
+        edit_mode : "standard",
+        tab_width : 4,
+        use_space : true
+      };
+      socket.saveSettings(defaults);
+      settings = defaults;
+      if(succ) succ();
+    }else{
+      console.log("ERROR: Could not read settings from server.");
+      if(fail) fail();
+      return;
+    }
+  });
+  // TODO: actually apply the new settings
 }
