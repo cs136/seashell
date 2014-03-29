@@ -18,7 +18,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project
          seashell/seashell-config
-         seashell/log)
+         seashell/log
+         json)
 
 (provide exn:project:file
          new-file
