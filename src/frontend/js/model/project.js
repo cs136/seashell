@@ -475,7 +475,7 @@ function projectIOHandler(ignored, message) {
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {
-      consoleWrite("--- Terminated ---\n");
+      consoleWrite("--- Terminated with exit code %d ---\n", message.status);
     }
     
     if (currentPID == message.pid) {
