@@ -45,16 +45,17 @@
   (->* ((or/c 'fatal 'error 'warning 'info 'debug) string?)
        #:rest (listof any/c) 
        void?)
-  (define block (make-semaphore))
-  (log-message logger
-               category
-               #f
-               (apply format `(,(string-append log-ts-str " ~a: " format-string)
-                  ,@(log-ts-args)
-                  ,category
-                  ,@args))
-               (list (current-continuation-marks) block))
-  (semaphore-wait block)
+  (unless (read-config 'test-mode)
+    (define block (make-semaphore))
+    (log-message logger
+                 category
+                 #f
+                 (apply format `(,(string-append log-ts-str " ~a: " format-string)
+                    ,@(log-ts-args)
+                    ,category
+                    ,@args))
+                 (list (current-continuation-marks) block))
+    (semaphore-wait block))
   (void))
 
 ;; make-log-reader: type-regexp -> evt?

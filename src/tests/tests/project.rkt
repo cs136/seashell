@@ -20,6 +20,8 @@
   (void))
 (make-directory test-dir)
 (config-set! 'seashell test-dir)
+(config-set! 'test-mode #t)
+
 ;; Test 2
 ;; make a project
 (new-project "foo")
@@ -29,7 +31,7 @@
 
 ;; Test 3
 ;; delete a non-project
-(with-handlers ([exn:project?
+(with-handlers ([exn:fail?
   (lambda (e) (set! passed-tests (add1 passed-tests)))])
   (delete-project "bar")
   (display "Was able to delete non-existent project.\n"
@@ -39,7 +41,7 @@
 ;; delete an actual project
 (delete-project "foo")
 (if (is-project? "foo")
-  (display "Was unable to delete a project.\n")
+  (display "Was unable to delete a project.\n" (current-error-port))
   (set! passed-tests (add1 passed-tests)))
 
 ;; Test 5

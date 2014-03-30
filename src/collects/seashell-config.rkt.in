@@ -97,6 +97,9 @@
       (cons 'backend-client-connection-timeout 900000)
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
+      ;; Whether or not the system is running tests,
+      ;; useful for disabling things like log file during tests
+      (cons 'test-mode                     #f)
       ;; Location of LLVM symbolizer.
       (cons 'llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer"))
       ;; Default binary to invoke when linking.
