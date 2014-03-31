@@ -24,6 +24,7 @@ var creds = null;
  * Sets up the development environment.
  */
 function seashellInit(rest) {
+  SeashellCoder.addEntropy();
   creds = read_login_credentials();
   if (creds) {
     socket = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
