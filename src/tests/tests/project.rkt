@@ -1,20 +1,15 @@
 #lang racket
 
 (require seashell/seashell-config
-         seashell/backend/project)
+         seashell/backend/project
+         seashell/backend/runner)
 
-(define total-tests 4)
+(define total-tests 6)
 (define passed-tests 0)
 
 (define test-dir (string->path "./.seashell-test"))
 
-;; Test 1
-;; test check-path with bad path
-#|(with-handlers ([exn
-    (lambda (e) (set! passed-tests (add1 passed-tests)))])
-  (check-path (string->path "./!@#$/directory"))
-  (display "check-path accepted garbage.\n" (current-error-port)))|#
-
+;; set up test environment
 (if (directory-exists? test-dir)
   (delete-directory/files test-dir)
   (void))
@@ -22,20 +17,28 @@
 (config-set! 'seashell test-dir)
 (config-set! 'test-mode #t)
 
-;; Test 2
+;; Test 1
 ;; make a project
 (new-project "foo")
 (if (is-project? "foo")
   (set! passed-tests (add1 passed-tests))
   (display "Project not successfully created.\n" (current-error-port)))
 
-;; Test 3
+;; Test 2
 ;; delete a non-project
 (with-handlers ([exn:fail?
   (lambda (e) (set! passed-tests (add1 passed-tests)))])
   (delete-project "bar")
   (display "Was able to delete non-existent project.\n"
     (current-error-port)))
+
+;; Test 3
+;; list projects when there is more than one
+(new-project "bar")
+
+(if (equal? (sort (list-projects) string<?) '("bar" "foo"))
+  (set! passed-tests (add1 passed-tests))
+  (display "list-projects failed.\n" (current-error-port)))
 
 ;; Test 4
 ;; delete an actual project
@@ -45,7 +48,20 @@
   (set! passed-tests (add1 passed-tests)))
 
 ;; Test 5
-;; try listing the projets (should be no projects at this point)
+;; run a project
+(with-output-to-file (check-and-build-path (build-project-path "bar") "test.c")
+  (thunk (display "#include <stdlib.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
+
+(with-handlers
+  ([exn? (lambda (e) (display (exn-message e) (current-error-port)))])
+  (define run-pid (run-project "bar"))
+  (sync (program-wait-evt run-pid))
+  (set! passed-tests (add1 passed-tests)))
+
+;; Test 6
+;; try listing the projects when there are none
+(delete-project "bar")
+
 (if (equal? (list-projects) '())
   (set! passed-tests (add1 passed-tests))
   (display "list-projects is not working.\n" (current-error-port)))
