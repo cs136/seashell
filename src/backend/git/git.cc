@@ -71,7 +71,7 @@ extern "C" struct seashell_git_status* seashell_git_get_status(const char* repos
   git_repository* repo = NULL;
   git_status_options opt = GIT_STATUS_OPTIONS_INIT;
   opt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-  opt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+  opt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
   git_status_list* list = NULL;
   int result = 0;
 
