@@ -163,6 +163,19 @@ function setupDialogs() {
   /** Set up the upload-file-dialog */
   $("#button-upload-file").on("click",
       handleUploadFile);
+  /** Select the first input element, or last button if no input elements */
+  $(".modal").on("shown.bs.modal", function() {
+    var inp = $(this).find("input");
+    if(inp) {
+      // the timeout makes it work in Firefox for some reason
+      setTimeout(function() {
+        inp.first().focus();
+      }, 5);
+    }
+    else {
+      $(this).find("button").last().focus();
+    }
+  });
 }
 
 /**

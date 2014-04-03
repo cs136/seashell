@@ -209,7 +209,7 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (delete-directory/files (build-project-path name)))
+    (delete-directory/files (check-and-build-path (build-project-path name))))
   (void))
 
 ;; (lock-project name)

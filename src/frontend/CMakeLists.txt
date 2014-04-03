@@ -20,6 +20,7 @@ cmake_minimum_required(VERSION 2.6)
 
 # Global Definitions
 set(SEASHELL_FRONTEND share/frontend)
+find_program(SEASHELL_MZTEXT mztext)
 
 # Custom build rules
 function(html_compile filename)
@@ -28,7 +29,7 @@ function(html_compile filename)
   set(output ${base_abs}.html)
   add_custom_target(
     ${base} ALL 
-    COMMAND ${CMAKE_C_COMPILER} -E -x c -P -C -o ${output} ${filename})
+    COMMAND ${SEASHELL_MZTEXT} -o ${output} ${filename})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
 

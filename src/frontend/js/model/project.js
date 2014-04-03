@@ -233,8 +233,10 @@ function fileNavigationAddEntry(file) {
   tag.addClass("file-entry")
      .append(
         $("<a>").text(file).append(
-          $("<span>").addClass("pull-right").addClass("glyphicon").addClass("glyphicon-trash").on("click", function() {deleteFileDialog(file);}))
-        .click(fileNavigationClickHandler));
+          $("<span>").addClass("pull-right")
+            .addClass("glyphicon").addClass("glyphicon-trash")
+            .on("click", fileNavigationTrashHandler(file)))
+          .click(fileNavigationClickHandler));
   // Add the tag.
   $("#file-navigator").append(tag);
   // Save the tag for easy access.
@@ -246,6 +248,13 @@ function fileNavigationClickHandler(event) {
   /** Only handle click events for the A tag itself, not for the span inside it. */
   if(event.target == this)
     fileOpen($(this).text());
+}
+
+function fileNavigationTrashHandler(file) {
+  return function(event) {
+    event.stopPropagation();
+    deleteFileDialog(file);
+  };
 }
 
 /**
@@ -477,7 +486,7 @@ function projectIOHandler(ignored, message) {
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {
-      consoleWrite("--- Terminated ---\n");
+      consoleWrite("--- Terminated with exit code %d ---\n", message.status);
     }
     
     if (currentPID == message.pid) {
@@ -593,9 +602,9 @@ function projectDownload() {
   Parameter ev is the click event that began the rename. */
 function fileRename(ev) {
   var lnk = $(ev.target);
+  var trash = lnk.children().last();
   lnk.unbind("click");
   var inp = $("<input type='text' class='form-control' value='"+lnk.text()+"' />");
-  var trash = lnk.children().last();
   lnk.hide().parent().prepend(inp);
   inp.focus().select();
 
@@ -606,12 +615,14 @@ function fileRename(ev) {
         var oldname = lnk.text();
         lnk.text(newname);
         inp.remove();
-        lnk.append(trash);
-        lnk.show().click(fileRename);
-
-        currentFile = newname;
-        currentFiles[newname] = currentFiles[oldname];
-        delete currentFiles[oldname];
+        lnk.click(fileRename)
+          .append(trash.click(fileNavigationTrashHandler(newname))).show();
+        
+        if(oldname != newname) {
+          currentFile = newname;
+          currentFiles[newname] = currentFiles[oldname];
+          delete currentFiles[oldname];
+        }
       })
       .fail(function() {
         displayErrorMessage("File could not be renamed.");

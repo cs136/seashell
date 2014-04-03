@@ -22,7 +22,6 @@
 /** Make sure we start the entropy collectors before doing anything stupid. */
 sjcl.random.startCollectors();
 
-
 /** Seashell's Encryption/Decryption class.
  * @constructor
  * @param {Array} key - Array of 4 words that represent the 128-bit AES key.
@@ -36,9 +35,14 @@ function SeashellCoder(key) {
 
 /** Adds entropy to the random pool that we use to generate IV's.
  * @static
- * @param {String|Array} entropy - Entropy to add.
+ * @param {String|Array} entropy - Entropy to add.  If null, adds
+ *        entropy generated from window.crypto.getRandomValues()
  */
 SeashellCoder.addEntropy = function(entropy) {
+  if (!entropy) {
+    entropy = new Uint32Array(32);
+    window.crypto.getRandomValues(entropy)
+  }
   sjcl.random.addEntropy(entropy);
 };
 

@@ -1,9 +1,12 @@
 #lang racket
 
-(require seashell/crypto)
+(require seashell/seashell-config
+         seashell/crypto)
 
 (define total-tests 3)
 (define passed 0)
+
+(config-set! 'test-mode #t)
 
 ;; Test 1: Encrypt and decrypt some byte string
 
