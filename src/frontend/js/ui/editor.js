@@ -28,7 +28,7 @@ function setupEditor() {
    *  on the next call to loadConfig(); */
   editor = CodeMirror($("#editor")[0],{
     lineNumbers: true,
-    tabSize: 2,
+    tabSize: 4,
     mode: "text/x-csrc",
     gutters: ["CodeMirror-lint-markers"],
     lineWrapping: true,

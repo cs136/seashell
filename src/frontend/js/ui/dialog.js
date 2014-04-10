@@ -29,10 +29,11 @@ function handleSaveSettings( ) {
   }
 
   writeSettings({
-    font_size : $("#editor_font").val(),
-    edit_mode : $("#editor_mode").val(),
-    tab_width : $("#tab_width").val(),
-    use_space : $("#use-spaces").val()
+    font_size  : $("#editor_font").val(),
+    edit_mode  : $("#editor_mode").val(),
+    tab_width  : $("#tab_width").val(),
+    use_space  : $("#use-spaces").val(),
+    text_style : $("#text_style").val()
   });
 
   refreshSettings(function (){

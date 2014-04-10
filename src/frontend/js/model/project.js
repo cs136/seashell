@@ -650,21 +650,36 @@ function writeSettings(settings){
  *  fail, a callback which is called when settings fail to be refreshed
  */
 function refreshSettings(succ, fail){
+  // function which applies the currently loaded settings to CodeMirror
+  function applySettings(){
+    // TODO: implement font_size
+    // TODO: how do I implement editor mode? editor.setOption("vimMode", true) doesn't work for some reason
+    editor.setOption("tabSize", settings["tab_width"]);
+    editor.setOption("indentUnit", settings["tab_width"]);
+    editor.setOption("theme", settings["text_style"]);
+    // TODO: implement expandtab
+  }
+    
+    
+  // read user settings from server, or use default if no settings exist
   var promise = socket.getSettings();
   promise.done(function (res){
     settings = res;
+    applySettings();
     if(succ) succ();
   }).fail(function (res){
     if(res == "notexists"){
       console.log("User settings file does not exist; creating new one with defaults.");
       var defaults = {
-        font_size : 10,
-        edit_mode : "standard",
-        tab_width : 4,
-        use_space : true
+        font_size  : 10,
+        edit_mode  : "standard",
+        tab_width  : 4,
+        use_space  : true,
+        text_style : "default"
       };
       socket.saveSettings(defaults);
       settings = defaults;
+      applySettings();
       if(succ) succ();
     }else{
       console.log("ERROR: Could not read settings from server.");
@@ -672,5 +687,4 @@ function refreshSettings(succ, fail){
       return;
     }
   });
-  // TODO: actually apply the new settings
 }
