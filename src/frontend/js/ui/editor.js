@@ -39,6 +39,9 @@ function setupEditor() {
        "Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto,
        "Ctrl-Enter": projectRun});
+
+  // load the user's settings
+  refreshSettings();
 }
 
 /** Editor indent function. */
