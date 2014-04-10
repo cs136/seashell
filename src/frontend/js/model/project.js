@@ -649,6 +649,7 @@ function writeSettings(settings){
  *  succ, a callback which is called when settings are successfully refreshed
  *  fail, a callback which is called when settings fail to be refreshed
  */
+// TODO: call this function after logging into seashell
 function refreshSettings(succ, fail){
   // function which applies the currently loaded settings to CodeMirror
   function applySettings(){
@@ -658,6 +659,14 @@ function refreshSettings(succ, fail){
     editor.setOption("indentUnit", settings["tab_width"]);
     editor.setOption("theme", settings["text_style"]);
     // TODO: implement expandtab
+
+    // change the options in the Settings menu to the new settings
+    $("#editor_font").val("42");
+    $("#editor_font").val(settings["font_size"]);
+    $("#editor_mode").val(settings["edit_mode"]);
+    $("#tab_width").val(settings["tab_width"]);
+    $("#use-spaces").val(settings["use_space"]);
+    $("#text_style").val(settings["text_style"]);
   }
     
     
