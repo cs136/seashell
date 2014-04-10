@@ -167,4 +167,4 @@
     [(file-exists? (build-path (read-config 'seashell) "settings.txt"))
       (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
         (thunk (read)))]
-    [else "notexists"]))
+    [else #f]))

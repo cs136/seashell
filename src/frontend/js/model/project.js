@@ -689,22 +689,16 @@ function refreshSettings(succ, fail){
   var promise = socket.getSettings();
   promise.done(function (res){
     settings = defaults;
-    for(var key in res){
+    if (res) {
+      for(var key in res) {
         settings[key] = res[key];
+      }
     }
     applySettings();
     if(succ) succ();
   }).fail(function (res){
-    if(res == "notexists"){
-      console.log("User settings file does not exist; creating new one with defaults.");
-      socket.saveSettings(defaults);
-      settings = defaults;
-      applySettings();
-      if(succ) succ();
-    }else{
-      console.log("ERROR: Could not read settings from server.");
-      if(fail) fail();
-      return;
-    }
+    console.log("ERROR: Could not read settings from server.");
+    if(fail) fail();
+    return;
   });
 }
