@@ -23,7 +23,7 @@
  * handleSaveSettings
  * This function will handle saving settings. */
 function handleSaveSettings( ) {
-  if($("font_size") < 6 || $("font_size") > 40){
+  if(!($("#editor_font").val() >= 6 && $("#editor_font").val() <= 40)){
     displayErrorMessage("Font size must be an integer between 6 and 40");
     return;
   }
@@ -32,7 +32,6 @@ function handleSaveSettings( ) {
     font_size  : $("#editor_font").val(),
     edit_mode  : $("#editor_mode").val(),
     tab_width  : $("#tab_width").val(),
-    use_space  : $("#use-spaces").val(),
     text_style : $("#text_style").val()
   });
 

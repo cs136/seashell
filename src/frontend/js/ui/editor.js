@@ -40,6 +40,9 @@ function setupEditor() {
        "Ctrl-J": editorGoto,
        "Ctrl-Enter": projectRun});
 
+  // set vim save keybinding
+  editor.save = function () { projectSave(currentProject); };
+
   // load the user's settings
   refreshSettings();
 }

@@ -653,19 +653,25 @@ function writeSettings(settings){
 function refreshSettings(succ, fail){
   // function which applies the currently loaded settings to CodeMirror
   function applySettings(){
-    // TODO: implement font_size
-    // TODO: how do I implement editor mode? editor.setOption("vimMode", true) doesn't work for some reason
+    $(".CodeMirror").css("font-size", settings["font_size"] + "pt");
+    if(settings["edit_mode"] == "vim"){
+        editor.setOption("vimMode", true);
+    }else if(settings["edit_mode"] == "emacs"){
+        editor.setOption("vimMode", false);
+        editor.setOption("keyMap", "emacs");
+    }else{
+        editor.setOption("vimMode", false);
+        editor.setOption("keyMap", "default");
+    }
     editor.setOption("tabSize", settings["tab_width"]);
     editor.setOption("indentUnit", settings["tab_width"]);
     editor.setOption("theme", settings["text_style"]);
     // TODO: implement expandtab
 
     // change the options in the Settings menu to the new settings
-    $("#editor_font").val("42");
     $("#editor_font").val(settings["font_size"]);
     $("#editor_mode").val(settings["edit_mode"]);
     $("#tab_width").val(settings["tab_width"]);
-    $("#use-spaces").val(settings["use_space"]);
     $("#text_style").val(settings["text_style"]);
   }
     
