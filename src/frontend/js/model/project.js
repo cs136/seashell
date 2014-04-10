@@ -651,6 +651,15 @@ function writeSettings(settings){
  */
 // TODO: call this function after logging into seashell
 function refreshSettings(succ, fail){
+  // default settings
+  var defaults = {
+    font_size  : 10,
+    edit_mode  : "standard",
+    tab_width  : 4,
+    use_space  : true,
+    text_style : "default"
+  };
+
   // function which applies the currently loaded settings to CodeMirror
   function applySettings(){
     $(".CodeMirror").css("font-size", settings["font_size"] + "pt");
@@ -679,19 +688,15 @@ function refreshSettings(succ, fail){
   // read user settings from server, or use default if no settings exist
   var promise = socket.getSettings();
   promise.done(function (res){
-    settings = res;
+    settings = defaults;
+    for(var key in res){
+        settings[key] = res[key];
+    }
     applySettings();
     if(succ) succ();
   }).fail(function (res){
     if(res == "notexists"){
       console.log("User settings file does not exist; creating new one with defaults.");
-      var defaults = {
-        font_size  : 10,
-        edit_mode  : "standard",
-        tab_width  : 4,
-        use_space  : true,
-        text_style : "default"
-      };
       socket.saveSettings(defaults);
       settings = defaults;
       applySettings();
