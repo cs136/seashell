@@ -44,7 +44,9 @@ TO DO:
 (define protocol-symbol/c
   (or/c 'sslv2-or-v3 'sslv2 'sslv3 'tls 'tls11 'tls12))
 (define curves/c
-  (or/c 'sect163r1 'sect163r2 'sect193r1 'sect233k1 'sect233r1 'sect239k1
+  (or/c 'sect163k1
+        'sect163r1 'sect163r2 'sect193r1 'sect193r2
+        'sect233k1 'sect233r1 'sect239k1
         'sect283k1 'sect409k1 'sect409r1 'sect571k1 'sect571r1
         'secp160k1 'secp160r1 'secp160r2 'secp192k1 'secp224k1 'secp224r1
         'secp256k1 'secp384r1 'secp521r1
@@ -598,6 +600,7 @@ TO DO:
       [(sect409k1) NID_sect409k1]
       [(sect409r1) NID_sect409r1]
       [(sect571k1) NID_sect571k1]
+      [(sect571r1) NID_sect571r1]
       [(secp160k1) NID_secp160k1]
       [(secp160r1) NID_secp160r1]
       [(secp160r2) NID_secp160r2]
