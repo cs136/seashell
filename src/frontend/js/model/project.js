@@ -18,248 +18,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-var currentFiles = null;
-var currentFile = null;
-var currentProject = null;
-var currentErrors = [];
-var currentPID = null;
-var saveTimeout = null;
 
-/**
- * Updates the list of projects.
- */
-function updateListOfProjects() {
-  var promise = socket.getProjects();
+function SeashellProject(name) {
+  this.name = name;
+  this.files = null;
+  this.currentFile = null;
+  this.currentErrors = null;
+  this.currentPID = null;
+  this.saveTimeout = null;
 
-  /** Fill the selector */
-  promise.done(function(projects) {
-    var projects_tag = $("#projects_list");
-
-    projects_tag.empty();
-    for (var i = 0; i < projects.length; i++) {
-      projects_tag.append(
-        $("<option>").attr("value", projects[i]).text(projects[i]));
-    }
-  }).fail(function(){
-    displayErrorMessage("List of projects could not be updated.");
-  });
-}
-
-/**
- * Saves everything in the current project.
- * @return {Promise} JQuery promise when all files are saved.
- */
-function projectSave() {
-  var promises = [];
-  for (var file in currentFiles) {
-    if ("document" in currentFiles[file]) {
-      promises.push(saveFile(file));
-    }
-  }
-
-  return $.when.apply(null, promises)
-    .done(function () {
-      window.clearTimeout(saveTimeout);
-      saveTimeout = window.setTimeout(projectSave, 10000);
-    });
-}
-
-/**
- * Saves a file.
- * @param {String} file Name of file to save.
- * @return {Promise} promise JQuery promise when file is saved.
- */
-function saveFile(file) {
-  return socket.writeFile(currentProject, file, currentFiles[file].document.getValue()).fail(function() {
-    displayErrorMessage(file+" could not be saved.");
-  });
-}
-
-/**
- * Creates a new file.
- * @param {String} file Name of file to create.
- * @return {Promise} promise JQuery promise when file is saved.
- */
-function createFile(file) {
-  return socket.newFile(currentProject, file).fail(function() {
-    displayErrorMessage(file+" could not be created.");
-  });
-}
-
-/**
- * Closes the project.
- *
- * @param {Boolean} save Save project on close or not.
- */
-function projectClose(save) {
-  if(currentProject) socket.unlockProject(currentProject);
-  if (save)
-    projectSave();
-  window.clearTimeout(saveTimeout);
-  saveTimeout = null;
-  currentFiles = null;
-  currentProject = null;
-  currentErrors = [];
-  /** Delete the list of files. */
-  $(".file-entry").remove();
-  /** OK, hide project - hide files */
-  $(".show-on-null-project").removeClass("hide");
-  $(".hide-on-null-project").addClass("hide");
-  $(".hide-on-null-file").addClass("hide");
-  $(".show-on-null-file").removeClass("hide");
-  $("#project-menu").text("No project open");
-}
-
-/**
- * Closes the current file. 
- *
- * @param {Boolean} save Save file on close or not.
- */
-function fileClose(save) {
-  if (currentFile) {
-    if (save)
-      saveFile(currentFile);
-
-    /** Swap out the document. */
-    editor.swapDoc(new CodeMirror.Doc("", "text/x-csrc"));
-    // remove rename click event and attach file open click event
-    $(".active").children().unbind("click")
-      .click(fileNavigationClickHandler);
-    /** Remove the active class from the links. */
-    $(".file-entry").removeClass("active");
-    /** Hide the editor. */
-    $(".hide-on-null-file").addClass("hide");
-    $(".show-on-null-file").removeClass("hide");
-    /** Unset the current file. */
-    currentFile = null;
-  }
-}
-
-/**
- * Deletes a file.
- * @param {String} file Name of file.
- */
-function fileDelete(file) {
-  if (currentFile == file) {
-    fileClose(false);
-  }
-  socket.deleteFile(currentProject, file).done(function () {
-    currentFiles[file].tag.remove();
-    delete currentFiles[file];
-  }).fail(function() {
-    displayErrorMessage(file+" could not be deleted.");
-  });
-}
-
-
-/**
- * Opens a file.
- * @param {String} file Name of file.
- */
-function fileOpen(name) {
-  function rest( ) {
-    fileClose();
-    /** Show file related stuff. 
-     *  THIS must happen before documents swap as something
-     *  breaks on rendering (observed on Firefox 26).*/
-    $(".hide-on-null-file").removeClass("hide");
-    $(".show-on-null-file").addClass("hide");
-    /** OK, set file contents. */
-    editorDocument(currentFiles[name].document);
-    /** Add the active class to this link. */
-    currentFiles[name].tag.addClass("active")
-      .children().click(fileRename);
-    /** Load the file. */
-    currentFile = name;
-  }
-
-  if (! ("document" in currentFiles[name])) {
-    socket.readFile(currentProject, name).done(function (contents) {
-      // TODO: Custom file types that are not C source files.
-      // Consult lib/codemirror/mode and stuff.
-      currentFiles[name].document = new CodeMirror.Doc(contents, "text/x-csrc");
-      currentFiles[name].document.on("change",
-        function () {
-          currentErrors = currentErrors.filter(function (error) {return error[1] != name;});
-        });
-      rest();
-    }).fail(function () {
-      displayErrorMessage(name+" could not be read.");
-    }); 
-  } else {
-    rest();
-  }
-}
-
-/**
- * Creates a file.
- * @param {String} file Name of file to create.
- * @return {Promise} JQuery promise when the file is created.
- */
-function fileNew(name) {
-  /** (Lazily) create the file. */
-  if (name in currentFiles) {
-    // This should never happen,
-    // as a project should only be open in one Seashell instance
-    // at any time.  Though that still has to be handled.
-    displayErrorMessage(name+" already exists.");
-  } else {
-    // TODO: Custom file types.
-    currentFiles[name] = {"document": CodeMirror.Doc("/**\n * File: " + name + "\n * Enter a description of this file.\n*/", "text/x-csrc")};
-    currentFiles[name].document.on("change",
-        function () {
-          currentErrors = currentErrors.filter(function (error) {return error[1] != name;});
-        });
-    // TODO: Proper new file call.
-    createFile(name).done(function () {;
-      fileNavigationAddEntry(name);
-      fileOpen(name)})
-    .fail(function () {
-      // TODO: Error handling.
-    });
-  }
-}
-
-/**
- * Creates a file entry in the UI.
- * @param {String} file Name of file for which a navigation link
- * should be added.
- */
-function fileNavigationAddEntry(file) {
-  // Bind the tag.
-  var tag = $("<li>");
-  tag.addClass("file-entry")
-     .append(
-        $("<a>").text(file).append(
-          $("<span>").addClass("pull-right")
-            .addClass("glyphicon").addClass("glyphicon-trash")
-            .on("click", fileNavigationTrashHandler(file)))
-          .click(fileNavigationClickHandler));
-  // Add the tag.
-  $("#file-navigator").append(tag);
-  // Save the tag for easy access.
-  currentFiles[file].tag = tag; 
-}
-
-/* click event handler for file navigation items */
-function fileNavigationClickHandler(event) {
-  /** Only handle click events for the A tag itself, not for the span inside it. */
-  if(event.target == this)
-    fileOpen($(this).text());
-}
-
-function fileNavigationTrashHandler(file) {
-  return function(event) {
-    event.stopPropagation();
-    deleteFileDialog(file);
-  };
-}
-
-/**
- * Locks a new project, opens it, and sets the current project.
- * @param {String} project Name of project to open.
- */
-function projectOpen(name) {
   var lockPromise = socket.lockProject(name);
   var openNoLock = function(){ projectOpenNoLock(name); };
   lockPromise.done(openNoLock).fail(function(res){
@@ -276,79 +43,213 @@ function projectOpen(name) {
         displayErrorMessage("Project "+name+" failed to lock.");
     }
   });
-}
 
 /**
  * Opens a new project and sets the current project (without locking).
  * @param {String} project Name of project to open.
  */
-function projectOpenNoLock(name) {
-  var promise = socket.listProject(name);
+  function projectOpenNoLock(name) {
+    var promise = socket.listProject(name);
 
-  /** Update the list of files. */
-  promise.done(function(files) {
-    projectClose(true);
-    currentFiles = {};
-    currentProject = name;
-    currentErrors = [];
-    saveTimeout = window.setTimeout(projectSave, 10000);
+    /** Update the list of files. */
+    promise.done(function(files) {
+      this.files = [];
+      this.currentErrors = [];
+      saveTimeout = window.setTimeout(projectSave, 10000);
 
-    $("#project-menu").text(name);
+      for (var i = 0; i < files.length; i++) {
+        /** Lazily load the documents later. */
+        this.files[files[i]] = new SeashellFile(files[i]);
+      }
+      /** OK, show project - hide files */
+      $(".show-on-null-project").addClass("hide");
+      $(".hide-on-null-project").removeClass("hide");
+      $(".hide-on-null-file").addClass("hide");
+      $(".show-on-null-file").removeClass("hide");
+      /** Refresh the console. */
+      consoleRefresh();
+    }).fail(function(){
+      displayErrorMessage("Project "+name+" could not be opened.");
+    });
+  }
 
-    for (var i = 0; i < files.length; i++) {
-      /** Lazily load the documents later. */
-      currentFiles[files[i]] = {};
-      /** Create a entry for it. */
-      fileNavigationAddEntry(files[i]);
-    }
-    /** OK, show project - hide files */
-    $(".show-on-null-project").addClass("hide");
-    $(".hide-on-null-project").removeClass("hide");
-    $(".hide-on-null-file").addClass("hide");
-    $(".show-on-null-file").removeClass("hide");
-    /** Refresh the console. */
-    consoleRefresh();
-  }).fail(function(){
-    displayErrorMessage("Project "+name+" could not be opened.");
+  /** Install the I/O handler. */
+  socket.requests[-3].callback = this.IOHandler;
+}
+
+SeashellProject.currentProject = null;
+
+function SeashellFile(name) {
+  this.name = name.split("/");
+  this.document = null;
+  this.children = null;
+}
+
+SeashellFile.prototype.fullname = function() {
+  return this.name.join("/");
+}
+
+/* fname should be the full path from project root, ie. dir/fname.c
+*/
+SeashellProject.prototype.createFile = function(fname) {
+  return socket.newFile(this.name, fname).done(function() {
+    var nFile = new SeashellFile(fname);
+    this.files.push(nFile);
+    this.openFile(nFile);
+  }).fail(function() {
+    displayErrorMessage("Error creating the file "+fname+".");
   });
 }
 
-/** 
+SeashellProject.prototype.placeFile = function(file, removeFirst) {
+
+ function rmv(aof) {
+    for(f in aof) {
+      if(f.children) {
+        f.children = rmv(f.children);
+      }
+      else if(f === file) {
+        return aof.splice(aof.indexOf(f), 1);
+      }
+    }
+    return aof;
+  }
+
+  function plc(aod, aof) {
+    if(aod.length > 1) {
+      for(f in aof) {
+        if(f.children && f.name[f.name.length-1] == aod[0]) {
+          f.children = plc(aod.slice(1), f.children);
+        }
+      }
+    }
+    else {
+      aof.push(file);
+    }
+    return aof;
+  }
+
+  if(removeFirst) {
+    this.files = rmv(this.files);
+  }
+  if(file) {
+    this.files = plc(file.name, this.files);
+  }
+}
+
+SeashellProject.prototype.openFile = function(file) {
+  if(file.children || file.document) return null;
+  else {
+    return socket.readFile(this.name, this.resolvePath(file))
+      .done(function(contents) {
+        file.document = contents;
+      })
+      .fail(function() {
+        displayErrorMessage("Error reading file "+file.name+".");
+      });
+  }
+}
+
+
+
+ /** 
  * Creates and opens a project.
  * @param {String} project Name of project to create.
  */
-function projectNew(name) {
+SeashellProject.createProject = function(name) {
   var promise = socket.newProject(name);
 
   /** Open it. */
   promise.done(function() {
-    projectOpen(name);
+    SeashellProject.currentProject = new SeashellProject(name);
   }).fail(function() {
     displayErrorMessage("Project "+name+" could not be created.");
   });
 }
 
-/**
- * Delete and closes the current project.
- */
-function projectDelete() {
-  var promise = socket.deleteProject(currentProject);
-
-  /** Deal with it. */
-  promise.done(function() {
-    projectClose(false);
-  }).fail(function() {
-    displayErrorMessage("Project could not be deleted.");
-  });
-
-  return promise;
+SeashellProject.prototype.saveProject = function() {
+  var promises = [];
+  function save_arr(aof) {
+    for(file in aof) {
+      if(file.children) save_arr(file.children);
+      else promises.push(file.save(this.name));
+    }
+  }
+  $.when.apply(null, promises)
+    .done(function() {
+      window.clearTimeout(this.saveTimeout);
+      this.saveTimeout = window.setTimeout(this.saveProject, 10000);
+    });
 }
 
-/**
- * Compiles the current project.
- */
-function projectCompile() {
-  var save_promise = projectSave();
+SeashellFile.prototype.save = function(pname) {
+  return socket.writeFile(pname, this.fullname(), this.document)
+    .fail(function() {
+      displayErrorMessage("File "+this.fullname()+" could not be saved.");
+    });
+}
+
+SeashellProject.getListOfProjects = function() {
+  return socket.getProjects()
+    .fail(function() {
+      displayErrorMessage("Could not fetch list of projects.");
+    });
+}
+
+SeashellProject.prototype.closeProject = function(save) {
+  if(this === SeashellProject.currentProject) {
+    socket.unlockProject(this.name);
+    if(save) this.saveProject();
+    window.clearTimeout(this.saveTimeout);
+    SeashellProject.currentProject = null;
+    delete this;
+  }
+}
+
+SeashellProject.prototype.closeFile = function(save) {
+  if(this.currentFile) {
+    if(save) this.currentFile.save();
+    this.currentFile = null;
+  }
+}
+
+SeashellProject.prototype.deleteFile = function(file) {
+  if(file === this.currentFile) this.closeFile(false);
+
+  function rmv(aof) {
+    for(f in aof) {
+      if(f.children) {
+        f.children = rmv(f.children);
+      }
+      else if(f == file) {
+        return aof.splice(aof.indexOf(f), 1);
+      }
+    }
+    return aof;
+  }
+
+  return socket.deleteFile(this.name, file.fullname())
+    .done(function() {
+      rmv(this.files);
+    })
+    .fail(function() {
+      displayErrorMessage("File "+file.fullname()+" could not be deleted.");
+    });
+}
+
+SeashellProject.prototype.deleteProject = function() {
+  var nm = this.name;
+  return socket.deleteProject(nm)
+    .done(function() {
+      this.projectClose(false);
+    })
+    .fail(function() {
+      displayErrorMessage("Project "+nm+" could not be deleted.");
+    });
+}
+
+SeashellProject.prototype.compile() {
+  var save_promise = this.saveProject();
   var promise = $.Deferred();
 
   save_promise.done(function () {
@@ -374,19 +275,19 @@ function projectCompile() {
     /** Deal with it. */
     promise.done(function(messages) {
       // Save the messages.
-      currentErrors = messages;
+      this.currentErrors = messages;
       // Write it to the console
-      writeErrors(currentErrors);
+      writeErrors(this.currentErrors);
       // Lint
       editorLint();
     }).fail(function(result) {
       if (Array.isArray(result)) {
         // Log
-        consoleWrite(sprintf("*** Error compiling %s:", currentProject));
+        consoleWrite(sprintf("*** Error compiling %s:", this.name));
         // Save the messages.
-        currentErrors = result;
+        this.currentErrors = result;
         // Write it to the console
-        writeErrors(currentErrors);
+        writeErrors(this.currentErrors);
         // Lint
         editorLint();
       } else {
@@ -394,7 +295,6 @@ function projectCompile() {
       }
     });
   }).fail(function () {
-    // TODO: Better error handling.
     promise.reject(null);
     displayErrorMessage("Compilation failed because project could not be saved.");
   });
@@ -435,11 +335,11 @@ function projectLinter() {
   return found;
 }
 
-/**
- * Project runner.
- */
-function projectRun() {
-  var compile_promise = projectCompile();
+SeashellProject.prototype.run(withTests, tests) {
+  // TODO: run with tests
+  if(withTests) return null;
+
+  var compile_promise = this.compile();
   var promise = $.Deferred();
 
   // TODO: If current PID is set, kill it.  This _is_
@@ -462,7 +362,7 @@ function projectRun() {
         consoleWrite(sprintf("--- Running project '%s' ---\n", currentProject));
       }
       
-      currentPID = pid;
+      this.currentPID = pid;
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
@@ -474,11 +374,8 @@ function projectRun() {
   return promise;
 }
 
-/**
- * Project I/O handler
- */
-function projectIOHandler(ignored, message) {
-  if (message.type == "stdout" || message.type == "stderr") {
+SeashellProject.prototype.IOHandler = function(ignored, message) {
+   if (message.type == "stdout" || message.type == "stderr") {
     consoleWriteRaw(message.message);
   } else if (message.type == "done") {
     if (consoleDebug()) {
@@ -487,147 +384,49 @@ function projectIOHandler(ignored, message) {
       consoleWrite("--- Terminated with exit code %d ---\n", message.status);
     }
     
-    if (currentPID == message.pid) {
-      currentPID = null;
+    if (this.currentPID == message.pid) {
+      this.currentPID = null;
     }
   }
 }
 
-/**
- * Project commit.
- * @param {String} description - Description to tag commit with.
- */
-function projectCommit(description) {
-  var save_promise = projectSave();
-  var promise = $.Deferred();
+SeashellProject.prototype.commit = function(description) {
+  // TODO: actually commit
+  return this.save();
+}
 
-  save_promise.done(function() {
-    promise = socket.saveProject(currentProject, description);
-    promise.fail(function() {
-      displayErrorMessage("Commit failed because project could not be saved.");
+SeashellProject.prototype.getUploadToken = function(filename) {
+  return socket.getUploadFileToken(this.name, filename)
+    .fail(function() {
+      displayErrorMessage("Failed to get upload token.");
     });
-  }).fail(function() {
-    promise.reject(null);
-    displayErrorMessage("Project could not be committed.");
-  });
-
-  return promise;
 }
 
-/**
- * Project upload file form handler
- */
-function projectUploadHandler() {
-  /** Hide the modal. */
-  $("#upload-file-dialog").modal("hide");
-  /** Get the filename. */
-  var filename = $("#file-to-upload").val().replace(/.*(\/|\\)/, '');
-  /** Get the ticket. */
-  var promise = socket.getUploadFileToken(currentProject, filename);
-  promise.done(function (token) {
-    var raw = JSON.stringify(token);
-    var options = {
-      target: null,
-      dataType: null,
-      error: function() {
-        displayErrorMessage("File could not be successfully uploaded.");
-      },
-      success: function() {
-        currentFiles[filename] = {};
-        fileNavigationAddEntry(filename);
-      },
-      data: {token: raw},
-      url: sprintf("https://%s:%s/upload", creds.host, creds.port)
-    };
-    /** Submit the form */
-    $("#upload-file-form").ajaxSubmit(options);
-  }).fail(function() {
-    displayErrorMessage("Error retrieving file upload ticket.");
-  });
-  return false;
+SeashellProject.prototype.onUploadSuccess = function(filename) {
+  this.files.push(new SeashellFile(filename));
 }
 
-/**
- * Project Setup Function
- **/
-function setupProjects() {
-  /** Install the I/O handler. */
-  socket.requests[-3].callback = projectIOHandler;
+SeashellProject.prototype.input = function(input) {
+  return socket.programInput(this.currentPID, input)
+    .fail(function() {
+      displayErrorMessage("Input was not successfully sent.");
+    });
 }
 
-/**
- * Project input handler
- * @param {String} input Input to send to project.
- */
-function projectInput(input) {
-  // TODO: Error handling and PID
-  var promise = socket.programInput(currentPID, input);
-  promise.fail(function () {
-    displayErrorMessage("Input was not successfully sent.");
-  });
-  return promise;
+SeashellProject.prototype.getDownloadToken = function() {
+  return socket.getExportToken(this.name)
+    .fail(function() {
+      displayErrorMessage("Could not get project download token.");
+    });
 }
 
-/**
- * Project download handler.
- */
-function projectDownload() {
-  return socket.getExportToken(currentProject).done(
-      function(token) {
-        /** Clear out any existing iframes. */
-        $("#download-iframe").remove();
-
-        /** Create a new one. */
-        var raw = JSON.stringify(token);
-        var frame =  $("<iframe>").attr("src",
-                                        sprintf("https://%s:%s/export/%s.zip?token=%s",
-                                          creds.host, creds.port,
-                                          encodeURIComponent(currentProject),
-                                          encodeURIComponent(raw)))
-                                  .attr("id", "download-iframe");
-
-        /** Errors will be shown below. */
-        $("#download-project-body").append(frame);
-        $("#download-project-dialog").modal("show");
-      })
-  .fail(function() {
-    displayErrorMessage("Error retrieving project download token.");
-  });
-}
-
-/* Handles the UI aspect of renaming files, and attaches a handler
-  to make a websocket request when user presses enter or clicks away.
-  Parameter ev is the click event that began the rename. */
-function fileRename(ev) {
-  var lnk = $(ev.target);
-  var trash = lnk.children().last();
-  lnk.unbind("click");
-  var inp = $("<input type='text' class='form-control' value='"+lnk.text()+"' />");
-  lnk.hide().parent().prepend(inp);
-  inp.focus().select();
-
-  var saveRename = function() {
-    socket.renameFile(currentProject, lnk.text(), inp.val())
-      .done(function() {
-        var newname = inp.val();
-        var oldname = lnk.text();
-        lnk.text(newname);
-        inp.remove();
-        lnk.click(fileRename)
-          .append(trash.click(fileNavigationTrashHandler(newname))).show();
-        
-        if(oldname != newname) {
-          currentFile = newname;
-          currentFiles[newname] = currentFiles[oldname];
-          delete currentFiles[oldname];
-        }
-      })
-      .fail(function() {
-        displayErrorMessage("File could not be renamed.");
-      });
-  };
-
-  inp.keydown(function(e) {
-    if(e.which==13) saveRename();
-  }).focusout(saveRename);
+SeashellProject.prototype.renameFile = function(file, name) {
+  return socket.renameFile(this.name, file.fullname(), name)
+    .done(function() {
+      file.name = name.split("/");
+      this.placeFile(file, true);
+    })
+    .fail(function() {
+      displayErrorMessage("File could not be renamed.");
+    });
 }
