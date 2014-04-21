@@ -1,4 +1,5 @@
 "use strict";
+
 /*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
@@ -18,6 +19,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+var saveTimeout = null;
+var settings = null;
 
 function SeashellProject(name) {
   this.name = name;
@@ -429,4 +432,73 @@ SeashellProject.prototype.renameFile = function(file, name) {
     .fail(function() {
       displayErrorMessage("File could not be renamed.");
     });
+}
+
+/**
+ * Writes user settings to their homedir on backend
+ */
+function writeSettings(settings){
+  socket.saveSettings(settings);
+}
+
+/**
+ * Reads user settings from their homedir on backend (uses defaults if they
+ * don't exist), updates the global settings variable, and applies the settings
+ *
+ * Parameters:
+ *  succ, a callback which is called when settings are successfully refreshed
+ *  fail, a callback which is called when settings fail to be refreshed
+ */
+// TODO: call this function after logging into seashell
+function refreshSettings(succ, fail){
+  // default settings
+  var defaults = {
+    font_size  : 10,
+    edit_mode  : "standard",
+    tab_width  : 4,
+    use_space  : true,
+    text_style : "default"
+  };
+
+  // function which applies the currently loaded settings to CodeMirror
+  function applySettings(){
+    $(".CodeMirror").css("font-size", settings["font_size"] + "pt");
+    if(settings["edit_mode"] == "vim"){
+        editor.setOption("vimMode", true);
+    }else if(settings["edit_mode"] == "emacs"){
+        editor.setOption("vimMode", false);
+        editor.setOption("keyMap", "emacs");
+    }else{
+        editor.setOption("vimMode", false);
+        editor.setOption("keyMap", "default");
+    }
+    editor.setOption("tabSize", settings["tab_width"]);
+    editor.setOption("indentUnit", settings["tab_width"]);
+    editor.setOption("theme", settings["text_style"]);
+    // TODO: implement expandtab
+
+    // change the options in the Settings menu to the new settings
+    $("#editor_font").val(settings["font_size"]);
+    $("#editor_mode").val(settings["edit_mode"]);
+    $("#tab_width").val(settings["tab_width"]);
+    $("#text_style").val(settings["text_style"]);
+  }
+    
+    
+  // read user settings from server, or use default if no settings exist
+  var promise = socket.getSettings();
+  promise.done(function (res){
+    settings = defaults;
+    if (res) {
+      for(var key in res) {
+        settings[key] = res[key];
+      }
+    }
+    applySettings();
+    if(succ) succ();
+  }).fail(function (res){
+    console.log("ERROR: Could not read settings from server.");
+    if(fail) fail();
+    return;
+  });
 }

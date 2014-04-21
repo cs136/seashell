@@ -28,7 +28,7 @@ function setupEditor() {
    *  on the next call to loadConfig(); */
   editor = CodeMirror($("#editor")[0],{
     lineNumbers: true,
-    tabSize: 2,
+    tabSize: 4,
     mode: "text/x-csrc",
     gutters: ["CodeMirror-lint-markers"],
     lineWrapping: true,
@@ -39,6 +39,12 @@ function setupEditor() {
        "Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto,
        "Ctrl-Enter": projectRun});
+
+  // set vim save keybinding
+  editor.save = function () { projectSave(currentProject); };
+
+  // load the user's settings
+  refreshSettings();
 }
 
 /** Editor indent function. */

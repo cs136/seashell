@@ -330,6 +330,34 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(make-file-upload-token project file)))]
+      ;; Directory manipulation functions
+      [(hash-table
+         ('id id)
+         ('type "createDirectory")
+         ('project project)
+         ('directory directory))
+       ;; TODO: Create directory
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+         ('id id)
+         ('type "renameDirectory")
+         ('project project)
+         ('directory directory))
+       ;; TODO: Rename directory
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+         ('id id)
+         ('type "deleteDirectory")
+         ('project project)
+         ('directory directory))
+       ;; TODO: Delete directory
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       ;; Renaming file dispatch
       [(hash-table
         ('id id)
@@ -341,6 +369,21 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "saveSettings")
+        ('settings settings))
+       (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
+         (thunk (write settings)) #:exists 'truncate)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getSettings"))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(read-settings)))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_
