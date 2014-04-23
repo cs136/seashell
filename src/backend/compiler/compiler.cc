@@ -160,8 +160,8 @@ extern "C" void seashell_compiler_clear_compile_flags (struct seashell_compiler*
  *  compiler - A Seashell compiler instance.
  *
  * Notes:
- *  The string returned may be changed after further calls to
- *  seashell_compiler_run.
+ *  The string returned is only valid while the compiler exists and until the next call
+ *  of seashell_compiler_run.
  */
 extern "C" const char * seashell_compiler_get_linker_messages(struct seashell_compiler* compiler) {
   return compiler->linker_messages.c_str();
@@ -275,6 +275,10 @@ extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_c
  *  compiler - A Seashell compiler instance.
  *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
+ *
+ * Note:
+ *  The string returned is only valid while the compiler instance exists and until the next call
+ *  of seashell_compiler_run.
  */
 extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k) {
   if (compiler->module_messages.size() <= n) {
