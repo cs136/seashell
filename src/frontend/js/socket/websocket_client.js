@@ -325,3 +325,11 @@ SeashellWebsocket.prototype.getSettings = function(deferred) {
     type : "getSettings"},
     deferred);
 };
+
+SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, deferred) {
+  return this.sendMessage({
+    type : "marmosetSubmit",
+    project: project,
+    assn: assn},
+    deferred);
+};
