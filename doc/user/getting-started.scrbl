@@ -12,28 +12,28 @@ environment.
 @nested[#:style 'boxed]{@bold{University of Waterloo only:} The following instructions only apply to the Seashell instance
 deployed at the University of Waterloo.}
 To launch a Seashell instance open your favorite web browser and navigate to @link["https://www.student.cs.uwaterloo.ca/seashell" "www.student.cs.uwaterloo.ca/seashell"]. 
-You will be required to authenticate with your @link["www.watiam.uwaterloo.ca" "WatIAM"] credentials.
+You will be required to authenticate with your @link["http://www.watiam.uwaterloo.ca" "WatIAM"] credentials.
 
 @section{Creating a Project}
 
-Click on the @link["#" "Create"] button in the center of your screen. You will be prompted 
+Click on the @bold["Create"] button in the center of your screen. You will be prompted 
 in a pop-up to specify the new projects' name, enter @cpp{Hello World Program} in the input field then 
-click on the @link["#" "Create"] button in the pop-up window. The new project will be created and 
+click on the @bold["Create"] button in the pop-up window. The new project will be created and 
 immediately opened.
 
 @section{Creating a File}
 
-Since the new project is empty there will be a @link["#" "Create"] button in the center of your screen, 
-click on it. You will be prompted in a pop-up to specify the name of the file, enter @cpp{hello_world.c} 
-in the input field then click on the @link["#" "Create"] button in the pop-up window. The new file 
+Since the new project is empty there will be a @bold["Create"] button in the center of your screen, 
+click on it. You will be prompted in a pop-up to specify the name of the file, enter @tt{hello_world.c} 
+in the input field then click on the @bold["Create"] button in the pop-up window. The new file 
 will be immediately created and opened.
 
 If you were in another project and there were one or more files already created, click on the 
-@link["#" "New File"] link in the left sidebar to create a new file.
+@bold["New File"] link in the left sidebar to create a new file.
 
 @section{Writing C Code}
 
-Open @cpp{hello_world.c} by selecting it from the sidebar on the left side of your screen. Add the 
+Open @tt{hello_world.c} by selecting it from the sidebar on the left side of your screen. Add the 
 following include directive and definition for @cpp{main} to your file:
 
 @verbatim[#:indent 2]{
@@ -44,12 +44,12 @@ int main(void) {
 }
 }
 
-To indent a single line of code use the @link["#" "tab"] key. If you are indenting one or more 
-lines of code then select all of the lines you want to indent and use the @link["#" "tab"] key.
+To indent a single line of code use the @bold["tab"] key. If you are indenting one or more 
+lines of code then select all of the lines you want to indent and use the @bold["tab"] key.
 
 @section{Compiling and Running a Program}
 
-Open the file that has the definition of @cpp{main} (@cpp{hello_world.c}).
+Open the file that has the definition of @cpp{main} (@tt{hello_world.c}).
 
 @itemlist[
   @item{Compiling: select the gear icon.}
