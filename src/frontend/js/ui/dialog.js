@@ -77,7 +77,12 @@ function handleNewProject( ) {
 
 /** This function will handle opening projects. */
 function handleOpenProject( ) {
-  projectOpen($("#projects_list").val());
+  SeashellProject.open($("#projects_list").val(), function(proj) {
+    $(".show-on-null-project, .hide-on-null-file").addClass("hide");
+    $(".hide-on-null-project, .show-on-null-file").removeClass("hide");
+    consoleRefresh();
+    updateFileMenu(proj);
+  });
   $("#open-project-dialog").modal("hide");
 }
 
@@ -131,6 +136,19 @@ function handleCommitProject( ) {
  */
 function handleUploadFile() {
   projectUploadHandler();
+}
+
+function updateListOfProjects() {
+  SeashellProject.getListOfProjects().done(function(projects) {
+    var projects_tag = $("#projects_list");
+    projects_tag.empty();
+    for(var i=0; i < projects.length; i++) {
+      projects_tag.append(
+        $("<option>").attr("value", projects[i]).text(projects[i]));
+    }
+  }).fail(function() {
+    displayErrorMessage("List of projects could not be updated.");
+  });
 }
 
 /**

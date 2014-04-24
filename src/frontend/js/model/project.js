@@ -22,7 +22,7 @@
 var saveTimeout = null;
 var settings = null;
 
-function SeashellProject(name) {
+function SeashellProject(name, callback) {
   this.name = name;
   this.files = null;
   this.currentFile = null;
@@ -47,6 +47,7 @@ function SeashellProject(name) {
     }
   });
 
+  var p = this;
 /**
  * Opens a new project and sets the current project (without locking).
  * @param {String} project Name of project to open.
@@ -56,21 +57,15 @@ function SeashellProject(name) {
 
     /** Update the list of files. */
     promise.done(function(files) {
-      this.files = [];
-      this.currentErrors = [];
-      saveTimeout = window.setTimeout(projectSave, 10000);
+      p.files = [];
+      p.currentErrors = [];
+      saveTimeout = window.setTimeout(p.save, 10000);
 
       for (var i = 0; i < files.length; i++) {
         /** Lazily load the documents later. */
-        this.files[files[i]] = new SeashellFile(files[i]);
+        p.placeFile(new SeashellFile(files[i]));
       }
-      /** OK, show project - hide files */
-      $(".show-on-null-project").addClass("hide");
-      $(".hide-on-null-project").removeClass("hide");
-      $(".hide-on-null-file").addClass("hide");
-      $(".show-on-null-file").removeClass("hide");
-      /** Refresh the console. */
-      consoleRefresh();
+      if(callback) callback(p);
     }).fail(function(){
       displayErrorMessage("Project "+name+" could not be opened.");
     });
@@ -78,6 +73,10 @@ function SeashellProject(name) {
 
   /** Install the I/O handler. */
   socket.requests[-3].callback = this.IOHandler;
+}
+
+SeashellProject.open = function(name, callback) {
+  SeashellProject.currentProject = new SeashellProject(name, callback);
 }
 
 SeashellProject.currentProject = null;
@@ -90,19 +89,20 @@ function SeashellFile(name) {
 
 SeashellFile.prototype.fullname = function() {
   return this.name.join("/");
-}
+};
 
 /* fname should be the full path from project root, ie. dir/fname.c
 */
 SeashellProject.prototype.createFile = function(fname) {
+  var p = this;
   return socket.newFile(this.name, fname).done(function() {
     var nFile = new SeashellFile(fname);
-    this.files.push(nFile);
-    this.openFile(nFile);
+    p.files.push(nFile);
+    p.openFile(nFile);
   }).fail(function() {
     displayErrorMessage("Error creating the file "+fname+".");
   });
-}
+};
 
 SeashellProject.prototype.placeFile = function(file, removeFirst) {
 
@@ -138,7 +138,7 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
   if(file) {
     this.files = plc(file.name, this.files);
   }
-}
+};
 
 SeashellProject.prototype.openFile = function(file) {
   if(file.children || file.document) return null;
@@ -151,9 +151,7 @@ SeashellProject.prototype.openFile = function(file) {
         displayErrorMessage("Error reading file "+file.name+".");
       });
   }
-}
-
-
+};
 
  /** 
  * Creates and opens a project.
@@ -168,10 +166,11 @@ SeashellProject.createProject = function(name) {
   }).fail(function() {
     displayErrorMessage("Project "+name+" could not be created.");
   });
-}
+};
 
-SeashellProject.prototype.saveProject = function() {
+SeashellProject.prototype.save = function() {
   var promises = [];
+  var p = this;
   function save_arr(aof) {
     for(file in aof) {
       if(file.children) save_arr(file.children);
@@ -180,24 +179,24 @@ SeashellProject.prototype.saveProject = function() {
   }
   $.when.apply(null, promises)
     .done(function() {
-      window.clearTimeout(this.saveTimeout);
-      this.saveTimeout = window.setTimeout(this.saveProject, 10000);
+      window.clearTimeout(p.saveTimeout);
+      p.saveTimeout = window.setTimeout(p.saveProject, 10000);
     });
-}
+};
 
 SeashellFile.prototype.save = function(pname) {
   return socket.writeFile(pname, this.fullname(), this.document)
     .fail(function() {
       displayErrorMessage("File "+this.fullname()+" could not be saved.");
     });
-}
+};
 
 SeashellProject.getListOfProjects = function() {
   return socket.getProjects()
     .fail(function() {
       displayErrorMessage("Could not fetch list of projects.");
     });
-}
+};
 
 SeashellProject.prototype.closeProject = function(save) {
   if(this === SeashellProject.currentProject) {
@@ -207,14 +206,14 @@ SeashellProject.prototype.closeProject = function(save) {
     SeashellProject.currentProject = null;
     delete this;
   }
-}
+};
 
 SeashellProject.prototype.closeFile = function(save) {
   if(this.currentFile) {
     if(save) this.currentFile.save();
     this.currentFile = null;
   }
-}
+};
 
 SeashellProject.prototype.deleteFile = function(file) {
   if(file === this.currentFile) this.closeFile(false);
@@ -238,7 +237,7 @@ SeashellProject.prototype.deleteFile = function(file) {
     .fail(function() {
       displayErrorMessage("File "+file.fullname()+" could not be deleted.");
     });
-}
+};
 
 SeashellProject.prototype.deleteProject = function() {
   var nm = this.name;
@@ -249,9 +248,9 @@ SeashellProject.prototype.deleteProject = function() {
     .fail(function() {
       displayErrorMessage("Project "+nm+" could not be deleted.");
     });
-}
+};
 
-SeashellProject.prototype.compile() {
+SeashellProject.prototype.compile = function() {
   var save_promise = this.saveProject();
   var promise = $.Deferred();
 
@@ -303,42 +302,50 @@ SeashellProject.prototype.compile() {
   });
 
   return promise;
-}
+};
 
 /**
  * Linter helper for projects.
  *
  * @return {Array of CodeMirror Linter messages} Result of linting the current file.
  */
-function projectLinter() {
+SeashellProject.linter = function() {
   var found = [];
+  if(SeashellProject.currentProject) {
+    /** Look up the current errors for the current file. */
+    for (var i = 0; i < SeashellProject.currentProject.currentErrors.length; i++) {
+      var error = SeashellProject.currentProject.currentErrors[i][0];
+      var file = SeashellProject.currentProject.currentErrors[i][1];
+      var line = SeashellProject.currentProject.currentErrors[i][2];
+      var column = SeashellProject.currentProject.currentErrors[i][3];
+      var message = SeashellProject.currentProject.currentErrors[i][4];
 
-  /** Look up the current errors for the current file. */
-  for (var i = 0; i < currentErrors.length; i++) {
-    var error = currentErrors[i][0];
-    var file = currentErrors[i][1];
-    var line = currentErrors[i][2];
-    var column = currentErrors[i][3];
-    var message = currentErrors[i][4];
+      /** Correct for off by one errors. */
+     if (line > 0) {
+        line --;
+      }
 
-    /** Correct for off by one errors. */
-    if (line > 0) {
-      line --;
+     if (file == this.currentFile || file == "final-link-result" ) {
+        found.push({
+          from: CodeMirror.Pos(line, column),
+          to: CodeMirror.Pos(line),
+          message: message,
+          severity: error ? "error" : "warning"});
+      }  
     }
-
-    if (file == currentFile || file == "final-link-result" ) {
-      found.push({
-        from: CodeMirror.Pos(line, column),
-        to: CodeMirror.Pos(line),
-        message: message,
-        severity: error ? "error" : "warning"});
-    }  
   }
 
   return found;
-}
+};
 
-SeashellProject.prototype.run(withTests, tests) {
+SeashellProject.run = function() {
+  if(SeashellProject.currentProject) {
+    return SeashellProject.currentProject.run();
+  }
+  return null;
+};
+
+SeashellProject.prototype.run = function(withTests, tests) {
   // TODO: run with tests
   if(withTests) return null;
 
@@ -375,7 +382,7 @@ SeashellProject.prototype.run(withTests, tests) {
   });
 
   return promise;
-}
+};
 
 SeashellProject.prototype.IOHandler = function(ignored, message) {
    if (message.type == "stdout" || message.type == "stderr") {
@@ -391,37 +398,37 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
       this.currentPID = null;
     }
   }
-}
+};
 
 SeashellProject.prototype.commit = function(description) {
   // TODO: actually commit
   return this.save();
-}
+};
 
 SeashellProject.prototype.getUploadToken = function(filename) {
   return socket.getUploadFileToken(this.name, filename)
     .fail(function() {
       displayErrorMessage("Failed to get upload token.");
     });
-}
+};
 
 SeashellProject.prototype.onUploadSuccess = function(filename) {
   this.files.push(new SeashellFile(filename));
-}
+};
 
 SeashellProject.prototype.input = function(input) {
   return socket.programInput(this.currentPID, input)
     .fail(function() {
       displayErrorMessage("Input was not successfully sent.");
     });
-}
+};
 
 SeashellProject.prototype.getDownloadToken = function() {
   return socket.getExportToken(this.name)
     .fail(function() {
       displayErrorMessage("Could not get project download token.");
     });
-}
+};
 
 SeashellProject.prototype.renameFile = function(file, name) {
   return socket.renameFile(this.name, file.fullname(), name)
@@ -432,7 +439,31 @@ SeashellProject.prototype.renameFile = function(file, name) {
     .fail(function() {
       displayErrorMessage("File could not be renamed.");
     });
-}
+};
+
+SeashellProject.prototype.JSTreeData = function() {
+  var nodes = [];
+  function JSTreeHelper(arr, res) {
+    for(var i=0; i < arr.length; i++) {
+      if(arr[i].children) {
+        var n = [];
+        JSTreeHelper(arr[i].children, n);
+        res.push({
+          text:arr[i].name[arr[i].name.length-1],
+          children: n
+        });
+      }
+      else {
+        res.push(arr[i].name[arr[i].name.length-1]);
+      }
+    }
+  }
+  if(this.files) {
+    JSTreeHelper(this.files, nodes);
+  }
+  return nodes;
+};
+
 
 /**
  * Writes user settings to their homedir on backend

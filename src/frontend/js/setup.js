@@ -64,8 +64,8 @@ function setupUI() {
   setupConsole();
   setupDialogs();
   setupMenu();
-  setupProjects();
   setupTooltips();
+  setupFileMenu();
 }
 
 /** Accessor functions. */
