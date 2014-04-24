@@ -8,4 +8,4 @@ Consult the @secref["user"] for general end-user documentation.
 @local-table-of-contents[]
 
 @include-section["layout.scrbl"]
-@include-section["support/compiler.scrbl"]
+@include-section["support/main.scrbl"]
