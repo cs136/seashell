@@ -9,7 +9,8 @@ This chapter guides you through the basics and introduces you to the Seashell de
 environment.
 
 @section{Launching a Seashell Instance}
-
+@nested[#:style 'boxed]{@bold{University of Waterloo only:} The following instructions only apply to the Seashell instance
+deployed at the University of Waterloo.}
 To launch a Seashell instance open your favorite web browser and navigate to @link["https://www.student.cs.uwaterloo.ca/seashell" "www.student.cs.uwaterloo.ca/seashell"]. 
 You will be required to authenticate with your @link["www.watiam.uwaterloo.ca" "WatIAM"] credentials.
 
