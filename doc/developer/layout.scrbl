@@ -12,7 +12,8 @@ These dependencies must be present in the build environment,
 and are @bold{not} provided by Seashell.  Seashell will only
 build and run on a relatively modern Linux installation.
 @itemlist[@item[@link["http://racket-lang.org/" "Racket v5.3.6+"]]
-           @item[@link["http://cmake.org" "CMake 2.8+"]]]
+           @item[@link["http://cmake.org" "CMake 2.8+"]]
+           @item[@link["http://openssl.org" "OpenSSL 1.0.1+"]]]
 
 @subsection[#:tag "seashell-integrated-deps"]{Integrated Dependencies}
 Seashell integrates the following external libraries into
@@ -25,6 +26,20 @@ its build process:
            @item[@link["https://bitwiseshiftleft.github.io/sjcl" "SJCL"]]
            @item[@link["https://github.com/alexei/sprintf.js" "Sprintf.JS"]]
            @item[@link["http://www.libssh2.org" "libssh2"]]]
+
+@section[#:tag "seashell-download"]{Downloading Source}
+Seashell's source code is maintained in a Git repository
+at @link["https://github.com/cs136/seashell" "https://github.com/cs136/seashell"].
+Run:
+@commandline{git clone https://github.com/cs136/seashell}
+to clone the source repository.
+
+@section[#:tag "seashell-build"]{Building from Source}
+Seashell does not support in-tree builds.  From a separate directory, run:
+@commandline{cmake ${PATH_TO_SEASHELL_SOURCE} -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}}
+@commandline{make}
+@commandline{make install}
+to build and install Seashell.
 
 @section{Layout}
 Seashell's source files are layed out in the following way:
@@ -48,4 +63,4 @@ The following Seashell support components live here:
 @subsection{Backend Server - @source-url-link["/src/collects"]}
 @subsection{Fronted - @source-url-link["/src/frontend"]}
 
-            
+   
