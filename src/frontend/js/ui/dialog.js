@@ -134,12 +134,29 @@ function handleUploadFile() {
 }
 
 /**
+ * handleMarmosetSubmit
+ * This handles submitting files to marmoset.
+*/
+function handleMarmosetSubmit() {
+    var promise = socket.marmosetSubmit(currentProject, $("#marmoset_project").val());
+
+    promise.done(function(){
+        // TODO: create some dialog to say that the project was submitted
+        $("#marmoset-submit-dialog").modal("hide");
+    }).fail(function(){
+        displayErrorMessage("Failed to submit project to Marmoset.");
+    });
+}
+
+/**
  * setupDialogs()
  * Sets up and attaches actions to all the dialogs. */
 function setupDialogs() {
   /** Set up the open-project-dialog. */
   $("#open-project-dialog").on("show.bs.modal",
       updateListOfProjects);
+  $("#marmoset-submit-dialog").on("show.bs.modal",
+      updateMarmosetProjects);
   $("#button-open-project").on("click",
       handleOpenProject);
   /** Set up the new-project-dialog. */
@@ -163,6 +180,9 @@ function setupDialogs() {
   /** Set up the upload-file-dialog */
   $("#button-upload-file").on("click",
       handleUploadFile);
+  /** Set up the marmoset-submit-dialog */
+  $("#button-marmoset-submit").on("click",
+      handleMarmosetSubmit);
   /** Select the first input element, or last button if no input elements */
   $(".modal").on("shown.bs.modal", function() {
     var inp = $(this).find("input");

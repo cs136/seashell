@@ -48,6 +48,26 @@ function updateListOfProjects() {
 }
 
 /**
+ * Updates the list of marmoset projects in the submit dialog.
+ */
+// TODO: ensure the student submits with the right filename using fnames array
+function updateMarmosetProjects() {
+    $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/project-list.cgi",
+        function(data){
+            var marmoset_tag = $("#marmoset_project");
+            var $xml = $(data);
+            var $rows = $xml.find("row");
+            var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
+            // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
+            for(var i = 0; i < assns.length; i++){
+                marmoset_tag.append(
+                    $("<option>").attr("value", assns[i]).text(assns[i]));
+                }
+            });
+}
+
+
+/**
  * Saves everything in the current project.
  * @return {Promise} JQuery promise when all files are saved.
  */
