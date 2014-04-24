@@ -26,7 +26,8 @@
 
 ;; Can we override these flags?
 (define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
-                               'seashell-known-hosts 'seashell-runtime-library)))
+                               'seashell-known-hosts 'seashell-runtime-library
+                               'seashell-install)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
@@ -70,6 +71,8 @@
       (cons 'seashell-known-hosts          (build-path seashell-install-path "etc" "seashell_hosts"))
       ;; Location of Seashell's Runtime Library
       (cons 'seashell-runtime-library      (build-path seashell-install-path "lib" "libseashell-rt.a"))
+      ;; Location of install path.
+      (cons 'seashell-install              (build-path seashell-install-path))
 
       ;; These flags can be overridden by the configuration file.
       ;; Enable debug mode execution (corresponds to seashell-numeric-debug value by default)
@@ -79,8 +82,6 @@
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
-      ;; Location of install path.
-      (cons 'seashell-install              (build-path seashell-install-path))
       ;; Location of SSL key.
       (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
       ;; Location of SSL certificate.
