@@ -39,6 +39,7 @@
          runtime-files-path
          run-project
          compile-project
+         marmoset-submit
          export-project)
 
 (require seashell/git
@@ -403,3 +404,27 @@
     (with-output-to-bytes
       (thunk
         (zip->output (pathlist-closure (directory-list)))))))
+
+;; (marmoset-submit course assn project file) -> void
+;; Submits a file to marmoset
+;;
+;; Arguments:
+;;   course  - Name of the course, used in SQL query (i.e. "CS136")
+;;   assn    - Name of the assignment/project in marmoset
+;;   project - Name of the project (of the file to be submitted) in seashell
+(define/contract (marmoset-submit course assn project)
+  (-> string? string? string? void?)
+
+  (define tmpzip (make-temporary-file "shstmp~a.zip" #f "/tmp"))
+  (with-output-to-file tmpzip
+    (thunk (write-bytes (export-project project))) #:exists 'truncate)
+    
+  ;; TODO: error handling
+  (define-values (proc out in err)
+    (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
+  (subprocess-wait proc)
+  (close-output-port in)
+  (close-input-port out)
+  (close-input-port err)
+
+  (delete-file tmpzip))
