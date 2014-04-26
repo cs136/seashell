@@ -412,9 +412,13 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (with-output-to-bytes
-      (thunk
-        (zip->output (pathlist-closure (directory-list)))))))
+    (begin
+      (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
+      (delete-file tmpzip)
+      (apply (curry zip tmpzip) (directory-list))
+      (define outbytes (file->bytes tmpzip))
+      (delete-file tmpzip)
+      outbytes)))
 
 ;; (marmoset-submit course assn project file) -> void
 ;; Submits a file to marmoset
