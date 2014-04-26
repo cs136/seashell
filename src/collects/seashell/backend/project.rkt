@@ -375,17 +375,28 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
+;;  file - Name of file to run.
 ;; Returns:
 ;;  pid - Process ID (used as unique identifier for process)
-(define/contract (run-project name)
-  (-> project-name? integer?)
+(define/contract (run-project name file)
+  (-> project-name? string? integer?)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
-  ;; TODO: Racket mode.
-  (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
-  (run-program output-path
-               (check-and-build-path (build-project-path name))))
+
+  ;; figure out which language to run with
+  (define lang
+    (match (filename-extension file)
+      ['#"rkt" 'racket]
+      ['#"c" 'C]
+      [_ (error "You can only run .c or .rkt files!")]))
+
+  (define program
+    (match lang
+      ['racket (check-and-build-path (build-project-path name) file)]
+      ['C (check-and-build-path (runtime-files-path) (format "~a-binary" name))]))
+
+  (run-program program (check-and-build-path (build-project-path name)) lang))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.

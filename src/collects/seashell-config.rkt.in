@@ -107,6 +107,8 @@
       (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
+      ;; Racket interpreter
+      (cons 'racket-interpreter            (string->path "/usr/bin/racket"))
       ;; Default system SSH binary
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.

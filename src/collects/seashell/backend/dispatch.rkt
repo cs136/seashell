@@ -191,8 +191,9 @@
       [(hash-table
         ('id id)
         ('type "runProject")
-        ('project name))
-       (define pid (run-project name))
+        ('project name)
+        ('file file))
+       (define pid (run-project name file))
        (project-runner-thread name pid)
        `#hash((id . ,id)
               (success . #t)

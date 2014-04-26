@@ -474,7 +474,7 @@ function projectRun() {
 
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(function () {
-    socket.runProject(currentProject, promise);
+    socket.runProject(currentProject, currentFile, promise);
 
     promise.done(function(pid) {
       consoleClear();
