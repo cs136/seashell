@@ -430,7 +430,7 @@
 (define/contract (marmoset-submit course assn project)
   (-> string? string? string? void?)
 
-  (define tmpzip (make-temporary-file "shstmp~a.zip" #f "/tmp"))
+  (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
   (with-output-to-file tmpzip
     (thunk (write-bytes (export-project project))) #:exists 'truncate)
     
