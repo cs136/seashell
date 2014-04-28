@@ -19,3 +19,4 @@ cmake_minimum_required(VERSION 2.6)
 
 add_library(seashell-rt seashell-runtime.cpp)
 install(TARGETS seashell-rt ARCHIVE DESTINATION lib)
+install(FILES seashell-runtime.rkt DESTINATION lib)

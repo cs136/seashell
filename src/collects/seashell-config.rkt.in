@@ -26,7 +26,7 @@
 
 ;; Can we override these flags?
 (define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
-                               'seashell-known-hosts 'seashell-runtime-library
+                               'seashell-known-hosts 'seashell-runtime-library 'seashell-runtime-racket-library
                                'seashell-install)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
@@ -71,6 +71,7 @@
       (cons 'seashell-known-hosts          (build-path seashell-install-path "etc" "seashell_hosts"))
       ;; Location of Seashell's Runtime Library
       (cons 'seashell-runtime-library      (build-path seashell-install-path "lib" "libseashell-rt.a"))
+      (cons 'seashell-racket-runtime-library (build-path seashell-install-path "lib" "seashell-runtime.rkt"))
       ;; Location of install path.
       (cons 'seashell-install              (build-path seashell-install-path))
 

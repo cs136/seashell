@@ -461,6 +461,9 @@ function projectLinter() {
  * Project runner.
  */
 function projectRun() {
+  var compile_promise = projectCompile();
+  var promise = $.Deferred();
+
   // function which actually runs the project (without compiling)
   function run() {
     socket.runProject(currentProject, currentFile, promise);
@@ -483,9 +486,6 @@ function projectRun() {
     run();
     return;
   }
-    
-  var compile_promise = projectCompile();
-  var promise = $.Deferred();
 
   // TODO: If current PID is set, kill it.  This _is_
   // a bit of a race condition, but the side effects
@@ -514,7 +514,7 @@ function projectIOHandler(ignored, message) {
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {
-      consoleWrite("--- Terminated with exit code %d ---\n", message.status);
+      consoleWrite(sprintf("--- Terminated with exit code %d ---\n", message.status));
     }
     
     if (currentPID == message.pid) {

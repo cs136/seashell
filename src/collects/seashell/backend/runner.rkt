@@ -170,7 +170,9 @@
                                       (path->string (read-config 'llvm-symbolizer))
                                       "detect_leaks=1"
                                        binary))]
-              ['racket (subprocess #f #f #f (read-config 'racket-interpreter) binary)])))
+              ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
+                                   "-t" (path->string (read-config 'seashell-racket-runtime-library))
+                                   "-u" binary)])))
         ;; Construct the I/O ports.
         (define-values (in-stdout out-stdout) (make-pipe))
         (define-values (in-stdin out-stdin) (make-pipe))
