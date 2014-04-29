@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Seashell.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
@@ -55,7 +54,8 @@ function handleCommit( ) {
  * handleNewFile
  * This function will handle creating new files. */
 function handleNewFile( ) {
-  fileNew($("#new_file_name").val());
+  var prom = SeashellProject.currentProject.createFile($("#new_file_name").val());
+  if(prom) prom.done(updateFileMenu);
   $("#new-file-dialog").modal("hide");
 }
 

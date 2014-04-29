@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
@@ -77,7 +75,7 @@ function SeashellProject(name, callback) {
 
 SeashellProject.open = function(name, callback) {
   SeashellProject.currentProject = new SeashellProject(name, callback);
-}
+};
 
 SeashellProject.currentProject = null;
 
@@ -95,13 +93,20 @@ SeashellFile.prototype.fullname = function() {
 */
 SeashellProject.prototype.createFile = function(fname) {
   var p = this;
-  return socket.newFile(this.name, fname).done(function() {
-    var nFile = new SeashellFile(fname);
-    p.files.push(nFile);
-    p.openFile(nFile);
-  }).fail(function() {
-    displayErrorMessage("Error creating the file "+fname+".");
-  });
+  if(this.exists(fname)) {
+    displayErrorMessage("File "+fname+" already exists.");
+    return null;
+  }
+  else {
+    return socket.newFile(this.name, fname).done(function() {
+      var nFile = new SeashellFile(fname);
+      nFile.document = CodeMirror.Doc("/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n");
+      p.place(nFile);
+      p.openFile(nFile);
+    }).fail(function() {
+      displayErrorMessage("Error creating the file "+fname+".");
+    });
+  }
 };
 
 SeashellProject.prototype.placeFile = function(file, removeFirst) {
@@ -143,9 +148,9 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 SeashellProject.prototype.openFile = function(file) {
   if(file.children || file.document) return null;
   else {
-    return socket.readFile(this.name, this.resolvePath(file))
+    return socket.readFile(this.name, file.name.join("/"))
       .done(function(contents) {
-        file.document = contents;
+        file.document = CodeMirror.Doc(contents, "text/x-csrc");
       })
       .fail(function() {
         displayErrorMessage("Error reading file "+file.name+".");
@@ -445,17 +450,18 @@ SeashellProject.prototype.JSTreeData = function() {
   var nodes = [];
   function JSTreeHelper(arr, res) {
     for(var i=0; i < arr.length; i++) {
+      var item = {text: arr[i].name[arr[i].name.length-1]};
+      item.file = arr[i];
       if(arr[i].children) {
         var n = [];
         JSTreeHelper(arr[i].children, n);
-        res.push({
-          text:arr[i].name[arr[i].name.length-1],
-          children: n
-        });
+        item.children = n;
+        item.icon = "glyphicon glyphicon-folder_closed";
       }
       else {
-        res.push(arr[i].name[arr[i].name.length-1]);
+        item.icon = "glyphicon glyphicon-file";
       }
+      res.push(item);
     }
   }
   if(this.files) {
@@ -532,4 +538,10 @@ function refreshSettings(succ, fail){
     if(fail) fail();
     return;
   });
+}
+
+/* predicate to determine if given filename exists in the project 
+*/
+SeashellProject.prototype.exists = function(fname) {
+  // TODO: this
 }

@@ -28,3 +28,6 @@
 [submodule "lib/form"]
 	path = lib/form
 	url = https://github.com/malsup/form.git
+[submodule "lib/jstree"]
+	path = lib/jstree
+	url = git://github.com/vakata/jstree.git
