@@ -461,7 +461,7 @@ function projectLinter() {
  * Project runner.
  */
 function projectRun() {
-  var compile_promise = projectCompile();
+  var compile_promise = currentFile.split('.').pop() == "rkt" ? null : projectCompile();
   var promise = $.Deferred();
 
   // function which actually runs the project (without compiling)
