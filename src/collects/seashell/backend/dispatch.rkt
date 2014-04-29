@@ -191,8 +191,9 @@
       [(hash-table
         ('id id)
         ('type "runProject")
-        ('project name))
-       (define pid (run-project name))
+        ('project name)
+        ('file file))
+       (define pid (run-project name file))
        (project-runner-thread name pid)
        `#hash((id . ,id)
               (success . #t)
@@ -384,6 +385,15 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(read-settings)))]
+      [(hash-table
+        ('id id)
+        ('project project)
+        ('assn assn)
+        ('type "marmosetSubmit"))
+        (marmoset-submit "CS136" assn project)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_

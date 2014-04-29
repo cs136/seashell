@@ -21,6 +21,25 @@
 var saveTimeout = null;
 var settings = null;
 
+/**
+ * Updates the list of marmoset projects in the submit dialog.
+ */
+// TODO: ensure the student submits with the right filename using fnames array
+function updateMarmosetProjects() {
+    $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/project-list.cgi",
+        function(data){
+            var marmoset_tag = $("#marmoset_project");
+            var $xml = $(data);
+            var $rows = $xml.find("row");
+            var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
+            // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
+            for(var i = 0; i < assns.length; i++){
+                marmoset_tag.append(
+                    $("<option>").attr("value", assns[i]).text(assns[i]));
+                }
+            });
+}
+
 /*
  * Constructor for SeashellProject
  * Parameters:
@@ -35,7 +54,6 @@ function SeashellProject(name, callback) {
   this.currentErrors = null;
   this.currentPID = null;
   this.saveTimeout = null;
-
   var lockPromise = socket.lockProject(name);
   var openNoLock = function(){ projectOpenNoLock(name); };
   lockPromise.done(openNoLock).fail(function(res){
@@ -422,17 +440,9 @@ SeashellProject.prototype.run = function(withTests, tests) {
   var compile_promise = this.compile();
   var promise = $.Deferred();
 
-  // TODO: If current PID is set, kill it.  This _is_
-  // a bit of a race condition, but the side effects
-  // (in JavaScript) are negligible, and it shouldn't
-  // happen that often anyways.
-  // 
-  // This can, and will happen whenever handles are reused.
-  // Oh well. 
-
-  /** We really ought not to run a project without compiling it. */
-  compile_promise.done(function () {
-    socket.runProject(currentProject, promise);
+  // function which actually runs the project (without compiling)
+  function run() {
+    socket.runProject(this.name, this.currentFile.name.join('/'), promise);
 
     promise.done(function(pid) {
       consoleClear();
@@ -446,7 +456,23 @@ SeashellProject.prototype.run = function(withTests, tests) {
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
-  }).fail(function () {
+  }
+
+  if(currentFile.split('.').pop() == "rkt"){
+    run();
+    return;
+  }
+
+  // TODO: If current PID is set, kill it.  This _is_
+  // a bit of a race condition, but the side effects
+  // (in JavaScript) are negligible, and it shouldn't
+  // happen that often anyways.
+  // 
+  // This can, and will happen whenever handles are reused.
+  // Oh well. 
+
+  /** We really ought not to run a project without compiling it. */
+  compile_promise.done(run).fail(function () {
     promise.reject(null);
     displayErrorMessage("Project compilation failed.");
   });
@@ -464,7 +490,7 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {
-      consoleWrite("--- Terminated with exit code %d ---\n", message.status);
+      consoleWrite(sprintf("--- Terminated with exit code %d ---\n", message.status));
     }
     
     if (this.currentPID == message.pid) {

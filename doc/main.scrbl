@@ -19,6 +19,7 @@ The University of Waterloo's main Seashell instance can be found
 
 @; ------------------------------------------------------------------
 @include-section["user/main.scrbl"]
+@include-section["administrative/main.scrbl"]
 @include-section["developer/main.scrbl"]
 
 @index-section[]

@@ -178,10 +178,11 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
  *  Consult dispatch.rkt for a full list of functions.
  *  These functions take in arguments as specified in server.rkt
  *  and return a JQuery Deferred object. */
-SeashellWebsocket.prototype.runProject = function(project, deferred) {
+SeashellWebsocket.prototype.runProject = function(project, file, deferred) {
   return this.sendMessage({
     type : "runProject",
-    project : project},
+    project : project,
+    file : file},
     deferred);
 };
 
@@ -323,5 +324,13 @@ SeashellWebsocket.prototype.saveSettings = function(settings, deferred) {
 SeashellWebsocket.prototype.getSettings = function(deferred) {
   return this.sendMessage({
     type : "getSettings"},
+    deferred);
+};
+
+SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, deferred) {
+  return this.sendMessage({
+    type : "marmosetSubmit",
+    project: project,
+    assn: assn},
     deferred);
 };

@@ -39,6 +39,7 @@
          runtime-files-path
          run-project
          compile-project
+         marmoset-submit
          export-project)
 
 (require seashell/git
@@ -374,17 +375,28 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
+;;  file - Name of file to run.
 ;; Returns:
 ;;  pid - Process ID (used as unique identifier for process)
-(define/contract (run-project name)
-  (-> project-name? integer?)
+(define/contract (run-project name file)
+  (-> project-name? string? integer?)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
-  ;; TODO: Racket mode.
-  (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
-  (run-program output-path
-               (check-and-build-path (build-project-path name))))
+
+  ;; figure out which language to run with
+  (define lang
+    (match (filename-extension file)
+      ['#"rkt" 'racket]
+      ['#"c" 'C]
+      [_ (error "You can only run .c or .rkt files!")]))
+
+  (define program
+    (match lang
+      ['racket (check-and-build-path (build-project-path name) file)]
+      ['C (check-and-build-path (runtime-files-path) (format "~a-binary" name))]))
+
+  (run-program program (check-and-build-path (build-project-path name)) lang))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
@@ -400,6 +412,34 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (with-output-to-bytes
-      (thunk
-        (zip->output (pathlist-closure (directory-list)))))))
+    (begin
+      (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
+      (delete-file tmpzip)
+      (apply (curry zip tmpzip) (directory-list))
+      (define outbytes (file->bytes tmpzip))
+      (delete-file tmpzip)
+      outbytes)))
+
+;; (marmoset-submit course assn project file) -> void
+;; Submits a file to marmoset
+;;
+;; Arguments:
+;;   course  - Name of the course, used in SQL query (i.e. "CS136")
+;;   assn    - Name of the assignment/project in marmoset
+;;   project - Name of the project (of the file to be submitted) in seashell
+(define/contract (marmoset-submit course assn project)
+  (-> string? string? string? void?)
+
+  (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
+  (with-output-to-file tmpzip
+    (thunk (write-bytes (export-project project))) #:exists 'truncate)
+    
+  ;; TODO: error handling
+  (define-values (proc out in err)
+    (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
+  (subprocess-wait proc)
+  (close-output-port in)
+  (close-input-port out)
+  (close-input-port err)
+
+  (delete-file tmpzip))

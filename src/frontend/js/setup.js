@@ -44,8 +44,7 @@ function seashellInit(rest) {
       displayErrorMessage("Seashell socket could not be set up.");
     });
   } else {
-    /** Note: Host-Specific code.  Probably want to read this from some file. */
-    window.location.replace("https://www.student.cs.uwaterloo.ca/seashell/");
+    window.location.replace("/seashell/");
   }
 }
 

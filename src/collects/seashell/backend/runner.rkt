@@ -137,13 +137,18 @@
          (close-output-port out-stderr))
        (loop)])))
 
-;; (run-project program [directory "/"])
+;; (run-project program directory lang)
 ;;  Runs a program.
+;;
+;; Arguments:
+;;   program   - the filename of the program to be run
+;;   directory - the directory containing the program
+;;   lang      - the language with which to run the program ('C or 'racket)
 ;;
 ;; Returns:
 ;;  PID of program
-(define/contract (run-program binary [directory "/"])
-  (->* (path-string?) (path-string?) integer?)
+(define/contract (run-program binary directory lang)
+  (-> path-string? path-string? (or/c 'C 'racket) integer?)
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -153,17 +158,21 @@
               (raise (exn:program:run
                       (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                       (current-continuation-marks)))))]
-        (logf 'info "Running binary ~a" binary)
+        (logf 'info "Running file ~a with language ~a" binary lang)
         (define-values (handle raw-stdout raw-stdin raw-stderr)
           (parameterize
             ([current-directory directory])
-            ;; Behaviour is inconsistent if we just exec directly.
-            ;; This seems to work.  (why: who knows?)
-            (subprocess #f #f #f (read-config 'system-shell) "-c"
-                        (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
-                                (path->string (read-config 'llvm-symbolizer))
-                                "detect_leaks=1"
-                                 binary))))
+            (match lang
+              ;; Behaviour is inconsistent if we just exec directly.
+              ;; This seems to work.  (why: who knows?)
+              ['C (subprocess #f #f #f (read-config 'system-shell) "-c"
+                              (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
+                                      (path->string (read-config 'llvm-symbolizer))
+                                      "detect_leaks=1"
+                                       binary))]
+              ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
+                                   "-t" (path->string (read-config 'seashell-racket-runtime-library))
+                                   "-u" binary)])))
         ;; Construct the I/O ports.
         (define-values (in-stdout out-stdout) (make-pipe))
         (define-values (in-stdin out-stdin) (make-pipe))
