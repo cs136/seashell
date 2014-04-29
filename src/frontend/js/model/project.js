@@ -1,3 +1,4 @@
+"use strict";
 /*
  * Seashell's front-end.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
@@ -20,6 +21,13 @@
 var saveTimeout = null;
 var settings = null;
 
+/*
+ * Constructor for SeashellProject
+ * Parameters:
+ * name - full file path & name, eg. tests/small.in
+ * callback - function to be called after project is created. Will be passed the
+ *    the new SeashellProject as a parameter.
+*/
 function SeashellProject(name, callback) {
   this.name = name;
   this.files = null;
@@ -73,23 +81,37 @@ function SeashellProject(name, callback) {
   socket.requests[-3].callback = this.IOHandler;
 }
 
+/*
+ * Opens a project with the given name.
+ * callback is called with the new SeashellProject instance once it is created.
+*/
 SeashellProject.open = function(name, callback) {
   SeashellProject.currentProject = new SeashellProject(name, callback);
 };
 
 SeashellProject.currentProject = null;
 
+/*
+ * Constructor for SeashellFile
+ * Parameters:
+ * name - the full file path & name from root of project
+*/
 function SeashellFile(name) {
   this.name = name.split("/");
   this.document = null;
   this.children = null;
 }
 
+/*
+ * Returns the full file path and name for a SeashellFile
+*/
 SeashellFile.prototype.fullname = function() {
   return this.name.join("/");
 };
 
-/* fname should be the full path from project root, ie. dir/fname.c
+/*
+ * Creates a new file in the project
+ * fname should be the full path from project root, ie. dir/fname.c
 */
 SeashellProject.prototype.createFile = function(fname) {
   var p = this;
@@ -101,7 +123,7 @@ SeashellProject.prototype.createFile = function(fname) {
     return socket.newFile(this.name, fname).done(function() {
       var nFile = new SeashellFile(fname);
       nFile.document = CodeMirror.Doc("/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n");
-      p.place(nFile);
+      p.placeFile(nFile);
       p.openFile(nFile);
     }).fail(function() {
       displayErrorMessage("Error creating the file "+fname+".");
@@ -109,8 +131,13 @@ SeashellProject.prototype.createFile = function(fname) {
   }
 };
 
+/*
+ * Places a file in the correct place in a file
+ * file - a SeashellFile instance
+ * removeFirst - if true, first searches files and removes the given
+ *    file if it is already in the project.
+*/
 SeashellProject.prototype.placeFile = function(file, removeFirst) {
-
  function rmv(aof) {
     for(f in aof) {
       if(f.children) {
@@ -145,6 +172,10 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
   }
 };
 
+/*
+ * Opens the given file in the project
+ * file - a SeashellFile instance
+*/
 SeashellProject.prototype.openFile = function(file) {
   if(file.children || file.document) return null;
   else {
@@ -173,6 +204,9 @@ SeashellProject.createProject = function(name) {
   });
 };
 
+/*
+ * Saves all files in the project
+ */
 SeashellProject.prototype.save = function() {
   var promises = [];
   var p = this;
@@ -189,6 +223,10 @@ SeashellProject.prototype.save = function() {
     });
 };
 
+/*
+ * Saves the file.
+ * pname - name of the file's project
+ */
 SeashellFile.prototype.save = function(pname) {
   return socket.writeFile(pname, this.fullname(), this.document)
     .fail(function() {
@@ -196,6 +234,9 @@ SeashellFile.prototype.save = function(pname) {
     });
 };
 
+/*
+ * Requests the list of all user's projects.
+*/
 SeashellProject.getListOfProjects = function() {
   return socket.getProjects()
     .fail(function() {
@@ -203,6 +244,10 @@ SeashellProject.getListOfProjects = function() {
     });
 };
 
+/*
+ * Closes the project.
+ * save - If true, saves project before closing
+*/
 SeashellProject.prototype.closeProject = function(save) {
   if(this === SeashellProject.currentProject) {
     socket.unlockProject(this.name);
@@ -213,6 +258,10 @@ SeashellProject.prototype.closeProject = function(save) {
   }
 };
 
+/*
+ * Closes the file.
+ * save - If true, saves the file before closing
+ */
 SeashellProject.prototype.closeFile = function(save) {
   if(this.currentFile) {
     if(save) this.currentFile.save();
@@ -220,6 +269,10 @@ SeashellProject.prototype.closeFile = function(save) {
   }
 };
 
+/*
+ * Deletes a file in the project.
+ * file - a SeashellFile instance that is in the project
+*/
 SeashellProject.prototype.deleteFile = function(file) {
   if(file === this.currentFile) this.closeFile(false);
 
@@ -244,6 +297,9 @@ SeashellProject.prototype.deleteFile = function(file) {
     });
 };
 
+/*
+ * Deletes the project.
+*/
 SeashellProject.prototype.deleteProject = function() {
   var nm = this.name;
   return socket.deleteProject(nm)
@@ -255,6 +311,9 @@ SeashellProject.prototype.deleteProject = function() {
     });
 };
 
+/*
+ * Compiles the project.
+ */
 SeashellProject.prototype.compile = function() {
   var save_promise = this.saveProject();
   var promise = $.Deferred();
@@ -343,6 +402,9 @@ SeashellProject.linter = function() {
   return found;
 };
 
+/*
+ * Runs the currently open project.
+ */
 SeashellProject.run = function() {
   if(SeashellProject.currentProject) {
     return SeashellProject.currentProject.run();
@@ -350,6 +412,9 @@ SeashellProject.run = function() {
   return null;
 };
 
+/*
+ * Runs the project.
+ */
 SeashellProject.prototype.run = function(withTests, tests) {
   // TODO: run with tests
   if(withTests) return null;
@@ -389,6 +454,9 @@ SeashellProject.prototype.run = function(withTests, tests) {
   return promise;
 };
 
+/*
+ * Callback function that handles program input & output activity
+*/
 SeashellProject.prototype.IOHandler = function(ignored, message) {
    if (message.type == "stdout" || message.type == "stderr") {
     consoleWriteRaw(message.message);
@@ -405,11 +473,18 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
   }
 };
 
+/*
+ * Should commit the project, currently just saves.
+ */
 SeashellProject.prototype.commit = function(description) {
   // TODO: actually commit
   return this.save();
 };
 
+/*
+ * Requests an upload token for the project.
+ * filename - the filename to be uploaded to
+ */
 SeashellProject.prototype.getUploadToken = function(filename) {
   return socket.getUploadFileToken(this.name, filename)
     .fail(function() {
@@ -417,10 +492,18 @@ SeashellProject.prototype.getUploadToken = function(filename) {
     });
 };
 
+/*
+ * Function called on successful file upload.
+ * filename - the filename that was uploaded
+ */
 SeashellProject.prototype.onUploadSuccess = function(filename) {
-  this.files.push(new SeashellFile(filename));
+  this.placeFile(new SeashellFile(filename));
 };
 
+/*
+ * Sends input to the currently running project.
+ * input - the actual input to be sent
+ */
 SeashellProject.prototype.input = function(input) {
   return socket.programInput(this.currentPID, input)
     .fail(function() {
@@ -428,6 +511,9 @@ SeashellProject.prototype.input = function(input) {
     });
 };
 
+/*
+ * Requests a download token for the project.
+ */
 SeashellProject.prototype.getDownloadToken = function() {
   return socket.getExportToken(this.name)
     .fail(function() {
@@ -435,6 +521,11 @@ SeashellProject.prototype.getDownloadToken = function() {
     });
 };
 
+/*
+ * Renames a file in the project.
+ * file - SeashellFile instance to rename
+ * name - new name (full path from project root) of the file
+ */
 SeashellProject.prototype.renameFile = function(file, name) {
   return socket.renameFile(this.name, file.fullname(), name)
     .done(function() {
@@ -446,6 +537,9 @@ SeashellProject.prototype.renameFile = function(file, name) {
     });
 };
 
+/*
+ * Returns an object formatted for use in the JSTree plugin
+ */
 SeashellProject.prototype.JSTreeData = function() {
   var nodes = [];
   function JSTreeHelper(arr, res) {
