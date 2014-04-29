@@ -48,33 +48,29 @@
 (define/contract (tunnel-launch)
   (-> tunnel?)
 
-#|CSCF
-  Turned off until CSCF updates the Linux environment
   ;; Randomly select a host
   (define host (first (shuffle (read-config 'host))))
-|#
-
-  ;; Get the hostname.
+#|
   (define short-hostname
     (string-trim
       (with-output-to-string
         (thunk
           (system "/bin/hostname")))))
   (define host (string-append short-hostname ".hosts.seashell.student.cs.uwaterloo.ca"))
+|#
 
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
+#|
                 (read-config 'seashell-backend-remote)))
-#|CSCF
-                Turned off until CSCF updates the Linux environment.
+|#
                 (read-config 'ssh-binary)
                 "-x"
                 "-o" "PreferredAuthentications hostbased"
                 "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
                 host
                 (read-config 'seashell-backend-remote)))
-|#
 
   ;; And the logger thread
   (define status-thread
