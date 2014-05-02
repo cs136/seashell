@@ -64,6 +64,14 @@ int seashell_drop_permissions(void) {
 }
 
 /**
+ * seashell_set_umask(void)
+ * Sets the umask for the Seashell process.
+ */
+void seashell_set_umask(void) {
+  umask(S_IWGRP | S_IWOTH);
+}
+
+/**
  * seashell_create_secret_file(char* file)
  * Creates a file with only user RW set, fails if the file already exists.
  * This is to deal with the fact that Racket doesn't allow setting permissions
