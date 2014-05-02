@@ -68,7 +68,7 @@ int seashell_drop_permissions(void) {
  * Sets the umask for the Seashell process.
  */
 void seashell_set_umask(void) {
-  umask(S_IWGRP | S_IWOTH);
+  umask(0077);
 }
 
 /**
