@@ -25,6 +25,7 @@
          seashell_create_secret_file
          seashell_uw_check_remote_user
          seashell_get_username
+         seashell_set_umask
          seashell_signal_detach)
 
 (define-ffi-definer define-support 
@@ -34,6 +35,7 @@
 ;; Manually check the result of these functions - as failure can indicate there's
 ;; an underlying security issue that needs to be addressed.
 (define-support seashell_drop_permissions (_fun -> _int))
+(define-support seashell_set_umask (_fun -> _void))
 (define-support seashell_signal_detach (_fun -> _int))
 (define-support seashell_create_secret_file (_fun _path -> _int))
 (define-support seashell_uw_check_remote_user (_fun -> _int))
