@@ -106,6 +106,10 @@
     ;; Unbuffered mode for output ports.
     (file-stream-buffer-mode (current-output-port) 'none)
     (file-stream-buffer-mode (current-error-port) 'none)
+
+    ;; Install umask.
+    ;; NOTE: This will not affect the permissions set for the ~/.seashell/{projects,runtime-files} directories.
+    (seashell_set_umask)
     
     ;; Logging setup.
     (standard-logger-setup))
