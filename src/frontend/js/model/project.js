@@ -234,10 +234,10 @@ SeashellProject.prototype.save = function() {
       else promises.push(file.save(this.name));
     }
   }
-  $.when.apply(null, promises)
+  return $.when.apply(null, promises)
     .done(function() {
       window.clearTimeout(p.saveTimeout);
-      p.saveTimeout = window.setTimeout(p.saveProject, 10000);
+      p.saveTimeout = window.setTimeout(p.save, 10000);
     });
 };
 
@@ -269,7 +269,7 @@ SeashellProject.getListOfProjects = function() {
 SeashellProject.prototype.closeProject = function(save) {
   if(this === SeashellProject.currentProject) {
     socket.unlockProject(this.name);
-    if(save) this.saveProject();
+    if(save) this.save();
     window.clearTimeout(this.saveTimeout);
     SeashellProject.currentProject = null;
     delete this;
@@ -333,11 +333,11 @@ SeashellProject.prototype.deleteProject = function() {
  * Compiles the project.
  */
 SeashellProject.prototype.compile = function() {
-  var save_promise = this.saveProject();
+  var save_promise = this.save();
   var promise = $.Deferred();
-
+  var p = this;
   save_promise.done(function () {
-    socket.compileProject(currentProject, promise);
+    socket.compileProject(p.name, promise);
 
     /** Helper function for writing errors. */
     function writeErrors(errors) {
@@ -458,7 +458,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
     });
   }
 
-  if(currentFile.split('.').pop() == "rkt"){
+  if(this.currentFile.fullname().split('.').pop() == "rkt"){
     run();
     return;
   }
