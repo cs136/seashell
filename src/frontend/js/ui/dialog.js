@@ -55,7 +55,9 @@ function handleCommit( ) {
  * This function will handle creating new files. */
 function handleNewFile( ) {
   var prom = SeashellProject.currentProject.createFile($("#new_file_name").val());
-  if(prom) prom.done(updateFileMenu);
+  if(prom) prom.done(function() {
+    updateFileMenu(SeashellProject.currentProject);
+  });
   $("#new-file-dialog").modal("hide");
 }
 

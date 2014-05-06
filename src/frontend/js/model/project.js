@@ -437,7 +437,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
   // TODO: run with tests
   if(withTests) return null;
 
-  var compile_promise = this.compile();
+  var compile_promise = this.currentFile.name.join('/').split('.').pop() == "rkt" ? null : this.compile();
   var promise = $.Deferred();
 
   // function which actually runs the project (without compiling)
@@ -458,7 +458,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
     });
   }
 
-  if(this.currentFile.fullname().split('.').pop() == "rkt"){
+  if(this.currentFile.name.join('/').split('.').pop() == "rkt"){
     run();
     return;
   }

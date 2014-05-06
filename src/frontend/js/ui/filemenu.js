@@ -17,6 +17,7 @@ function setupFileMenu() {
 /* proj is a SeashellProject */
 function updateFileMenu(proj) {
   if(proj) {
+    console.log(proj.JSTreeData());
     $.jstree.create("#file-tree", {
       'core' : {
         'data' : proj.JSTreeData()

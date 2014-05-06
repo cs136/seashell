@@ -24,7 +24,7 @@
  * This functions handles the save project menu item.
  */
 function handleSaveProject() {
-  projectSave( );
+  SeashellProject.currentProject.save();
 }
 
 /**
@@ -32,7 +32,7 @@ function handleSaveProject() {
  * This function handles the compile project menu item.
  */
 function handleCompileProject() {
-  projectCompile();
+  SeashellProject.currentProject.compile();
 }
 
 /**
@@ -81,7 +81,7 @@ function handleAutoformat() {
  */
 function handleRunProject() {
   // TODO: Multiple running projects?
-  projectRun();
+  SeashellProject.run();
 }
 
 /**
@@ -89,7 +89,20 @@ function handleRunProject() {
  * This function handles downloading projects.
  */
 function handleDownloadProject() {
-  projectDownload();
+  SeashellProject.currentProject.getDownloadToken()
+    .done(function(token) {
+      $("#download-iframe").remove();
+      var raw = JSON.stringify(token);
+      var frame = $("<iframe>").attr("src",
+        sprintf("https://%s:%s/export/%s.zip?token=%s",
+          creds.host,
+          creds.port,
+          encodeURIComponent(currentProject),
+          encodeURIComponent(raw)))
+        .attr("id", "download-iframe");
+      $("#download-project-body").append(frame);
+      $("#download-project-dialog").modal("show");
+    });
 }
 
 /**
