@@ -18,7 +18,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-var saveTimeout = null;
 var settings = null;
 
 /**
@@ -53,7 +52,8 @@ function SeashellProject(name, callback) {
   this.currentFile = null;
   this.currentErrors = null;
   this.currentPID = null;
-  this.saveTimeout = null;
+  var p = this;
+  this.saveInterval = setInterval(function() { p.save(); }, 10000);
   var lockPromise = socket.lockProject(name);
   var openNoLock = function(){ projectOpenNoLock(name); };
   lockPromise.done(openNoLock).fail(function(res){
@@ -195,7 +195,9 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
  * file - a SeashellFile instance
 */
 SeashellProject.prototype.openFile = function(file) {
-  if(file.children || file.document) return null;
+  if(file.children) return null;
+  this.currentFile = file;
+  if(file.document) return null;
   else {
     return socket.readFile(this.name, file.name.join("/"))
       .done(function(contents) {
@@ -292,23 +294,24 @@ SeashellProject.prototype.closeFile = function(save) {
  * file - a SeashellFile instance that is in the project
 */
 SeashellProject.prototype.deleteFile = function(file) {
-  if(file === this.currentFile) this.closeFile(false);
+  if(file == this.currentFile) this.closeFile(false);
 
   function rmv(aof) {
-    for(f in aof) {
-      if(f.children) {
-        f.children = rmv(f.children);
+    for(var f=0; f < aof.length; f++) {
+      if(aof[f] == file) {
+        aof.splice(aof.indexOf(aof[f]), 1);
+        return aof;
       }
-      else if(f == file) {
-        return aof.splice(aof.indexOf(f), 1);
+      else if(aof[f].children) {
+        aof[f].children = rmv(aof[f].children);
       }
     }
     return aof;
   }
-
+  var p = this;
   return socket.deleteFile(this.name, file.fullname())
     .done(function() {
-      rmv(this.files);
+      p.files = rmv(p.files);
     })
     .fail(function() {
       displayErrorMessage("File "+file.fullname()+" could not be deleted.");
@@ -571,12 +574,12 @@ SeashellProject.prototype.JSTreeData = function() {
   function JSTreeHelper(arr, res) {
     for(var i=0; i < arr.length; i++) {
       var item = {text: arr[i].name[arr[i].name.length-1]};
-      item.file = arr[i];
+      item.path = arr[i].fullname();
       if(arr[i].children) {
         var n = [];
         JSTreeHelper(arr[i].children, n);
         item.children = n;
-        item.icon = "glyphicon glyphicon-folder_closed";
+        item.icon = "glyphicon glyphicon-folder-closed";
       }
       else {
         item.icon = "glyphicon glyphicon-file";
@@ -587,9 +590,28 @@ SeashellProject.prototype.JSTreeData = function() {
   if(this.files) {
     JSTreeHelper(this.files, nodes);
   }
+  console.log(nodes);
   return nodes;
 };
 
+/* finds a SeashellFile in the project given its path as a string
+*/
+SeashellProject.prototype.getFileFromPath = function(path) {
+  function find(array, path) {
+    for(var i=0; i < array.length; i++) {
+      if(array[i].name[array[i].name.length-1] == path[0]) {
+        if(path.length==1) {
+          return array[i];
+        }
+        else {
+          return find(array[i].children, path.slice(1));
+        }
+      }
+    }
+    return false;
+  }
+  return find(this.files, path.split('/'));
+};
 
 /**
  * Writes user settings to their homedir on backend
@@ -663,5 +685,15 @@ function refreshSettings(succ, fail){
 /* predicate to determine if given filename exists in the project 
 */
 SeashellProject.prototype.exists = function(fname) {
-  // TODO: this
+  function check(aof) {
+    for(var f=0; f < aof.length; f++) {
+      if(aof[f].fullname() == fname)
+        return true;
+      if(aof[f].children) {
+        if(check(aof[f].children))
+          return true;
+      }
+    }
+    return false;
+  }
 }

@@ -55,3 +55,8 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/codemirror/"
   FILES_MATCHING PATTERN "*"
   PATTERN ".git" EXCLUDE
   PATTERN ".gitignore" EXCLUDE)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/jstree/"
+  DESTINATION "${SEASHELL_FRONTEND}/jstree"
+  FILES_MATCHING PATTERN "*"
+  PATTERN ".git" EXCLUDE
+  PATTERN ".gitignore" EXCLUDE)
