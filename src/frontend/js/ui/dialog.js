@@ -149,6 +149,25 @@ function handleMarmosetSubmit() {
 }
 
 /**
+ * handleLogout
+ * This handles logging out of seashell.
+*/
+function handleLogout() {
+    console.log("in handleLogout");
+    displayConfirmationMessage(
+        "Log out of Seashell",
+        "Do you want to log out? You will lose any unsaved data.",
+        function (){
+            console.log("setting onbeforeunload");
+            window.onbeforeunload = function() {};
+            console.log("changing window");
+            window.location.replace("https://cas.uwaterloo.ca/cas/logout");
+            console.log("after window change");
+        });
+}
+
+
+/**
  * setupDialogs()
  * Sets up and attaches actions to all the dialogs. */
 function setupDialogs() {
@@ -183,6 +202,9 @@ function setupDialogs() {
   /** Set up the marmoset-submit-dialog */
   $("#button-marmoset-submit").on("click",
       handleMarmosetSubmit);
+  /** Set up the logout dialog */
+  $("#menu-logout").on("click",
+      handleLogout);
   /** Select the first input element, or last button if no input elements */
   $(".modal").on("shown.bs.modal", function() {
     var inp = $(this).find("input");
