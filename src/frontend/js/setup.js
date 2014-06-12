@@ -58,6 +58,7 @@ function setupUI() {
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
   $(".userid").text(creds.user);
+  $("#master-container").removeClass("hide"); // show the UI
   /** OK, set everything up. */
   setupEditor();
   setupConsole();
