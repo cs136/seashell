@@ -548,10 +548,17 @@ function projectCommit(description) {
  * Project upload file form handler
  */
 function projectUploadHandler() {
-  /** Hide the modal. */
-  $("#upload-file-dialog").modal("hide");
   /** Get the filename. */
   var filename = $("#file-to-upload").val().replace(/.*(\/|\\)/, '');
+  /** Make sure the file does not already exist */
+  for(var file in currentFiles){
+    if(file == filename){
+      displayErrorMessage("File '" + filename + "' already exists!");
+      return false;
+    }
+  }
+  /** Hide the modal. */
+  $("#upload-file-dialog").modal("hide");
   /** Get the ticket. */
   var promise = socket.getUploadFileToken(currentProject, filename);
   promise.done(function (token) {
