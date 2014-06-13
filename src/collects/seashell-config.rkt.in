@@ -91,6 +91,8 @@
       (cons 'tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel"))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (build-path seashell-install-path "bin" "seashell-user-backend"))
+      ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
+      (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having
       ;; received no new messages, will terminate.
       (cons 'backend-client-idle-timeout   1800000)

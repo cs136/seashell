@@ -19,6 +19,7 @@
 (require net/url
          racket/async-channel
          racket/serialize
+         racket/udp
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -39,6 +40,23 @@
          (prefix-in filter: web-server/dispatchers/dispatch-filter))
 
 (provide backend-main)
+
+;; creds-valid? creds credentials-file -> boolean?
+;; Checks whether or not the given creds point to a running seashell instance
+;; TODO: verify that response came from seashell
+(define/contract (creds-valid? creds credentials-file)
+  (-> hash? path? boolean?)
+  (cond
+    [(hash-has-key? creds 'ping-port)
+      (define sock (udp-open-socket))
+      (udp-send-to sock (hash-ref creds 'host) (hash-ref creds 'ping-port) #"ping")
+      (define success (sync/timeout (read-config 'seashell-ping-timeout)
+                                    (udp-receive!-evt sock (make-bytes 0))))
+      (unless success
+        (logf 'info "creds file was stale; generating new creds")
+        (delete-file credentials-file))
+      (if success #t #f)]
+    [else #f]))
 
 ;; Channel used to keep process alive.
 (define keepalive-chan (make-async-channel))
@@ -149,7 +167,7 @@
                         credentials-file
                       (thunk
                        (define result (read))
-                       (if (eof-object? result)
+                       (if (or (eof-object? result) (not (creds-valid? (deserialize result) credentials-file)))
                            (begin
                              (sleep 1)
                              (abort-current-continuation repeat))
@@ -200,6 +218,16 @@
         ;; Get current username
         (define username (or (seashell_get_username) "unknown_user"))
         
+        ;; Start the UDP ping listener
+        (define sock (udp-open-socket))
+        (udp-bind! sock #f 0)
+        (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
+        (define (udp-listen-ping)
+          (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
+          (udp-send-to sock client-host client-port #"pong")
+          (udp-listen-ping))
+        (thread udp-listen-ping)
+        
         ;; Generate and send credentials, write lock file
         (define host (read))
         (logf 'debug "Read hostname '~a' from login server." host)
@@ -209,6 +237,7 @@
           `#hash((key . ,(seashell-crypt-key->client key))
                  (host . ,host)
                  (port . ,start-result)
+                 (ping-port . ,ping-port)
                  (user . ,username)))
         
         ;; Write credentials back to file and to tunnel.
