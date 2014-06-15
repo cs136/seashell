@@ -29,7 +29,7 @@
  */
 int seashell_try_and_lock_file(int fd) {
   struct flock lock = {0};
-  lock.l_type = F_RDLCK;
+  lock.l_type = F_WRLCK;
   lock.l_whence = SEEK_SET;
   lock.l_start = 0;
   lock.l_len = 0;

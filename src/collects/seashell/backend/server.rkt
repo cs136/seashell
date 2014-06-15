@@ -169,21 +169,25 @@
                   ;; Try to read the file...
                   (with-handlers
                       ([exn:fail:filesystem? (lambda (exn) (void))])
-                    (with-input-from-file
-                        credentials-file
-                      (thunk
-                        (with-handlers
-                          ([exn:fail:read? (lambda (exn)
-                                             (sleep 1)
-                                             (abort-current-continuation repeat))])
-                         (define result (read))
-                         (if (or (eof-object? result)
-                                 (not (try-and-lock-file (current-input-port)))
-                                 (not (creds-valid? (deserialize result) credentials-file)))
-                             (begin
-                               (sleep 1)
-                               (abort-current-continuation repeat))
-                             (write result)))))
+                    (call-with-output-file
+                      credentials-file
+                      (lambda (lock-file)
+                        (with-input-from-file
+                            credentials-file
+                          (thunk
+                            (with-handlers
+                              ([exn:fail:read? (lambda (exn)
+                                                 (sleep 1)
+                                                 (abort-current-continuation repeat))])
+                             (define result (read))
+                             (if (or (eof-object? result)
+                                     (not (try-and-lock-file lock-file))
+                                     (not (creds-valid? (deserialize result) credentials-file)))
+                                 (begin
+                                   (sleep 1)
+                                   (abort-current-continuation repeat))
+                                 (write result))))
+                          #:exists 'update)))
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
                   ;; If it does not exist, create it mode 600 and get a port to it.
