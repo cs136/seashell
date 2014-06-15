@@ -43,7 +43,7 @@
 (define-support seashell_create_secret_file (_fun _path -> _int))
 (define-support seashell_uw_check_remote_user (_fun -> _int))
 (define-support seashell_get_username (_fun -> _string))
-(define-support seashell_try_and_lock_file (_fun -> _int -> _bool))
+(define-support seashell_try_and_lock_file (_fun _int -> _int))
 
 ;; Underlying Racket support functions.
 (define-self scheme_get_port_file_descriptor
@@ -55,5 +55,5 @@
 (define (try-and-lock-file port)
   (define-values (fd not-error?) (scheme_get_port_file_descriptor port))
   (cond
-    [not-error? (seashell_try_and_lock_file fd)]
+    [not-error? (= 0 (seashell_try_and_lock_file fd))]
     [else #f]))
