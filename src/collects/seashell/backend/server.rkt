@@ -172,14 +172,18 @@
                     (with-input-from-file
                         credentials-file
                       (thunk
-                       (define result (read))
-                       (if (or (eof-object? result)
-                               (not (try-and-lock-file (current-input-port)))
-                               (not (creds-valid? (deserialize result) credentials-file)))
-                           (begin
-                             (sleep 1)
-                             (abort-current-continuation repeat))
-                           (write result))))
+                        (with-handlers
+                          ([exn:fail:read? (lambda (exn)
+                                             (sleep 1)
+                                             (abort-current-continuation repeat))])
+                         (define result (read))
+                         (if (or (eof-object? result)
+                                 (not (try-and-lock-file (current-input-port)))
+                                 (not (creds-valid? (deserialize result) credentials-file)))
+                             (begin
+                               (sleep 1)
+                               (abort-current-continuation repeat))
+                             (write result)))))
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
                   ;; If it does not exist, create it mode 600 and get a port to it.
