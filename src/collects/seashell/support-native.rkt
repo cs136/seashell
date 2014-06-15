@@ -26,10 +26,13 @@
          seashell_uw_check_remote_user
          seashell_get_username
          seashell_set_umask
-         seashell_signal_detach)
+         seashell_signal_detach
+         try-and-lock-file)
 
 (define-ffi-definer define-support 
                     (ffi-lib (read-config 'seashell-support)))
+(define-ffi-definer define-self 
+                    (ffi-lib #f))
 
 ;; These functions return 0 on success and 1 on failure if they return anything.
 ;; Manually check the result of these functions - as failure can indicate there's
@@ -40,3 +43,17 @@
 (define-support seashell_create_secret_file (_fun _path -> _int))
 (define-support seashell_uw_check_remote_user (_fun -> _int))
 (define-support seashell_get_username (_fun -> _string))
+(define-support seashell_try_and_lock_file (_fun _int -> _int))
+
+;; Underlying Racket support functions.
+(define-self scheme_get_port_file_descriptor
+             (_fun (port : _scheme) (fd : (_ptr o _long)) -> (not-error? : _bool) -> (values fd not-error?)))
+
+;; try-and-lock-file port? -> bool?
+;; Attempts to lock the file @ port using fcntl, returning #f if it could not,
+;; #t otherwise.
+(define (try-and-lock-file port)
+  (define-values (fd not-error?) (scheme_get_port_file_descriptor port))
+  (cond
+    [not-error? (= 0 (seashell_try_and_lock_file fd))]
+    [else #f]))
