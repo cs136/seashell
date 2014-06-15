@@ -48,14 +48,20 @@
   (-> hash? path? boolean?)
   (cond
     [(hash-has-key? creds 'ping-port)
-      (define sock (udp-open-socket))
-      (udp-send-to sock (hash-ref creds 'host) (hash-ref creds 'ping-port) #"ping")
-      (define success (sync/timeout (read-config 'seashell-ping-timeout)
-                                    (udp-receive!-evt sock (make-bytes 0))))
-      (unless success
-        (logf 'info "creds file was stale; generating new creds")
-        (delete-file credentials-file))
-      (if success #t #f)]
+     ;; Ensure a consistent family.
+     (define sock (udp-open-socket (hash-ref creds 'host)
+                                   (hash-ref creds 'port)))
+     (udp-send-to sock (hash-ref creds 'host) (hash-ref creds 'ping-port) #"ping")
+     (define success (sync/timeout (read-config 'seashell-ping-timeout)
+                                   (udp-receive!-evt sock (make-bytes 0))))
+     (udp-close sock)
+
+     ;; Remove stale credentials files.  This can be a race condition,
+     ;; so make sure the file is locked with fcntl before continuing.
+     (unless success
+       (logf 'info "Credentials file was stale; regenerating.")
+       (delete-file credentials-file))
+     (if success #t #f)]
     [else #f]))
 
 ;; Channel used to keep process alive.
@@ -167,7 +173,9 @@
                         credentials-file
                       (thunk
                        (define result (read))
-                       (if (or (eof-object? result) (not (creds-valid? (deserialize result) credentials-file)))
+                       (if (or (eof-object? result)
+                               (not (try-and-lock-file credentials-file))
+                               (not (creds-valid? (deserialize result) credentials-file)))
                            (begin
                              (sleep 1)
                              (abort-current-continuation repeat))
