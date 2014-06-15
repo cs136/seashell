@@ -174,7 +174,7 @@
                       (thunk
                        (define result (read))
                        (if (or (eof-object? result)
-                               (not (try-and-lock-file credentials-file))
+                               (not (try-and-lock-file (current-input-port)))
                                (not (creds-valid? (deserialize result) credentials-file)))
                            (begin
                              (sleep 1)
