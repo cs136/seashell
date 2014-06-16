@@ -168,7 +168,8 @@
                  (thunk
                   ;; Try to read the file...
                   (with-handlers
-                      ([exn:fail:filesystem? (lambda (exn) (void))])
+                      ([exn:fail:filesystem? (lambda (exn) 
+                      (logf 'debug "Retrying error on credentials file: ~a" (exn-message exn)))])
                     (call-with-output-file
                       credentials-file
                       (lambda (lock-file)
@@ -186,8 +187,8 @@
                                  (begin
                                    (sleep 1)
                                    (abort-current-continuation repeat))
-                                 (write result))))
-                          #:exists 'update)))
+                                 (write result))))))
+                          #:exists 'update)
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
                   ;; If it does not exist, create it mode 600 and get a port to it.
@@ -200,10 +201,6 @@
                    (open-output-file credentials-file #:exists 'must-truncate)))
                  repeat
                  (thunk (loop (add1 tries))))))
-        ;; Set permissions on the file.
-        (file-or-directory-permissions
-         credentials-file
-         user-read-bit)
         
         ;; Global dispatcher.
         (define seashell-dispatch
