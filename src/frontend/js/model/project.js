@@ -458,6 +458,13 @@ function projectLinter() {
 }
 
 /**
+ * Sends EOF to the currently running project.
+ */
+function sendEOF() {
+    if(currentPID) socket.sendEOF(currentPID);
+}
+
+/**
  * Project runner.
  */
 function projectRun() {
