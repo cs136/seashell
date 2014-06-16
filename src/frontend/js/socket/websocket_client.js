@@ -265,6 +265,14 @@ SeashellWebsocket.prototype.newFile = function(name, file_name, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
+  return this.sendMessage({
+    type : "newDirectory",
+    project : name,
+    file : dir_name },
+    deferred);
+};
+
 SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, deferred) {
   return this.sendMessage({
     type : "writeFile",

@@ -23,7 +23,9 @@
 
 (provide exn:project:file
          new-file
+         new-directory
          remove-file
+         remove-directory
          read-file
          write-file
          list-files
@@ -55,6 +57,18 @@
                          #:exists 'append)))
   (void))
 
+(define/contract (new-directory project dir)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (with-handlers
+    [(exn:fail:filesystem?
+      (lambda (exn)
+        (raise (exn:project
+          (format "Directory already exists, or some other filesystem error occurred: ~a" (exn-message exn))
+          (current-continuation-marks)))))]
+    (make-directory
+      (check-and-build-path (build-project-path project) dir))
+    (void)))
+
 ;; (remove-file project file) -> void?
 ;; Deletes a file inside a project.
 ;;
@@ -74,6 +88,21 @@
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (path->string (check-and-build-path (build-project-path project) file)))
     (delete-file (check-and-build-path (build-project-path project) file)))
+  (void))
+
+;; (remove-directory project dir)
+;; Deletes the directory at the given path dir, INCLUDING all files in the
+;; directory.
+(define/contract (remove-directory project dir)
+  (-> (and/c project-name? is-project) path-string? void?)
+  (with-handlers
+    [(exn:fail:filesystem?
+      (lambda (exn)
+        (raise (exn:project
+          (format "Filesystem error occurred: ~a" (exn-message exn))
+          (current-continuation-marks)))))]
+    (logf 'info "Deleting directory ~a!" (path->string (check-and-build-path (build-project-path project) dir)))
+    (delete-directory/files (check-and-build-path (build-project-path project) dir)))
   (void))
 
 ;; (read-file project file) -> bytes?
@@ -105,24 +134,36 @@
   (void))
 
 ;; (list-files project)
-;; Lists all files in a project.
+;; Lists all files and directories in a project.
 ;;
 ;; Arguments:
 ;;  project - Project to deal with.
+;;  dir - optional, subdirectory within project to start at.
+;;      Mainly used for recursive calls.
 ;; Returns:
-;;  (listof string?) - Files in project.
-;;
-;; Notes:
-;;  This function assumes that projects are organized in a flat manner.
-;;  We will have to rework Seashell if this assumption does not hold in the future.
-(define/contract (list-files project)
-  (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
-  (define project-path (check-and-build-path (build-project-path project)))
-  (map path->string
-    (filter
-      (lambda (path)
-        (file-exists? (build-path project-path path)))
-      (directory-list project-path))))
+;;  (listof string?) - Files and directories in project.
+(define/contract (list-files project [dir #f])
+  (->* ((and/c project-name? is-project?))
+    ((or/c #f (and/c string? path-string?)))
+    (listof (list/c (and/c string? path-string?) boolean?)))
+  (define start-path (if dir (check-and-build-path
+    (build-project-path project) dir) (build-project-path project)))
+  (foldl (lambda (path rest)
+    (define current (build-path start-path path))
+    (define relative (if dir (build-path dir path) path))
+    (cond
+      [(and (directory-exists? current) (not (directory-hidden? current)))
+        (cons (list (path->string relative) #t) (append (list-files project
+          relative) rest))]
+      [(file-exists? current)
+        (cons (list (path->string relative) #f) rest)]
+      [else rest]))
+    '() (directory-list start-path)))
+
+;; Determines if a directory is hidden (begins with a .)
+(define/contract (directory-hidden? path)
+  (-> path? boolean?)
+  (string=? "." (substring (last (string-split (path->string path) "/")) 0 1)))
 
 ;; (rename-file project old-file new-file)
 ;; Renames a file.

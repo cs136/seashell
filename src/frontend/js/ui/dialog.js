@@ -62,6 +62,18 @@ function handleNewFile( ) {
 }
 
 /**
+ * handleNewFolder
+ * Handles creating a new directory in the current project
+ */
+function handleNewFolder() {
+  var prom = SeashellProject.currentProject.createDirectory($("#new_folder_name").val());
+  if(prom) prom.done(function() {
+    updateFileMenu(SeashellProject.currentProject);
+  });
+  $("#new-folder-dialog").modal("hide");
+}
+
+/**
  * handleDeleteFile 
  * This function will handle deleting files. */
 function handleDeleteFile( ) {
@@ -73,15 +85,21 @@ function handleDeleteFile( ) {
  * handleNewProject
  * This function will handle creating new projects. */
 function handleNewProject( ) {
-  projectNew($("#new_project_name").val());
+  var name = $("#new_project_name").val();
+  SeashellProject.new(name).done(function() {
+    handleOpenProject(name);
+  });
   $("#new-project-dialog").modal("hide");
 }
 
 /** This function will handle opening projects. */
-function handleOpenProject( ) {
-  SeashellProject.open($("#projects_list").val(), function(proj) {
+function handleOpenProject(name) {
+  name = name ? name : $("#projects_list").val();
+  console.log("Opening project "+name);
+  SeashellProject.open(name, function(proj) {
     $(".show-on-null-project, .hide-on-null-file").addClass("hide");
     $(".hide-on-null-project, .show-on-null-file").removeClass("hide");
+    $("#project-menu").text(name);
     consoleRefresh();
     updateFileMenu(proj);
   });
@@ -92,7 +110,8 @@ function handleOpenProject( ) {
  * handleDeleteProject
  * This function will handle deleting projects. */
 function handleDeleteProject( ) {
-  projectDelete();
+  if(SeashellProject.currentProject)
+    SeashellProject.currentProject.delete();
   $("#delete-project-dialog").modal("hide");
 }
 
@@ -178,7 +197,7 @@ function setupDialogs() {
   $("#marmoset-submit-dialog").on("show.bs.modal",
       updateMarmosetProjects);
   $("#button-open-project").on("click",
-      handleOpenProject);
+      function() { handleOpenProject(); });
   /** Set up the new-project-dialog. */
   $("#button-new-project").on("click",
       handleNewProject);
@@ -191,6 +210,8 @@ function setupDialogs() {
   /** Set up the new-file-dialog. */
   $("#button-new-file").on("click",
       handleNewFile);
+  $("#button-new-folder").on("click",
+    handleNewFolder);
   /** Set up the delete-file-dialog. */
   $("#button-delete-file").on("click",
       handleDeleteFile);

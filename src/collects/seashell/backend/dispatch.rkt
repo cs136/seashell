@@ -290,6 +290,15 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "newDirectory")
+        ('project project)
+        ('directory directory))
+       (new-directory project directory)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
         ('type "deleteFile")
         ('project project)
         ('file file))

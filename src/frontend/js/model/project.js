@@ -39,6 +39,13 @@ function updateMarmosetProjects() {
             });
 }
 
+SeashellProject.new = function(name) {
+  return socket.newProject(name)
+    .fail(function() {
+      displayErrorMessage("Project "+name+" could not be created.");
+    });
+}
+
 /*
  * Constructor for SeashellProject
  * Parameters:
@@ -52,8 +59,6 @@ function SeashellProject(name, callback) {
   this.currentFile = null;
   this.currentErrors = null;
   this.currentPID = null;
-  var p = this;
-  this.saveInterval = setInterval(function() { p.save(); }, 10000);
   var lockPromise = socket.lockProject(name);
   var openNoLock = function(){ projectOpenNoLock(name); };
   lockPromise.done(openNoLock).fail(function(res){
@@ -83,11 +88,11 @@ function SeashellProject(name, callback) {
     promise.done(function(files) {
       p.files = [];
       p.currentErrors = [];
-      saveTimeout = window.setTimeout(p.save, 10000);
+      p.saveInterval = setInterval(function() { p.save(); }, 10000);
 
       for (var i = 0; i < files.length; i++) {
         /** Lazily load the documents later. */
-        p.placeFile(new SeashellFile(files[i]));
+        p.placeFile(new SeashellFile(files[i][0], files[i][1]));
       }
       if(callback) callback(p);
     }).fail(function(){
@@ -104,6 +109,8 @@ function SeashellProject(name, callback) {
  * callback is called with the new SeashellProject instance once it is created.
 */
 SeashellProject.open = function(name, callback) {
+  if(SeashellProject.currentProject)
+    SeashellProject.currentProject.close();
   SeashellProject.currentProject = new SeashellProject(name, callback);
 };
 
@@ -113,11 +120,13 @@ SeashellProject.currentProject = null;
  * Constructor for SeashellFile
  * Parameters:
  * name - the full file path & name from root of project
+ * is_dir - boolean, true if this is a directory. Default is false.
 */
-function SeashellFile(name) {
+function SeashellFile(name, is_dir) {
   this.name = name.split("/");
   this.document = null;
   this.children = null;
+  this.is_dir = is_dir ? true : false;
 }
 
 /*
@@ -149,6 +158,20 @@ SeashellProject.prototype.createFile = function(fname) {
   }
 };
 
+SeashellProject.prototype.createDirectory = function(dname) {
+  var p = this;
+  if(this.exists(dname)) {
+    displayErrorMessage("Directory "+dname+" already exists.");
+    return null;
+  }
+  return socket.newDirectory(this.name, dname).done(function() {
+    var dirObj = new SeashellFile(dname);
+    p.placeFile(dirObj);
+  }).fail(function() {
+    displayErrorMessage("Error creating the directory "+dname+".");
+  });
+}
+
 /*
  * Places a file in the correct place in a file
  * file - a SeashellFile instance
@@ -170,9 +193,9 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 
   function plc(aod, aof) {
     if(aod.length > 1) {
-      for(f in aof) {
-        if(f.children && f.name[f.name.length-1] == aod[0]) {
-          f.children = plc(aod.slice(1), f.children);
+      for(var i=0; i < aof.length; i++) {
+        if(aof[i].children && aof[i].name[aof[i].name.length-1] == aod[0]) {
+          aof[i].children = plc(aod.slice(1), aof[i].children);
         }
       }
     }
@@ -209,21 +232,6 @@ SeashellProject.prototype.openFile = function(file) {
   }
 };
 
- /** 
- * Creates and opens a project.
- * @param {String} project Name of project to create.
- */
-SeashellProject.createProject = function(name) {
-  var promise = socket.newProject(name);
-
-  /** Open it. */
-  promise.done(function() {
-    SeashellProject.currentProject = new SeashellProject(name);
-  }).fail(function() {
-    displayErrorMessage("Project "+name+" could not be created.");
-  });
-};
-
 /*
  * Saves all files in the project
  */
@@ -231,15 +239,15 @@ SeashellProject.prototype.save = function() {
   var promises = [];
   var p = this;
   function save_arr(aof) {
-    for(file in aof) {
-      if(file.children) save_arr(file.children);
-      else promises.push(file.save(this.name));
+    for(var f=0; f < aof.length; f++) {
+      if(aof[f].children) save_arr(aof[f].children);
+      else promises.push(aof[f].save(p.name));
     }
   }
+  save_arr(this.files);
   return $.when.apply(null, promises)
-    .done(function() {
-      window.clearTimeout(p.saveTimeout);
-      p.saveTimeout = window.setTimeout(p.save, 10000);
+    .fail(function() {
+      displayErrorMessage("Project failed to save.");
     });
 };
 
@@ -248,10 +256,13 @@ SeashellProject.prototype.save = function() {
  * pname - name of the file's project
  */
 SeashellFile.prototype.save = function(pname) {
-  return socket.writeFile(pname, this.fullname(), this.document)
-    .fail(function() {
-      displayErrorMessage("File "+this.fullname()+" could not be saved.");
-    });
+  if(this.document) {
+    return socket.writeFile(pname, this.fullname(), this.document.getValue())
+      .fail(function() {
+        displayErrorMessage("File "+this.fullname()+" could not be saved.");
+      });
+  }
+  return $.Deferred().resolve().promise();
 };
 
 /*
@@ -268,13 +279,18 @@ SeashellProject.getListOfProjects = function() {
  * Closes the project.
  * save - If true, saves project before closing
 */
-SeashellProject.prototype.closeProject = function(save) {
+SeashellProject.prototype.close = function(save) {
   if(this === SeashellProject.currentProject) {
-    socket.unlockProject(this.name);
-    if(save) this.save();
-    window.clearTimeout(this.saveTimeout);
+    var proms = [];
+    proms.push(socket.unlockProject(this.name));
+    if(save) proms.push(this.save());
+    window.clearInterval(this.saveInterval);
     SeashellProject.currentProject = null;
     delete this;
+    return $.when.apply(proms)
+      .fail(function() {
+        displayErrorMessage("Project could not be closed.");
+      });
   }
 };
 
@@ -321,15 +337,19 @@ SeashellProject.prototype.deleteFile = function(file) {
 /*
  * Deletes the project.
 */
-SeashellProject.prototype.deleteProject = function() {
-  var nm = this.name;
-  return socket.deleteProject(nm)
-    .done(function() {
-      this.projectClose(false);
-    })
-    .fail(function() {
-      displayErrorMessage("Project "+nm+" could not be deleted.");
-    });
+SeashellProject.prototype.delete = function(callback) {
+  var p = this;
+
+  this.close().done(function() {
+    socket.deleteProject(p.name)
+      .done(function() {
+        if(callback)
+          callback();
+      })
+      .fail(function() {
+        displayErrorMessage("Project "+p.name+" could not be deleted.");
+      });
+  });
 };
 
 /*
@@ -362,19 +382,19 @@ SeashellProject.prototype.compile = function() {
     /** Deal with it. */
     promise.done(function(messages) {
       // Save the messages.
-      this.currentErrors = messages;
+      p.currentErrors = messages;
       // Write it to the console
-      writeErrors(this.currentErrors);
+      writeErrors(p.currentErrors);
       // Lint
       editorLint();
     }).fail(function(result) {
       if (Array.isArray(result)) {
         // Log
-        consoleWrite(sprintf("*** Error compiling %s:", this.name));
+        consoleWrite(sprintf("*** Error compiling %s:", p.name));
         // Save the messages.
-        this.currentErrors = result;
+        p.currentErrors = result;
         // Write it to the console
-        writeErrors(this.currentErrors);
+        writeErrors(p.currentErrors);
         // Lint
         editorLint();
       } else {
@@ -442,10 +462,11 @@ SeashellProject.prototype.run = function(withTests, tests) {
 
   var compile_promise = this.currentFile.name.join('/').split('.').pop() == "rkt" ? null : this.compile();
   var promise = $.Deferred();
+  var p = this;
 
   // function which actually runs the project (without compiling)
   function run() {
-    socket.runProject(this.name, this.currentFile.name.join('/'), promise);
+    socket.runProject(p.name, p.currentFile.name.join('/'), promise);
 
     promise.done(function(pid) {
       consoleClear();
@@ -455,7 +476,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
         consoleWrite(sprintf("--- Running project '%s' ---\n", currentProject));
       }
       
-      this.currentPID = pid;
+      p.currentPID = pid;
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
@@ -575,14 +596,18 @@ SeashellProject.prototype.JSTreeData = function() {
     for(var i=0; i < arr.length; i++) {
       var item = {text: arr[i].name[arr[i].name.length-1]};
       item.path = arr[i].fullname();
-      if(arr[i].children) {
+      if(arr[i].is_dir) {
         var n = [];
-        JSTreeHelper(arr[i].children, n);
+        if(arr[i].children)
+          JSTreeHelper(arr[i].children, n);
         item.children = n;
-        item.icon = "glyphicon glyphicon-folder-closed";
+        item.icon = 'glyphicon glyphicon-folder';
       }
       else {
-        item.icon = "glyphicon glyphicon-file";
+        item.icon = false;
+        // for some reason this doesn't work.
+        // according to JSTree docs, it should...
+        // item.icon = 'glyphicon glyphicon-file';
       }
       res.push(item);
     }
@@ -590,7 +615,6 @@ SeashellProject.prototype.JSTreeData = function() {
   if(this.files) {
     JSTreeHelper(this.files, nodes);
   }
-  console.log(nodes);
   return nodes;
 };
 

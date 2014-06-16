@@ -44,9 +44,11 @@ function setupFileMenu() {
   $("#file-tree").jstree()
     .on("select_node.jstree", function(e, data) {
       var file = SeashellProject.currentProject.getFileFromPath(data.node.original.path);
-      var prom = SeashellProject.currentProject.openFile(file);
-      if(prom) prom.done(function() { docSwap(file.document); });
-      else docSwap(file.document);
+      if(!file.is_dir) {
+        var prom = SeashellProject.currentProject.openFile(file);
+        if(prom) prom.done(function() { docSwap(file.document); });
+        else docSwap(file.document);
+      }
     });
 }
 
