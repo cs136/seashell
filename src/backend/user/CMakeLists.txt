@@ -19,7 +19,7 @@
 # Main library: seashell-user-backend, seashell-user-launcher
 add_executable(seashell-user-backend user.c)
 add_executable(seashell-user-launcher launcher.c)
-add_library(seashell-support SHARED security.c user-child.c)
+add_library(seashell-support SHARED security.c user-child.c support.c)
 
 install(TARGETS seashell-user-backend RUNTIME DESTINATION bin)
 install(TARGETS seashell-user-launcher RUNTIME DESTINATION bin)

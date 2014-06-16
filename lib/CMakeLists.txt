@@ -84,7 +84,7 @@ add_subdirectory(llvm)
 # (Note: As we compile libgit2 as a static library, we don't actually need to pass along the library
 # directories).
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
-set(LIBSSH2_LIBRARY true)
+set(LIBSSH2_LIBRARY "")
 set(LIBSSH2_FOUND true)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)

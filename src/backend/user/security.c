@@ -46,20 +46,24 @@
  */
 int seashell_drop_permissions(void) {
   int error = 0;
-  if ((error = prctl(PR_SET_DUMPABLE, 0, 0, 0, 0)) != 0) {
-    fprintf(stderr, "Could not disable ptrace on ourself - %d!\n", error);
-    return 1;
-  }
 
-  /** Note: PR_SET_DUMPABLE must be set 0 before this call
-   *  goes through as if not, user process can ptrace
-   *  Seashell and possibly extract private keys. */
+  /** commit_creds in the kernel will reset prctl(PR_GET_DUMPABLE)
+   *  to whatever /proc/sys/fs/suid_dumpable is.  Therefore, we
+   *  run prctl(PR_SET_DUMPABLE, 0) after the setresgid call.
+   */
   if ((error = setresgid(getgid(), getgid(), getgid()) != 0)) {
     fprintf(stderr, "Could not setresgid(%d, %d, %d) - %d!\n",
         getgid(), getgid(), getgid(), error);
     return 1;
   }
 
+  /** Usually prctl(PR_GET_DUMPABLE) is set to a sane value [0].
+   *  Just in case, though...
+   */
+  if ((error = prctl(PR_SET_DUMPABLE, 0, 0, 0, 0)) != 0) {
+    fprintf(stderr, "Could not disable ptrace on ourself - %d!\n", error);
+    return 1;
+  }
   return 0;
 }
 
@@ -68,7 +72,7 @@ int seashell_drop_permissions(void) {
  * Sets the umask for the Seashell process.
  */
 void seashell_set_umask(void) {
-  umask(S_IWGRP | S_IWOTH);
+  umask(0077);
 }
 
 /**

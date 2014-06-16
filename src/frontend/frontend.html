@@ -48,15 +48,17 @@
     <title>Seashell</title>
   </head>
   <body>
+<div class="hide" id="master-container">
 @(include "include/navigation.html")
 @(include "include/body.html")
+</div>
 @(include "include/dialog.html")
 @(include "include/scripts.html")
     <!-- Window setup. -->
     <script>
       $(document).ready(function(){
           seashellInit();
-          $('#warning-dialog').modal('show');
+          // $('#warning-dialog').modal('show');
           });
     </script>
   </body>
