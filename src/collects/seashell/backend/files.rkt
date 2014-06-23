@@ -94,7 +94,7 @@
 ;; Deletes the directory at the given path dir, INCLUDING all files in the
 ;; directory.
 (define/contract (remove-directory project dir)
-  (-> (and/c project-name? is-project) path-string? void?)
+  (-> (and/c project-name? is-project?) path-string? void?)
   (with-handlers
     [(exn:fail:filesystem?
       (lambda (exn)

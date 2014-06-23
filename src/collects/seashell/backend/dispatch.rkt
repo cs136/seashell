@@ -292,8 +292,8 @@
         ('id id)
         ('type "newDirectory")
         ('project project)
-        ('directory directory))
-       (new-directory project directory)
+        ('dir dir))
+       (new-directory project dir)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -303,6 +303,15 @@
         ('project project)
         ('file file))
        (remove-file project file)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "deleteDirectory")
+        ('project project)
+        ('dir dir))
+       (remove-directory project dir)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

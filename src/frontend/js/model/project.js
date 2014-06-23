@@ -125,7 +125,7 @@ SeashellProject.currentProject = null;
 function SeashellFile(name, is_dir) {
   this.name = name.split("/");
   this.document = null;
-  this.children = null;
+  this.children = is_dir ? [] : null;
   this.is_dir = is_dir ? true : false;
 }
 
@@ -158,6 +158,10 @@ SeashellProject.prototype.createFile = function(fname) {
   }
 };
 
+/*
+ * Creates a new directory in the project.
+ * dname should be full path from project root.
+*/
 SeashellProject.prototype.createDirectory = function(dname) {
   var p = this;
   if(this.exists(dname)) {
@@ -165,7 +169,7 @@ SeashellProject.prototype.createDirectory = function(dname) {
     return null;
   }
   return socket.newDirectory(this.name, dname).done(function() {
-    var dirObj = new SeashellFile(dname);
+    var dirObj = new SeashellFile(dname, true);
     p.placeFile(dirObj);
   }).fail(function() {
     displayErrorMessage("Error creating the directory "+dname+".");
@@ -173,7 +177,7 @@ SeashellProject.prototype.createDirectory = function(dname) {
 }
 
 /*
- * Places a file in the correct place in a file
+ * Places a file in the correct place in a project
  * file - a SeashellFile instance
  * removeFirst - if true, first searches files and removes the given
  *    file if it is already in the project.
@@ -194,7 +198,7 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
   function plc(aod, aof) {
     if(aod.length > 1) {
       for(var i=0; i < aof.length; i++) {
-        if(aof[i].children && aof[i].name[aof[i].name.length-1] == aod[0]) {
+        if(aof[i].is_dir && aof[i].name[aof[i].name.length-1] == aod[0]) {
           aof[i].children = plc(aod.slice(1), aof[i].children);
         }
       }
@@ -306,7 +310,7 @@ SeashellProject.prototype.closeFile = function(save) {
 };
 
 /*
- * Deletes a file in the project.
+ * Deletes a file OR directory in the project.
  * file - a SeashellFile instance that is in the project
 */
 SeashellProject.prototype.deleteFile = function(file) {
@@ -325,6 +329,15 @@ SeashellProject.prototype.deleteFile = function(file) {
     return aof;
   }
   var p = this;
+  if(file.is_dir) {
+    return socket.deleteDirectory(this.name, file.fullname())
+      .done(function() {
+        p.files = rmv(p.files);
+      })
+      .fail(function() {
+        displayErrorMessage("Directory "+file.fullname()+" could not be deleted.");
+      });
+  }
   return socket.deleteFile(this.name, file.fullname())
     .done(function() {
       p.files = rmv(p.files);

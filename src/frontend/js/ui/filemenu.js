@@ -21,7 +21,7 @@ function setupFileMenu() {
             'label' : 'Rename',
             'icon' : 'glyphicon glyphicon-edit',
             'action' : function(obj) {
-              $("#file-tree").jstree().rename_node(obj);
+              $("#file-tree").jstree().edit(node);
             }
           },
           'Delete' : {
@@ -29,12 +29,22 @@ function setupFileMenu() {
             'icon' : 'glyphicon glyphicon-remove',
             'action' : function(obj) {
               var file = SeashellProject.currentProject.getFileFromPath(node.original.path);
-              SeashellProject.currentProject.deleteFile(file)
-                .done(function() {
-                  updateFileMenu();
-                  $(".hide-on-null-file").addClass("hide");
-                  $(".show-on-null-file").removeClass("hide");
-                });
+              if(file.is_dir) {
+                displayConfirmationMessage("Delete Folder",
+                  "Are you sure you want to delete the folder \""+file.fullname()+"\"? This will delete all files and folders it contains.",
+                  function() {
+                    SeashellProject.currentProject.deleteFile(file)
+                      .done(updateFileMenu);
+                  });
+              }
+              else {
+                SeashellProject.currentProject.deleteFile(file)
+                  .done(function() {
+                    updateFileMenu();
+                    $(".hide-on-null-file").addClass("hide");
+                    $(".show-on-null-file").removeClass("hide");
+                  });
+              }
             }
           }
         }
@@ -49,6 +59,18 @@ function setupFileMenu() {
         if(prom) prom.done(function() { docSwap(file.document); });
         else docSwap(file.document);
       }
+    })
+    .on("rename_node.jstree", function(e, data) {
+      console.log("Rename event triggered.");
+      var file = SeashellProject.currentProject.getFileFromPath(data.node.original.path);
+      SeashellProject.currentProject.renameFile(file)
+        .fail(function() {
+          displayErrorMessage("File or folder "+file.fullname()+" could not be renamed.");
+          updateFileMenu();
+        })
+        .done(function() {
+          file.name[file.name.length-1] = e.new;
+        });
     });
 }
 

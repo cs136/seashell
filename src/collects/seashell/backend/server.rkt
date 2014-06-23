@@ -186,8 +186,8 @@
                                  (begin
                                    (sleep 1)
                                    (abort-current-continuation repeat))
-                                 (write result))))
-                          #:exists 'update)))
+                                 (write result))))))
+                          #:exists 'update)
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
                   ;; If it does not exist, create it mode 600 and get a port to it.

@@ -269,7 +269,7 @@ SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
   return this.sendMessage({
     type : "newDirectory",
     project : name,
-    file : dir_name },
+    dir : dir_name },
     deferred);
 };
 
@@ -289,6 +289,14 @@ SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
     file : file_name},
     deferred);
 };
+
+SeashellWebsocket.prototype.deleteDirectory = function(name, dir_name, deferred) {
+  return this.sendMessage({
+    type : "deleteDirectory",
+    project : name,
+    dir : dir_name },
+    deferred);
+}
 
 SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
   return this.sendMessage({
