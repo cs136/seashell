@@ -1,3 +1,4 @@
+"use strict";
 
 function setupFileMenu() {
   function docSwap(doc) {
@@ -5,12 +6,10 @@ function setupFileMenu() {
     $(".show-on-null-file").addClass("hide");
     editorDocument(doc);
   }
-  $(":jstree").jstree("destroy");
   $.jstree.create("#file-tree", {
     'core' : {
       'data' : (SeashellProject.currentProject ?
-        SeashellProject.currentProject.JSTreeData() : []),
-      'check_callback': true
+        SeashellProject.currentProject.JSTreeData() : [])
     },
     'plugins' :
       ['contextmenu'],
@@ -21,7 +20,10 @@ function setupFileMenu() {
             'label' : 'Rename',
             'icon' : 'glyphicon glyphicon-edit',
             'action' : function(obj) {
-              $("#file-tree").jstree().edit(node);
+              var file = SeashellProject.currentProject.getFileFromPath(node.original.path);
+              $("#rename-file-old-input").val(file.fullname());
+              $("#rename-file-new-input").val(file.name[file.name.length-1]);
+              $("#rename-file-dialog").modal("show");
             }
           },
           'Delete' : {
@@ -61,7 +63,6 @@ function setupFileMenu() {
       }
     })
     .on("rename_node.jstree", function(e, data) {
-      console.log("Rename event triggered.");
       var file = SeashellProject.currentProject.getFileFromPath(data.node.original.path);
       SeashellProject.currentProject.renameFile(file)
         .fail(function() {

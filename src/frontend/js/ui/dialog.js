@@ -159,6 +159,17 @@ function handleUploadFile() {
   projectUploadHandler();
 }
 
+function handleRename() {
+  var oldf = $("#rename-file-old-input").val();
+  var oldfp = oldf.split("/");
+  oldfp.pop();
+  var newf = $("#rename-file-new-input").val();
+  var file = SeashellProject.currentProject.getFileFromPath(oldf);
+  SeashellProject.currentProject.renameFile(file, oldfp.join("/")+"/"+newf)
+    .done(updateFileMenu);
+  $("#rename-file-dialog").modal("hide");
+}
+
 function updateListOfProjects() {
   SeashellProject.getListOfProjects().done(function(projects) {
     var projects_tag = $("#projects_list");
@@ -221,6 +232,8 @@ function setupDialogs() {
   $("#button-new-project").on("click",
       handleNewProject);
   /** Set up the delete-project-dialog. */
+  $("#button-rename-file").on("click",
+    handleRename);
   $("#button-delete-project").on("click",
       handleDeleteProject);
   /** Set up the revert-project-dialg. */

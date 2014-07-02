@@ -347,6 +347,33 @@
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<!-- Rename File dialog -->
+<div class="modal fade" id="rename-file-dialog" tabindex="-1" role="dialog" aria-labelledby="rename-file-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="rename-file-label">
+          <span class="glyphicon glyphicon-edit"></span> 
+          Rename File/Folder</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <input type="hidden" id="rename-file-old-input" />
+            <label for="new_folder_name">New Name:</label>
+            <input type="text" id="rename-file-new-input" class="form-control" placeholder="">
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="button-rename-file" class="btn btn-primary">Rename</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+
 <!-- Delete File dialog -->
 <div class="modal fade" id="delete-file-dialog" tabindex="-1" role="dialog" aria-labelledby="delete-file-label" aria-hidden="true">
   <div class="modal-dialog">

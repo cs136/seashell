@@ -149,7 +149,7 @@ SeashellProject.prototype.createFile = function(fname) {
   else {
     return socket.newFile(this.name, fname).done(function() {
       var nFile = new SeashellFile(fname);
-      nFile.document = CodeMirror.Doc("/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n");
+      nFile.document = CodeMirror.Doc("/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n", "text/x-csrc");
       p.placeFile(nFile);
       p.openFile(nFile);
     }).fail(function() {
@@ -184,7 +184,7 @@ SeashellProject.prototype.createDirectory = function(dname) {
 */
 SeashellProject.prototype.placeFile = function(file, removeFirst) {
  function rmv(aof) {
-    for(f in aof) {
+    for(var f in aof) {
       if(f.children) {
         f.children = rmv(f.children);
       }
@@ -590,10 +590,10 @@ SeashellProject.prototype.getDownloadToken = function() {
  * name - new name (full path from project root) of the file
  */
 SeashellProject.prototype.renameFile = function(file, name) {
+  var p = this;
   return socket.renameFile(this.name, file.fullname(), name)
     .done(function() {
       file.name = name.split("/");
-      this.placeFile(file, true);
     })
     .fail(function() {
       displayErrorMessage("File could not be renamed.");
@@ -614,13 +614,10 @@ SeashellProject.prototype.JSTreeData = function() {
         if(arr[i].children)
           JSTreeHelper(arr[i].children, n);
         item.children = n;
-        item.icon = 'glyphicon glyphicon-folder';
+        item.icon = 'glyphicon glyphicon-folder-open';
       }
       else {
-        item.icon = false;
-        // for some reason this doesn't work.
-        // according to JSTree docs, it should...
-        // item.icon = 'glyphicon glyphicon-file';
+        item.icon = 'glyphicon glyphicon-file';
       }
       res.push(item);
     }
@@ -634,14 +631,14 @@ SeashellProject.prototype.JSTreeData = function() {
 /* finds a SeashellFile in the project given its path as a string
 */
 SeashellProject.prototype.getFileFromPath = function(path) {
-  function find(array, path) {
+  function find(array, p) {
     for(var i=0; i < array.length; i++) {
-      if(array[i].name[array[i].name.length-1] == path[0]) {
-        if(path.length==1) {
+      if(array[i].name[array[i].name.length-1] == p[0]) {
+        if(p.length==1) {
           return array[i];
         }
         else {
-          return find(array[i].children, path.slice(1));
+          return find(array[i].children, p.slice(1));
         }
       }
     }
