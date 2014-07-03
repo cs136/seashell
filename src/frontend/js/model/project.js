@@ -373,7 +373,7 @@ SeashellProject.prototype.compile = function() {
   var promise = $.Deferred();
   var p = this;
   save_promise.done(function () {
-    socket.compileProject(p.name, promise);
+    socket.compileProject(p.name, p.currentFile.fullname(), promise);
 
     /** Helper function for writing errors. */
     function writeErrors(errors) {
@@ -491,9 +491,9 @@ SeashellProject.prototype.run = function(withTests, tests) {
     promise.done(function(pid) {
       consoleClear();
       if (consoleDebug()) {
-        consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", currentProject, pid));
+        consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", p.name, pid));
       } else {
-        consoleWrite(sprintf("--- Running project '%s' ---\n", currentProject));
+        consoleWrite(sprintf("--- Running project '%s' ---\n", p.name));
       }
       
       p.currentPID = pid;

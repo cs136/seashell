@@ -211,9 +211,10 @@
       [(hash-table
         ('id id)
         ('type "compileProject")
-        ('project name))
+        ('project name)
+        ('file file))
        (define-values (result messages)
-         (compile-project name))
+         (compile-project name file))
        `#hash((id . ,id)
               (success . ,result)
               (result . ,messages))]

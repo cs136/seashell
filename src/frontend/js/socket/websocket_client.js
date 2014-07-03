@@ -193,10 +193,11 @@ SeashellWebsocket.prototype.sendEOF = function(pid, deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.compileProject = function(project, deferred) {
+SeashellWebsocket.prototype.compileProject = function(project, file, deferred) {
   return this.sendMessage({
     type : "compileProject",
-    project : project},
+    project : project,
+    file : file},
     deferred);
 };
 

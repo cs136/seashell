@@ -319,27 +319,30 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
+;;  file - full path and name of file we are compiling from
 ;; Returns:
 ;;  List of diagnostics (error?, file, line, column, message)
 ;;  Error if any diagnostics have error? set.
 ;;
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-project name)
-  (-> project-name? (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
+(define/contract (compile-project name file)
+  (-> project-name? path-string? (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
+  (define path (check-and-build-path (build-project-path name) file))
+  (match-define-values (base _ _) (split-path path))
   ;; TODO: Other languages? (C++, maybe?)
   ;; Get *.c files in project.
   (define c-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"c"))
-            (directory-list (build-project-path name) #:build? #t)))
+            (directory-list base #:build? #t)))
   (define o-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"o"))
-            (directory-list (build-project-path name) #:build? #t)))
+            (directory-list base #:build? #t)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages)
