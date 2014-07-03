@@ -392,19 +392,23 @@
 ;;  port  - port to send it on.
 ;; Optional Arguments:
 ;;  mask - mask data or not.
+;;  fragment-tail? Frame is not the head of a sequence of fragmented frames.
 ;;
 ;; Returns:
 ;;  Nothing.
 (define/contract (send-frame frame port
-                             #:mask? [mask? #f])
+                             #:mask? [mask? #f]
+                             #:fragment-tail? [fragment-tail? #f])
   (->* (ws-frame? port?)
        (#:mask?
+        boolean?
+        #:fragment-tail?
         boolean?)
        void?)
 
   ;; Construct the framing byte
   (define framing-byte
-    (bitwise-ior (ws-frame-opcode frame)
+    (bitwise-ior (if fragment-tail? 0 (ws-frame-opcode frame))
                  (arithmetic-shift (ws-frame-rsv frame) 4)
                  (if (ws-frame-final? frame) 128 0)))
 
@@ -557,7 +561,6 @@
   (define control (ws-connection-control conn))
 
   ;; Internal fragmentation state.
-  ;; TODO handle sending fragmented frames. (A sequence of non-final frames followed by a final frame)
   (define fragmented? #f)
 
   (thread
@@ -581,5 +584,6 @@
             (loop)]
            [else
             ;; Send the frame, repeat
-            (send-frame sync-result port #:mask? mask?)
+            (send-frame sync-result port #:mask? mask? #:fragment-tail? fragmented?)
+            (set! fragmented? (not (ws-frame-final? sync-result)))
             (loop)]))))))

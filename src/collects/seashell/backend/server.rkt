@@ -168,7 +168,8 @@
                  (thunk
                   ;; Try to read the file...
                   (with-handlers
-                      ([exn:fail:filesystem? (lambda (exn) (void))])
+                      ([exn:fail:filesystem? (lambda (exn) 
+                      (logf 'debug "Retrying error on credentials file: ~a" (exn-message exn)))])
                     (call-with-output-file
                       credentials-file
                       (lambda (lock-file)
@@ -200,10 +201,6 @@
                    (open-output-file credentials-file #:exists 'must-truncate)))
                  repeat
                  (thunk (loop (add1 tries))))))
-        ;; Set permissions on the file.
-        (file-or-directory-permissions
-         credentials-file
-         user-read-bit)
         
         ;; Global dispatcher.
         (define seashell-dispatch

@@ -198,6 +198,15 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,pid))]
+      ;; Send EOF to stdin of the program with the given pid
+      [(hash-table
+        ('id id)
+        ('type "sendEOF")
+        ('pid pid))
+       (close-output-port (program-stdin pid))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       ;; Project compilation functions.
       [(hash-table
         ('id id)

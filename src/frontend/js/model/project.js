@@ -456,8 +456,15 @@ SeashellProject.linter = function() {
   return found;
 };
 
-/*
- * Runs the currently open project.
+/**
+ * Sends EOF to the currently running project.
+ */
+function sendEOF() {
+    if(currentPID) socket.sendEOF(currentPID);
+}
+
+/**
+ * Project runner.
  */
 SeashellProject.run = function() {
   if(SeashellProject.currentProject) {

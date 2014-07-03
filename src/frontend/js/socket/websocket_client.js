@@ -186,6 +186,13 @@ SeashellWebsocket.prototype.runProject = function(project, file, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.sendEOF = function(pid, deferred) {
+  return this.sendMessage({
+    type : "sendEOF",
+    pid : pid},
+    deferred);
+};
+
 SeashellWebsocket.prototype.compileProject = function(project, deferred) {
   return this.sendMessage({
     type : "compileProject",

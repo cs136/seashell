@@ -35,8 +35,9 @@ function setupConsole() {
   // Store the welcome message in seashell_console.
   seashell_console.welcomeMessage = welcomeMessage;
 
-  // Hook the input button
+  // Hook the input button and the EOF button
   $("#submit-console-input").on("click", consoleInput);
+  $("#send-eof").on("click", sendEOF);
   $("#input-line").keydown(function(e) {
       if(e.which == 13) consoleInput();
   });
