@@ -165,7 +165,7 @@ function handleRename() {
   oldfp.pop();
   var newf = $("#rename-file-new-input").val();
   var file = SeashellProject.currentProject.getFileFromPath(oldf);
-  SeashellProject.currentProject.renameFile(file, oldfp.join("/")+"/"+newf)
+  SeashellProject.currentProject.renameFile(file, (oldfp.length>1 ? oldfp.join("/")+"/" : "")+newf)
     .done(updateFileMenu);
   $("#rename-file-dialog").modal("hide");
 }
