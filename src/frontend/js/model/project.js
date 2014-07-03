@@ -149,7 +149,15 @@ SeashellProject.prototype.createFile = function(fname) {
   else {
     return socket.newFile(this.name, fname).done(function() {
       var nFile = new SeashellFile(fname);
-      nFile.document = CodeMirror.Doc("/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n", "text/x-csrc");
+      var ext = fname.split(".").pop();
+      var def = "";
+      if(ext=="c"||ext=="h") {
+        def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
+      }
+      else if(ext=="rkt") {
+        def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
+      }
+      nFile.document = CodeMirror.Doc(def, "text/x-csrc");
       p.placeFile(nFile);
       p.openFile(nFile);
     }).fail(function() {
