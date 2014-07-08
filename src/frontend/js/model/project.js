@@ -88,7 +88,7 @@ function SeashellProject(name, callback) {
     promise.done(function(files) {
       p.files = [];
       p.currentErrors = [];
-      p.saveInterval = setInterval(function() { p.save(); }, 10000);
+      p.saveInterval = setInterval(handleSaveProject, 10000);
 
       for (var i = 0; i < files.length; i++) {
         /** Lazily load the documents later. */
@@ -256,6 +256,7 @@ SeashellProject.prototype.save = function() {
       else promises.push(aof[f].save(p.name));
     }
   }
+  console.log(this.files);
   save_arr(this.files);
   return $.when.apply(null, promises)
     .fail(function() {
@@ -269,9 +270,11 @@ SeashellProject.prototype.save = function() {
  */
 SeashellFile.prototype.save = function(pname) {
   if(this.document) {
+    var f = this;
+    console.log(this);
     return socket.writeFile(pname, this.fullname(), this.document.getValue())
       .fail(function() {
-        displayErrorMessage("File "+this.fullname()+" could not be saved.");
+        displayErrorMessage("File "+f.fullname()+" could not be saved.");
       });
   }
   return $.Deferred().resolve().promise();
@@ -377,7 +380,7 @@ SeashellProject.prototype.delete = function(callback) {
  * Compiles the project.
  */
 SeashellProject.prototype.compile = function() {
-  var save_promise = this.save();
+  var save_promise = handleSaveProject();
   var promise = $.Deferred();
   var p = this;
   save_promise.done(function () {
@@ -488,7 +491,9 @@ SeashellProject.prototype.run = function(withTests, tests) {
   // TODO: run with tests
   if(withTests) return null;
 
-  var compile_promise = this.currentFile.name.join('/').split('.').pop() == "rkt" ? null : this.compile();
+  var ext = this.currentFile.name[this.currentFile.name.length-1]
+    .split('.').pop();
+  var compile_promise = ext == "rkt" ? handleSaveProject() : this.compile();
   var promise = $.Deferred();
   var p = this;
 
@@ -510,11 +515,6 @@ SeashellProject.prototype.run = function(withTests, tests) {
     });
   }
 
-  if(this.currentFile.name.join('/').split('.').pop() == "rkt"){
-    run();
-    return;
-  }
-
   // TODO: If current PID is set, kill it.  This _is_
   // a bit of a race condition, but the side effects
   // (in JavaScript) are negligible, and it shouldn't
@@ -526,7 +526,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(run).fail(function () {
     promise.reject(null);
-    displayErrorMessage("Project compilation failed.");
+    displayErrorMessage((ext=="c" ? "Compiling" : "Saving")+" project failed.");
   });
 
   return promise;
