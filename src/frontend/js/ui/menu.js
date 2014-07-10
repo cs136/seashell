@@ -24,7 +24,13 @@
  * This functions handles the save project menu item.
  */
 function handleSaveProject() {
-  SeashellProject.currentProject.save();
+  $("#save-animation").show();
+  return SeashellProject.currentProject.save()
+    .done(function() {
+      setTimeout(function() {
+        $("#save-animation").hide();
+      }, 500);
+    });
 }
 
 /**
