@@ -174,6 +174,13 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      ;; Ping, for timeout checking.
+      [(hash-table
+        ('id id)
+        ('type "ping"))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       ;; Program signalling code.
       [(hash-table
         ('id id)
