@@ -28,7 +28,7 @@ var disconnect = false;
  * Sets up the websocket disconnection monitor.
  */
 function setupDisconnectMonitor(){
-    if(dccount >= 7){
+    if(dccount >= 3){
         if(!disconnect){
             displayErrorMessage("You are not connected to the Seashell server. Any work you do right now will not be saved!");
             $("#master-container").addClass("disconnected");
