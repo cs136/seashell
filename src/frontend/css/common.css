@@ -28,6 +28,11 @@ body {
   padding-bottom: 50px; /* Account for fixed navbar */
 }
 
+/** Angry red background for when the client is disconnected */
+.disconnected {
+    background-color: #ff0000;
+}
+
 /** No project display. */
 .no-project {
   padding: 40px 15px;

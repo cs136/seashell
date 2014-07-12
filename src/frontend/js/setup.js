@@ -32,6 +32,8 @@ function seashellInit(rest) {
       console.log("Seashell socket set up properly.");
       setupUI();
       console.log("User interface set up properly.");
+      setInterval(setupDisconnectMonitor, 1000);
+      console.log("Websocket disconnection monitor set up properly.");
       /** Install refresh handler. */
       window.onbeforeunload = function () {
         return "Are you sure you want to leave Seashell?  Unsaved data may be lost.";

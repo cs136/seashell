@@ -20,6 +20,35 @@
  */
 var settings = null;
 
+// variable for monitoring disconnection from websocket
+var dccount = 0;
+var disconnect = false;
+
+/**
+ * Sets up the websocket disconnection monitor.
+ */
+function setupDisconnectMonitor(){
+    if(dccount >= 7){
+        if(!disconnect){
+            displayErrorMessage("You are not connected to the Seashell server. Any work you do right now will not be saved!");
+            $("#master-container").addClass("disconnected");
+        }
+        disconnect = true;
+    }
+    
+    dccount++;
+
+    var promise = socket.ping();
+    promise.done(function (){
+        if(disconnect){
+            displayErrorMessage("Your connection to the Seashell server has been restored.");
+            $("#master-container").removeClass("disconnected");
+        }
+        disconnect = false;
+        dccount = 0;
+    });
+}
+
 /**
  * Updates the list of marmoset projects in the submit dialog.
  */
