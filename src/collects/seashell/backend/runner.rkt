@@ -188,12 +188,12 @@
                                    "-u" binary)])))
 
         (cond
-          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory)) test))
+          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory) test)))
                 (define prog-input (file->bytes (string-append test-base-file ".in")))
                 (write-bytes prog-input raw-stdin)
                 (close-output-port raw-stdin)
                 (subprocess-wait handle)
-                (define prog-output (read-bytes raw-stdout))
+                (define prog-output (port->bytes raw-stdout))
                 (close-input-port raw-stdout)
                 (close-input-port raw-stderr)
                 (diff prog-output (string-append test-base-file ".expect"))]
@@ -250,9 +250,9 @@
       (close-output-port stdin)
       (subprocess-wait handle) ;; wait for diff to finish
 
-      (define diff-output (read-bytes stdout))
+      (define diff-output (port->bytes stdout))
       (close-input-port stdout)
-      (define diff-err (read-bytes stderr))
+      (define diff-err (port->bytes stderr))
       (close-input-port stderr)
       
       (match (subprocess-status handle)

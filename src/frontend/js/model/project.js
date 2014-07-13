@@ -532,7 +532,7 @@ SeashellProject.prototype.run = function(test) {
 
   // function which actually runs the project (without compiling)
   function run() {
-    socket.runProject(p.name, p.currentFile.name.join('/'), promise, test);
+    socket.runProject(p.name, p.currentFile.name.join('/'), test ? test : false, promise);
 
     promise.done(function(pid) {
       consoleClear();

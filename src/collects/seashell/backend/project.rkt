@@ -373,7 +373,7 @@
                           (seashell-diagnostic-message diagnostic)))
                   diagnostics))))))
 
-;; (run-project name)
+;; (run-project name file test)
 ;; Runs a project
 ;;
 ;; Arguments:

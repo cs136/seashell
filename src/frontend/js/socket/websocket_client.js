@@ -184,7 +184,7 @@ SeashellWebsocket.prototype.ping = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.runProject = function(project, file, deferred, test) {
+SeashellWebsocket.prototype.runProject = function(project, file, test, deferred) {
   return this.sendMessage({
     type : "runProject",
     project : project,
