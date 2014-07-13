@@ -500,7 +500,8 @@ SeashellProject.linter = function() {
  * Sends EOF to the currently running project.
  */
 function sendEOF() {
-    if(currentPID) socket.sendEOF(currentPID);
+    if(SeashellProject.currentProject.currentPID)
+        socket.sendEOF(SeashellProject.currentProject.currentPID);
 }
 
 /**
