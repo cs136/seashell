@@ -202,7 +202,7 @@
         ('file file)
         ('test test))
        (define result (match (run-project name file test)
-        [(cons tag data) `#hash((tag . ,tag) (data . ,data))] ;; run with test
+        [(list tag data) (logf 'debug "data is ~a\n" data) `#hash((tag . ,tag) (data . ,data))] ;; run with test
         [pid (project-runner-thread name pid) pid]))          ;; run without test
        `#hash((id . ,id)
               (success . #t)
