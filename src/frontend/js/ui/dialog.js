@@ -236,23 +236,25 @@ function handleRunWithTests() {
   for(var i=0; i < boxes.length; i++) {
     tests.push($(boxes[i]).val());
   }
+  $("#run-with-tests-dialog").modal("hide");
+  $("[href=#test-tab]").tab("show");
   function runTestError() {
     displayErrorMessage("An error occurred while running the project with tests.");
   }
   function runNext(message) {
     /* message: first element tag, second data*/
     if(message) {
-      if(message[0] == "pass") {
+      if(message.tag == "pass") {
         $("#test-tab").append("<div class='alert alert-success' role='alert'><span class='glyphicon glyphicon-ok-circle'></span> Passed test <strong>"+last+".</div>");
       }
-      else if(message[0] == "fail") {
+      else if(message.tag == "fail") {
         $("#test-tab").append("<div class='alert alert-danger' role='alert'><span class='glyphicon glyphicon-remove-circle'></span> Failed test <strong>"
-          +last+":"+generateDiff(message[1])+"</div>");
+          +last+":"+generateDiff(message.data)+"</div>");
       }
       else {
         $("#test-tab").append("<div class='alert alert-info' role='alert'><span class='glyphicon glyphicon-info-sign'></span> Ran test "
           +last+" and produced the following output:<div class='test-result-output'><pre>"
-          +message[1]+"</pre></div>");
+          +message.data+"</pre></div>");
       }
     }
     if(tests.length) {
