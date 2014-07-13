@@ -193,10 +193,15 @@
                 (write-bytes prog-input raw-stdin)
                 (close-output-port raw-stdin)
                 (subprocess-wait handle)
+
                 (define prog-output (port->bytes raw-stdout))
                 (close-input-port raw-stdout)
+                (define prog-stderr (port->bytes raw-stderr))
                 (close-input-port raw-stderr)
-                (diff prog-output (string-append test-base-file ".expect"))]
+
+                (match (subprocess-status handle)
+                  [0 (diff prog-output (string-append test-base-file ".expect"))]
+                  [_ (list "error" (bytes->string/utf-8 prog-stderr))])]
           [else
             ;; Construct the I/O ports.
             (define-values (in-stdout out-stdout) (make-pipe))
@@ -234,7 +239,7 @@
 ;;
 ;; Arguments:
 ;;  prog-output - the output of the program
-;;  expect-file - the .expect file with which to compare the program otuput
+;;  expect-file - the .expect file with which to compare the program output
 ;; Returns:
 ;;  a tag and a string; "pass" means the test passed and the string is
 ;;  empty, "fail" means the test failed and the string is a diff, and
