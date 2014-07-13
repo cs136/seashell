@@ -232,9 +232,14 @@
                                                                        (exn-continuation-marks exn))))])
     ;; Install configuration.
     (config-refresh!)
+
     ;; Check which mode we're running as.
     (if (equal? (get-cgi-method) "POST")
       (password-based-login/ajax)
       (uw-login/redirect)))
+
+    ;; Log the successful login attempt.
+    (when (read-config 'login-tracking-helper)
+      (system* (read-config 'login-tracking-helper)))
   (exit 0))
 
