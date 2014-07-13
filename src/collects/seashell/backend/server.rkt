@@ -90,6 +90,25 @@
       (unless (= 0 (seashell_signal_detach))
         (exit-from-seashell 5)))))
 
+;; make-udp-ping-listener -> (values integer? custodian?)
+;; Creates the UDP ping listener, and returns a custodian that can shut it down.
+(define/contract (make-udp-ping-listener)
+  (-> (values integer? custodian?))
+  (parameterize ([current-custodian (make-custodian (current-custodian))])
+    ;; Start the UDP ping listener
+    (define sock (udp-open-socket))
+    ;; Bind the socket.
+    (udp-bind! sock #f 0)
+    ;; Get the ports.
+    (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
+    (thread
+      (thunk
+        (let loop ()
+          (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
+          (udp-send-to sock client-host client-port #"pong")
+          (loop))))
+    (values ping-port (current-custodian))))
+
 ;; (backend/main)
 ;; Entry point to the backend server.
 ;;
@@ -150,6 +169,7 @@
     (define credentials-file (build-path (read-config 'seashell) "creds"))
     (define credentials-port #f)
     (define shutdown-server void)
+    (define shutdown-listener void)
     
     ;; Note: (exit-from-seashell ...) does not unwind the continuation stack.
     (dynamic-wind
@@ -228,18 +248,14 @@
         (when (exn? start-result)
           (raise start-result))
 
+        ;; Start the UDP ping listener.
+        (define-values (ping-port udp-custodian)
+          (make-udp-ping-listener))
+        (set! shutdown-listener
+          (thunk (custodian-shutdown-all udp-custodian)))
+
         ;; Get current username
         (define username (or (seashell_get_username) "unknown_user"))
-        
-        ;; Start the UDP ping listener
-        (define sock (udp-open-socket))
-        (udp-bind! sock #f 0)
-        (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
-        (define (udp-listen-ping)
-          (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
-          (udp-send-to sock client-host client-port #"pong")
-          (udp-listen-ping))
-        (thread udp-listen-ping)
         
         ;; Generate and send credentials, write lock file
         (define host (read))
@@ -277,6 +293,8 @@
       (unless (or (not credentials-port)
                   (port-closed? credentials-port))
         (close-output-port credentials-port))
+      ;; Shutdown listner
+      (shutdown-listener)
       ;; Shutdown server
       (shutdown-server)
       ;; Delete lock file
