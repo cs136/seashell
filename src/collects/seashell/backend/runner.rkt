@@ -137,18 +137,28 @@
          (close-output-port out-stderr))
        (loop)])))
 
-;; (run-project program directory lang)
+;; (run-program binary directory lang test)
 ;;  Runs a program.
 ;;
 ;; Arguments:
 ;;   program   - the filename of the program to be run
 ;;   directory - the directory containing the program
 ;;   lang      - the language with which to run the program ('C or 'racket)
+;;   test      - if #f, I/O is done directly with the user. Otherwise, test is
+;;               a string representing the name of a test to use in tests/.
+;;               i.e. if test is "foo", input is from tests/foo.in, output is
+;;               diffed against tests/foo.expect
 ;;
 ;; Returns:
-;;  PID of program
-(define/contract (run-program binary directory lang)
-  (-> path-string? path-string? (or/c 'C 'racket) integer?)
+;;  test is #f - the PID of the program, immediately (without waiting for the
+;;               program to terminate)
+;;  otherwise  - a tag and a bytestring; 'pass means the test passed and the
+;;               bytestring is empty, 'fail means the test failed and the
+;;               bytestring is a diff, and 'no-expect means no .expect file was
+;;               found, and the bytestring is the output of the program
+(define/contract (run-program binary directory lang test)
+  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
+      (or/c integer? (cons/c (or/c 'pass 'fail 'no-expect) bytes?)))
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -158,7 +168,10 @@
               (raise (exn:program:run
                       (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
                       (current-continuation-marks)))))]
-        (logf 'info "Running file ~a with language ~a" binary lang)
+        (if test
+          (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
+          (logf 'info "Running file ~a with language ~a" binary lang))
+
         (define-values (handle raw-stdout raw-stdin raw-stderr)
           (parameterize
             ([current-directory directory])
@@ -173,36 +186,80 @@
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
                                    "-t" (path->string (read-config 'seashell-racket-runtime-library))
                                    "-u" binary)])))
-        ;; Construct the I/O ports.
-        (define-values (in-stdout out-stdout) (make-pipe))
-        (define-values (in-stdin out-stdin) (make-pipe))
-        (define-values (in-stderr out-stderr) (make-pipe))
-        ;; Set buffering modes
-        (file-stream-buffer-mode raw-stdin 'none)
-        ;; Construct the destroyed-semaphore
-        (define destroyed-semaphore (make-semaphore 0))
-        ;; Construct the control structure.
-        (define result (program in-stdin in-stdout in-stderr
-                                out-stdin out-stdout out-stderr
-                                raw-stdin raw-stdout raw-stderr
-                                handle #f #f destroyed-semaphore))
-        (define control-thread (thread (thunk (program-control-thread result))))
-        (set-program-control! result control-thread)
-        ;; Install it in the hash-table
-        (define pid (subprocess-pid handle))
-        ;; Block if there's still a PID in there.  This is to prevent
-        ;; nasty race-conditions in which a process which is started
-        ;; has the same PID as a process which is just about to be destroyed.
-        (define block-semaphore
-          (call-with-semaphore
-            program-destroy-semaphore
-            (thunk
-              (define handle (hash-ref program-table pid #f))
-              (if handle (program-destroy-semaphore handle) #f))))
-        (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
-        (hash-set! program-table pid result)
-        (logf 'info "Binary ~a running as PID ~a." binary pid)
-        pid))))
+
+        (cond
+          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory)) test))
+                (define prog-input (file->bytes (string-append test-base-file ".in")))
+                (write-bytes prog-input raw-stdin)
+                (close-output-port raw-stdin)
+                (subprocess-wait handle)
+                (define prog-output (read-bytes raw-stdout))
+                (close-input-port raw-stdout)
+                (close-input-port raw-stderr)
+                (diff prog-output (string-append test-base-file ".expect"))]
+          [else
+            ;; Construct the I/O ports.
+            (define-values (in-stdout out-stdout) (make-pipe))
+            (define-values (in-stdin out-stdin) (make-pipe))
+            (define-values (in-stderr out-stderr) (make-pipe))
+            ;; Set buffering modes
+            (file-stream-buffer-mode raw-stdin 'none)
+            ;; Construct the destroyed-semaphore
+            (define destroyed-semaphore (make-semaphore 0))
+            ;; Construct the control structure.
+            (define result (program in-stdin in-stdout in-stderr
+                                    out-stdin out-stdout out-stderr
+                                    raw-stdin raw-stdout raw-stderr
+                                    handle #f #f destroyed-semaphore))
+            (define control-thread (thread (thunk (program-control-thread result))))
+            (set-program-control! result control-thread)
+            ;; Install it in the hash-table
+            (define pid (subprocess-pid handle))
+            ;; Block if there's still a PID in there.  This is to prevent
+            ;; nasty race-conditions in which a process which is started
+            ;; has the same PID as a process which is just about to be destroyed.
+            (define block-semaphore
+              (call-with-semaphore
+                program-destroy-semaphore
+                (thunk
+                  (define handle (hash-ref program-table pid #f))
+                  (if handle (program-destroy-semaphore handle) #f))))
+            (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
+            (hash-set! program-table pid result)
+            (logf 'info "Binary ~a running as PID ~a." binary pid)
+            pid])))))
+
+;; (diff prog-output expect-file)
+;; Returns a diff between the program output and the .expect file
+;;
+;; Arguments:
+;;  prog-output - the output of the program
+;;  expect-file - the .expect file with which to compare the program otuput
+;; Returns:
+;;  a tag and a bytestring; 'pass means the test passed and the bytestring is
+;;  empty, 'fail means the test failed and the bytestring is a diff, and
+;;  'no-expect means no .expect file was found, and the bytestring is the output
+;;  of the program
+(define/contract (diff prog-output expect-file)
+  (-> bytes? string? (cons/c (or/c 'pass 'fail 'no-expect) bytes?))
+  (cond
+    [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
+      (define-values (handle stdout stdin stderr)
+        (subprocess #f #f #f (read-config 'diff-program) "-U100000" "-" expect-file))
+      (write-bytes prog-output stdin)
+      (close-output-port stdin)
+      (subprocess-wait handle) ;; wait for diff to finish
+
+      (define diff-output (read-bytes stdout))
+      (close-input-port stdout)
+      (define diff-err (read-bytes stderr))
+      (close-input-port stderr)
+      
+      (match (subprocess-status handle)
+        [0 (cons 'pass #"")]
+        [1 (cons 'fail diff-output)]
+        [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
+    [else (cons 'no-expect prog-output)]))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program

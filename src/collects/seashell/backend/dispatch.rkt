@@ -199,12 +199,14 @@
         ('id id)
         ('type "runProject")
         ('project name)
-        ('file file))
-       (define pid (run-project name file))
-       (project-runner-thread name pid)
+        ('file file)
+        ('test test))
+       (define result (match (run-project name file test)
+        [(cons tag data) `#hash((tag . ,tag) (data . ,data))] ;; run with test
+        [pid (project-runner-thread name pid) pid]))          ;; run without test
        `#hash((id . ,id)
               (success . #t)
-              (result . ,pid))]
+              (result . ,result))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)
