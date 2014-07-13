@@ -158,7 +158,7 @@
 ;;               found, and the bytestring is the output of the program
 (define/contract (run-program binary directory lang test)
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
-      (or/c integer? (cons/c (or/c 'pass 'fail 'no-expect) bytes?)))
+      (or/c integer? (list/c (or/c 'pass 'fail 'no-expect) bytes?)))
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -241,7 +241,7 @@
 ;;  'no-expect means no .expect file was found, and the bytestring is the output
 ;;  of the program
 (define/contract (diff prog-output expect-file)
-  (-> bytes? string? (cons/c (or/c 'pass 'fail 'no-expect) bytes?))
+  (-> bytes? string? (list/c (or/c 'pass 'fail 'no-expect) bytes?))
   (cond
     [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
       (define-values (handle stdout stdin stderr)
@@ -256,10 +256,10 @@
       (close-input-port stderr)
       
       (match (subprocess-status handle)
-        [0 (cons 'pass #"")]
-        [1 (cons 'fail diff-output)]
+        [0 (list 'pass #"")]
+        [1 (list 'fail diff-output)]
         [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
-    [else (cons 'no-expect prog-output)]))
+    [else (list 'no-expect prog-output)]))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
