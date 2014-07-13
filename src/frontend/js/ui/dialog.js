@@ -251,9 +251,13 @@ function handleRunWithTests() {
         $("#test-tab").append("<div class='alert alert-danger' role='alert'><span class='glyphicon glyphicon-remove-circle'></span> Failed test <strong>"
           +last+":"+generateDiff(message.data)+"</div>");
       }
+      else if(message.tag == "error") {
+        $("#test-tab").append("<div class='alert alert-warning' role='alert'><span class='glyphicon glyphicon-warning-sign'></span> Program crashed on test <strong>"
+          +last+":"+"<div class='test-result-output'><pre>" + message.data + "</pre></div>");
+      }
       else {
-        $("#test-tab").append("<div class='alert alert-info' role='alert'><span class='glyphicon glyphicon-info-sign'></span> Ran test "
-          +last+" and produced the following output:<div class='test-result-output'><pre>"
+        $("#test-tab").append("<div class='alert alert-info' role='alert'><span class='glyphicon glyphicon-info-sign'></span> Ran test <strong>"
+          +last+"</strong> and produced the following output:<div class='test-result-output'><pre>"
           +message.data+"</pre></div>");
       }
     }
