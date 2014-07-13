@@ -214,18 +214,18 @@ function generateDiff(data) {
       expectline++;
     }
     else if(first == "+") {
-      expect += "<span class='test-result-highlight'>"+expectline+"&nbsp;"+line+"</span><br />";
+      expect += "<span class='test-result-highlight'><span class='test-result-line-num'>"+expectline+"</span>&nbsp;"+line+"</span><br />";
       output += "<br />";
       expectline++;
     }
     else {
-      output += "<span class='test-result-highlight'>"+outputline+"&nbsp;"+line+"</span><br />";
+      output += "<span class='test-result-highlight'><span class='test-result-line-num'>"+outputline+"</span>&nbsp;"+line+"</span><br />";
       expect += "<br />";
       outputline++;
     }
   }
   return "<div class='test-result-output'><div class='test-result-diff'>Expected output:<br /><br />"
-    +expect+"</div><div class='test-result-diff'>Program output:"
+    +expect+"</div><div class='test-result-diff'>Program output:<br /><br />"
     +output+"</div></div>";
 }
 
@@ -236,6 +236,7 @@ function handleRunWithTests() {
   for(var i=0; i < boxes.length; i++) {
     tests.push($(boxes[i]).val());
   }
+  Array.sort(tests);
   $("#run-with-tests-dialog").modal("hide");
   $("[href=#test-tab]").tab("show");
   function runTestError() {
