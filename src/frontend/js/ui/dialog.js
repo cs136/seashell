@@ -346,6 +346,13 @@ function setupDialogs() {
     else {
       $(this).find("button").last().focus();
     }
+  }).each(function() {
+    var button = $(this).find("button").last();
+    $(this).keydown(function(e) {
+      if(e.which == 13) {
+        button.click();
+      }
+    });
   });
 }
 
