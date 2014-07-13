@@ -62,7 +62,11 @@ function setupUI() {
   $(".userid").text(creds.user);
   $("#main-panel-tabs").tabs();
   $("#master-container").removeClass("hide"); // show the UI
-  $("#editor-tab").click(function() { editor.refresh(); });
+  $("[href=#edit-tab]").click(function() {
+    setTimeout(function() {
+      editorDocument(SeashellProject.currentProject.currentFile.document);
+    }, 50);
+  });
   /** OK, set everything up. */
   setupEditor();
   setupConsole();

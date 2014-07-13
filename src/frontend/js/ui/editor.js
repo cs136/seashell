@@ -29,6 +29,7 @@ function setupEditor() {
   editor = CodeMirror($("#editor")[0],{
     lineNumbers: true,
     tabSize: 4,
+    indentUnit: 4,
     mode: "text/x-csrc",
     gutters: ["CodeMirror-lint-markers"],
     lineWrapping: true,
