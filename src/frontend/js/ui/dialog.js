@@ -236,6 +236,7 @@ function handleRunWithTests() {
   for(var i=0; i < boxes.length; i++) {
     tests.push($(boxes[i]).val());
   }
+  Array.sort(tests);
   $("#run-with-tests-dialog").modal("hide");
   $("[href=#test-tab]").tab("show");
   function runTestError() {
