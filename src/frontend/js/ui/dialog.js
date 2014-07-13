@@ -206,8 +206,8 @@ function generateDiff(data) {
   var expect = "";
   for(var i=0; i < lines.length; i++) {
     var first = lines[i].substring(0,1);
+    var line = lines[i].substring(1).replace(" ", "&nbsp;");
     if(first == " ") {
-      var line = lines[i].substring(1).replace(" ", "&nbsp;");
       output += outputline+"&nbsp;"+line+"<br />";
       expect += expectline+"&nbsp;"+line+"<br />";
       outputline++;
@@ -225,7 +225,7 @@ function generateDiff(data) {
     }
   }
   return "<div class='test-result-output'><div class='test-result-diff'>Expected output:<br /><br />"
-    +expect+"</div><div class='test-result-diff'>"
+    +expect+"</div><div class='test-result-diff'>Program output:"
     +output+"</div></div>";
 }
 
@@ -256,6 +256,9 @@ function handleRunWithTests() {
           +last+" and produced the following output:<div class='test-result-output'><pre>"
           +message.data+"</pre></div>");
       }
+    }
+    else {
+      $("#test-tab").html("");
     }
     if(tests.length) {
       last = tests.shift();
