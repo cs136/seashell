@@ -152,13 +152,13 @@
 ;; Returns:
 ;;  test is #f - the PID of the program, immediately (without waiting for the
 ;;               program to terminate)
-;;  otherwise  - a tag and a bytestring; 'pass means the test passed and the
-;;               bytestring is empty, 'fail means the test failed and the
-;;               bytestring is a diff, and 'no-expect means no .expect file was
-;;               found, and the bytestring is the output of the program
+;;  otherwise  - a tag and a string; 'pass means the test passed and the
+;;               string is empty, 'fail means the test failed and the
+;;               string is a diff, and 'no-expect means no .expect file was
+;;               found, and the string is the output of the program
 (define/contract (run-program binary directory lang test)
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
-      (or/c integer? (cons/c (or/c 'pass 'fail 'no-expect) bytes?)))
+      (or/c integer? (list/c string? string?)))
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -188,12 +188,12 @@
                                    "-u" binary)])))
 
         (cond
-          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory)) test))
+          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory) test)))
                 (define prog-input (file->bytes (string-append test-base-file ".in")))
                 (write-bytes prog-input raw-stdin)
                 (close-output-port raw-stdin)
                 (subprocess-wait handle)
-                (define prog-output (read-bytes raw-stdout))
+                (define prog-output (port->bytes raw-stdout))
                 (close-input-port raw-stdout)
                 (close-input-port raw-stderr)
                 (diff prog-output (string-append test-base-file ".expect"))]
@@ -236,12 +236,12 @@
 ;;  prog-output - the output of the program
 ;;  expect-file - the .expect file with which to compare the program otuput
 ;; Returns:
-;;  a tag and a bytestring; 'pass means the test passed and the bytestring is
-;;  empty, 'fail means the test failed and the bytestring is a diff, and
-;;  'no-expect means no .expect file was found, and the bytestring is the output
+;;  a tag and a string; "pass" means the test passed and the string is
+;;  empty, "fail" means the test failed and the string is a diff, and
+;;  "no-expect" means no .expect file was found, and the string is the output
 ;;  of the program
 (define/contract (diff prog-output expect-file)
-  (-> bytes? string? (cons/c (or/c 'pass 'fail 'no-expect) bytes?))
+  (-> bytes? string? (list/c string? string?))
   (cond
     [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
       (define-values (handle stdout stdin stderr)
@@ -250,16 +250,16 @@
       (close-output-port stdin)
       (subprocess-wait handle) ;; wait for diff to finish
 
-      (define diff-output (read-bytes stdout))
+      (define diff-output (port->bytes stdout))
       (close-input-port stdout)
-      (define diff-err (read-bytes stderr))
+      (define diff-err (port->bytes stderr))
       (close-input-port stderr)
       
       (match (subprocess-status handle)
-        [0 (cons 'pass #"")]
-        [1 (cons 'fail diff-output)]
+        [0 (list "pass" "")]
+        [1 (list "fail" (bytes->string/utf-8 diff-output))]
         [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
-    [else (cons 'no-expect prog-output)]))
+    [else (list "no-expect" (bytes->string/utf-8 prog-output))]))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program

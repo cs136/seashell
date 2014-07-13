@@ -83,6 +83,8 @@
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      ;; Name of special subdirectory in each user program which contains tests (.in and .expect files)
+      (cons 'tests-subdirectory            "tests")
       ;; Location of SSL key.
       (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
       ;; Location of SSL certificate.
@@ -112,6 +114,8 @@
       (cons 'system-shell                  (string->path "/bin/sh"))
       ;; Racket interpreter
       (cons 'racket-interpreter            (string->path "/usr/bin/racket"))
+      ;; diff program
+      (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.

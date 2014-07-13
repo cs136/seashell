@@ -373,7 +373,7 @@
                           (seashell-diagnostic-message diagnostic)))
                   diagnostics))))))
 
-;; (run-project name)
+;; (run-project name file test)
 ;; Runs a project
 ;;
 ;; Arguments:
@@ -384,7 +384,7 @@
 ;;  pid - Process ID (used as unique identifier for process)
 (define/contract (run-project name file test)
   (-> project-name? string? (or/c #f string?)
-      (or/c integer? (cons/c (or/c 'pass 'fail 'no-expect) bytes?)))
+      (or/c integer? (list/c string? string?)))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
