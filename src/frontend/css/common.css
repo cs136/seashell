@@ -151,18 +151,34 @@ div.tooltip .tooltip-inner {
   overflow:hidden;
 }
 
+#test-tab {
+  padding-top:10px;
+}
+
 .test-result-output {
-  background:#FFF;
+  background:#EEE;
+  border:1px solid #999;
+  border-radius:5px;
   font-family:monospace;
   color:#000;
   padding:10px;
+  font-weight:normal;
 }
  
 .test-result-highlight {
   color:#FF0000;
+  font-weight:bold;
 }
 
 .test-result-diff {
   display:inline-block;
+  vertical-align:top;
   padding:10px;
+  border-right:1px solid #999;
+  height:100%;
+}
+
+.test-result-line-num {
+  color:#000;
+  font-weight:bold;
 }
