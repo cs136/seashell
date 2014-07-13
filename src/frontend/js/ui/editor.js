@@ -41,7 +41,7 @@ function setupEditor() {
        "Ctrl-Enter": SeashellProject.run});
 
   // set vim save keybinding
-  editor.save = function () { projectSave(currentProject); };
+  editor.save = function () { SeashellProject.currentProject.save(); };
 
   // load the user's settings
   refreshSettings();
