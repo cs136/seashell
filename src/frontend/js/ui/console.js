@@ -88,5 +88,5 @@ function consoleWriteRaw(message) {
 function consoleInput() {
   var input = $("#input-line").val() + "\n";
   $("#input-line").val("");
-  projectInput(input);
+  SeashellProject.currentProject.input(input);
 }
