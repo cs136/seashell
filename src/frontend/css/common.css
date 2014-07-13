@@ -145,3 +145,21 @@ div.tooltip .tooltip-inner {
   max-width: 175px !important;
   white-space: nowrap;
 }
+
+#file-tree {
+  max-width:190px;
+  overflow:hidden;
+}
+
+.test-result-output {
+  background:#FFF;
+  font-family:monospace;
+}
+ 
+.test-result-highlight {
+  color:#FF0000;
+}
+
+.test-result-diff {
+  display:inline-block;
+}

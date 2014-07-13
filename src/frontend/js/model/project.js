@@ -285,7 +285,6 @@ SeashellProject.prototype.save = function() {
       else promises.push(aof[f].save(p.name));
     }
   }
-  console.log(this.files);
   save_arr(this.files);
   return $.when.apply(null, promises)
     .fail(function() {
@@ -300,7 +299,6 @@ SeashellProject.prototype.save = function() {
 SeashellFile.prototype.save = function(pname) {
   if(this.document) {
     var f = this;
-    console.log(this);
     return socket.writeFile(pname, this.fullname(), this.document.getValue())
       .fail(function() {
         displayErrorMessage("File "+f.fullname()+" could not be saved.");
@@ -308,6 +306,13 @@ SeashellFile.prototype.save = function(pname) {
   }
   return $.Deferred().resolve().promise();
 };
+
+/*
+ * Returns the file extension of the SeashellFile
+*/
+SeashellFile.prototype.ext = function() {
+  return this.name[this.name.length-1].split(".").pop();
+}
 
 /*
  * Requests the list of all user's projects.
@@ -515,11 +520,9 @@ SeashellProject.run = function() {
 
 /*
  * Runs the project.
+ * test - [optional] name of test to run with the program
  */
-SeashellProject.prototype.run = function(withTests, tests) {
-  // TODO: run with tests
-  if(withTests) return null;
-
+SeashellProject.prototype.run = function(test) {
   var ext = this.currentFile.name[this.currentFile.name.length-1]
     .split('.').pop();
   var compile_promise = ext == "rkt" ? handleSaveProject() : this.compile();
@@ -528,7 +531,7 @@ SeashellProject.prototype.run = function(withTests, tests) {
 
   // function which actually runs the project (without compiling)
   function run() {
-    socket.runProject(p.name, p.currentFile.name.join('/'), promise);
+    socket.runProject(p.name, p.currentFile.name.join('/'), promise, test);
 
     promise.done(function(pid) {
       consoleClear();
@@ -689,6 +692,27 @@ SeashellProject.prototype.getFileFromPath = function(path) {
     return false;
   }
   return find(this.files, path.split('/'));
+};
+
+/*
+ * Returns an array of test file filenames
+*/
+SeashellProject.prototype.getTestsForFile = function(file) {
+  var path = file.name.slice(0,file.name.length-1).join("/")+"/tests";
+  path = path.charAt(0) == '/' ? path.substr(1) : path;
+  var testDir = this.getFileFromPath(path);
+  var arr = [];
+  if(testDir && testDir.is_dir) {
+    for(var i=0; i < testDir.children.length; i++) {
+      if(testDir.children[i].ext() == "in") {
+        var name = testDir.children[i].name[testDir.children[i].name.length-1];
+        name = name.split(".");
+        name.pop();
+        arr.push(name.join("."));
+      }
+    }
+  }
+  return arr;
 };
 
 /**

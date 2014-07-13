@@ -60,7 +60,9 @@ function setupUI() {
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
   $(".userid").text(creds.user);
+  $("#main-panel-tabs").tabs();
   $("#master-container").removeClass("hide"); // show the UI
+  $("#editor-tab").click(function() { editor.refresh(); });
   /** OK, set everything up. */
   setupEditor();
   setupConsole();

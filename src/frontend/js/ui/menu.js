@@ -90,6 +90,19 @@ function handleRunProject() {
   SeashellProject.run();
 }
 
+function handleRunWithTestsDialog() {
+  var tests = SeashellProject.currentProject.getTestsForFile(SeashellProject.currentProject.currentFile);
+  var html = "";
+  for(var i=0; i < tests.length; i++) {
+    html += "<label class='checkbox'><input type='checkbox' name='run-with-tests-input' checked='checked' value='"+tests[i]+"' />"+tests[i]+"</label>";
+  }
+  if(!html) {
+    html = "<p>No tests could be found.</p>";
+  }
+  $("#form-run-with-tests").html(html);
+  $("#run-with-tests-dialog").modal("show");
+}
+
 /**
  * handleDownloadProject()
  * This function handles downloading projects.
@@ -123,6 +136,9 @@ function setupMenu() {
 
   $("#menu-run").on("click", handleRunProject);
   $("#toolbar-run").on("click", handleRunProject);
+
+  $("#menu-run-tests").on("click", handleRunWithTestsDialog);
+  $("#toolbar-run-tests").on("click", handleRunWithTestsDialog);
 
   $("#menu-undo").on("click", handleUndo);
   $("#toolbar-undo").on("click", handleUndo);

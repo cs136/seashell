@@ -198,6 +198,72 @@ function handleMarmosetSubmit() {
     });
 }
 
+function generateDiff(data) {
+  var lines = data.split("\n").slice(3);
+  var output = "";
+  var outputline = 1;
+  var expectline = 1;
+  var expect = "";
+  for(var i=0; i < lines.length; i++) {
+    var first = lines[i].substring(0,1);
+    if(first == " ") {
+      var line = lines[i].substring(1).replace(" ", "&nbsp;");
+      output += outputline+"&nbsp;"+line+"<br />";
+      expect += expectline+"&nbsp;"+line+"<br />";
+      outputline++;
+      expectline++;
+    }
+    else if(first == "+") {
+      expect += "<span class='test-result-highlight'>"+expectline+"&nbsp;"+line+"</span><br />";
+      output += "<br />";
+      expectline++;
+    }
+    else {
+      output += "<span class='test-result-highlight'>"+outputline+"&nbsp;"+line+"</span><br />";
+      expect += "<br />";
+      outputline++;
+    }
+  }
+  return "<div class='test-result-output'><div class='test-result-diff'>Expected output:<br /><br />"
+    +expect+"</div><div class='test-result-diff'>"
+    +output+"</div></div>";
+}
+
+function handleRunWithTests() {
+  var tests = [];
+  var last;
+  var boxes = $("input[name=run-with-tests-input]:checked");
+  for(var i=0; i < boxes.length; i++) {
+    tests.push($(boxes[i]).val());
+  }
+  function runTestError() {
+    displayErrorMessage("An error occurred while running the project with tests.");
+  }
+  function runNext(message) {
+    if(message) {
+      if(message.tag == "pass") {
+        $("#test-tab").append("<div class='alert alert-success' role='alert'><span class='glyphicon glyphicon-ok-circle'></span> Passed test <strong>"+last+".</div>");
+      }
+      else if(message.tag == "fail") {
+        $("#test-tab").append("<div class='alert alert-danger' role='alert'><span class='glyphicon glyphicon-remove-circle'></span> Failed test <strong>"
+          +last+":"+generateDiff(message.data)+"</div>");
+      }
+      else {
+        $("#test-tab").append("<div class='alert alert-info' role='alert'><span class='glyphicon glyphicon-info-sign'></span> Ran test "
+          +last+" and produced the following output:<div class='test-result-output'><pre>"
+          +message.data+"</pre></div>");
+      }
+    }
+    if(tests.length) {
+      last = tests.shift();
+      SeashellProject.currentProject.run(last)
+        .done(runNext)
+        .fail(runTestError);
+    }
+  }
+  runNext();
+}
+
 /**
  * handleLogout
  * This handles logging out of seashell.
@@ -256,6 +322,8 @@ function setupDialogs() {
   /** Set up the marmoset-submit-dialog */
   $("#button-marmoset-submit").on("click",
       handleMarmosetSubmit);
+  $("#button-run-with-tests").on("click",
+      handleRunWithTests);
   /** Set up the logout dialog */
   $("#menu-logout").on("click",
       handleLogout);
