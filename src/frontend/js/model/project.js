@@ -489,7 +489,7 @@ SeashellProject.linter = function() {
         line --;
       }
 
-     if (file == this.currentFile || file == "final-link-result" ) {
+     if (file == SeashellProject.currentProject.currentFile.name.join("/") || file == "final-link-result" ) {
         found.push({
           from: CodeMirror.Pos(line, column),
           to: CodeMirror.Pos(line),

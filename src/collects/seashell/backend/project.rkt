@@ -372,7 +372,8 @@
                 (map
                   (lambda (diagnostic)
                     (list (seashell-diagnostic-error? diagnostic)
-                          (path->string (file-name-from-path key))
+                          (path->string (find-relative-path (simple-form-path project-base)
+                                                            (simple-form-path key)))
                           (seashell-diagnostic-line diagnostic)
                           (seashell-diagnostic-column diagnostic)
                           (seashell-diagnostic-message diagnostic)))
