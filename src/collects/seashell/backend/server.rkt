@@ -54,9 +54,9 @@
            (thunk
              (udp-connect! sock ping-host ping-port)
              (udp-send sock #"ping")
-             (sync-timeout (read-config 'seashell-ping-timeout)
+             (sync/timeout (read-config 'seashell-ping-timeout)
                            (udp-receive!-evt sock (make-bytes 0))))
-           (thunk (udp-close! sock)))))
+           (thunk (udp-close sock)))))
      ;; Remove stale credentials files.  This can be a race condition,
      ;; so make sure the file is locked with fcntl before continuing.
      ;; XXX you are not locking the file here...
