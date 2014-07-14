@@ -116,7 +116,7 @@ function handleDownloadProject() {
         sprintf("https://%s:%s/export/%s.zip?token=%s",
           creds.host,
           creds.port,
-          encodeURIComponent(currentProject),
+          encodeURIComponent(SeashellProject.currentProject.name),
           encodeURIComponent(raw)))
         .attr("id", "download-iframe");
       $("#download-project-body").append(frame);
