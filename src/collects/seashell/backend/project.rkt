@@ -320,7 +320,8 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
-;;  file - full path and name of file we are compiling from
+;;  file - Full path and name of file we are compiling from, or #f,
+;;         to denote no file.  (We attempt to do something reasonable in this case).
 ;; Returns:
 ;;  List of diagnostics (error?, file, line, column, message)
 ;;  Error if any diagnostics have error? set.
@@ -328,12 +329,15 @@
 ;; Raises:
 ;;  exn:project if project does not exist.
 (define/contract (compile-project name file)
-  (-> project-name? path-string? (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
+  (-> project-name? (or/c #f path-string?) (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
-  (define path (check-and-build-path (build-project-path name) file))
-  (match-define-values (base _ _) (split-path path))
+
+  (define project-base (build-project-path name))
+  (match-define-values (base _ _)
+                       (if file (split-path (check-and-build-path project-base file))
+                                (values (check-and-build-path project-base) #f #f)))
   ;; TODO: Other languages? (C++, maybe?)
   ;; Get *.c files in project.
   (define c-files

@@ -417,8 +417,9 @@ SeashellProject.prototype.compile = function() {
   var save_promise = handleSaveProject();
   var promise = $.Deferred();
   var p = this;
+
   save_promise.done(function () {
-    socket.compileProject(p.name, p.currentFile.fullname(), promise);
+    socket.compileProject(p.name, p.currentFile ? false : p.currentFile.fullname(), promise);
 
     /** Helper function for writing errors. */
     function writeErrors(errors) {
