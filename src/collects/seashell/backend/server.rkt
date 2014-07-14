@@ -53,7 +53,7 @@
            (thunk (void))
            (thunk
              (udp-connect! sock ping-host ping-port)
-             (udp-send! sock #"ping")
+             (udp-send sock #"ping")
              (sync-timeout (read-config 'seashell-ping-timeout)
                            (udp-receive!-evt sock (make-bytes 0))))
            (thunk (udp-close! sock)))))
