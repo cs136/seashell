@@ -43,26 +43,32 @@
 
 ;; creds-valid? creds credentials-file -> boolean?
 ;; Checks whether or not the given creds point to a running seashell instance
-;; TODO: verify that response came from seashell
 (define/contract (creds-valid? creds credentials-file)
   (-> hash? path? boolean?)
-  (cond
-    [(hash-has-key? creds 'ping-port)
-     ;; Ensure a consistent family.
-     (define sock (udp-open-socket (hash-ref creds 'host)
-                                   (hash-ref creds 'port)))
-     (udp-send-to sock (hash-ref creds 'host) (hash-ref creds 'ping-port) #"ping")
-     (define success (sync/timeout (read-config 'seashell-ping-timeout)
-                                   (udp-receive!-evt sock (make-bytes 0))))
-     (udp-close sock)
-
+  (match creds
+    [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
+     (define success
+       (let ([sock (udp-open-socket ping-host ping-port)])
+         (dynamic-wind
+           (thunk (void))
+           (thunk
+             (udp-connect! sock ping-host ping-port)
+             (udp-send! sock #"ping")
+             (sync-timeout (read-config 'seashell-ping-timeout)
+                           (udp-receive!-evt sock (make-bytes 0))))
+           (thunk (udp-close! sock)))))
      ;; Remove stale credentials files.  This can be a race condition,
      ;; so make sure the file is locked with fcntl before continuing.
+     ;; XXX you are not locking the file here...
      (unless success
        (logf 'info "Credentials file was stale; regenerating.")
        (delete-file credentials-file))
-     (if success #t #f)]
-    [else #f]))
+     (and success #t)]
+    [else
+      ;; Outdated credentials file format. Delete it.
+      (logf 'info "Credentials file did not contain ping information; regenerating.")
+      (delete-file credentials-file)
+      #f]))
 
 ;; Channel used to keep process alive.
 (define keepalive-chan (make-async-channel))
