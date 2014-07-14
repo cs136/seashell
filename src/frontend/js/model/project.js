@@ -537,13 +537,21 @@ SeashellProject.prototype.run = function(test) {
 
     promise.done(function(pid) {
       consoleClear();
-      if (consoleDebug()) {
+
+      /** Either pid is a number or some list of messages,
+       *  depending on whether or not test is false or not.
+       *  Handle both cases. */
+      if (consoleDebug() && typeof pid == 'number') {
         consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", p.name, pid));
       } else {
         consoleWrite(sprintf("--- Running project '%s' ---\n", p.name));
       }
       
-      p.currentPID = pid;
+      if (typeof pid == 'number') {
+        p.currentPID = pid;
+      } else {
+        p.currentPID = null;
+      }
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
