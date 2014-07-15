@@ -395,7 +395,7 @@ SeashellProject.prototype.deleteFile = function(file) {
 /*
  * Deletes the project.
 */
-SeashellProject.prototype.delete = function(callback) {
+SeashellProject.prototype.remove = function(callback) {
   var p = this;
 
   this.close().done(function() {

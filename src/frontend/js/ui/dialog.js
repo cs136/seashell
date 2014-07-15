@@ -110,8 +110,9 @@ function handleOpenProject(name) {
  * handleDeleteProject
  * This function will handle deleting projects. */
 function handleDeleteProject( ) {
-  if(SeashellProject.currentProject)
-    SeashellProject.currentProject.delete();
+  if(SeashellProject.currentProject) {
+    SeashellProject.currentProject.remove();
+  }
   $("#delete-project-dialog").modal("hide");
 }
 
