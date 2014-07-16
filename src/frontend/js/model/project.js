@@ -395,7 +395,7 @@ SeashellProject.prototype.deleteFile = function(file) {
 /*
  * Deletes the project.
 */
-SeashellProject.prototype.delete = function(callback) {
+SeashellProject.prototype.remove = function(callback) {
   var p = this;
 
   this.close().done(function() {
@@ -417,8 +417,9 @@ SeashellProject.prototype.compile = function() {
   var save_promise = handleSaveProject();
   var promise = $.Deferred();
   var p = this;
+
   save_promise.done(function () {
-    socket.compileProject(p.name, p.currentFile.fullname(), promise);
+    socket.compileProject(p.name, p.currentFile ? false : p.currentFile.fullname(), promise);
 
     /** Helper function for writing errors. */
     function writeErrors(errors) {
@@ -488,7 +489,7 @@ SeashellProject.linter = function() {
         line --;
       }
 
-     if (file == this.currentFile || file == "final-link-result" ) {
+     if (file == SeashellProject.currentProject.currentFile.name.join("/") || file == "final-link-result" ) {
         found.push({
           from: CodeMirror.Pos(line, column),
           to: CodeMirror.Pos(line),
@@ -536,13 +537,21 @@ SeashellProject.prototype.run = function(test) {
 
     promise.done(function(pid) {
       consoleClear();
-      if (consoleDebug()) {
+
+      /** Either pid is a number or some list of messages,
+       *  depending on whether or not test is false or not.
+       *  Handle both cases. */
+      if (consoleDebug() && typeof pid == 'number') {
         consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", p.name, pid));
       } else {
         consoleWrite(sprintf("--- Running project '%s' ---\n", p.name));
       }
       
-      p.currentPID = pid;
+      if (typeof pid == 'number') {
+        p.currentPID = pid;
+      } else {
+        p.currentPID = null;
+      }
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
@@ -564,6 +573,15 @@ SeashellProject.prototype.run = function(test) {
 
   return promise;
 };
+
+/*
+ * Kills the running project.
+ */
+SeashellProject.prototype.kill = function() {
+  var promise = $.Deferred();
+  socket.programKill(this.pid);
+  promise.reject(null);
+}
 
 /*
  * Callback function that handles program input & output activity

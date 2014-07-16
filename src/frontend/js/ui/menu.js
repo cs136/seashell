@@ -90,6 +90,15 @@ function handleRunProject() {
   SeashellProject.run();
 }
 
+/**
+ * handleProgramKill()
+ * This function handles killing the program.
+ */
+function handleProgramKill() {
+  SeashellProject.kill();
+}
+
+
 function handleRunWithTestsDialog() {
   var tests = SeashellProject.currentProject.getTestsForFile(SeashellProject.currentProject.currentFile);
   var html = "";
@@ -116,7 +125,7 @@ function handleDownloadProject() {
         sprintf("https://%s:%s/export/%s.zip?token=%s",
           creds.host,
           creds.port,
-          encodeURIComponent(currentProject),
+          encodeURIComponent(SeashellProject.currentProject.name),
           encodeURIComponent(raw)))
         .attr("id", "download-iframe");
       $("#download-project-body").append(frame);
@@ -139,6 +148,9 @@ function setupMenu() {
 
   $("#menu-run-tests").on("click", handleRunWithTestsDialog);
   $("#toolbar-run-tests").on("click", handleRunWithTestsDialog);
+
+  $("#menu-kill").on("click", handleProgramKill);
+  $("#toolbar-kill").on("click", handleProgramKill);
 
   $("#menu-undo").on("click", handleUndo);
   $("#toolbar-undo").on("click", handleUndo);

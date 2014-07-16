@@ -110,8 +110,9 @@ function handleOpenProject(name) {
  * handleDeleteProject
  * This function will handle deleting projects. */
 function handleDeleteProject( ) {
-  if(SeashellProject.currentProject)
-    SeashellProject.currentProject.delete();
+  if(SeashellProject.currentProject) {
+    SeashellProject.currentProject.remove();
+  }
   $("#delete-project-dialog").modal("hide");
 }
 
@@ -188,7 +189,7 @@ function updateListOfProjects() {
  * This handles submitting files to marmoset.
 */
 function handleMarmosetSubmit() {
-    var promise = socket.marmosetSubmit(currentProject, $("#marmoset_project").val());
+    var promise = socket.marmosetSubmit(currentProject.name, $("#marmoset_project").val());
 
     promise.done(function(){
         // TODO: create some dialog to say that the project was submitted
