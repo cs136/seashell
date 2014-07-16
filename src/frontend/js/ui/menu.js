@@ -90,6 +90,15 @@ function handleRunProject() {
   SeashellProject.run();
 }
 
+/**
+ * handleProgramKill()
+ * This function handles killing the program.
+ */
+function handleProgramKill() {
+  SeashellProject.kill();
+}
+
+
 function handleRunWithTestsDialog() {
   var tests = SeashellProject.currentProject.getTestsForFile(SeashellProject.currentProject.currentFile);
   var html = "";
@@ -139,6 +148,9 @@ function setupMenu() {
 
   $("#menu-run-tests").on("click", handleRunWithTestsDialog);
   $("#toolbar-run-tests").on("click", handleRunWithTestsDialog);
+
+  $("#menu-kill").on("click", handleProgramKill);
+  $("#toolbar-kill").on("click", handleProgramKill);
 
   $("#menu-undo").on("click", handleUndo);
   $("#toolbar-undo").on("click", handleUndo);
