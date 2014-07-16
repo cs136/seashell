@@ -189,9 +189,8 @@ function updateListOfProjects() {
  * This handles submitting files to marmoset.
 */
 function handleMarmosetSubmit() {
-    var promise = socket.marmosetSubmit(currentProject.name, $("#marmoset_project").val());
-
-    promise.done(function(){
+    SeashellProject.currentProject.submit($("#marmoset_project").val())
+      .done(function(){
         // TODO: create some dialog to say that the project was submitted
         $("#marmoset-submit-dialog").modal("hide");
     }).fail(function(){
