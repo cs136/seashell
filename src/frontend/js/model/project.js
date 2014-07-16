@@ -179,7 +179,7 @@ SeashellProject.prototype.createFile = function(fname) {
     return socket.newFile(this.name, fname).done(function() {
       var nFile = new SeashellFile(fname);
       var ext = fname.split(".").pop();
-      var def = "";
+      var def = "\n";
       if(ext=="c"||ext=="h") {
         def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
       }
