@@ -578,9 +578,7 @@ SeashellProject.prototype.run = function(test) {
  * Kills the running project.
  */
 SeashellProject.prototype.kill = function() {
-  var promise = $.Deferred();
-  socket.programKill(this.pid);
-  promise.reject(null);
+  return socket.programKill(this.currentPID);
 }
 
 /*

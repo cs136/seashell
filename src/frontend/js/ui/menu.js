@@ -95,7 +95,13 @@ function handleRunProject() {
  * This function handles killing the program.
  */
 function handleProgramKill() {
-  SeashellProject.kill();
+  SeashellProject.currentProject.kill()
+    .done(function() {
+      consoleWrite("\n--- Program stopped by user ---\n");
+    })
+    .fail(function() {
+      displayErrorMessage("Failed to stop program execution.");
+    });
 }
 
 

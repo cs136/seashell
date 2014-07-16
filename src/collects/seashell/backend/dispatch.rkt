@@ -186,7 +186,10 @@
         ('id id)
         ('type "programKill")
         ('pid pid))
-       (program-kill pid)]
+       (program-kill pid)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       ;; Project running input
       [(hash-table
         ('id id)
