@@ -180,9 +180,9 @@ function handleUploadFile() {
       },
       success: function() { // TODO: make JSTree refresh
         var nFile = new SeashellFile(filename);
-        // nFile.document = CodeMirror.Doc(def, "text/x-csrc");
-        // p.placeFile(nFile);
-        // p.openFile(nFile);
+        SeashellProject.currentProject.placeFile(nFile);
+        updateFileMenu(SeashellProject.currentProject);
+        SeashellProject.currentProject.openFile(nFile);
       },
       data: {token: raw},
       url: sprintf("https://%s:%s/upload", creds.host, creds.port)
