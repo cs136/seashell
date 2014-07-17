@@ -157,7 +157,42 @@ function handleCommitProject( ) {
  * This handles uploading files.
  */
 function handleUploadFile() {
-  projectUploadHandler();
+  /** Get the filename. */
+  var filename = $("#file-to-upload").val().replace(/.*(\/|\\)/, '');
+  /** Make sure the file does not already exist */
+  for(var file in SeashellProject.currentProject.files){
+    if(file.name == filename){
+      displayErrorMessage("File '" + filename + "' already exists!");
+      return false;
+    }
+  }
+  /** Hide the modal. */
+  $("#upload-file-dialog").modal("hide");
+  /** Get the ticket. */
+  var promise = socket.getUploadFileToken(SeashellProject.currentProject.name, filename);
+  promise.done(function (token) {
+    var raw = JSON.stringify(token);
+    var options = {
+      target: null,
+      dataType: null,
+      error: function() {
+        displayErrorMessage("File could not be successfully uploaded.");
+      },
+      success: function() { // TODO: make JSTree refresh
+        var nFile = new SeashellFile(filename);
+        // nFile.document = CodeMirror.Doc(def, "text/x-csrc");
+        // p.placeFile(nFile);
+        // p.openFile(nFile);
+      },
+      data: {token: raw},
+      url: sprintf("https://%s:%s/upload", creds.host, creds.port)
+    };
+    /** Submit the form */
+    $("#upload-file-form").ajaxSubmit(options);
+  }).fail(function() {
+    displayErrorMessage("Error retrieving file upload ticket.");
+  });
+  return false;
 }
 
 function handleRename() {
