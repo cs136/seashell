@@ -265,7 +265,16 @@ SeashellProject.prototype.openFile = function(file) {
   else {
     return socket.readFile(this.name, file.name.join("/"))
       .done(function(contents) {
-        file.document = CodeMirror.Doc(contents, "text/x-csrc");
+        var mime = "text";
+        var ext = file.ext();
+        if(ext == "c" || ext == "h") {
+          mime = "text/x-csrc";
+        }
+        else if(ext == "rkt") {
+          mime = "text/x-scheme";
+        }
+        console.log(ext);
+        file.document = CodeMirror.Doc(contents, mime);
       })
       .fail(function() {
         displayErrorMessage("Error reading file "+file.name+".");

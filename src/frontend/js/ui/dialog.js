@@ -178,7 +178,7 @@ function handleUploadFile() {
       error: function() {
         displayErrorMessage("File could not be successfully uploaded.");
       },
-      success: function() { // TODO: make JSTree refresh
+      success: function() {
         var nFile = new SeashellFile(filename);
         SeashellProject.currentProject.placeFile(nFile);
         updateFileMenu(SeashellProject.currentProject);
