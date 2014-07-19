@@ -66,7 +66,7 @@
      (and success #t)]
     [else
       ;; Outdated credentials file format. Delete it.
-      (logf 'info "Credentials file did not contain ping information; regenerating.")
+      (logf 'info "Purging old credentials file...")
       (delete-file credentials-file)
       #f]))
 
@@ -187,15 +187,21 @@
         (set! credentials-port
               (let loop ([tries 0])
                 (when (> tries 5)
-                  (logf 'info "Error opening credentials file - aborting!")
+                  (logf 'error "Error opening credentials file - aborting!")
                   (exit-from-seashell 4))
                 (define repeat (make-continuation-prompt-tag))
                 (call-with-continuation-prompt
                  (thunk
                   ;; Try to read the file...
                   (with-handlers
-                      ([exn:fail:filesystem? (lambda (exn) 
-                      (logf 'debug "Retrying error on credentials file: ~a" (exn-message exn)))])
+                      ([exn:fail:filesystem? 
+                         (lambda (exn)
+                           (cond
+                             [(not (file-or-directory-permissions credentials-file 'write))
+                              (logf 'info "Purging old credentials file...")
+                              (delete-file credentials-file)]
+                             [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))])
+                           (abort-current-continuation repeat))])
                     (call-with-output-file
                       credentials-file
                       (lambda (lock-file)
@@ -204,14 +210,12 @@
                           (thunk
                             (with-handlers
                               ([exn:fail:read? (lambda (exn)
-                                                 (sleep 1)
                                                  (abort-current-continuation repeat))])
                              (define result (read))
                              (if (or (eof-object? result)
                                      (not (try-and-lock-file lock-file))
                                      (not (creds-valid? (deserialize result) credentials-file)))
                                  (begin
-                                   (sleep 1)
                                    (abort-current-continuation repeat))
                                  (write result))))))
                           #:exists 'update)
@@ -226,7 +230,9 @@
                    ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
                    (open-output-file credentials-file #:exists 'must-truncate)))
                  repeat
-                 (thunk (loop (add1 tries))))))
+                 (thunk 
+                   (sleep (expt 2 tries))
+                   (loop (add1 tries))))))
         
         ;; Global dispatcher.
         (define seashell-dispatch
