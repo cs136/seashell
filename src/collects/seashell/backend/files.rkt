@@ -163,7 +163,8 @@
 ;; Determines if a directory is hidden (begins with a .)
 (define/contract (directory-hidden? path)
   (-> path? boolean?)
-  (string=? "." (substring (last (string-split (path->string path) "/")) 0 1)))
+  (define-values (_1 filename _2) (split-path (simplify-path path)))
+  (string=? "." (substring (path->string filename) 0 1)))
 
 ;; (rename-file project old-file new-file)
 ;; Renames a file.
