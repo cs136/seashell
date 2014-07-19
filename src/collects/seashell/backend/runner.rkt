@@ -180,15 +180,15 @@
               ;; This seems to work.  (why: who knows?)
               ['C (subprocess #f #f #f (read-config 'system-shell) "-c"
                               (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
-                                      (path->string (read-config 'llvm-symbolizer))
+                                      (some-system-path->string (read-config 'llvm-symbolizer))
                                       "detect_leaks=1"
                                        binary))]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
-                                   "-t" (path->string (read-config 'seashell-racket-runtime-library))
+                                   "-t" (some-system-path->string (read-config 'seashell-racket-runtime-library))
                                    "-u" binary)])))
 
         (cond
-          [test (define test-base-file (path->string (build-path directory (read-config 'tests-subdirectory) test)))
+          [test (define test-base-file (some-system-path->string (build-path directory (read-config 'tests-subdirectory) test)))
                 (define prog-input (file->bytes (string-append test-base-file ".in")))
                 (write-bytes prog-input raw-stdin)
                 (close-output-port raw-stdin)

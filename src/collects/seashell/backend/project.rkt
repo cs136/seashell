@@ -144,7 +144,7 @@
 ;; Lists existing Seashell projects.
 (define/contract (list-projects)
   (-> (listof project-name?))
-  (map path->string
+  (map some-system-path->string
        (filter (compose directory-exists? build-project-path)
                (directory-list (project-base-path)))))
 
@@ -372,7 +372,7 @@
                 (map
                   (lambda (diagnostic)
                     (list (seashell-diagnostic-error? diagnostic)
-                          (path->string (find-relative-path (simple-form-path project-base)
+                          (some-system-path->string (find-relative-path (simple-form-path project-base)
                                                             (simple-form-path key)))
                           (seashell-diagnostic-line diagnostic)
                           (seashell-diagnostic-column diagnostic)
