@@ -197,9 +197,13 @@
                       ([exn:fail:filesystem? 
                          (lambda (exn)
                            (cond
-                             [(not (file-or-directory-permissions credentials-file 'write))
+                             [(not (with-handlers ([exn:fail:filesystem? (lambda(_) #f)])
+                                     (file-or-directory-permissions credentials-file 'write)))
                               (logf 'info "Purging old credentials file...")
-                              (delete-file credentials-file)]
+                              (with-handlers ([exn:fail:filesystem? (lambda(_) (void))])
+                                (delete-file credentials-file))
+                              (when (file-exists? credentials-file)
+                                (logf 'warning "Could not delete old credentials file!"))]
                              [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))])
                            (abort-current-continuation repeat))])
                     (call-with-output-file
