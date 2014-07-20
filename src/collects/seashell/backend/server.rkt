@@ -197,15 +197,24 @@
                       ([exn:fail:filesystem? 
                          (lambda (exn)
                            (cond
-                             [(not (with-handlers ([exn:fail:filesystem? (lambda(_) #f)])
-                                     (file-or-directory-permissions credentials-file 'write)))
+                             ;; Case 1: File does not exist.
+                             [(not (file-exists? credentials-file))
+                              (void)]
+                             ;; Case 2: File does exist, and the permissions are set badly.
+                             ;; We assume that this is caused by an old installation of Seashell
+                             ;; and purge credentials accordingly.
+                             ;; XXX do we just add +w permissions instead and retry the operation?
+                             [(not (with-handlers ([exn:fail:filesystem? (lambda(_) #t)])
+                                     (member 'write (file-or-directory-permissions credentials-file #f))))
                               (logf 'info "Purging old credentials file...")
                               (with-handlers ([exn:fail:filesystem? (lambda(_) (void))])
                                 (delete-file credentials-file))
                               (when (file-exists? credentials-file)
-                                (logf 'warning "Could not delete old credentials file!"))]
-                             [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))])
-                           (abort-current-continuation repeat))])
+                                (logf 'warning "Could not delete old credentials file!"))
+                              (abort-current-continuation repeat)]
+                             ;; Case 3: Something else...
+                             [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))
+                                   (abort-current-continuation repeat)]))])
                     (call-with-output-file
                       credentials-file
                       (lambda (lock-file)
@@ -225,6 +234,7 @@
                           #:exists 'update)
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
+                  (logf 'info "Attempting to create new credentials file...")
                   ;; If it does not exist, create it mode 600 and get a port to it.
                   ;; This can lead to a race condition with the above code, so if we can't create it,
                   ;; we loop again (up to a certain number of times)
@@ -313,8 +323,9 @@
       (shutdown-listener)
       ;; Shutdown server
       (shutdown-server)
-      ;; Delete lock file
-      (delete-file credentials-file)))
+      ;; Delete lock file - but suppress any errors.
+      (with-handlers ([exn:fail:filesystem? (lambda (exn) (void))])
+        (delete-file credentials-file))))
     
     (logf 'info "Graceful shutdown.") 
     (exit-from-seashell 0)))
