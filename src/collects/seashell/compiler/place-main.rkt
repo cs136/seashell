@@ -33,8 +33,8 @@
   (let loop ()
     (with-handlers
       ([exn:fail?
-        (lambda (exn) (logf 'error "Exception received in compilation place: ~a" (exn-message exn)))])
+        (lambda (exn) (place-channel-put channel (list #t #f (exn-message exn))))])
       (define args (place-channel-get channel))
       (define-values (result data) (apply seashell-compile-files args))
-      (place-channel-put channel (list result data))
+      (place-channel-put channel (list #f result data))
     (loop))))

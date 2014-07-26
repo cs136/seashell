@@ -36,8 +36,11 @@
         (place-channel-put compiler-place 
                            (list user-cflags user-ldflags sources objects))
         (match-define 
-          (list result data)
+          (list exn? result data)
           (place-channel-get compiler-place))
+        (when exn?
+          (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
+                           (current-continuation-marks))))
         (values result data)))
     (values #f (make-hash))))
 
