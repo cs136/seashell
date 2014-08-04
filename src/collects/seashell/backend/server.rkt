@@ -31,6 +31,7 @@
          seashell/backend/authenticate
          seashell/compiler
          seashell/crypto
+         seashell/git
          web-server/web-server
          web-server/http/xexpr
          web-server/http/request-structs
@@ -260,6 +261,7 @@
 
         ;; Start our places.
         (seashell-compile-place/init)
+        (seashell-git-place/init)
         
         ;; Start the server.
         (define conf-chan  (make-async-channel))

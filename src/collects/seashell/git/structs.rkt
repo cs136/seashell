@@ -1,5 +1,6 @@
-#lang racket/base
-;; Seashell's version control system.
+#lang racket
+
+;; Seashell's libgit2 bindings.
 ;; Copyright (C) 2013-2014 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -16,6 +17,10 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/git/git seashell/git/place)
-(provide (all-from-out seashell/git/git)
-         (all-from-out seashell/git/place))
+(provide (struct-out exn:git)
+         (struct-out seashell-git-status)
+         (struct-out seashell-git-update)) 
+
+(struct exn:git exn:fail ())
+(struct seashell-git-status (status) #:prefab)
+(struct seashell-git-update (update) #:prefab)
