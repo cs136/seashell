@@ -179,10 +179,8 @@ function handleUploadFile() {
         displayErrorMessage("File could not be successfully uploaded.");
       },
       success: function() {
-        var nFile = new SeashellFile(filename);
-        SeashellProject.currentProject.placeFile(nFile);
+        SeashellProject.currentProject.onUploadSuccess(filename);
         updateFileMenu(SeashellProject.currentProject);
-        SeashellProject.currentProject.openFile(nFile);
       },
       data: {token: raw},
       url: sprintf("https://%s:%s/upload", creds.host, creds.port)
