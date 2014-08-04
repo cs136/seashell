@@ -165,7 +165,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init (build-project-path name))
+    (seashell-git-init/place (build-project-path name))
     (make-directory (check-and-build-path (build-project-path name) "tests")))
   (void))
 
@@ -192,7 +192,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone source (build-project-path name)))
+    (seashell-git-clone/place source (build-project-path name)))
   (void))
 
 ;; (delete-project name)
@@ -284,7 +284,7 @@
   ;;  3. Add 'deletes' to each of the files that
   ;;     have been deleted from the working tree.
   ;;  4. Run the commit.
-  (define status (seashell-git-get-status repo))
+  (define status (seashell-git-get-status/place repo))
   (define entries (seashell-git-status-entrycount status))
 
   (define files-add
@@ -312,7 +312,7 @@
   (for-each (curry seashell-git-commit-delete-file commit)
             files-delete)
 
-  (seashell-git-commit commit message)
+  (seashell-git-commit/place commit message)
   (void))
 
 ;; (compile-project name)

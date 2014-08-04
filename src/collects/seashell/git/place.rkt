@@ -28,7 +28,7 @@
          seashell-git-get-status/place
          seashell-git-init/place
          seashell-git-clone/place
-         seashell-git-update/place)
+         seashell-git-commit/place)
 
 ;; (seashell-git-place/init)
 ;; Sets up the Seashell git place.
@@ -56,7 +56,7 @@
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get `(seashell-git-get-status/raw ,repo)))
+                    (place-channel-put/get git-place `(seashell-git-get-status/raw ,repo)))
       (when exn?
         (raise (exn:git data current-continuation-marks)))
       (seashell-git-status (wrap-git-gc data)))))
@@ -72,7 +72,7 @@
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get `(seashell-git-init ,repo)))
+                    (place-channel-put/get git-place `(seashell-git-init ,repo)))
       (when exn?
         (raise (exn:git data current-continuation-marks)))
       (void))))
@@ -89,7 +89,7 @@
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get `(seashell-git-clone ,from ,to)))
+                    (place-channel-put/get git-place `(seashell-git-clone ,from ,to)))
       (when exn?
         (raise (exn:git data current-continuation-marks)))
       (void))))
@@ -100,13 +100,13 @@
 ;; Arguments:
 ;;  update - Update to commit.
 ;;  message - Message to commit.
-(define/contract (seashell-git-update/place update message)
+(define/contract (seashell-git-commit/place update message)
   (-> seashell-git-update? string? any/c)
   (call-with-semaphore
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get `(seashell-git-update ,update ,message)))
+                    (place-channel-put/get git-place `(seashell-git-update ,update ,message)))
       (when exn?
         (raise (exn:git data current-continuation-marks)))
       (void))))
