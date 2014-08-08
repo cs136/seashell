@@ -86,7 +86,7 @@
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (logf 'info "Deleting file ~a!" (path->string (check-and-build-path (build-project-path project) file)))
+    (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
     (delete-file (check-and-build-path (build-project-path project) file)))
   (void))
 
@@ -101,7 +101,7 @@
         (raise (exn:project
           (format "Filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
-    (logf 'info "Deleting directory ~a!" (path->string (check-and-build-path (build-project-path project) dir)))
+    (logf 'info "Deleting directory ~a!" (some-system-path->string (check-and-build-path (build-project-path project) dir)))
     (delete-directory/files (check-and-build-path (build-project-path project) dir)))
   (void))
 
@@ -153,17 +153,18 @@
     (define relative (if dir (build-path dir path) path))
     (cond
       [(and (directory-exists? current) (not (directory-hidden? current)))
-        (cons (list (path->string relative) #t) (append (list-files project
+        (cons (list (some-system-path->string relative) #t) (append (list-files project
           relative) rest))]
       [(file-exists? current)
-        (cons (list (path->string relative) #f) rest)]
+        (cons (list (some-system-path->string relative) #f) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
 ;; Determines if a directory is hidden (begins with a .)
 (define/contract (directory-hidden? path)
   (-> path? boolean?)
-  (string=? "." (substring (last (string-split (path->string path) "/")) 0 1)))
+  (define-values (_1 filename _2) (split-path (simplify-path path)))
+  (string=? "." (substring (some-system-path->string filename) 0 1)))
 
 ;; (rename-file project old-file new-file)
 ;; Renames a file.

@@ -31,6 +31,7 @@
          seashell/backend/authenticate
          seashell/compiler
          seashell/crypto
+         seashell/git
          web-server/web-server
          web-server/http/xexpr
          web-server/http/request-structs
@@ -66,7 +67,7 @@
      (and success #t)]
     [else
       ;; Outdated credentials file format. Delete it.
-      (logf 'info "Credentials file did not contain ping information; regenerating.")
+      (logf 'info "Purging old credentials file...")
       (delete-file credentials-file)
       #f]))
 
@@ -187,15 +188,34 @@
         (set! credentials-port
               (let loop ([tries 0])
                 (when (> tries 5)
-                  (logf 'info "Error opening credentials file - aborting!")
+                  (logf 'error "Error opening credentials file - aborting!")
                   (exit-from-seashell 4))
                 (define repeat (make-continuation-prompt-tag))
                 (call-with-continuation-prompt
                  (thunk
                   ;; Try to read the file...
                   (with-handlers
-                      ([exn:fail:filesystem? (lambda (exn) 
-                      (logf 'debug "Retrying error on credentials file: ~a" (exn-message exn)))])
+                      ([exn:fail:filesystem? 
+                         (lambda (exn)
+                           (cond
+                             ;; Case 1: File does not exist.
+                             [(not (file-exists? credentials-file))
+                              (void)]
+                             ;; Case 2: File does exist, and the permissions are set badly.
+                             ;; We assume that this is caused by an old installation of Seashell
+                             ;; and purge credentials accordingly.
+                             ;; XXX do we just add +w permissions instead and retry the operation?
+                             [(not (with-handlers ([exn:fail:filesystem? (lambda(_) #t)])
+                                     (member 'write (file-or-directory-permissions credentials-file #f))))
+                              (logf 'info "Purging old credentials file...")
+                              (with-handlers ([exn:fail:filesystem? (lambda(_) (void))])
+                                (delete-file credentials-file))
+                              (when (file-exists? credentials-file)
+                                (logf 'warning "Could not delete old credentials file!"))
+                              (abort-current-continuation repeat)]
+                             ;; Case 3: Something else...
+                             [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))
+                                   (abort-current-continuation repeat)]))])
                     (call-with-output-file
                       credentials-file
                       (lambda (lock-file)
@@ -204,19 +224,18 @@
                           (thunk
                             (with-handlers
                               ([exn:fail:read? (lambda (exn)
-                                                 (sleep 1)
                                                  (abort-current-continuation repeat))])
                              (define result (read))
                              (if (or (eof-object? result)
                                      (not (try-and-lock-file lock-file))
                                      (not (creds-valid? (deserialize result) credentials-file)))
                                  (begin
-                                   (sleep 1)
                                    (abort-current-continuation repeat))
                                  (write result))))))
                           #:exists 'update)
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
+                  (logf 'info "Attempting to create new credentials file...")
                   ;; If it does not exist, create it mode 600 and get a port to it.
                   ;; This can lead to a race condition with the above code, so if we can't create it,
                   ;; we loop again (up to a certain number of times)
@@ -226,7 +245,9 @@
                    ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
                    (open-output-file credentials-file #:exists 'must-truncate)))
                  repeat
-                 (thunk (loop (add1 tries))))))
+                 (thunk 
+                   (sleep (expt 2 tries))
+                   (loop (add1 tries))))))
         
         ;; Global dispatcher.
         (define seashell-dispatch
@@ -240,6 +261,7 @@
 
         ;; Start our places.
         (seashell-compile-place/init)
+        (seashell-git-place/init)
         
         ;; Start the server.
         (define conf-chan  (make-async-channel))
@@ -303,8 +325,9 @@
       (shutdown-listener)
       ;; Shutdown server
       (shutdown-server)
-      ;; Delete lock file
-      (delete-file credentials-file)))
+      ;; Delete lock file - but suppress any errors.
+      (with-handlers ([exn:fail:filesystem? (lambda (exn) (void))])
+        (delete-file credentials-file))))
     
     (logf 'info "Graceful shutdown.") 
     (exit-from-seashell 0)))

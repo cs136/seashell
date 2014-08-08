@@ -16,5 +16,6 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/git/git)
-(provide (all-from-out seashell/git/git))
+(require seashell/git/git seashell/git/place)
+(provide (all-from-out seashell/git/git)
+         (all-from-out seashell/git/place))

@@ -70,7 +70,7 @@
      (seashell_compiler_clear_files compiler)
      (seashell_compiler_clear_compile_flags compiler)
      (for-each ((curry seashell_compiler_add_compile_flag) compiler) cflags)
-     (for-each ((curry seashell_compiler_add_file) compiler) (map path->string sources))
+     (for-each ((curry seashell_compiler_add_file) compiler) (map some-system-path->string sources))
      
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler))
@@ -112,14 +112,14 @@
           #:exists 'truncate)
         (define-values (linker linker-output linker-input linker-error)
           (apply subprocess #f #f #f (read-config 'system-linker)
-                 `("-o" ,(path->string result-file)
-                   ,(path->string object-file)
-                   ,@(map path->string objects)
+                 `("-o" ,(some-system-path->string result-file)
+                   ,(some-system-path->string object-file)
+                   ,@(map some-system-path->string objects)
                    "-fsanitize=address"
                    ,@(map
                        (curry string-append (read-config 'linker-flag-prefix))
                        (list "--whole-archive"
-                             (path->string (read-config 'seashell-runtime-library))
+                             (some-system-path->string (read-config 'seashell-runtime-library))
                              "--no-whole-archive"))
                    ,@(map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
         ;; Close unused port.

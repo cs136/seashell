@@ -21,14 +21,11 @@
          seashell-compile-place/init)
 
 (define compiler-place #f)
-(define compiler-place-lock (make-semaphore 44))
+(define compiler-place-lock (make-semaphore 1))
 
 ;; seashell-compile-files/place 
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
-;;
-;; Caution: There is some nasty behaviour with places and the FFI.
-;; Until this is resolved, do not use this function.
 (define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
   (-> (listof string?) (listof string?) (listof path?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
@@ -39,8 +36,11 @@
         (place-channel-put compiler-place 
                            (list user-cflags user-ldflags sources objects))
         (match-define 
-          (list result data)
+          (list exn? result data)
           (place-channel-get compiler-place))
+        (when exn?
+          (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
+                           (current-continuation-marks))))
         (values result data)))
     (values #f (make-hash))))
 
