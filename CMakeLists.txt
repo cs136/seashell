@@ -23,6 +23,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
 # Build our components.
+add_subdirectory(doc)
 add_subdirectory(lib)
 add_subdirectory(src)
 
