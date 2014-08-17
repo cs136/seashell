@@ -687,6 +687,7 @@ SeashellProject.prototype.JSTreeData = function() {
         if(arr[i].children)
           JSTreeHelper(arr[i].children, n);
         item.children = n;
+        item.state = { opened : true };
         item.icon = 'glyphicon glyphicon-folder-open';
       }
       else {
