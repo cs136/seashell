@@ -1,4 +1,4 @@
-/**
+/*
  * Seashell.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
@@ -31,7 +31,8 @@ function handleSaveSettings( ) {
     font_size  : $("#editor_font").val(),
     edit_mode  : $("#editor_mode").val(),
     tab_width  : $("#tab_width").val(),
-    text_style : $("#text_style").val()
+    text_style : $("#text_style").val(),
+    page_style : $("#page_style").val()
   });
 
   refreshSettings(function (){

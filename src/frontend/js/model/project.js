@@ -811,7 +811,8 @@ function refreshSettings(succ, fail){
     edit_mode  : "standard",
     tab_width  : 4,
     use_space  : true,
-    text_style : "neat"
+    text_style : "neat",
+    page_style : "light"
   };
 
   // function which applies the currently loaded settings to CodeMirror
@@ -829,6 +830,7 @@ function refreshSettings(succ, fail){
     editor.setOption("tabSize", settings["tab_width"]);
     editor.setOption("indentUnit", settings["tab_width"]);
     editor.setOption("theme", settings["text_style"]);
+    $("link#theme-css").attr("href", "css/themes/"+settings["page_style"]+".css");
     // TODO: implement expandtab
 
     // change the options in the Settings menu to the new settings
@@ -836,6 +838,7 @@ function refreshSettings(succ, fail){
     $("#editor_mode").val(settings["edit_mode"]);
     $("#tab_width").val(settings["tab_width"]);
     $("#text_style").val(settings["text_style"]);
+    $("#page_style").val(settings["page_style"]);
   }
     
     
@@ -851,7 +854,7 @@ function refreshSettings(succ, fail){
     applySettings();
     if(succ) succ();
   }).fail(function (res){
-    console.log("ERROR: Could not read settings from server.");
+    displayErrorMessage("Could not read user settings from server.");
     if(fail) fail();
     return;
   });
