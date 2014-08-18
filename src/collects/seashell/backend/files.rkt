@@ -145,18 +145,19 @@
 (define/contract (list-files project [dir #f])
   (->* ((and/c project-name? is-project?))
     ((or/c #f (and/c string? path-string?)))
-    (listof (list/c (and/c string? path-string?) boolean?)))
+    (listof (list/c (and/c string? path-string?) boolean? number?)))
   (define start-path (if dir (check-and-build-path
     (build-project-path project) dir) (build-project-path project)))
   (foldl (lambda (path rest)
     (define current (build-path start-path path))
     (define relative (if dir (build-path dir path) path))
+    (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
       [(and (directory-exists? current) (not (directory-hidden? current)))
-        (cons (list (some-system-path->string relative) #t) (append (list-files project
+        (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
       [(file-exists? current)
-        (cons (list (some-system-path->string relative) #f) rest)]
+        (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
 

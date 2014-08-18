@@ -39,13 +39,21 @@ function setupEditor() {
       {"Ctrl-N": newFileDialog,
        "Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto,
-       "Ctrl-Enter": SeashellProject.run});
+       "Ctrl-Enter": SeashellProject.run,
+       "Ctrl-R": SeashellProject.run});
 
   // set vim save keybinding
   editor.save = function () { SeashellProject.currentProject.save(); };
 
   // load the user's settings
   refreshSettings();
+}
+
+function handleDocumentChange(file) {
+  if(!file.unsaved) {
+    file.unsaved = true;
+    $("#edit-tab-item").text("*Editor*");
+  }
 }
 
 /** Editor indent function. */

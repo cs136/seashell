@@ -121,7 +121,7 @@ function SeashellProject(name, callback) {
 
       for (var i = 0; i < files.length; i++) {
         /** Lazily load the documents later. */
-        p.placeFile(new SeashellFile(files[i][0], files[i][1]));
+        p.placeFile(new SeashellFile(files[i][0], files[i][1], files[i][2]));
       }
       if(callback) callback(p);
     }).fail(function(){
@@ -150,12 +150,24 @@ SeashellProject.currentProject = null;
  * Parameters:
  * name - the full file path & name from root of project
  * is_dir - boolean, true if this is a directory. Default is false.
+ * last_saved - last time the file was saved, in milliseconds.
+ *    If not provided, defaults to Date.now()
+ *
+ * SeashellFile's fields:
+ * - name: file path from root as an array
+ * - document: the CodeMirror document object for the file
+ * - children: array of children if object is a directory
+ * - is_dir: boolean, true if object is a directory
+ * - last_saved: last time that the file was saved, in milliseconds
+ * - unsaved: boolean, true if there is unsaved work in this file's CodeMirror document
 */
-function SeashellFile(name, is_dir) {
+function SeashellFile(name, is_dir, last_saved) {
   this.name = name.split("/");
   this.document = null;
   this.children = is_dir ? [] : null;
   this.is_dir = is_dir ? true : false;
+  this.last_saved = last_saved ? last_saved : Date.now();
+  this.unsaved = false;
 }
 
 /*
@@ -273,8 +285,8 @@ SeashellProject.prototype.openFile = function(file) {
         else if(ext == "rkt") {
           mime = "text/x-scheme";
         }
-        console.log(ext);
         file.document = CodeMirror.Doc(contents, mime);
+        file.document.on("change", function() { handleDocumentChange(file); });
       })
       .fail(function() {
         displayErrorMessage("Error reading file "+file.name+".");
@@ -290,7 +302,7 @@ SeashellProject.prototype.save = function() {
   var p = this;
   function save_arr(aof) {
     for(var f=0; f < aof.length; f++) {
-      if(aof[f].children) save_arr(aof[f].children);
+      if(aof[f].is_dir) save_arr(aof[f].children);
       else promises.push(aof[f].save(p.name));
     }
   }
@@ -302,19 +314,53 @@ SeashellProject.prototype.save = function() {
 };
 
 /*
+ * Predicate. Returns true if there is unsaved work in the project.
+ */
+SeashellProject.prototype.isUnsaved = function() {
+  for(var f=0; f < this.files.length; f++) {
+    if(this.files[f].isUnsaved())
+      return true;
+  }
+  return false;
+};
+
+/*
  * Saves the file.
  * pname - name of the file's project
  */
 SeashellFile.prototype.save = function(pname) {
-  if(this.document) {
+  if(this.unsaved) {
     var f = this;
     return socket.writeFile(pname, this.fullname(), this.document.getValue())
+      .done(function() {
+        f.last_saved = Date.now();
+        f.unsaved = false;
+      })
       .fail(function() {
         displayErrorMessage("File "+f.fullname()+" could not be saved.");
       });
   }
   return $.Deferred().resolve().promise();
 };
+
+/*
+ * Predicate. Returns true if the file or directory contains unsaved work.
+ */
+SeashellFile.prototype.isUnsaved = function() {
+  if(this.is_dir) {
+    for(var f=0; f < this.children.length; f++) {
+      if(this.children[f].isUnsaved()) return true;
+    }
+    return false;
+  }
+  return this.unsaved;
+};
+
+SeashellFile.prototype.lastSavedString = function() {
+  var d = new Date(this.last_saved);
+  return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + " " + d.getHours()
+    + ":" + d.getMinutes() + ":" + d.getSeconds();
+}
 
 /*
  * Returns the file extension of the SeashellFile
@@ -765,7 +811,7 @@ function refreshSettings(succ, fail){
     edit_mode  : "standard",
     tab_width  : 4,
     use_space  : true,
-    text_style : "default"
+    text_style : "neat"
   };
 
   // function which applies the currently loaded settings to CodeMirror

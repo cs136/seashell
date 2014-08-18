@@ -27,6 +27,11 @@ function handleSaveProject() {
   $("#save-animation").show();
   return SeashellProject.currentProject.save()
     .done(function() {
+      if(SeashellProject.currentProject.currentFile) {
+        $("#edit-tab-item").text("Editor");
+        $("#last-saved").text("Last saved "
+          +SeashellProject.currentProject.currentFile.lastSavedString());
+      }
       setTimeout(function() {
         $("#save-animation").hide();
       }, 500);
@@ -39,6 +44,7 @@ function handleSaveProject() {
  */
 function handleCompileProject() {
   SeashellProject.currentProject.compile();
+  $("[href=#interactions-tab]").click();
 }
 
 /**
@@ -88,6 +94,7 @@ function handleAutoformat() {
 function handleRunProject() {
   // TODO: Multiple running projects?
   SeashellProject.run();
+  $("[href=#interactions-tab]").click();
 }
 
 /**

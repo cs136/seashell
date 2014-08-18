@@ -72,6 +72,13 @@ function setupFileMenu() {
         var prom = SeashellProject.currentProject.openFile(file);
         if(prom) prom.done(function() { docSwap(file.document); });
         else docSwap(file.document);
+        if(file.unsaved) {
+          $("#edit-tab-item").text("*Editor*");
+        }
+        else {
+          $("#edit-tab-item").text("Editor");
+        }
+        $("#last-saved").text("Last saved "+file.lastSavedString());
       }
     })
     .on("rename_node.jstree", function(e, data) {

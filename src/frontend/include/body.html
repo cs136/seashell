@@ -61,7 +61,8 @@
         to get started!
         </p>
         <ul class="nav nav-tabs hide-on-null-file" role="tablist">
-          <li class="active"><a href="#edit-tab" role="tab" data-toggle="tab">Editor</a></li>
+          <li class="active"><a id="edit-tab-item" href="#edit-tab" role="tab" data-toggle="tab">Editor</a></li>
+          <li><a href="#interactions-tab" role="tab" data-toggle="tab">Interactions</a></li>
           <li><a href="#test-tab" role="tab" data-toggle="tab">Tests</a></li>
         </ul>
         <div class="tab-content hide-on-null-file">
@@ -69,6 +70,9 @@
           <div id="edit-tab" class="tab-pane active">
             <div class="editor" id="editor">
             </div>
+            <div id="last-saved"></div>
+          </div>
+          <div id="interactions-tab" class="tab-pane">
             <!--Messages and program output will appear here.-->
             <div id="console" class="console"></div>
             <!--Interactions are submitted here.-->
