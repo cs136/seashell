@@ -36,10 +36,8 @@ function setupEditor() {
     matchBrackets: true,
     lint: true});
   editor.setOption("extraKeys",
-      {"Ctrl-N": newFileDialog,
-       "Ctrl-I": editorIndent,
-       "Ctrl-J": editorGoto,
-       "Ctrl-Enter": SeashellProject.run});
+      {"Ctrl-I": editorIndent,
+       "Ctrl-J": editorGoto});
 
   // set vim save keybinding
   editor.save = function () { SeashellProject.currentProject.save(); };

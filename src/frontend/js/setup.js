@@ -73,6 +73,46 @@ function setupUI() {
   setupDialogs();
   setupMenu();
   setupTooltips();
+  setupHotkeys();
+}
+
+/*
+ * These are hotkeys that will work everywhere, ie. not just
+ *    in the editor.
+ */
+function setupHotkeys() {
+  var ctrl = false;
+  $("body").keydown(function(e) {
+    if(ctrl) {
+      switch(e.keyCode) {
+        case 83: // ctrl-s
+          if(SeashellProject.currentProject) {
+            handleSaveProject();
+            e.preventDefault();
+          }
+          break;
+        case 78: // ctrl-n
+          if(SeashellProject.currentProject) {
+            newFileDialog();
+            e.preventDefault();
+          }
+          break;
+        case 82: // ctrl-r
+        case 13: // ctrl-enter
+          if(SeashellProject.currentProject) {
+            handleRunProject();
+            e.preventDefault();
+          }
+          break;
+      }
+    }
+    else {
+      if(e.keyCode == 17) ctrl = true;
+    }
+  })
+  .keyup(function(e) {
+    if(e.keyCode == 17) ctrl = false;
+  });
 }
 
 /** Accessor functions. */
