@@ -35,7 +35,7 @@ function setupDisconnectMonitor(){
         }
         disconnect = true;
     }
-    
+
     dccount++;
 
     var promise = socket.ping();
@@ -131,6 +131,17 @@ function SeashellProject(name, callback) {
 
   /** Install the I/O handler. */
   socket.requests[-3].callback = this.IOHandler;
+
+  socket.listProject(name, false).done(function(result) {
+    $("#questions-row")
+          .html(_.chain(result)
+                .filter(function (x) { return 'q' == x[0][0]; })
+                .map(function (x) {
+                    return sprintf("<a href=\"#\">%s</a>", x[0]);
+                })
+                .sortBy(_.identity)
+                .value().join(" "));
+  });
 }
 
 /*
@@ -504,7 +515,7 @@ SeashellProject.linter = function() {
           to: CodeMirror.Pos(line),
           message: message,
           severity: error ? "error" : "warning"});
-      }  
+      }
     }
   }
 
@@ -555,7 +566,7 @@ SeashellProject.prototype.run = function(test) {
       } else {
         consoleWrite(sprintf("--- Running project '%s' ---\n", p.name));
       }
-      
+
       if (typeof pid == 'number') {
         p.currentPID = pid;
       } else {
@@ -570,9 +581,9 @@ SeashellProject.prototype.run = function(test) {
   // a bit of a race condition, but the side effects
   // (in JavaScript) are negligible, and it shouldn't
   // happen that often anyways.
-  // 
+  //
   // This can, and will happen whenever handles are reused.
-  // Oh well. 
+  // Oh well.
 
   /** We really ought not to run a project without compiling it. */
   compile_promise.done(run).fail(function () {
@@ -602,7 +613,7 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
     } else {
       consoleWrite(sprintf("--- Terminated with exit code %d ---\n", message.status));
     }
-    
+
     if (this.currentPID == message.pid) {
       this.currentPID = null;
     }
@@ -790,8 +801,8 @@ function refreshSettings(succ, fail){
     $("#tab_width").val(settings["tab_width"]);
     $("#text_style").val(settings["text_style"]);
   }
-    
-    
+
+
   // read user settings from server, or use default if no settings exist
   var promise = socket.getSettings();
   promise.done(function (res){
@@ -810,7 +821,7 @@ function refreshSettings(succ, fail){
   });
 }
 
-/* predicate to determine if given filename exists in the project 
+/* predicate to determine if given filename exists in the project
 */
 SeashellProject.prototype.exists = function(fname) {
   function check(aof) {
@@ -829,4 +840,3 @@ SeashellProject.prototype.exists = function(fname) {
 SeashellProject.prototype.submit = function(marm_project) {
   return socket.marmosetSubmit(this.name, marm_project);
 }
-
