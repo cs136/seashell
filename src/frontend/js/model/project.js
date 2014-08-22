@@ -135,7 +135,7 @@ function SeashellProject(name, callback) {
   socket.listProject(name, false).done(function(result) {
     $("#questions-row")
           .html(_.chain(result)
-                .filter(function (x) { return 'q' == x[0][0]; })
+                .filter(function (x) { return x[1] && 'q' == x[0][0]; })
                 .map(function (x) {
                     return sprintf("<a href=\"#\">%s</a>", x[0]);
                 })
