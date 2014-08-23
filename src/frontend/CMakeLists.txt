@@ -19,7 +19,6 @@ project(seashell-frontend)
 cmake_minimum_required(VERSION 2.6)
 
 # Global Definitions
-set(SEASHELL_FRONTEND share/frontend)
 find_program(SEASHELL_MZTEXT mztext)
 
 # Custom build rules
