@@ -28,7 +28,7 @@ function(html_compile filename)
   set(base_abs ${CMAKE_CURRENT_BINARY_DIR}/${base})
   set(output ${base_abs}.html)
   add_custom_target(
-    ${base} ALL 
+    ${base} ALL
     COMMAND ${SEASHELL_MZTEXT} -o ${output} ${filename})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
@@ -52,11 +52,6 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js DESTINATION ${SEASHELL_FRONTEND
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/codemirror/"
   DESTINATION "${SEASHELL_FRONTEND}/codemirror"
-  FILES_MATCHING PATTERN "*"
-  PATTERN ".git" EXCLUDE
-  PATTERN ".gitignore" EXCLUDE)
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/jstree/"
-  DESTINATION "${SEASHELL_FRONTEND}/jstree"
   FILES_MATCHING PATTERN "*"
   PATTERN ".git" EXCLUDE
   PATTERN ".gitignore" EXCLUDE)

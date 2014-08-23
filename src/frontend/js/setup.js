@@ -73,7 +73,6 @@ function setupUI() {
   setupDialogs();
   setupMenu();
   setupTooltips();
-  setupFileMenu();
 }
 
 /** Accessor functions. */
