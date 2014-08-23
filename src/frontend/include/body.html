@@ -6,9 +6,8 @@
   </noscript>
 
   <div class="container content-fill" style="padding-top: 10px">
-    <hr style="margin-bottom: 10px"/>
-    <div class="row">
-      <div class="col-md-4 col-md-offset-1">
+    <div class="row" style="margin-top: 15px">
+      <div class="col-md-4 col-md-offset-1 col-xs-4 col-xs-offset-1">
         <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
           <span class="glyphicon glyphicon-briefcase" style="margin-right: 5px">
           </span>
@@ -21,30 +20,31 @@
         </h2>
       </div>
 
-      <div class="col-md-6"
+      <div class="col-md-6 col-xs-6"
            style="font-size: 18px; text-align: right; margin-top: 5px">
         <span id="questions-row" style="word-spacing: 15px">
         </span>
       </div>
     </div>
-    <hr style="margin-top: 9px"/>
+    <div class="col-md-12 col-xs-12">
+      <hr style="margin-top: 9px"/>
+    </div>
+    <div class="row">
+      <div class="col-md-1 col-xs-1"
+           style="text-align: right; padding-right: 0">
+        <a href="#" style="font-size: 13px; color: black">
+          <span class="glyphicon glyphicon-plus"><span class="caret"></span>
+          </span>
+        </a>
+      </div>
+      <div id="question-files-row"
+           class="col-md-10 col-xs-10"
+           style="word-spacing: 25px; font-size: 14px">
+      </div>
+    </div>
   </div>
 
   <div class="row content-fill">
-    <div class="col-md-2">
-      <div class="affix-top" role="navigation">
-        <ul class="nav nav-pills nav-stacked" id="file-navigator">
-          <li><a href="#upload-file-dialog" data-toggle="modal">
-            <span class="glyphicon glyphicon-cloud-upload"></span> Upload File</a></li>
-          <li><a href="#new-file-dialog" data-toggle="modal"><span class="text-muted pull-right">Ctrl-n</span>
-            <span class="glyphicon glyphicon-file"></span> New File</a></li>
-          <!--<li><a href="#new-folder-dialog" data-toggle="modal"><span class="glyphicon glyphicon-folder-open"></span> New Folder</a></li>-->
-          <!-- The file list is manipulated JavaScript. -->
-            <div id="file-tree"></div>
-          <!-- This ends the file list. -->
-        </ul>
-      </div>
-    </div>
     <div class="col-md-10 content-fill" role="main">
       <!--The toolbar goes here. -->
       <div class="btn-toolbar toolbar">

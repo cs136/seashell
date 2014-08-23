@@ -115,6 +115,7 @@ function SeashellProject(name, callback) {
 
     /** Update the list of files. */
     promise.done(function(files) {
+
       p.files = [];
       p.currentErrors = [];
       p.saveInterval = setInterval(handleSaveProject, 10000);
@@ -123,6 +124,24 @@ function SeashellProject(name, callback) {
         /** Lazily load the documents later. */
         p.placeFile(new SeashellFile(files[i][0], files[i][1]));
       }
+
+      $("#questions-row")
+        .html(_.chain(files)
+                .filter(function(x) { return x[1] && 'q' == x[0][0]; })
+                  .map(function(x) {
+                    var name = x[0];
+                    var call =
+                      sprintf("SeashellProject.currentProject.openQuestion" +
+                              "(&quot;%s&quot;);",
+                              name);
+                    return sprintf("<a href=\"#\" " +
+                                   "onClick=\"%s return false;\">" +
+                                   "%s</a>",
+                                   call, name);
+                  })
+                    .sortBy(_.identity)
+                      .value().join(" "));
+
       if(callback) callback(p);
     }).fail(function(){
       displayErrorMessage("Project "+name+" could not be opened.");
@@ -131,17 +150,6 @@ function SeashellProject(name, callback) {
 
   /** Install the I/O handler. */
   socket.requests[-3].callback = this.IOHandler;
-
-  socket.listProject(name, false).done(function(result) {
-    $("#questions-row")
-          .html(_.chain(result)
-                .filter(function (x) { return x[1] && 'q' == x[0][0]; })
-                .map(function (x) {
-                    return sprintf("<a href=\"#\">%s</a>", x[0]);
-                })
-                .sortBy(_.identity)
-                .value().join(" "));
-  });
 }
 
 /*
@@ -264,6 +272,46 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
     this.files = plc(file.name, this.files);
   }
 };
+
+SeashellProject.prototype.openQuestion = function(dir) {
+  socket.listProject(name).done(function(files) {
+    files =
+      _.chain(files)
+        .filter(function(x) { return !x[1] && dir == x[0].split('/')[0]; })
+          .map(function(x) { return x[0].split('/')[1]; })
+            .value();
+
+    var basename = function(z) { return z.split('.')[0]; };
+    var extension = function(z) { return z.split('.')[1]; };
+    var has_source_buddy = function(x) {
+      return ['c', 'h'].indexOf(extension(x)) >= 0 &&
+        _.find(files,
+               function(y) {
+                 return x != y &&
+                   basename(x) == basename(y);
+               });
+    };
+    var make_source_buddies = function(name) {
+      return '<a href="#">' + basename(name) + '.c' +
+        '</a><span style="word-spacing: 2px">' +
+        '<span style="color: #aaa">&nbsp;-&nbsp</span>' +
+        '<a href="#">.h</a></span>';
+    };
+
+    $("#question-files-row")
+      .html(_.reduce(files, function(html, name) {
+              var style = function(x) {
+                return '<span style="margin-right: 30px">' + x + '</span>';
+              };
+              if (!has_source_buddy(name))
+                return html + style('<a href="#">' + name + '</a>');
+              if ('c' == extension(name))
+                return html + style(make_source_buddies(name));
+              return html;
+              },
+              ''));
+   });
+}
 
 /*
  * Opens the given file in the project
