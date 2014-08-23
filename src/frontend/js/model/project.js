@@ -289,7 +289,8 @@ SeashellProject.prototype.openQuestion = function(dir) {
                function(y) { return x != y && basename(x) == basename(y); });
     };
     var make_file_link = function(x) {
-      var link = $('<a>', { href: '#', text: x });
+      var link = $('<a>',
+                   { href: '#', text: x, style: "text-decoration: none" });
       link.click(function() { p.openFilePath(dir + '/' + x); });
       return link;
     };
@@ -752,34 +753,6 @@ SeashellProject.prototype.renameFile = function(file, name) {
     .fail(function() {
       displayErrorMessage("File could not be renamed.");
     });
-};
-
-/*
- * Returns an object formatted for use in the JSTree plugin
- */
-SeashellProject.prototype.JSTreeData = function() {
-  var nodes = [];
-  function JSTreeHelper(arr, res) {
-    for(var i=0; i < arr.length; i++) {
-      var item = {text: arr[i].name[arr[i].name.length-1]};
-      item.path = arr[i].fullname();
-      if(arr[i].is_dir) {
-        var n = [];
-        if(arr[i].children)
-          JSTreeHelper(arr[i].children, n);
-        item.children = n;
-        item.icon = 'glyphicon glyphicon-folder-open';
-      }
-      else {
-        item.icon = 'glyphicon glyphicon-file';
-      }
-      res.push(item);
-    }
-  }
-  if(this.files) {
-    JSTreeHelper(this.files, nodes);
-  }
-  return nodes;
 };
 
 /* finds a SeashellFile in the project given its path as a string
