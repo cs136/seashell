@@ -135,10 +135,9 @@ function SeashellProject(name, callback) {
                                   text: name,
                                   id: 'question-link-' + name,
                                   class: 'question-link' })
-            console.log(link);
+            link.click(function(x) { p.openQuestion(name); });
             $('#questions-row').append(link);
             $('#questions-row').append(' ');
-            link.click(function(x) { p.openQuestion(name); });
           });
 
       if(callback) callback(p);
@@ -273,6 +272,8 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 };
 
 SeashellProject.prototype.openQuestion = function(dir) {
+  var p = this;
+
   socket.listProject(name).done(function(files) {
     files =
       _.chain(files)
@@ -287,12 +288,10 @@ SeashellProject.prototype.openQuestion = function(dir) {
         _.find(files,
                function(y) { return x != y && basename(x) == basename(y); });
     };
-    var make_source_buddies = function(name) {
-      return '<a href="#">' + basename(name) + '.c' +
-        '</a><span style="word-spacing: 2px">' +
-        '<span style="color: #aaa; margin-right: -2px; font-size: 12px">' +
-        ' | </span>' +
-        '<a href="#">.h</a></span>';
+    var make_file_link = function(x) {
+      var link = $('<a>', { href: '#', text: x });
+      link.click(function() { p.openFilePath(dir + '/' + x); });
+      return link;
     };
 
     _.forEach($('#questions-row > a'),
@@ -302,20 +301,40 @@ SeashellProject.prototype.openQuestion = function(dir) {
                   x.className += ' question-link-active';
               });
 
-    $('#question-files-row')
-      .html(_.reduce(files, function(html, name) {
-              var style = function(x) {
-                return '<span style="margin-right: 30px">' + x + '</span>';
-              };
-              if (!has_source_buddy(name))
-                return html + style('<a href="#">' + name + '</a>');
-              if ('c' == extension(name))
-                return html + style(make_source_buddies(name));
-              return html;
-              },
-              ''));
-   });
+    var parent = $('#question-files-row');
+    parent.empty();
+    _.forEach(files, function(x) {
+      var span = $('<span>', { style: 'margin-right: 30px' });
+      span.append(make_file_link(x));
+      if (!has_source_buddy(x))
+      {
+        parent.append(span);
+        return;
+      }
+      if ('c' != extension(x))
+        return;
+      span.append('<span style="word-spacing: 2px">' +
+                  '<span style="color: #aaa; margin-right: -2px; ' +
+                  'font-size: 12px"> | </span>');
+      span.append(make_file_link(basename(x) + '.h'));
+      parent.append(span);
+    });
+  });
 }
+
+SeashellProject.prototype.openFilePath = function(path) {
+  var file = this.getFileFromPath(path);
+  var doc = file.document;
+  var done = function() {
+    $(".hide-on-null-file").removeClass("hide");
+    $(".show-on-null-file").addClass("hide");
+    editorDocument(file.document);
+  };
+  if (doc)
+    done();
+  else
+    this.openFile(file).done(done);
+};
 
 /*
  * Opens the given file in the project
@@ -336,7 +355,6 @@ SeashellProject.prototype.openFile = function(file) {
         else if(ext == "rkt") {
           mime = "text/x-scheme";
         }
-        console.log(ext);
         file.document = CodeMirror.Doc(contents, mime);
       })
       .fail(function() {
