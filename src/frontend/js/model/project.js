@@ -286,10 +286,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
     var has_source_buddy = function(x) {
       return ['c', 'h'].indexOf(extension(x)) >= 0 &&
         _.find(files,
-               function(y) {
-                 return x != y &&
-                   basename(x) == basename(y);
-               });
+               function(y) { return x != y && basename(x) == basename(y); });
     };
     var make_source_buddies = function(name) {
       return '<a href="#">' + basename(name) + '.c' +
