@@ -1,24 +1,16 @@
 #lang racket
 
-(require seashell/seashell-config
+(require "test-environment.rkt"
          seashell/backend/project
          seashell/backend/files)
 
 (define total-tests 6)
 (define passed 0)
 
-(define test-dir (string->path "./.seashell-test"))
-
-(when (directory-exists? test-dir)
-  (delete-directory/files test-dir))
-
-(make-directory test-dir)
-(config-set! 'test-mode #t)
-(config-set! 'seashell test-dir)
+;; Create a test project
 (new-project "test")
 
 ;; Test 1: create a file
-
 (new-file "test" "good.c")
 
 (if (file-exists? (check-and-build-path (build-project-path "test") "good.c"))
@@ -52,9 +44,8 @@
 ;; Test 5: list the files
 
 (new-file "test" "good.c")
-
 (match (list-files "test")
-  [(list "good.c" "bad.c") (set! passed (add1 passed))]
+  [`(("tests" #t ,_) ("good.c" #f ,_) ("bad.c" #f ,_)) (set! passed (add1 passed))]
   [_ (display "Failed to list files.\n" (current-error-port))])
 
 ;; Test 6: remove a file
