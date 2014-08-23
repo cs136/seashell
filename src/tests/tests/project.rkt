@@ -1,6 +1,6 @@
 #lang racket
 
-(require seashell/seashell-config
+(require "test-environment.rkt"
          seashell/backend/project
          seashell/backend/runner)
 
@@ -8,14 +8,6 @@
 (define passed-tests 0)
 
 (define test-dir (string->path "./.seashell-test"))
-
-;; set up test environment
-(if (directory-exists? test-dir)
-  (delete-directory/files test-dir)
-  (void))
-(make-directory test-dir)
-(config-set! 'seashell test-dir)
-(config-set! 'test-mode #t)
 
 ;; Test 1
 ;; make a project
@@ -54,7 +46,7 @@
 
 (with-handlers
   ([exn? (lambda (e) (display (exn-message e) (current-error-port)))])
-  (define run-pid (run-project "bar"))
+  (define run-pid (run-project "bar" "test.c" #f))
   (sync (program-wait-evt run-pid))
   (set! passed-tests (add1 passed-tests)))
 
