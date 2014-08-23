@@ -281,19 +281,21 @@ SeashellProject.prototype.openQuestion = function(dir) {
           .map(function(x) { return x[0].split('/')[1]; })
             .value();
 
-    var basename = function(z) { return z.split('.')[0]; };
-    var extension = function(z) { return z.split('.')[1]; };
-    var has_source_buddy = function(x) {
+    function basename(z) { return z.split('.')[0]; }
+    function extension(z) { return z.split('.')[1]; }
+    function has_source_buddy(x)
+    {
       return ['c', 'h'].indexOf(extension(x)) >= 0 &&
         _.find(files,
                function(y) { return x != y && basename(x) == basename(y); });
-    };
-    var make_file_link = function(x) {
+    }
+    function make_file_link(x)
+    {
       var link = $('<a>',
                    { href: '#', text: x, style: "text-decoration: none" });
       link.click(function() { p.openFilePath(dir + '/' + x); });
       return link;
-    };
+    }
 
     _.forEach($('#questions-row > a'),
               function(x) {
