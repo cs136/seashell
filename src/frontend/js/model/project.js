@@ -293,8 +293,8 @@ SeashellProject.prototype.openQuestion = function(dir) {
     var make_source_buddies = function(name) {
       return '<a href="#">' + basename(name) + '.c' +
         '</a><span style="word-spacing: 2px">' +
-        '<span style="color: #aaa; margin-right: -3px; font-size: 12px">' +
-        ' // </span>' +
+        '<span style="color: #aaa; margin-right: -2px; font-size: 12px">' +
+        ' | </span>' +
         '<a href="#">.h</a></span>';
     };
 

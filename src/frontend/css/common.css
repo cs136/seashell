@@ -215,8 +215,10 @@ div.tooltip .tooltip-inner {
 .question-link:hover {
   text-decoration: none;
   opacity: 1;
+  color: black;
 }
 
 .question-link-active {
   opacity: 1;
+  color: black;
 }
