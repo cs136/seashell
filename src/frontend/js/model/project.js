@@ -125,24 +125,21 @@ function SeashellProject(name, callback) {
         p.placeFile(new SeashellFile(files[i][0], files[i][1]));
       }
 
-      $("#questions-row")
-        .html(_.chain(files)
-                .filter(function(x) { return x[1] && 'q' == x[0][0]; })
-                  .map(function(x) {
-                    var name = x[0];
-                    var call =
-                      sprintf("SeashellProject.currentProject.openQuestion" +
-                              "(&quot;%s&quot;);",
-                              name);
-                    return sprintf('<a href="#" ' +
-                                   'id="question-link-' + name + '" ' +
-                                   'class="question-link"' +
-                                   'onClick="%s return false;">' +
-                                   '%s</a>',
-                                   call, name);
-                  })
-                    .sortBy(_.identity)
-                      .value().join(' '));
+      _.chain(files)
+        .sortBy(function(x) { return x[0]; })
+          .forEach(function(x) {
+            if (!x[1] || 'q' != x[0][0])
+              return;
+            var name = x[0];
+            var link = $('<a>', { href: '#',
+                                  text: name,
+                                  id: 'question-link-' + name,
+                                  class: 'question-link' })
+            console.log(link);
+            $('#questions-row').append(link);
+            $('#questions-row').append(' ');
+            link.click(function(x) { p.openQuestion(name); });
+          });
 
       if(callback) callback(p);
     }).fail(function(){
@@ -300,10 +297,9 @@ SeashellProject.prototype.openQuestion = function(dir) {
 
     _.forEach($('#questions-row > a'),
               function(x) {
+                x.className = 'question-link';
                 if (x.getAttribute('id') == 'question-link-' + dir)
-                  x.className = 'question-link question-link-active';
-                else
-                  x.className = 'question-link';
+                  x.className += ' question-link-active';
               });
 
     $('#question-files-row')
