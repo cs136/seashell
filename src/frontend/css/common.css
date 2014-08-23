@@ -195,15 +195,28 @@ div.tooltip .tooltip-inner {
 }
 
 .navbar .navbar-nav {
-    display: inline-block;
-    float: none;
+  display: inline-block;
+  float: none;
 }
 
 .navbar .navbar-collapse {
-    text-align: center;
+  text-align: center;
 }
 
 .navbar-icons > li > a {
-    padding: 10px 12px;
-    font-size: 16px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.question-link {
+  opacity: 0.5;
+}
+
+.question-link:hover {
+  text-decoration: none;
+  opacity: 1;
+}
+
+.question-link-active {
+  opacity: 1;
 }

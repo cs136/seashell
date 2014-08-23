@@ -134,13 +134,15 @@ function SeashellProject(name, callback) {
                       sprintf("SeashellProject.currentProject.openQuestion" +
                               "(&quot;%s&quot;);",
                               name);
-                    return sprintf("<a href=\"#\" " +
-                                   "onClick=\"%s return false;\">" +
-                                   "%s</a>",
+                    return sprintf('<a href="#" ' +
+                                   'id="question-link-' + name + '" ' +
+                                   'class="question-link"' +
+                                   'onClick="%s return false;">' +
+                                   '%s</a>',
                                    call, name);
                   })
                     .sortBy(_.identity)
-                      .value().join(" "));
+                      .value().join(' '));
 
       if(callback) callback(p);
     }).fail(function(){
@@ -291,11 +293,20 @@ SeashellProject.prototype.openQuestion = function(dir) {
     var make_source_buddies = function(name) {
       return '<a href="#">' + basename(name) + '.c' +
         '</a><span style="word-spacing: 2px">' +
-        '<span style="color: #aaa">&nbsp;-&nbsp</span>' +
+        '<span style="color: #aaa; margin-right: -3px; font-size: 12px">' +
+        ' // </span>' +
         '<a href="#">.h</a></span>';
     };
 
-    $("#question-files-row")
+    _.forEach($('#questions-row > a'),
+              function(x) {
+                if (x.getAttribute('id') == 'question-link-' + dir)
+                  x.className = 'question-link question-link-active';
+                else
+                  x.className = 'question-link';
+              });
+
+    $('#question-files-row')
       .html(_.reduce(files, function(html, name) {
               var style = function(x) {
                 return '<span style="margin-right: 30px">' + x + '</span>';
