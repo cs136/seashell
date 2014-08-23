@@ -274,27 +274,48 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 SeashellProject.prototype.openQuestion = function(dir) {
   var p = this;
 
-  socket.listProject(name).done(function(files) {
-    files =
-      _.chain(files)
-        .filter(function(x) { return !x[1] && dir == x[0].split('/')[0]; })
-          .map(function(x) { return x[0].split('/')[1]; })
-            .value();
+  socket.listProject(p.name).done(function(files) {
+    function attach_dir_listing_to_node(dir, node) {
+      var dfiles =
+        _.chain(files)
+          .filter(function(x) { return !x[1] && dir == x[0].split('/')[0]; })
+            .map(function(x) { return x[0].split('/')[1]; })
+              .value();
+      function basename(z) { return z.split('.')[0]; }
+      function extension(z) { return z.split('.')[1]; }
+      function has_source_buddy(x)
+      {
+        return ['c', 'h'].indexOf(extension(x)) >= 0 &&
+          _.find(dfiles,
+                 function(y) { return x != y && basename(x) == basename(y); });
+      }
+      function make_file_link(x, caption)
+      {
+        caption = caption || x;
+        var link = $('<a>', { href: '#',
+                              text: caption,
+                              style: "text-decoration: none" });
+        link.click(function() { p.openFilePath(dir + '/' + x); });
+        return link;
+      }
 
-    function basename(z) { return z.split('.')[0]; }
-    function extension(z) { return z.split('.')[1]; }
-    function has_source_buddy(x)
-    {
-      return ['c', 'h'].indexOf(extension(x)) >= 0 &&
-        _.find(files,
-               function(y) { return x != y && basename(x) == basename(y); });
-    }
-    function make_file_link(x)
-    {
-      var link = $('<a>',
-                   { href: '#', text: x, style: "text-decoration: none" });
-      link.click(function() { p.openFilePath(dir + '/' + x); });
-      return link;
+      var parent = node;
+      parent.empty();
+      _.forEach(dfiles, function(x) {
+        var span = $('<span>', { style: 'margin-right: 30px' });
+        span.append(make_file_link(x));
+        if (!has_source_buddy(x))
+        {
+          parent.append(span);
+          return;
+        }
+        if ('c' != extension(x))
+          return;
+        span.append('<span style="word-spacing: 2px">' +
+                    '<span style="color: #aaa; font-size: 12px">,</span>');
+        span.append(make_file_link(basename(x) + '.h', '.h'));
+        parent.append(span);
+      });
     }
 
     _.forEach($('#questions-row > a'),
@@ -303,25 +324,8 @@ SeashellProject.prototype.openQuestion = function(dir) {
                 if (x.getAttribute('id') == 'question-link-' + dir)
                   x.className += ' question-link-active';
               });
-
-    var parent = $('#question-files-row');
-    parent.empty();
-    _.forEach(files, function(x) {
-      var span = $('<span>', { style: 'margin-right: 30px' });
-      span.append(make_file_link(x));
-      if (!has_source_buddy(x))
-      {
-        parent.append(span);
-        return;
-      }
-      if ('c' != extension(x))
-        return;
-      span.append('<span style="word-spacing: 2px">' +
-                  '<span style="color: #aaa; margin-right: -2px; ' +
-                  'font-size: 12px"> | </span>');
-      span.append(make_file_link(basename(x) + '.h'));
-      parent.append(span);
-    });
+    attach_dir_listing_to_node(dir, $('#question-files-row'));
+    attach_dir_listing_to_node('common', $('#common-files-row'));
   });
 }
 

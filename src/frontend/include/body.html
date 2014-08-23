@@ -20,8 +20,8 @@
         </h2>
       </div>
 
-      <div class="col-md-6 col-xs-6"
-           style="font-size: 18px; text-align: right; margin-top: 5px">
+      <div class="col-md-6 col-xs-6 text-right"
+           style="font-size: 18px; margin-top: 5px">
         <span id="questions-row" style="word-spacing: 15px">
         </span>
       </div>
@@ -29,19 +29,29 @@
     <div class="col-md-12 col-xs-12">
       <hr style="margin-top: 9px"/>
     </div>
-    <div class="row">
-      <div class="col-md-1 col-xs-1"
-           style="text-align: right; padding-right: 0">
-        <span rel="tooltip" data-toggle="tooltip" title="add files...">
-          <a href="#" style="font-size: 13px; color: black">
-            <span class="glyphicon glyphicon-plus"></span>
+    <div class="row" style="padding-top: 0">
+      <div class="col-md-2 col-xs-2 text-right">
+        <small>common files</small>
+      </div>
+      <kbd id="common-files-row" class="col-md-6 col-xs-6"
+           style="word-spacing: 25px; font-size: 14px">
+      </kbd>
+      <div class="col-md-3 col-xs-3 text-right" style="font-size: 24px">
+        <span rel="tooltip" title="submit question">
+          <a href="#">
+            <span class="glyphicon glyphicon-send"></span>
           </a>
         </span>
       </div>
-      <div id="question-files-row"
+    </div>
+    <div class="row">
+      <div class="col-md-2 col-xs-2 text-right">
+        <small>question files</small>
+      </div>
+      <kbd id="question-files-row"
            class="col-md-10 col-xs-10"
            style="word-spacing: 25px; font-size: 14px">
-      </div>
+      </kbd>
     </div>
   </div>
 
@@ -63,13 +73,8 @@
         Open or <a href="#new-file-dialog" class="btn btn-primary btn-lg" data-toggle="modal">Create</a> a file
         to get started!
         </p>
-        <ul class="nav nav-tabs hide-on-null-file" role="tablist">
-          <li class="active"><a href="#edit-tab" role="tab" data-toggle="tab">Editor</a></li>
-          <li><a href="#test-tab" role="tab" data-toggle="tab">Tests</a></li>
-        </ul>
-        <div class="tab-content hide-on-null-file">
-          <!--The editor goes here.-->
-          <div id="edit-tab" class="tab-pane active">
+        <div class="hide-on-null-file">
+          <div id="edit-tab">
             <div class="editor" id="editor">
             </div>
             <!--Messages and program output will appear here.-->
@@ -82,9 +87,6 @@
                 <button class="btn btn-default" type="button" id="send-eof">EOF</button>
               </span>
             </div>
-          </div>
-          <div id="test-tab" class="tab-pane">
-          You have not run any tests yet.
           </div>
         </div><!-- end main panel tabs -->
       </div>
