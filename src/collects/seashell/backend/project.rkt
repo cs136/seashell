@@ -423,13 +423,8 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (begin
-      (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
-      (delete-file tmpzip)
-      (apply (curry zip tmpzip) (directory-list))
-      (define outbytes (file->bytes tmpzip))
-      (delete-file tmpzip)
-      outbytes)))
+    (with-output-to-bytes
+      (zip->output (pathlist-closure (directory-list))))))
 
 ;; (marmoset-submit course assn project file) -> void
 ;; Submits a file to marmoset
@@ -445,7 +440,8 @@
   (with-output-to-file tmpzip
     (thunk (write-bytes (export-project project))) #:exists 'truncate)
     
-  ;; TODO: error handling
+  ;; TODO: (better) error handling.  Exceptions received here
+  ;; will be properly caught, but an error message would be nice.
   (define-values (proc out in err)
     (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
   (subprocess-wait proc)
