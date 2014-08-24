@@ -351,7 +351,9 @@
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages)
-    (seashell-compile-files/place '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files o-files))
+    (seashell-compile-files/place '("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
+                                    "-gdwarf-4" "-O0")
+                                  '("-lm") c-files o-files))
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
