@@ -199,6 +199,7 @@ SeashellProject.prototype.createFile = function(fname) {
         def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
       }
       nFile.document = CodeMirror.Doc(def, "text/x-csrc");
+      nFile.document.on("change", function() { handleDocumentChange(nFile); });
       p.placeFile(nFile);
       p.openFile(nFile);
     }).fail(function() {
