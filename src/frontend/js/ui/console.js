@@ -21,17 +21,17 @@ var seashell_console = null;
 
 /** Sets up the console. */
 function setupConsole() {
-  var welcomeMessage = '+++ Welcome to Seashell! Messages and program output will appear here. +++';
-  
+  var welcomeMessage = '\n\n\n\n\n\nwelcome to seashell! messages and program output will appear here.';
+
   seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
        readOnly: true,
        lineWrapping: true,
-       theme: 'blackboard'});
-  
+       theme: 'default'});
+
   // Debugging state for the console.
   seashell_console.debug = false;
- 
+
   // Store the welcome message in seashell_console.
   seashell_console.welcomeMessage = welcomeMessage;
 
@@ -73,7 +73,7 @@ function consoleWrite(message) {
 }
 
 /** Writes a message to the console, in raw mode (no processing done).
- * 
+ *
  * @param {String} message Message to write.
  */
 function consoleWriteRaw(message) {

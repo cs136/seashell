@@ -5,98 +5,112 @@
     This page requires JavaScript to operate properly.
   </noscript>
 
-  <div class="container content-fill" style="padding-top: 10px">
-    <div class="row" style="margin-top: 15px">
-      <div class="col-md-4 col-md-offset-1 col-xs-4 col-xs-offset-1">
-        <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
-          <span class="glyphicon glyphicon-briefcase" style="margin-right: 5px">
+  <div class="row" style="margin-top: 15px">
+    <div class="col-md-4 col-md-offset-1 col-xs-4 col-xs-offset-1">
+      <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
+        <span class="glyphicon glyphicon-briefcase" style="margin-right: 5px">
+        </span>
+        <span style="position: relative; bottom: 6px; font-size: 20px">
+          <span style="font-weight: 400">
+            <span class="userid"></span> /
           </span>
-          <span style="position: relative; bottom: 6px; font-size: 20px">
-            <span style="font-weight: 400">
-              <span class="userid"></span> /
-            </span>
-            <span id="project-menu"></span> <span class="caret"></span>
-          </span>
-        </h2>
-      </div>
-
-      <div class="col-md-6 col-xs-6 text-right"
-           style="font-size: 18px; margin-top: 5px">
-        <span id="questions-row" style="word-spacing: 15px">
+          <span id="project-menu"></span> <span class="caret"></span>
         </span>
-      </div>
-    </div>
-    <div class="col-md-12 col-xs-12">
-      <hr style="margin-top: 9px"/>
-    </div>
-    <div class="row" style="padding-top: 0">
-      <div class="col-md-2 col-xs-2 text-right">
-        <small>common files</small>
-      </div>
-      <kbd id="common-files-row" class="col-md-6 col-xs-6"
-           style="word-spacing: 25px; font-size: 14px">
-      </kbd>
-      <div class="col-md-3 col-xs-3 text-right" style="font-size: 24px">
-        <span rel="tooltip" title="submit question">
-          <a href="#">
-            <span class="glyphicon glyphicon-send"></span>
-          </a>
-        </span>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-2 col-xs-2 text-right">
-        <small>question files</small>
-      </div>
-      <kbd id="question-files-row"
-           class="col-md-10 col-xs-10"
-           style="word-spacing: 25px; font-size: 14px">
-      </kbd>
+      </h2>
     </div>
 
-    <div class="col-md-12 col-xs-12">
-      <hr style="margin-top: 9px"/>
+    <div class="col-md-6 col-xs-6 text-right"
+         style="font-size: 18px; margin-top: 5px">
+      <span id="questions-row" style="word-spacing: 15px">
+      </span>
     </div>
+  </div>
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1">
+      <hr style="margin-top: 9px; margin-bottom: 8px"/>
+    </div>
+  </div>
+  <div class="row" style="padding-top: 0">
+    <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right"
+         style="font-size: 24px">
+      <span rel="tooltip" title="submit question">
+        <a href="#">
+          <span class="glyphicon glyphicon-send"></span>
+        </a>
+      </span>
+    </div>
+  </div>
+  <div class="row" style="padding-top: 0">
+    <div class="col-md-2 col-md-offset-1 col-xs-2 col-xs-offset-1 text-right"
+         style="width: auto">
+      <small>common files</small>
+    </div>
+    <kbd id="common-files-row" class="col-md-6 col-xs-6"
+         style="word-spacing: 25px; font-size: 14px">
+    </kbd>
+  </div>
+  <div class="row">
+    <div class="col-md-2 col-md-offset-1 col-xs-2 col-xs-offset-1 text-right"
+         style="width: auto">
+      <small>question files</small>
+    </div>
+    <kbd id="question-files-row"
+         class="col-md-9 col-xs-9"
+         style="word-spacing: 25px; font-size: 14px">
+    </kbd>
+  </div>
 
-    <div class="row">
-      <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right"
-           style="font-size: 24px; text-decoration: none">
-        <span rel="tooltip" title="build/run">
-          <a href="#">
-            <span class="glyphicon glyphicon-play"></span>
-          </a>
-        </span>
-        &nbsp;
-        <span rel="tooltip" title="stop">
-          <a href="#">
-            <span class="glyphicon glyphicon-stop"></span>
-          </a>
-        </span>
-      </div>
+  <div class="row" style="margin-top: 15px">
+    <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right"
+         style="font-size: 24px; text-decoration: none">
+      <span rel="tooltip" title="build/run">
+        <a href="#">
+          <span class="glyphicon glyphicon-play"></span>
+        </a>
+      </span>
+      &nbsp;
+      <span rel="tooltip" title="stop">
+        <a href="#">
+          <span class="glyphicon glyphicon-stop"></span>
+        </a>
+      </span>
     </div>
   </div>
 
-  <div class="row content-fill">
-    <div class="col-md-10 content-fill" role="main">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1"
+         style="padding: 0"
+         role="main">
       <div class="editor-console">
         <p class="show-on-null-file no-file">
-        Open or <a href="#new-file-dialog" class="btn btn-primary btn-lg" data-toggle="modal">Create</a> a file
-        to get started!
+          Open or <a href="#new-file-dialog"
+                     class="btn btn-primary btn-lg"
+                     data-toggle="modal">Create</a> a file
+          to get started!
         </p>
         <div class="hide-on-null-file">
-          <div id="edit-tab">
-            <div class="editor" id="editor">
-            </div>
-            <!--Messages and program output will appear here.-->
-            <div id="console" class="console"></div>
-            <!--Interactions are submitted here.-->
-            <div class="console-input input-group">
-              <input type="text" class="form-control" id="input-line">
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" id="submit-console-input">&gt;&gt;</button>
-                <button class="btn btn-default" type="button" id="send-eof">EOF</button>
+          <div id="editor"></div>
+          <div id="console">
+            <div id="console-title" class="col-md-12 col-xs-12">
+              <span class="glyphicon glyphicon-list-alt"></span>
+              <span style="position: relative; bottom: 2px; left: 2px">
+                console
               </span>
+              <div id="console-controls" class="pull-right">
+                <a href="">clear</a>
+              </div>
             </div>
+          </div>
+          <div class="console-input input-group">
+            <div class="input-group-addon" style="font-size: 10px">
+              <span class="glyphicon glyphicon-chevron-right"></span>
+            </div>
+            <input type="text" class="form-control" id="input-line">
+            <!-- <span class="input-group-btn"> -->
+            <!--   <button class="btn btn-default" -->
+            <!--           type="button" -->
+            <!--           id="send-eof">EOF</button> -->
+            <!-- </span> -->
           </div>
         </div><!-- end main panel tabs -->
       </div>
