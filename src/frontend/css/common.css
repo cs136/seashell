@@ -194,14 +194,6 @@ div.tooltip .tooltip-inner {
   font-weight:bold;
 }
 
-#project-list table {
-  margin: 0 auto;
-}
-
-#project-list table td {
-  padding:3px 20px 3px 20px;
-}
-
 #last-saved {
   color: #444;
   float: right;

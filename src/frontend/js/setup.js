@@ -60,10 +60,9 @@ function setupUI() {
   $(".show-on-null-project").removeClass("hide");
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
-  $(".userid").text(creds.user).attr("title", "Logged in as "+creds.user);
+  $(".userid").text(creds.user);
   $("#main-panel-tabs").tabs();
   $("#master-container").removeClass("hide"); // show the UI
-  updateListOfProjects();
   $("[href=#edit-tab]").click(function() {
     setTimeout(function() {
       editorDocument(SeashellProject.currentProject.currentFile.document);
