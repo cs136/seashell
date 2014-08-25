@@ -36,7 +36,8 @@ function seashellInit(rest) {
       console.log("Websocket disconnection monitor set up properly.");
       /** Install refresh handler. */
       window.onbeforeunload = function () {
-        return "Are you sure you want to leave Seashell?  Unsaved data may be lost.";
+        if(SeashellProject.currentProject && SeashellProject.currentProject.isUnsaved())
+          return "Are you sure you want to leave Seashell?  Unsaved data may be lost.";
       };
       /** Run the rest of the code. */
       if (rest)
@@ -73,6 +74,46 @@ function setupUI() {
   setupDialogs();
   setupMenu();
   setupTooltips();
+  setupHotkeys();
+}
+
+/*
+ * These are hotkeys that will work everywhere, ie. not just
+ *    in the editor.
+ */
+function setupHotkeys() {
+  var ctrl = false;
+  $("body").keydown(function(e) {
+    if(ctrl) {
+      switch(e.keyCode) {
+        case 83: // ctrl-s
+          if(SeashellProject.currentProject) {
+            handleSaveProject();
+            e.preventDefault();
+          }
+          break;
+        case 78: // ctrl-n
+          if(SeashellProject.currentProject) {
+            newFileDialog();
+            e.preventDefault();
+          }
+          break;
+        case 82: // ctrl-r
+        case 13: // ctrl-enter
+          if(SeashellProject.currentProject) {
+            handleRunProject();
+            e.preventDefault();
+          }
+          break;
+      }
+    }
+    else {
+      if(e.keyCode == 17) ctrl = true;
+    }
+  })
+  .keyup(function(e) {
+    if(e.keyCode == 17) ctrl = false;
+  });
 }
 
 /** Accessor functions. */

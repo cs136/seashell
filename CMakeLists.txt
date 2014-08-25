@@ -22,6 +22,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
+# Global Destinations
+set(SEASHELL_FRONTEND share/frontend)
+set(SEASHELL_DOC ${SEASHELL_FRONTEND}/doc)
+set(SEASHELL_COLLECTS share/collects)
+
 # Build our components.
 add_subdirectory(doc)
 add_subdirectory(lib)

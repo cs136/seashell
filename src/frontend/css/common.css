@@ -4,6 +4,10 @@ body {
   padding-top: 50px; /* Account for fixed navbar */
 }
 
+#master-container {
+  height: 100%;
+}
+
 /** Hide tag. */
 .hide {
   display: none;
@@ -294,4 +298,9 @@ div.tooltip .tooltip-inner {
 
 #questions-row {
   font-weight: 300;
+}
+
+#last-saved {
+  color: #444;
+  float: right;
 }

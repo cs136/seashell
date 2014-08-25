@@ -351,7 +351,9 @@
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages)
-    (seashell-compile-files/place '("-Wall" "-gdwarf-4" "-O0") '("-lm") c-files o-files))
+    (seashell-compile-files/place '("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
+                                    "-gdwarf-4" "-O0")
+                                  '("-lm") c-files o-files))
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
@@ -423,13 +425,8 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (begin
-      (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
-      (delete-file tmpzip)
-      (apply (curry zip tmpzip) (directory-list))
-      (define outbytes (file->bytes tmpzip))
-      (delete-file tmpzip)
-      outbytes)))
+    (with-output-to-bytes
+      (zip->output (pathlist-closure (directory-list))))))
 
 ;; (marmoset-submit course assn project file) -> void
 ;; Submits a file to marmoset
@@ -445,7 +442,8 @@
   (with-output-to-file tmpzip
     (thunk (write-bytes (export-project project))) #:exists 'truncate)
     
-  ;; TODO: error handling
+  ;; TODO: (better) error handling.  Exceptions received here
+  ;; will be properly caught, but an error message would be nice.
   (define-values (proc out in err)
     (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
   (subprocess-wait proc)

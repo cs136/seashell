@@ -254,6 +254,15 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "newProjectFrom")
+        ('project project)
+        ('source source))
+        (new-project-from project source)
+        `#hash((id . ,id)
+               (success . #t)
+               (result . #t))]
+      [(hash-table
+        ('id id)
         ('type "deleteProject")
         ('project project))
        (delete-project project)

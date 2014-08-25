@@ -19,7 +19,8 @@
 
 ;; This file was modified from ssl-unit-tcp.rkt in Racket 5.3.6
 (provide make-ssl-tcp@)
-(require racket/unit net/tcp-sig seashell/overrides/openssl/mzssl
+(require racket/unit net/tcp-sig
+         openssl
          (prefix-in tcp: racket/tcp))
 
 (define (error/network who fmt . args)
@@ -33,7 +34,7 @@
          client-cert-file client-key-file client-root-cert-files
          [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
          [ecdhe-curve 'secp521r1]
-         [dhe-param-path ssl-dh-param-path])
+         [dhe-param-path ssl-dh4096-param-path])
  ;; Load contexts first.
  (define ctx (ssl-make-client-context))
  (define sctx (ssl-make-server-context))
