@@ -16,18 +16,6 @@ function setupFileMenu() {
     'contextmenu' : {
       'items' : function(node) {
         return {
-          'New File' : {
-            'label' : 'New File',
-            'icon' : 'glyphicon glyphicon-file',
-            'action' : function(obj) {
-              var srcFile = SeashellProject.currentProject.getFileFromPath(node.original.path);
-              var pref = srcFile.name.slice();
-              if(!srcFile.is_dir) pref.pop();
-              pref = pref.join("/");
-              $("#new-file-prefix-input").val(pref);
-              $("#new-file-dialog").modal("show");
-            }
-          },
           'Rename' : {
             'label' : 'Rename',
             'icon' : 'glyphicon glyphicon-edit',
