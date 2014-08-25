@@ -271,3 +271,7 @@ div.tooltip .tooltip-inner {
   opacity: 1;
   color: black;
 }
+
+#questions-row {
+  font-weight: 300;
+}

@@ -294,7 +294,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
         caption = caption || x;
         var link = $('<a>', { href: '#',
                               text: caption,
-                              style: "text-decoration: none" });
+                              style: 'text-decoration: none'});
         link.click(function() { p.openFilePath(dir + '/' + x); });
         return link;
       }
@@ -303,17 +303,17 @@ SeashellProject.prototype.openQuestion = function(dir) {
       parent.empty();
       _.forEach(dfiles, function(x) {
         var span = $('<span>', { style: 'margin-right: 30px' });
-        span.append(make_file_link(x));
         if (!has_source_buddy(x))
         {
+          span.append(make_file_link(x));
           parent.append(span);
           return;
         }
         if ('c' != extension(x))
           return;
-        span.append('<span style="word-spacing: 2px">' +
-                    '<span style="color: #aaa; font-size: 12px">,</span>');
-        span.append(make_file_link(basename(x) + '.h', '.h'));
+        span.append(make_file_link(x, basename(x) + ' c'));
+        span.append('<span style="color: #aaa; font-size: 12px">,</span>');
+        span.append(make_file_link(basename(x) + '.h', 'h'));
         parent.append(span);
       });
     }
