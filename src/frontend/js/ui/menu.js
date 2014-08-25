@@ -33,7 +33,6 @@ function handleSaveProject() {
  */
 function handleCompileProject() {
   SeashellProject.currentProject.compile();
-  $("[href=#interactions-tab]").click();
 }
 
 /**
@@ -83,7 +82,6 @@ function handleAutoformat() {
 function handleRunProject() {
   // TODO: Multiple running projects?
   SeashellProject.run();
-  $("[href=#interactions-tab]").click();
 }
 
 /**
