@@ -266,13 +266,28 @@ div.tooltip .tooltip-inner {
   opacity: 0.5;
 }
 
-.question-link:hover {
+.question-link:hover, .question-link-active:hover {
   text-decoration: none;
   opacity: 1;
   color: black;
 }
 
 .question-link-active {
+  opacity: 1;
+  color: black;
+}
+
+.file-link {
+  opacity: 0.5;
+}
+
+.file-link:hover, .file-link-active:hover {
+  text-decoration: none;
+  opacity: 1;
+  color: black;
+}
+
+.file-link-active {
   opacity: 1;
   color: black;
 }
