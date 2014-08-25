@@ -36,7 +36,8 @@ function seashellInit(rest) {
       console.log("Websocket disconnection monitor set up properly.");
       /** Install refresh handler. */
       window.onbeforeunload = function () {
-        return "Are you sure you want to leave Seashell?  Unsaved data may be lost.";
+        if(SeashellProject.currentProject && SeashellProject.currentProject.isUnsaved())
+          return "Are you sure you want to leave Seashell?  Unsaved data may be lost.";
       };
       /** Run the rest of the code. */
       if (rest)

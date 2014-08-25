@@ -46,6 +46,13 @@ function setupEditor() {
   refreshSettings();
 }
 
+function handleDocumentChange(file) {
+  if(!file.unsaved) {
+    file.unsaved = true;
+    $("#edit-tab-item").text("*Editor*");
+  }
+}
+
 /** Editor indent function. */
 function editorIndent() {
   /** TODO: Write this, and the clang-format integration code. */
