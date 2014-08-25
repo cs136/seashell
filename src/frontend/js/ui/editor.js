@@ -47,10 +47,13 @@ function setupEditor() {
 }
 
 function handleDocumentChange(file) {
-  if(!file.unsaved) {
-    file.unsaved = true;
-    $("#edit-tab-item").text("*Editor*");
+  if (file.unsaved !== false) {
+    window.clearTimeout(file.unsaved);
   }
+
+  file.unsaved = window.setTimeout(function () {
+    file.save();
+   }, 1000);
 }
 
 /** Editor indent function. */

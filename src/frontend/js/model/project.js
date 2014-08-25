@@ -90,6 +90,7 @@ function SeashellProject(name, callback) {
   this.currentPID = null;
   var lockPromise = socket.lockProject(name);
   var openNoLock = function(){ projectOpenNoLock(name); };
+
   lockPromise.done(openNoLock).fail(function(res){
     if(res == "locked"){
         displayConfirmationMessage("Project is locked by another browser instance",
@@ -115,14 +116,12 @@ function SeashellProject(name, callback) {
 
     /** Update the list of files. */
     promise.done(function(files) {
-
       p.files = [];
       p.currentErrors = [];
-      p.saveInterval = setInterval(handleSaveProject, 10000);
 
       for (var i = 0; i < files.length; i++) {
         /** Lazily load the documents later. */
-        p.placeFile(new SeashellFile(files[i][0], files[i][1], files[i][2]));
+        p.placeFile(new SeashellFile(p, files[i][0], files[i][1], files[i][2]));
       }
 
       _.chain(files)
@@ -170,6 +169,7 @@ SeashellProject.currentProject = null;
 /*
  * Constructor for SeashellFile
  * Parameters:
+ * project - Project this file is associated with.
  * name - the full file path & name from root of project
  * is_dir - boolean, true if this is a directory. Default is false.
  * last_saved - last time the file was saved, in milliseconds.
@@ -181,11 +181,13 @@ SeashellProject.currentProject = null;
  * - children: array of children if object is a directory
  * - is_dir: boolean, true if object is a directory
  * - last_saved: last time that the file was saved, in milliseconds
- * - unsaved: boolean, true if there is unsaved work in this file's CodeMirror document
+ * - unsaved: false if this file is saved already, otherwise a timer ID
+ *            for when we'll save the file.
 */
-function SeashellFile(name, is_dir, last_saved) {
+function SeashellFile(project, name, is_dir, last_saved) {
   this.name = name.split("/");
   this.document = null;
+  this.project = project;
   this.children = is_dir ? [] : null;
   this.is_dir = is_dir ? true : false;
   this.last_saved = last_saved ? last_saved : Date.now();
@@ -211,7 +213,7 @@ SeashellProject.prototype.createFile = function(fname) {
   }
   else {
     return socket.newFile(this.name, fname).done(function() {
-      var nFile = new SeashellFile(fname);
+      var nFile = new SeashellFile(p, fname);
       var ext = fname.split(".").pop();
       var def = "\n";
       if(ext=="c"||ext=="h") {
@@ -241,7 +243,7 @@ SeashellProject.prototype.createDirectory = function(dname) {
     return null;
   }
   return socket.newDirectory(this.name, dname).done(function() {
-    var dirObj = new SeashellFile(dname, true);
+    var dirObj = new SeashellFile(p, dname, true);
     p.placeFile(dirObj);
   }).fail(function() {
     displayErrorMessage("Error creating the directory "+dname+".");
@@ -392,7 +394,7 @@ SeashellProject.prototype.save = function() {
   function save_arr(aof) {
     for(var f=0; f < aof.length; f++) {
       if(aof[f].is_dir) save_arr(aof[f].children);
-      else promises.push(aof[f].save(p.name));
+      else promises.push(aof[f].save());
     }
   }
   save_arr(this.files);
@@ -417,10 +419,10 @@ SeashellProject.prototype.isUnsaved = function() {
  * Saves the file.
  * pname - name of the file's project
  */
-SeashellFile.prototype.save = function(pname) {
-  if(this.unsaved) {
+SeashellFile.prototype.save = function() {
+  if(this.unsaved !== false) {
     var f = this;
-    return socket.writeFile(pname, this.fullname(), this.document.getValue())
+    return socket.writeFile(this.project.name, this.fullname(), this.document.getValue())
       .done(function() {
         f.last_saved = Date.now();
         f.unsaved = false;
@@ -442,7 +444,7 @@ SeashellFile.prototype.isUnsaved = function() {
     }
     return false;
   }
-  return this.unsaved;
+  return this.unsaved !== false;
 };
 
 SeashellFile.prototype.lastSavedString = function() {
@@ -747,7 +749,7 @@ SeashellProject.prototype.getUploadToken = function(filename) {
  * filename - the filename that was uploaded
  */
 SeashellProject.prototype.onUploadSuccess = function(filename) {
-  this.placeFile(new SeashellFile(filename));
+  this.placeFile(new SeashellFile(this, filename));
 };
 
 /*
