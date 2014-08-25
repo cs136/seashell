@@ -36,12 +36,12 @@ function setupConsole() {
   seashell_console.welcomeMessage = welcomeMessage;
 
   // Hook the input button and the EOF button
-  $("#submit-console-input").on("click", consoleInput);
   $("#send-eof").on("click", sendEOF);
   $("#input-line").keydown(function(e) {
       if(e.which == 13) consoleInput();
   });
 
+  $("#console-clear-button").click(consoleClear);
 }
 
 /** Determines if the console is in a debugging state. */

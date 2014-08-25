@@ -113,7 +113,12 @@ body {
   font-size: 15px;
 }
 
-#console-controls a {
+#console-clear-button {
+  font-weight: 200;
+  font-size: 15px;
+  padding: 0;
+  position: relative;
+  bottom: 2px;
   text-decoration: none;
 }
 
