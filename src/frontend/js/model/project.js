@@ -350,16 +350,11 @@ SeashellProject.prototype.openQuestion = function(dir) {
 
 SeashellProject.prototype.openFilePath = function(path) {
   var file = this.getFileFromPath(path);
-  var doc = file.document;
-  var done = function() {
+  this.openFile(file).done(function() {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
     editorDocument(file.document);
-  };
-  if (doc)
-    done();
-  else
-    this.openFile(file).done(done);
+  });
 };
 
 /*
@@ -367,27 +362,25 @@ SeashellProject.prototype.openFilePath = function(path) {
  * file - a SeashellFile instance
 */
 SeashellProject.prototype.openFile = function(file) {
-  if(file.children) return null;
+  if (file.children)
+    return null;
   this.currentFile = file;
-  if(file.document) return null;
-  else {
-    return socket.readFile(this.name, file.name.join("/"))
-      .done(function(contents) {
+  if (file.document)
+    return { done: function(x) { x(); } }
+  return socket.readFile(this.name, file.name.join("/"))
+    .done(function(contents) {
         var mime = "text";
         var ext = file.ext();
-        if(ext == "c" || ext == "h") {
+        if (ext == "c" || ext == "h")
           mime = "text/x-csrc";
-        }
-        else if(ext == "rkt") {
+        else if (ext == "rkt")
           mime = "text/x-scheme";
-        }
         file.document = CodeMirror.Doc(contents, mime);
         file.document.on("change", function() { handleDocumentChange(file); });
       })
-      .fail(function() {
+    .fail(function() {
         displayErrorMessage("Error reading file "+file.name+".");
-      });
-  }
+    });
 };
 
 /*
@@ -495,17 +488,6 @@ SeashellProject.prototype.close = function(save) {
 };
 
 /*
- * Closes the file.
- * save - If true, saves the file before closing
- */
-SeashellProject.prototype.closeFile = function(save) {
-  if(this.currentFile) {
-    if(save) this.currentFile.save();
-    this.currentFile = null;
-  }
-};
-
-/*
  * Deletes a file OR directory in the project.
  * file - a SeashellFile instance that is in the project
 */
@@ -568,20 +550,15 @@ SeashellProject.prototype.compile = function() {
   var save_promise = handleSaveProject();
   var promise = $.Deferred();
   var p = this;
-
   save_promise.done(function () {
-    socket.compileProject(p.name, p.currentFile ? false : p.currentFile.fullname(), promise);
+    socket.compileProject(p.name, p.currentFile.fullname(), promise);
 
-    /** Helper function for writing errors. */
     function writeErrors(errors) {
       consoleWrite("*** clang produced the following messages:");
       for (var i = 0; i < errors.length; i++) {
-        var error = errors[i][0];
-        var file = errors[i][1];
-        var line = errors[i][2];
-        var column = errors[i][3];
+        var error = errors[i][0], file = errors[i][1];
+        var line = errors[i][2], column = errors[i][3];
         var message = errors[i][4];
-
         consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
             file, line, column,
             error ? "error" : "warning",
@@ -589,31 +566,25 @@ SeashellProject.prototype.compile = function() {
       }
     }
 
-    /** Deal with it. */
     promise.done(function(messages) {
-      // Save the messages.
       p.currentErrors = messages;
-      // Write it to the console
       writeErrors(p.currentErrors);
-      // Lint
       editorLint();
     }).fail(function(result) {
-      if (Array.isArray(result)) {
-        // Log
-        consoleWrite(sprintf("*** Error compiling %s:", p.name));
-        // Save the messages.
-        p.currentErrors = result;
-        // Write it to the console
-        writeErrors(p.currentErrors);
-        // Lint
-        editorLint();
-      } else {
+      if (!Array.isArray(result))
+      {
         displayErrorMessage("Project could not be compiled.");
+        return;
       }
+      consoleWrite(sprintf("*** Error compiling %s:", p.name));
+      p.currentErrors = result;
+      writeErrors(p.currentErrors);
+      editorLint();
     });
   }).fail(function () {
     promise.reject(null);
-    displayErrorMessage("Compilation failed because project could not be saved.");
+    displayErrorMessage
+      ("Compilation failed because project could not be saved.");
   });
 
   return promise;
@@ -684,7 +655,8 @@ SeashellProject.prototype.run = function(test) {
 
   // function which actually runs the project (without compiling)
   function run() {
-    socket.runProject(p.name, p.currentFile.name.join('/'), test ? test : false, promise);
+    socket.runProject(p.name, p.currentFile.name.join('/'),
+                      test ? test : false, promise);
 
     promise.done(function(pid) {
       consoleClear();
