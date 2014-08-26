@@ -31,19 +31,19 @@
       <hr style="margin-top: 9px; margin-bottom: 8px"/>
     </div>
   </div>
-  <div class="row" style="padding-top: 0">
-    <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right"
-         style="font-size: 24px">
-      <span rel="tooltip" title="submit question">
-        <a href="#marmoset-submit-dialog" id="menu-submit" data-toggle="modal">
-          <span class="glyphicon glyphicon-send"></span>
-        </a>
-      </span>
-    </div>
-  </div>
+  <!-- <div class="row" style="padding-top: 0"> -->
+  <!--   <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right" -->
+  <!--        style="font-size: 24px"> -->
+  <!--     <span rel="tooltip" title="submit question"> -->
+  <!--       <a href="#marmoset-submit-dialog" id="menu-submit" data-toggle="modal"> -->
+  <!--         <span class="glyphicon glyphicon-send"></span> -->
+  <!--       </a> -->
+  <!--     </span> -->
+  <!--   </div> -->
+  <!-- </div> -->
   <div class="row" style="padding-top: 0">
     <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
-      <kbd style="font-style: italic">common</kbd>
+      <kbd style="font-style: italic">common/</kbd>
     </div>
     <kbd id="common-files-row" class="col-md-8 col-xs-8 text-center"
          style="font-size: 14px">
@@ -58,23 +58,6 @@
     </kbd>
   </div>
 
-  <div class="row" style="margin-top: 15px">
-    <div class="col-md-3 col-md-offset-8 col-xs-3 col-xs-offset-8 text-right">
-      <button id="toolbar-run"
-              rel="tooltip" title="build/run" class="btn btn-link"
-              style="padding-left: 0; padding-right: 0">
-        <span style="font-size: 24px"
-              class="glyphicon glyphicon-play"></span>
-      </button>
-      &nbsp;
-      <button id="toolbar-kill" rel="tooltip" title="stop"
-              class="btn btn-link"
-              style="padding-left: 0; padding-right: 0">
-        <span style="font-size: 24px" class="glyphicon glyphicon-stop"></span>
-      </button>
-    </div>
-  </div>
-
   <div class="row">
     <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1"
          style="padding: 0"
@@ -87,7 +70,24 @@
           to get started!
         </p>
         <div class="hide-on-null-file">
-          <div id="editor"></div>
+          <div id="editor">
+            <div id="editor-controls"
+                 style="position: absolute; top: 4px; right: -3px; z-index: 5000">
+              <button id="toolbar-run"
+                      rel="tooltip" title="build/run" class="btn btn-link"
+                      style="padding-left: 0; padding-right: 0">
+                <span style="font-size: 24px"
+                      class="glyphicon glyphicon-play"></span>
+              </button>
+              &nbsp;
+              <button id="toolbar-kill" rel="tooltip" title="stop"
+                      class="btn btn-link hidden"
+                      style="padding-left: 0; padding-right: 0">
+                <span style="font-size: 24px"
+                      class="glyphicon glyphicon-stop"></span>
+              </button>
+            </div>
+          </div>
           <div id="console">
             <div id="console-title" class="col-md-12 col-xs-12">
               <span class="glyphicon glyphicon-list-alt"></span>

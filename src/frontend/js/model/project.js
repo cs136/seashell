@@ -342,7 +342,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
       });
     }
 
-    $('#question-files-list-title').text(dir);
+    $('#question-files-list-title').text(dir + '/');
     attach_dir_listing_to_node(dir, $('#question-files-row'));
     attach_dir_listing_to_node('common', $('#common-files-row'));
   });
