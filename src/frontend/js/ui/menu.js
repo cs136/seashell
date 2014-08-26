@@ -84,6 +84,7 @@ function handleRunProject() {
   // TODO: Multiple running projects?
   consoleClear();
   SeashellProject.run();
+  $('#input-line').focus();
 }
 
 /**
