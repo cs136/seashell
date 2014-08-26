@@ -32,6 +32,7 @@ function handleSaveProject() {
  * This function handles the compile project menu item.
  */
 function handleCompileProject() {
+  consoleClear();
   SeashellProject.currentProject.compile();
 }
 
@@ -81,6 +82,7 @@ function handleAutoformat() {
  */
 function handleRunProject() {
   // TODO: Multiple running projects?
+  consoleClear();
   SeashellProject.run();
 }
 

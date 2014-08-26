@@ -21,7 +21,9 @@ var seashell_console = null;
 
 /** Sets up the console. */
 function setupConsole() {
-  var welcomeMessage = '\n\n\n\n\n\nwelcome to seashell! messages and program output will appear here.';
+  var welcomeMessage =
+     Array(6).join('\n') +
+     'welcome to seashell! messages and program output will appear here.';
 
   seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
@@ -29,18 +31,11 @@ function setupConsole() {
        lineWrapping: true,
        theme: 'default'});
 
-  // Debugging state for the console.
   seashell_console.debug = false;
-
-  // Store the welcome message in seashell_console.
   seashell_console.welcomeMessage = welcomeMessage;
 
-  // Hook the input button and the EOF button
   $("#send-eof").on("click", sendEOF);
-  $("#input-line").keydown(function(e) {
-      if(e.which == 13) consoleInput();
-  });
-
+  $("#input-line").keydown(function(e) { if(e.which == 13) consoleInput(); });
   $("#console-clear-button").click(consoleClear);
 }
 
@@ -57,19 +52,23 @@ function consoleRefresh() {
 
 /** Clears the contents of the output console. */
 function consoleClear() {
-  seashell_console.setValue(seashell_console.welcomeMessage);
+  seashell_console.setValue('');
 }
 
 /** Writes a message to the console.
  *
  * @param {String} message Message to write.
  **/
+function consoleScrollToBottom() {
+  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
+                                   ch: 0});
+}
+
 function consoleWrite(message) {
   var value = seashell_console.getValue();
   value += "\n" + message;
   seashell_console.setValue(value);
-  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
-                                   ch: 0});
+  consoleScrollToBottom();
 }
 
 /** Writes a message to the console, in raw mode (no processing done).
@@ -80,8 +79,7 @@ function consoleWriteRaw(message) {
   var value = seashell_console.getValue();
   value += message;
   seashell_console.setValue(value);
-  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
-                                   ch: 0});
+  consoleScrollToBottom();
 }
 
 /** Handles input on the console */
