@@ -657,6 +657,7 @@ SeashellProject.prototype.run = function(test) {
 
   // function which actually runs the project (without compiling)
   function run() {
+    setPlayStopButtonPlaying(true);
     socket.runProject(p.name, p.currentFile.name.join('/'),
                       test ? test : false, promise);
 
@@ -713,6 +714,7 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
    if (message.type == "stdout" || message.type == "stderr") {
     consoleWriteRaw(message.message);
   } else if (message.type == "done") {
+    setPlayStopButtonPlaying(false);
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {

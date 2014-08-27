@@ -94,6 +94,7 @@ function handleRunProject() {
 function handleProgramKill() {
   SeashellProject.currentProject.kill()
     .done(function() {
+      setPlayStopButtonPlaying(false);
       consoleWrite("\n--- Program stopped by user ---\n");
     });
 }
@@ -131,6 +132,14 @@ function handleDownloadProject() {
       $("#download-project-body").append(frame);
       $("#download-project-dialog").modal("show");
     });
+}
+
+function setPlayStopButtonPlaying(playing) {
+  var a = '#toolbar-run', b = '#toolbar-kill';
+  if (!playing)
+    b = [a, a = b][0];
+  $(a).addClass('hidden');
+  $(b).removeClass('hidden');
 }
 
 /**
