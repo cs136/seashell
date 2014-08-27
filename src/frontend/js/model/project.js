@@ -715,6 +715,7 @@ SeashellProject.prototype.IOHandler = function(ignored, message) {
     consoleWriteRaw(message.message);
   } else if (message.type == "done") {
     setPlayStopButtonPlaying(false);
+    editor.focus();
     if (consoleDebug()) {
       consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
     } else {

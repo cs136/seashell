@@ -95,6 +95,7 @@ function handleProgramKill() {
   SeashellProject.currentProject.kill()
     .done(function() {
       setPlayStopButtonPlaying(false);
+      editor.focus();
       consoleWrite("\n--- Program stopped by user ---\n");
     });
 }
