@@ -700,7 +700,7 @@ SeashellProject.prototype.kill = function() {
 SeashellProject.prototype.IOHandler = function(ignored, message) {
   if (message.type == "stdout" || message.type == "stderr")
   {
-    consoleWriteRaw(message.message);
+    consoleWrite(message.message);
     return;
   }
   if (message.type != "done")

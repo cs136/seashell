@@ -19,7 +19,6 @@
  */
 var seashell_console = null;
 
-/** Sets up the console. */
 function setupConsole() {
   var welcomeMessage =
      Array(7).join('\n') +
@@ -40,26 +39,18 @@ function setupConsole() {
   $("#console-clear-button").click(consoleClear);
 }
 
-/** Determines if the console is in a debugging state. */
 function consoleDebug() {
   return seashell_console && seashell_console.debug;
 }
 
-/** Refreshes the console.
- *  Call after the console is shown after a hide. */
 function consoleRefresh() {
   seashell_console.refresh();
 }
 
-/** Clears the contents of the output console. */
 function consoleClear() {
   seashell_console.setValue('');
 }
 
-/** Writes a message to the console.
- *
- * @param {String} message Message to write.
- **/
 function consoleScrollToBottom() {
   seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
                                    ch: 0});
@@ -74,20 +65,8 @@ function consoleWriteln(message) {
   consoleWrite((message || '') + '\n');
 }
 
-/** Writes a message to the console, in raw mode (no processing done).
- *
- * @param {String} message Message to write.
- */
-function consoleWriteRaw(message) {
-  var value = seashell_console.getValue();
-  value += message;
-  seashell_console.setValue(value);
-  consoleScrollToBottom();
-}
-
-/** Handles input on the console */
 function consoleInput() {
-  var input = $("#input-line").val() + "\n";
-  $("#input-line").val("");
+  var input = $('#input-line').val() + '\n';
+  $('#input-line').val('');
   SeashellProject.currentProject.input(input);
 }
