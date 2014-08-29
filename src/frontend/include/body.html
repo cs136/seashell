@@ -2,7 +2,7 @@
 <!-- This is shown when there is an active project -->
 <div class="container content hide-on-null-project">
   <noscript>
-    This page requires JavaScript to operate properly.
+    This page requires JavaScript to operate properly, or at all.
   </noscript>
 
   <div class="row" style="margin-top: 15px">
@@ -45,7 +45,7 @@
     <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
       <kbd style="font-style: italic">common/</kbd>
     </div>
-    <kbd id="common-files-row" class="col-md-8 col-xs-8 text-center"
+    <kbd id="common-files-row" class="col-md-8 col-xs-8"
          style="font-size: 14px">
     </kbd>
   </div>
@@ -53,7 +53,15 @@
     <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
       <kbd style="font-style: italic" id="question-files-list-title"></kbd>
     </div>
-    <kbd id="question-files-row" class="col-md-8 col-xs-8 text-center"
+    <kbd id="question-files-row" class="col-md-8 col-xs-8"
+         style="font-size: 14px">
+    </kbd>
+  </div>
+  <div class="row">
+    <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
+      <kbd style="font-style: italic">tests/</kbd>
+    </div>
+    <kbd id="test-files-row" class="col-md-8 col-xs-8"
          style="font-size: 14px">
     </kbd>
   </div>
@@ -74,7 +82,7 @@
             <div id="editor-controls"
                  style="position: absolute; top: 6px; right: 10px; z-index: 10">
               <button id="toolbar-run"
-                      rel="tooltip" title="build/run" class="btn btn-link"
+                      rel="tooltip" title="run" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0">
                 <span style="font-size: 24px"
                       class="glyphicon glyphicon-play"></span>
@@ -84,6 +92,12 @@
                       style="padding-left: 0; padding-right: 0">
                 <span style="font-size: 24px"
                       class="glyphicon glyphicon-stop"></span>
+              </button>
+              <button id="toolbar-run-tests"
+                      rel="tooltip" title="run tests" class="btn btn-link"
+                      style="padding-left: 0; padding-right: 0; margin-left: 10px;">
+                <span style="font-size: 23px; top: 3px"
+                      class="glyphicon glyphicon-tasks"></span>
               </button>
             </div>
           </div>

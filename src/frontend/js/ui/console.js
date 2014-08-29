@@ -22,12 +22,13 @@ var seashell_console = null;
 /** Sets up the console. */
 function setupConsole() {
   var welcomeMessage =
-     Array(6).join('\n') +
+     Array(7).join('\n') +
      'welcome to seashell! messages and program output will appear here.';
 
   seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
-       readOnly: true,
+       readOnly: false,
+       mode: 'text/x-markdown',
        lineWrapping: true,
        theme: 'default'});
 
@@ -65,10 +66,12 @@ function consoleScrollToBottom() {
 }
 
 function consoleWrite(message) {
-  var value = seashell_console.getValue();
-  value += "\n" + message;
-  seashell_console.setValue(value);
+  seashell_console.setValue(seashell_console.getValue() + message);
   consoleScrollToBottom();
+}
+
+function consoleWriteln(message) {
+  consoleWrite(message + '\n');
 }
 
 /** Writes a message to the console, in raw mode (no processing done).

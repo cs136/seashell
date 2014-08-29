@@ -127,7 +127,7 @@ function SeashellProject(name, callback) {
       _.chain(files)
         .sortBy(function(x) { return x[0]; })
           .forEach(function(x) {
-            if (!x[1] || 'q' != x[0][0])
+            if (!x[1] || !/^q[^/]+$/.exec(x[0]))
               return;
             var name = x[0];
             var link = $('<a>', { href: '#',
@@ -296,13 +296,16 @@ SeashellProject.prototype.openQuestion = function(dir) {
 
   socket.listProject(p.name).done(function(files) {
     function attach_dir_listing_to_node(dir, parent) {
-      var dfiles =
-        _.chain(files)
-          .filter(function(x) { return !x[1] && dir == x[0].split('/')[0]; })
-            .map(function(x) { return x[0].split('/')[1]; })
-              .value();
       function basename(z) { return z.split('.')[0]; }
       function extension(z) { return z.split('.')[1]; }
+      function dirname(z) {
+        return z.substring(0, z.length - /\/[^\/]+$/.exec(z)[0].length);
+      }
+      var dfiles =
+        _.chain(files)
+          .filter(function(x) { return !x[1] && dirname(x[0]) == dir; })
+            .map(function(x) { return /[^\/]+$/.exec(x[0])[0]; })
+              .value();
       function has_source_buddy(x)
       {
         return ['c', 'h'].indexOf(extension(x)) >= 0 &&
@@ -347,6 +350,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
     $('#question-files-list-title').text(dir + '/');
     attach_dir_listing_to_node(dir, $('#question-files-row'));
     attach_dir_listing_to_node('common', $('#common-files-row'));
+    attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
   });
 }
 
@@ -556,7 +560,8 @@ SeashellProject.prototype.compile = function() {
     socket.compileProject(p.name, p.currentFile.fullname(), promise);
 
     function writeErrors(errors) {
-      consoleWrite("*** clang produced the following messages:");
+      if (errors.length)
+        consoleWrite("*** clang produced the following messages:");
       for (var i = 0; i < errors.length; i++) {
         var error = errors[i][0], file = errors[i][1];
         var line = errors[i][2], column = errors[i][3];
@@ -644,40 +649,31 @@ SeashellProject.run = function() {
   return null;
 };
 
-/*
- * Runs the project.
- * test - [optional] name of test to run with the program
- */
 SeashellProject.prototype.run = function(test) {
+  // test - [optional] name of test to run with the program
   var ext = this.currentFile.name[this.currentFile.name.length-1]
     .split('.').pop();
+  var src_name = this.currentFile.name[this.currentFile.name.length - 2]
   var compile_promise = ext == "rkt" ? handleSaveProject() : this.compile();
   var promise = $.Deferred();
   var p = this;
 
-  // function which actually runs the project (without compiling)
   function run() {
     setPlayStopButtonPlaying(true);
     socket.runProject(p.name, p.currentFile.name.join('/'),
                       test ? test : false, promise);
 
     promise.done(function(pid) {
-      consoleClear();
-
-      /** Either pid is a number or some list of messages,
-       *  depending on whether or not test is false or not.
-       *  Handle both cases. */
-      if (consoleDebug() && typeof pid == 'number') {
-        consoleWrite(sprintf("--- Running project '%s' [PID: %d] ---\n", p.name, pid));
-      } else {
-        consoleWrite(sprintf("--- Running project '%s' ---\n", p.name));
+      if (!test) {
+        if (consoleDebug() && typeof pid == 'number')
+          consoleWriteln(sprintf("# run '%s' (pid %d)", src_name, pid));
+        else
+          consoleWriteln(sprintf("# run '%s'", src_name));
       }
-
-      if (typeof pid == 'number') {
+      if (typeof pid == 'number')
         p.currentPID = pid;
-      } else {
+      else
         p.currentPID = null;
-      }
     }).fail(function() {
       displayErrorMessage("Project could not be run.");
     });
@@ -711,21 +707,24 @@ SeashellProject.prototype.kill = function() {
  * Callback function that handles program input & output activity
 */
 SeashellProject.prototype.IOHandler = function(ignored, message) {
-   if (message.type == "stdout" || message.type == "stderr") {
+  if (message.type == "stdout" || message.type == "stderr")
+  {
     consoleWriteRaw(message.message);
-  } else if (message.type == "done") {
-    setPlayStopButtonPlaying(false);
-    editor.focus();
-    if (consoleDebug()) {
-      consoleWrite(sprintf("--- Terminated [PID: %d] with exit code %d ---\n", message.pid, message.status));
-    } else {
-      consoleWrite(sprintf("--- Terminated with exit code %d ---\n", message.status));
-    }
-
-    if (this.currentPID == message.pid) {
-      this.currentPID = null;
-    }
+    return;
   }
+  if (message.type != "done")
+    return;
+
+  setPlayStopButtonPlaying(false);
+  editor.focus();
+  if (consoleDebug())
+    consoleWriteln(sprintf("\n# exited (pid %d) with code %d",
+                           message.pid, message.status));
+  else
+    consoleWriteln(sprintf("\n# exited with code %d", message.status));
+
+  if (this.currentPID == message.pid)
+    this.currentPID = null;
 };
 
 /*
@@ -815,9 +814,7 @@ SeashellProject.prototype.getFileFromPath = function(path) {
  * Returns an array of test file filenames
 */
 SeashellProject.prototype.getTestsForFile = function(file) {
-  var path = file.name.slice(0,file.name.length-1).join("/")+"/tests";
-  path = path.charAt(0) == '/' ? path.substr(1) : path;
-  var testDir = this.getFileFromPath(path);
+  var testDir = this.getFileFromPath(file.name[0] + '/tests');
   var arr = [];
   if(testDir && testDir.is_dir) {
     for(var i=0; i < testDir.children.length; i++) {

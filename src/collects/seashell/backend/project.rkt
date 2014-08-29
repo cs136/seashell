@@ -399,7 +399,7 @@
 ;;  pid - Process ID (used as unique identifier for process)
 (define/contract (run-project name file test)
   (-> project-name? string? (or/c #f string?)
-      (or/c integer? (list/c string? string?)))
+      (or/c integer? (list/c string? (hash/c symbol? string?))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -448,7 +448,7 @@
   (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
   (with-output-to-file tmpzip
     (thunk (write-bytes (export-project project))) #:exists 'truncate)
-    
+
   ;; TODO: (better) error handling.  Exceptions received here
   ;; will be properly caught, but an error message would be nice.
   (define-values (proc out in err)

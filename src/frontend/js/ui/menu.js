@@ -19,105 +19,56 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/**
- * handleSaveProject( )
- * This functions handles the save project menu item.
- */
 function handleSaveProject() {
   return SeashellProject.currentProject.save();
 }
 
-/**
- * handleCompileProject( )
- * This function handles the compile project menu item.
- */
 function handleCompileProject() {
-  consoleClear();
-  SeashellProject.currentProject.compile();
+  return SeashellProject.currentProject.compile();
 }
 
-/**
- * handleUndo( )
- * This function handles the undo menu item.
- */
-function handleUndo( ) {
-  editorUndo();
-}
-
-/**
- * handleRedo( )
- * This function handles the redo menu item.
- */
-function handleRedo() {
-  editorRedo();
-}
-
-/**
- * handleCommentLines( )
- * This function handles the comment lines menu item.
- */
-function handleCommentLines() {
-  // TODO: Implement comments.
-}
-
-/**
- * handleCommentSelection( )
- * This function handles the comment selection menu item.
- */
-function handleCommentSelection() {
-  // TODO: Implement comments.
-}
-
-/**
- * handleAutoformat( )
- * This function handles the autoformat menu item.
- */
-function handleAutoformat() {
-  // TODO: Implement autoformat.
-}
-
-/**
- * handleRunProject()
- * This function handles running projects.
- */
 function handleRunProject() {
-  // TODO: Multiple running projects?
-  consoleClear();
-  SeashellProject.run();
-  $('#input-line').focus();
+  return SeashellProject.run();
 }
 
-/**
- * handleProgramKill()
- * This function handles killing the program.
- */
+function handleRunTests() {
+  SeashellProject.currentProject.compile().done(function() {
+    var tests = SeashellProject.currentProject.getTestsForFile
+      (SeashellProject.currentProject.currentFile);
+
+    function run_tests() {
+      if (!tests.length) {
+        consoleWriteln('# done');
+        setPlayStopButtonPlaying(false);
+        return;
+      }
+      var name = tests.shift();
+      consoleWrite(sprintf("# run test '%s'... ", name));
+      SeashellProject.currentProject.run('../q1/tests/' + name)
+        .fail(function() { console.log('oops test failed'); })
+        .done(function(result) {
+          consoleWriteln(result.tag);
+          if ('fail' == result.tag) {
+            var x = result.data;
+            consoleWriteln(sprintf('## expected output:\n%s', x.expected));
+            consoleWriteln(sprintf('## test output:\n%s', x.actual));
+          }
+          run_tests();
+        });
+    }
+    run_tests();
+  });
+}
+
 function handleProgramKill() {
   SeashellProject.currentProject.kill()
     .done(function() {
       setPlayStopButtonPlaying(false);
       editor.focus();
-      consoleWrite("\n--- Program stopped by user ---\n");
+      consoleWriteln("# stopped by user (that's you!)");
     });
 }
 
-
-function handleRunWithTestsDialog() {
-  var tests = SeashellProject.currentProject.getTestsForFile(SeashellProject.currentProject.currentFile);
-  var html = "";
-  for(var i=0; i < tests.length; i++) {
-    html += "<label class='checkbox'><input type='checkbox' name='run-with-tests-input' checked='checked' value='"+tests[i]+"' />"+tests[i]+"</label>";
-  }
-  if(!html) {
-    html = "<p>No tests could be found.</p>";
-  }
-  $("#form-run-with-tests").html(html);
-  $("#run-with-tests-dialog").modal("show");
-}
-
-/**
- * handleDownloadProject()
- * This function handles downloading projects.
- */
 function handleDownloadProject() {
   SeashellProject.currentProject.getDownloadToken()
     .done(function(token) {
@@ -143,33 +94,19 @@ function setPlayStopButtonPlaying(playing) {
   $(b).removeClass('hidden');
 }
 
-/**
- * Sets up the menu; attaches actions to each menu item that does not already have
- * an action attached to it. */
 function setupMenu() {
-  $("#menu-save-project").on("click", handleSaveProject);
-  $("#toolbar-save-project").on("click", handleSaveProject);
+  function withInputFromConsole(x) {
+    consoleClear();
+    $('#input-line').focus();
+    x();
+  }
 
-  $("#menu-compile").on("click", handleCompileProject);
-  $("#toolbar-compile").on("click", handleCompileProject);
-
-  $("#menu-run").on("click", handleRunProject);
-  $("#toolbar-run").on("click", handleRunProject);
-
-  $("#menu-run-tests").on("click", handleRunWithTestsDialog);
-  $("#toolbar-run-tests").on("click", handleRunWithTestsDialog);
-
-  $("#menu-kill").on("click", handleProgramKill);
+  $("#toolbar-run").on("click", function() {
+    withInputFromConsole(handleRunProject);
+  });
+  $("#toolbar-run-tests").on("click", function() {
+    withInputFromConsole(handleRunTests);
+  });
   $("#toolbar-kill").on("click", handleProgramKill);
-
-  $("#menu-undo").on("click", handleUndo);
-  $("#toolbar-undo").on("click", handleUndo);
-  $("#menu-redo").on("click", handleRedo);
-  $("#toolbar-redo").on("click", handleRedo);
-
-  $("#menu-commentLine").on("click", handleCommentLines);
-  $("#menu-commentSelection").on("click", handleCommentSelection);
-  $("#menu-autoformat").on("click", handleAutoformat);
-
   $("#menu-download").on("click", handleDownloadProject);
 }
