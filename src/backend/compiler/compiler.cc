@@ -558,7 +558,7 @@ static int final_link_step (struct seashell_compiler* compiler)
    *  in memory.
    */
   compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
-  return 0; 
+  return 0;
 }
 
 /**
@@ -568,7 +568,7 @@ static int final_link_step (struct seashell_compiler* compiler)
  *  const char* src_path)
  *
  * Compiles a given source file, links it into a module.
- * 
+ *
  * Arguments:
  *  module - Module to link into.
  *  src_path - File to compile.
@@ -594,7 +594,7 @@ static int compile_module (seashell_compiler* compiler,
 
     std::vector<seashell_diag>& compile_messages = compiler->module_messages[index];
     #define PUSH_DIAGNOSTIC(x) compile_messages.push_back(seashell_diag(true, src_path, (x)))
-   
+
 
     /** Set up compilation arguments. */
     for(std::vector<std::string>::iterator p = compiler->compiler_flags.begin();
@@ -623,7 +623,7 @@ static int compile_module (seashell_compiler* compiler,
                   std::back_inserter(compile_messages));
       return 1;
     }
-    
+
     clang::CompilerInstance Clang;
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
@@ -636,10 +636,10 @@ static int compile_module (seashell_compiler* compiler,
                   std::back_inserter(compile_messages));
       return 1;
     }
-    
+
     /** Set up the default headers */
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
-    Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true); 
+    Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
 
     clang::EmitLLVMOnlyAction Act(&compiler->context);
     Success = Clang.ExecuteAction(Act);
@@ -656,11 +656,10 @@ static int compile_module (seashell_compiler* compiler,
 
     OwningPtr<Module> mod(Act.takeModule());
     if (!mod) {
-      PUSH_DIAGNOSTIC("libseashell-clang: takeModule() failed.");
       return 1;
     }
-   
-    /** Link the module into the one we're building. 
+
+    /** Link the module into the one we're building.
      *  NOTE: We destroy the source as we've taken the module
      *  (and that for some awful reason, copying modules breaks horribly
      *   LLVM's DWARF emitter.  Someone really ought to file a bug) */
@@ -674,4 +673,3 @@ static int compile_module (seashell_compiler* compiler,
     return 0;
     #undef PUSH_DIAGNOSTIC
 }
-
