@@ -71,7 +71,7 @@ function consoleWrite(message) {
 }
 
 function consoleWriteln(message) {
-  consoleWrite(message + '\n');
+  consoleWrite((message || '') + '\n');
 }
 
 /** Writes a message to the console, in raw mode (no processing done).

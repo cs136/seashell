@@ -47,12 +47,10 @@ function handleRunTests() {
       SeashellProject.currentProject.run('../q1/tests/' + name)
         .fail(function() { console.log('oops test failed'); })
         .done(function(result) {
-          consoleWriteln(result.tag);
-          if ('fail' == result.tag) {
-            var x = result.data;
-            consoleWriteln(sprintf('## expected output:\n%s', x.expected));
-            consoleWriteln(sprintf('## test output:\n%s', x.actual));
-          }
+          consoleWrite(result.tag);
+          if ('fail' == result.tag)
+            consoleWrite(sprintf(' with output:\n%s', result.data.actual));
+          consoleWriteln();
           run_tests();
         });
     }
