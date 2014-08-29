@@ -560,16 +560,11 @@ SeashellProject.prototype.compile = function() {
     socket.compileProject(p.name, p.currentFile.fullname(), promise);
 
     function writeErrors(errors) {
-      if (errors.length)
-        consoleWrite("*** clang produced the following messages:");
       for (var i = 0; i < errors.length; i++) {
         var error = errors[i][0], file = errors[i][1];
         var line = errors[i][2], column = errors[i][3];
         var message = errors[i][4];
-        consoleWrite(sprintf("*** %s:%d:%d: %s: %s",
-            file, line, column,
-            error ? "error" : "warning",
-            message));
+        consoleWriteln(sprintf("%s:%d:%d: %s", file, line, column, message));
       }
     }
 
@@ -583,7 +578,7 @@ SeashellProject.prototype.compile = function() {
         displayErrorMessage("Project could not be compiled.");
         return;
       }
-      consoleWrite(sprintf("*** Error compiling %s:", p.name));
+      consoleWriteln("# compilation failed with errors:");
       p.currentErrors = result;
       writeErrors(p.currentErrors);
       editorLint();
