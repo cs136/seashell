@@ -618,7 +618,7 @@ SeashellProject.linter = function() {
           from: CodeMirror.Pos(line, column),
           to: CodeMirror.Pos(line),
           message: message,
-          severity: error ? "error" : "warning"});
+          severity: 'error'});
       }
     }
   }
@@ -682,11 +682,7 @@ SeashellProject.prototype.run = function(test) {
   // This can, and will happen whenever handles are reused.
   // Oh well.
 
-  /** We really ought not to run a project without compiling it. */
-  compile_promise.done(run).fail(function () {
-    promise.reject(null);
-    displayErrorMessage((ext=="c" ? "Compiling" : "Saving")+" project failed.");
-  });
+  compile_promise.done(run).fail(function () { promise.reject(null); });
 
   return promise;
 };
