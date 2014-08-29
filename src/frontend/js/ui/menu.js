@@ -32,30 +32,7 @@ function handleRunProject() {
 }
 
 function handleRunTests() {
-  SeashellProject.currentProject.compile().done(function() {
-    var tests = SeashellProject.currentProject.getTestsForFile
-      (SeashellProject.currentProject.currentFile);
-
-    function run_tests() {
-      if (!tests.length) {
-        consoleWriteln('# done');
-        setPlayStopButtonPlaying(false);
-        return;
-      }
-      var name = tests.shift();
-      consoleWrite(sprintf("# run test '%s'... ", name));
-      SeashellProject.currentProject.run('../q1/tests/' + name)
-        .fail(function() { console.log('oops test failed'); })
-        .done(function(result) {
-          consoleWrite(result.tag);
-          if ('fail' == result.tag)
-            consoleWrite(sprintf(' with output:\n%s', result.data.actual));
-          consoleWriteln();
-          run_tests();
-        });
-    }
-    run_tests();
-  });
+  return SeashellProject.runTests();
 }
 
 function handleProgramKill() {

@@ -24,9 +24,6 @@ var settings = null;
 var dccount = 0;
 var disconnect = false;
 
-/**
- * Sets up the websocket disconnection monitor.
- */
 function setupDisconnectMonitor(){
     if(dccount >= 3){
         if(!disconnect){
@@ -592,51 +589,32 @@ SeashellProject.prototype.compile = function() {
   return promise;
 };
 
-/**
- * Linter helper for projects.
- *
- * @return {Array of CodeMirror Linter messages} Result of linting the current file.
- */
 SeashellProject.linter = function() {
-  var found = [];
-  if(SeashellProject.currentProject) {
-    /** Look up the current errors for the current file. */
-    for (var i = 0; i < SeashellProject.currentProject.currentErrors.length; i++) {
-      var error = SeashellProject.currentProject.currentErrors[i][0];
-      var file = SeashellProject.currentProject.currentErrors[i][1];
-      var line = SeashellProject.currentProject.currentErrors[i][2];
-      var column = SeashellProject.currentProject.currentErrors[i][3];
-      var message = SeashellProject.currentProject.currentErrors[i][4];
-
-      /** Correct for off by one errors. */
-     if (line > 0) {
-        line --;
-      }
-
-     if (file == SeashellProject.currentProject.currentFile.name.join("/") || file == "final-link-result" ) {
-        found.push({
-          from: CodeMirror.Pos(line, column),
-          to: CodeMirror.Pos(line),
-          message: message,
-          severity: 'error'});
-      }
-    }
+  var found = [], project = SeashellProject.currentProject;
+  if (project)
+  {
+    _.forEach(project.currentErrors,
+              function(err) {
+                var error = err[0], file = err[1];
+                var line = _.max([err[2] - 1, 0]), column = err[3];
+                var message = err[4];
+                if (_.contains([project.currentFile.name.join("/"),
+                                'final-link-result'],
+                               file))
+                  found.push({ from: CodeMirror.Pos(line, column),
+                               to: CodeMirror.Pos(line),
+                               message: message,
+                               severity: 'error' });
+              });
   }
-
   return found;
 };
 
-/**
- * Sends EOF to the currently running project.
- */
 function sendEOF() {
     if(SeashellProject.currentProject.currentPID)
         socket.sendEOF(SeashellProject.currentProject.currentPID);
 }
 
-/**
- * Project runner.
- */
 SeashellProject.run = function() {
   if(SeashellProject.currentProject) {
     return SeashellProject.currentProject.run();
@@ -644,11 +622,39 @@ SeashellProject.run = function() {
   return null;
 };
 
+SeashellProject.runTests = function() {
+  var p = SeashellProject.currentProject;
+  p.compile().done(function() {
+    var tests = p.getTestsForFile(p.currentFile);
+    function run_tests() {
+      if (!tests.length) {
+        consoleWriteln('# done');
+        setPlayStopButtonPlaying(false);
+        return;
+      }
+      var name = tests.shift();
+      consoleWrite(sprintf("# run test '%s'... ", name));
+      p.run(sprintf('../%s/tests/%s', p.currentFile.name[0] , name))
+        .fail(function() { console.log("TODO: internal test error"); })
+        .done(function(result) {
+          consoleWriteln({ 'pass' : 'passed',
+                           'fail' : sprintf('failed with output:\n%s',
+                                            result.data.actual),
+                           'no-expect' : "no `.expect' file found. write one?"}
+                         [result.tag]);
+
+          run_tests();
+        });
+    }
+    run_tests();
+  });
+};
+
 SeashellProject.prototype.run = function(test) {
   // test - [optional] name of test to run with the program
   var ext = this.currentFile.name[this.currentFile.name.length-1]
     .split('.').pop();
-  var src_name = this.currentFile.name[this.currentFile.name.length - 2]
+  var src_name = this.currentFile.name[this.currentFile.name.length - 2];
   var compile_promise = ext == "rkt" ? handleSaveProject() : this.compile();
   var promise = $.Deferred();
   var p = this;
