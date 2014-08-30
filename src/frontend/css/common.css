@@ -55,6 +55,11 @@ body {
   height: 20%;
 }
 
+#question-controls button {
+  text-decoration: none;
+  font-size: 14px;
+}
+
 /** Editor and the console. */
 .CodeMirror {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
