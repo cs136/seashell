@@ -50,14 +50,21 @@
     </kbd>
     <div id="question-controls" class="col-md-2 col-xs-2 text-right"
          style="padding-right: 11px">
-      <button id="toolbar-add-file" rel="tooltip" title="new file…"
-              class="btn btn-link" style="padding: 0; margin-right: 7px">
-        <span class="glyphicon glyphicon-plus"></span>
-        <span class="caret" style="position: relative; bottom: 1px; right: 2px">
+      <a href="#"
+         tabindex="0"
+         data-toggle="popover"
+         id="toolbar-add-file"
+         class="btn btn-link"
+         style="padding: 0; margin-right: 7px; outline: 0; text-decoration: none">
+        <span rel="tooltip" title="new file…">
+          <span class="glyphicon glyphicon-plus"></span>
+          <span class="caret" style="position: relative; bottom: 1px; right: 2px">
+          </span>
         </span>
-      </button>
+      </a>
       <button id="toolbar-submit-question"
-              rel="tooltip" title="submit question…" class="btn btn-link"
+              rel="tooltip"
+              title="submit question…" class="btn btn-link"
               style="padding: 0">
         <span class="glyphicon glyphicon-send"></span>
       </button>

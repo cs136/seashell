@@ -84,4 +84,24 @@ function setupMenu() {
   });
   $("#toolbar-kill").on("click", handleProgramKill);
   $("#menu-download").on("click", handleDownloadProject);
+
+  $('#toolbar-add-file').popover({
+    placement: 'bottom',
+    trigger: 'focus',
+    content:
+    '<ul class="dropdown-menu popover-menu">\
+      <li><a href="#">new source file</a></li>\
+      <li><a href="#">new test</a></li>\
+      <li role="presentation" class="divider"></li>\
+      <li><a href="#">new common source file</a></li>\
+    </ul>',
+    html: true
+  });
+  $('#toolbar-add-file').on('show.bs.popover', function() {
+    $('#toolbar-add-file > span').tooltip('hide');
+    $('#toolbar-add-file > span').tooltip('disable');
+  });
+  $('#toolbar-add-file').on('hidden.bs.popover', function() {
+    $('#toolbar-add-file > span').tooltip('enable');
+  });
 }
