@@ -89,9 +89,9 @@
           to get started!
         </p>
         <div class="hide-on-null-file">
-          <div id="editor">
+          <div id="editor" style="position: relative">
             <div id="editor-controls"
-                 style="position: absolute; top: 6px; right: 10px; z-index: 10">
+                 style="position: absolute; right: 13px; z-index: 10">
               <button id="toolbar-run"
                       rel="tooltip" title="run" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0">
@@ -109,6 +109,17 @@
                       style="padding-left: 0; padding-right: 0; margin-left: 10px;">
                 <span style="font-size: 23px; top: 3px"
                       class="glyphicon glyphicon-tasks"></span>
+              </button>
+            </div>
+            <div id="current-file-controls"
+                 style="position: absolute; bottom: 0; right: 13px; z-index: 10">
+              <button id="toolbar-delete-file"
+                      rel="tooltip"
+                      title="delete this file"
+                      class="btn btn-link"
+                      style="padding-left: 0; padding-right: 0">
+                <span style="font-size: 18px; color: red"
+                      class="glyphicon glyphicon-trash"></span>
               </button>
             </div>
           </div>
