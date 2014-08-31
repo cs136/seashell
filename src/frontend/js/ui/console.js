@@ -22,7 +22,7 @@ var seashell_console = null;
 function setupConsole() {
   var welcomeMessage =
      Array(7).join('\n') +
-     'welcome to seashell! messages and program output will appear here.';
+     '### welcome to seashell! messages and program output will appear here.';
 
   seashell_console = CodeMirror($("#console")[0],
       {value: welcomeMessage,
