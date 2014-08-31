@@ -634,7 +634,7 @@ SeashellProject.runTests = function() {
       }
       var name = tests.shift();
       consoleWrite(sprintf("# run test '%s'... ", name));
-      p.run(sprintf('../%s/tests/%s', p.currentFile.name[0] , name))
+      p.run(name)
         .fail(function() { console.log("TODO: internal test error"); })
         .done(function(result) {
           consoleWriteln({ 'pass' : 'passed',

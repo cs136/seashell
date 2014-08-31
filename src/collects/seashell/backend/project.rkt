@@ -361,6 +361,7 @@
                                     "-gdwarf-4" "-O0"
                                     "-I" ,(some-system-path->string project-common))
                                   '("-lm") c-files o-files))
+  ;; TODO Vary binary name by file we're building.
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
@@ -399,24 +400,33 @@
 ;;  pid - Process ID (used as unique identifier for process)
 (define/contract (run-project name file test)
   (-> project-name? string? (or/c #f string?)
-      (or/c integer? (list/c string? (hash/c symbol? string?))))
+      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
-  ;; figure out which language to run with
+  ;; Figure out which language to run with
   (define lang
     (match (filename-extension file)
       ['#"rkt" 'racket]
       ['#"c" 'C]
       [_ (error "You can only run .c or .rkt files!")]))
 
+  ;; Name of program to run.
+  ;; TODO Vary by file [target] to run.
   (define program
     (match lang
       ['racket (check-and-build-path (build-project-path name) file)]
       ['C (check-and-build-path (runtime-files-path) (format "~a-binary" name))]))
+ 
+  ;; Get the base directory of our file that we're running.
+  (define project-base (build-project-path name))
+  (define project-common (check-and-build-path project-base "common"))
+  (match-define-values (base _ _)
+                       (if file (split-path (check-and-build-path project-base file))
+                                (values (check-and-build-path project-base) #f #f)))
 
-  (run-program program (check-and-build-path (build-project-path name)) lang test))
+  (run-program program base lang test))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
