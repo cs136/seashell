@@ -84,6 +84,27 @@ function setupMenu() {
   });
   $("#toolbar-kill").on("click", handleProgramKill);
   $("#menu-download").on("click", handleDownloadProject);
+  $('#toolbar-delete-file').on("click", function() {
+    var warning_msg = 'are you sure? click again';
+    var p = $('#toolbar-delete-file');
+    if (p.attr('data-original-title') != warning_msg)
+    {
+      p.tooltip('hide')
+        .attr('data-original-title', warning_msg)
+        .tooltip('fixTitle')
+        .tooltip('show');
+      return;
+    }
+    p.tooltip('hide').attr('data-original-title', 'delete this file')
+      .tooltip('fixTitle');
+    var file = SeashellProject.currentProject.currentFile;
+    if (!file.is_dir)
+      SeashellProject.currentProject.deleteFile(file)
+        .done(function() {
+          var p = SeashellProject.currentProject;
+          p.openQuestion(p.currentQuestion);
+        });
+  });
 
   $('#toolbar-add-file').popover({
     placement: 'bottom',
