@@ -291,7 +291,7 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 
 SeashellProject.prototype.openQuestion = function(dir) {
   var p = this;
-
+  var result = $.Deferred();
   socket.listProject(p.name).done(function(files) {
     function attach_dir_listing_to_node(dir, parent) {
       function basename(z) { return z.split('.')[0]; }
@@ -328,29 +328,39 @@ SeashellProject.prototype.openQuestion = function(dir) {
       }
 
       parent.empty();
-      _.forEach(dfiles, function(x) {
-        var span = $('<span>', { style: 'margin-right: 30px' });
-        if (!has_source_buddy(x))
-        {
-          span.append(make_file_link(x));
+      return _.chain(dfiles)
+        .map(function(x) {
+          var span = $('<span>', { style: 'margin-right: 30px' });
+          if (!has_source_buddy(x))
+          {
+            var link = make_file_link(x);
+            span.append(link);
+            parent.append(span);
+            return link;
+          }
+          if ('c' != extension(x))
+            return null;
+          var link = make_file_link(x, basename(x) + ' c');
+          span.append(link);
+          span.append('<span style="color: #aaa; font-size: 12px">,</span>');
+          span.append(make_file_link(basename(x) + '.h', 'h'));
           parent.append(span);
-          return;
-        }
-        if ('c' != extension(x))
-          return;
-        span.append(make_file_link(x, basename(x) + ' c'));
-        span.append('<span style="color: #aaa; font-size: 12px">,</span>');
-        span.append(make_file_link(basename(x) + '.h', 'h'));
-        parent.append(span);
-      });
+          return link;
+        })
+          .filter(_.identity).value();
     }
 
     $('#question-files-list-title').text(dir + '/');
-    attach_dir_listing_to_node(dir, $('#question-files-row'));
+
+    attach_dir_listing_to_node(dir, $('#question-files-row'))[0].click();
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
     p.currentQuestion = dir;
+
+    result.resolve();
   });
+
+  return result;
 }
 
 SeashellProject.prototype.openFilePath = function(path) {
@@ -362,10 +372,6 @@ SeashellProject.prototype.openFilePath = function(path) {
   });
 };
 
-/*
- * Opens the given file in the project
- * file - a SeashellFile instance
-*/
 SeashellProject.prototype.openFile = function(file) {
   if (file.children)
     return null;
