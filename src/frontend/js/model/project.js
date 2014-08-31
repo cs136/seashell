@@ -83,6 +83,7 @@ function SeashellProject(name, callback) {
   this.name = name;
   this.files = null;
   this.currentFile = null;
+  this.currentQuestion = null;
   this.currentErrors = null;
   this.currentPID = null;
   var lockPromise = socket.lockProject(name);
@@ -348,6 +349,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
     attach_dir_listing_to_node(dir, $('#question-files-row'));
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
+    p.currentQuestion = dir;
   });
 }
 
@@ -487,6 +489,13 @@ SeashellProject.prototype.close = function(save) {
       .fail(function() {
         displayErrorMessage("Project could not be closed.");
       });
+  }
+};
+
+SeashellProject.prototype.closeFile = function(save) {
+  if(this.currentFile) {
+    if(save) this.currentFile.save();
+    this.currentFile = null;
   }
 };
 
