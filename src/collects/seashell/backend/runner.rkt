@@ -158,7 +158,7 @@
 ;;               found, and the string is the output of the program
 (define/contract (run-program binary directory lang test)
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
-      (or/c integer? (list/c string? (hash/c symbol? string?))))
+      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -246,7 +246,7 @@
 ;;  "no-expect" means no .expect file was found, and the string is the output
 ;;  of the program
 (define/contract (diff prog-output expect-file)
-  (-> bytes? string? (list/c string? (hash/c symbol? string?)))
+  (-> bytes? string? (list/c string? (or/c string? (hash/c symbol? string?))))
   (cond
    [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
     (define-values (handle stdout stdin stderr)
