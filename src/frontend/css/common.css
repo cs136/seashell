@@ -86,6 +86,14 @@ body {
   border: 1px solid #ddd;
 }
 
+#editor-controls > button {
+  text-decoration: none;
+}
+
+#editor-controls > button > span {
+  font-variant: small-caps;
+}
+
 #console {
 }
 
@@ -318,6 +326,10 @@ div.tooltip .tooltip-inner {
   float: none;
   padding: 0;
   margin: 0;
+}
+
+#question-controls a, #question-controls button {
+  font-variant: small-caps;
 }
 
 #question-controls .popover {

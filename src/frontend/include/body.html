@@ -35,28 +35,27 @@
     <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
       <kbd style="font-style: italic">common/</kbd>
     </div>
-    <kbd id="common-files-row" class="col-md-7 col-xs-7"
+    <kbd id="common-files-row" class="col-md-6 col-xs-6"
          style="font-size: 14px">
     </kbd>
-    <div id="question-controls" class="col-md-2 col-xs-2 text-right"
+    <div id="question-controls" class="col-md-3 col-xs-3 text-right"
          style="padding-right: 11px">
       <a href="#"
          tabindex="0"
          data-toggle="popover"
          id="toolbar-add-file"
          class="btn btn-link"
-         style="padding: 0; margin-right: 7px; outline: 0; text-decoration: none">
-        <span rel="tooltip" title="new file…">
-          <span class="glyphicon glyphicon-plus"></span>
-          <span class="caret" style="position: relative; bottom: 1px; right: 2px">
+         style="padding: 0; margin-right: 15px; outline: 0; text-decoration: none">
+        <span>
+          <span>add file</span>
+          <span class="caret"
+                style="position: relative; bottom: 0; right: 2px">
           </span>
         </span>
       </a>
-      <button id="toolbar-submit-question"
-              rel="tooltip"
-              title="submit question…" class="btn btn-link"
+      <button id="toolbar-submit-question" class="btn btn-link"
               style="padding: 0">
-        <span class="glyphicon glyphicon-send"></span>
+        <span>submit question</span>
       </button>
     </div>
   </div>
@@ -92,23 +91,17 @@
           <div id="editor" style="position: relative">
             <div id="editor-controls"
                  style="position: absolute; right: 13px; z-index: 10">
-              <button id="toolbar-run"
-                      rel="tooltip" title="run" class="btn btn-link"
+              <button id="toolbar-run" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0">
-                <span style="font-size: 24px"
-                      class="glyphicon glyphicon-play"></span>
+                <span style="font-size: 18px">run</span>
               </button>
-              <button id="toolbar-kill" rel="tooltip" title="stop"
-                      class="btn btn-link hidden"
+              <button id="toolbar-kill" class="btn btn-link hidden"
                       style="padding-left: 0; padding-right: 0">
-                <span style="font-size: 24px"
-                      class="glyphicon glyphicon-stop"></span>
+                <span style="font-size: 18px">stop</span>
               </button>
-              <button id="toolbar-run-tests"
-                      rel="tooltip" title="run tests" class="btn btn-link"
-                      style="padding-left: 0; padding-right: 0; margin-left: 10px;">
-                <span style="font-size: 23px; top: 3px"
-                      class="glyphicon glyphicon-tasks"></span>
+              <button id="toolbar-run-tests" class="btn btn-link"
+                      style="padding-left: 0; padding-right: 0; margin-left: 15px;">
+                <span style="font-size: 18px">test</span>
               </button>
             </div>
             <div id="current-file-controls"
@@ -117,9 +110,10 @@
                       rel="tooltip"
                       title="delete this file"
                       class="btn btn-link"
-                      style="padding-left: 0; padding-right: 0">
-                <span style="font-size: 18px; color: red"
-                      class="glyphicon glyphicon-trash"></span>
+                      style="padding-left: 0; padding-right: 0; text-decoration: none">
+                <span style="font-size: 14px; color: red; font-variant: small-caps;">
+                  delete
+                </span>
               </button>
             </div>
           </div>
