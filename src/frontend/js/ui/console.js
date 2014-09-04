@@ -20,19 +20,13 @@
 var seashell_console = null;
 
 function setupConsole() {
-  var welcomeMessage =
-     Array(7).join('\n') +
-     '### welcome to seashell! messages and program output will appear here.';
-
   seashell_console = CodeMirror($("#console")[0],
-      {value: welcomeMessage,
-       readOnly: false,
+      {readOnly: true,
        mode: 'text/x-markdown',
        lineWrapping: true,
        theme: 'default'});
 
   seashell_console.debug = false;
-  seashell_console.welcomeMessage = welcomeMessage;
 
   $("#send-eof").on("click", sendEOF);
   $("#input-line").keydown(function(e) { if(e.which == 13) consoleInput(); });
