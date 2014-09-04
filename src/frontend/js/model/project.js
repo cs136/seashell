@@ -122,6 +122,7 @@ function SeashellProject(name, callback) {
         p.placeFile(new SeashellFile(p, files[i][0], files[i][1], files[i][2]));
       }
 
+      $('#questions-row').empty();
       _.chain(files)
         .sortBy(function(x) { return x[0]; })
           .forEach(function(x) {
@@ -355,6 +356,7 @@ SeashellProject.prototype.openQuestion = function(dir) {
     attach_dir_listing_to_node(dir, $('#question-files-row'))[0].click();
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
+    $('#folder-option-current-question').text(dir);
     p.currentQuestion = dir;
 
     result.resolve();

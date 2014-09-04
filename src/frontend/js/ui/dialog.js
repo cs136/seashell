@@ -54,10 +54,10 @@ function handleCommit( ) {
  * handleNewFile
  * This function will handle creating new files. */
 function handleNewFile( ) {
-  var prom = SeashellProject.currentProject.createFile($("#new_file_name").val());
-  if(prom) prom.done(function() {
-    updateFileMenu(SeashellProject.currentProject);
-  });
+  var folder = $('#new-file-folder option:selected').text();
+  var p = SeashellProject.currentProject;
+  var prom = p.createFile(sprintf('%s/%s', folder, $("#new_file_name").val()));
+  if(prom) prom.done(function() { updateFileMenu(p); });
   $("#new-file-dialog").modal("hide");
 }
 
@@ -128,7 +128,8 @@ function handleRevertProject( ) {
  * Pops up the New File Dialog
  */
 function newFileDialog( ) {
-  $("#new-file-dialog").modal("show");
+  $('#new_file_name').val('');
+  $('#new-file-dialog').modal('show');
 }
 
 /**
@@ -198,8 +199,8 @@ function handleRename() {
   var file = p.currentFile;
   var fname = _.last(file.name);
   var dirname = _.first(file.name, file.name.length - 1).join('/');
-  p.renameFile(file,
-               sprintf('%s/%s', dirname, $("#rename-file-new-input").val()))
+  var new_fname = _.last($("#rename-file-new-input").val().split('/'));
+  p.renameFile(file, sprintf('%s/%s', dirname, new_fname))
     .done(updateFileMenu);
   $("#rename-file-dialog").modal("hide");
 }

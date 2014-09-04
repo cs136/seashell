@@ -113,7 +113,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="warning-label">
-          <span class="glyphicon glyphicon-warning-sign"></span> 
+          <span class="glyphicon glyphicon-warning-sign"></span>
           Warning!</h4>
       </div>
       <div class="modal-body">
@@ -150,7 +150,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="settings-label">
-          <span class="glyphicon glyphicon-cog"></span> 
+          <span class="glyphicon glyphicon-cog"></span>
           Settings.</h4>
       </div>
       <div class="modal-body">
@@ -229,7 +229,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="new-project-label">
-          <span class="glyphicon glyphicon-file"></span> 
+          <span class="glyphicon glyphicon-file"></span>
           New Project</h4>
       </div>
       <div class="modal-body">
@@ -253,13 +253,21 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="new-file-label">
-          <span class="glyphicon glyphicon-file"></span> 
+          <span class="glyphicon glyphicon-file"></span>
           New File</h4>
       </div>
-      <div class="modal-body">
-          <div class="form-group">
-            <label for="new_file_name">File Name:</label>
-            <input type="text" id="new_file_name" class="form-control" placeholder="">
+      <div class="modal-body" style="font-size: 16px;">
+          <div class="form-group" style="text-align: center">
+            <select id="new-file-folder" style="outline: none">
+              <option>common</option>
+              <option id="folder-option-current-question"></option>
+              <option>tests</option>
+            </select>
+            <span>&nbsp;&nbsp;<b>/</b>&nbsp;&nbsp;</span>
+            <input type="text"
+                   id="new_file_name"
+                   placeholder="file name"
+                   style="outline: none; width: 50%; padding-left: 5px">
           </div>
       </div>
       <div class="modal-footer">
@@ -277,7 +285,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="new-folder-label">
-          <span class="glyphicon glyphicon-folder-open"></span> 
+          <span class="glyphicon glyphicon-folder-open"></span>
           New Folder</h4>
       </div>
       <div class="modal-body">
@@ -301,7 +309,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="open-project-label">
-          <span class="glyphicon glyphicon-folder-open"></span> 
+          <span class="glyphicon glyphicon-folder-open"></span>
           Open Project</h4>
       </div>
       <div class="modal-body">
@@ -326,7 +334,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="delete-project-label">
-          <span class="glyphicon glyphicon-trash"></span> 
+          <span class="glyphicon glyphicon-trash"></span>
           Delete Project</h4>
       </div>
       <div class="modal-body">
@@ -354,7 +362,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="rename-file-label">
-          <span class="glyphicon glyphicon-edit"></span> 
+          <span class="glyphicon glyphicon-edit"></span>
           Rename File/Folder</h4>
       </div>
       <div class="modal-body">
@@ -379,7 +387,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="run-with-tests-label">
-          <span class="glyphicon glyphicon-play-circle"></span> 
+          <span class="glyphicon glyphicon-play-circle"></span>
           Run With Tests</h4>
       </div>
       <div class="modal-body">
@@ -404,7 +412,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="delete-file-label">
-          <span class="glyphicon glyphicon-trash"></span> 
+          <span class="glyphicon glyphicon-trash"></span>
           Delete File</h4>
       </div>
       <div class="modal-body">
@@ -432,7 +440,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="revert-project-label">
-          <span class="glyphicon glyphicon-trash"></span> 
+          <span class="glyphicon glyphicon-trash"></span>
           Revert Project</h4>
       </div>
       <div class="modal-body">
@@ -453,7 +461,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="commit-project-label">
-          <span class="glyphicon glyphicon-export"></span> 
+          <span class="glyphicon glyphicon-export"></span>
           Commit Project</h4>
       </div>
       <div class="modal-body">
@@ -477,7 +485,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="upload-file-label">
-          <span class="glyphicon glyphicon-cloud-upload"></span> 
+          <span class="glyphicon glyphicon-cloud-upload"></span>
           Upload File</h4>
       </div>
       <div class="modal-body">
@@ -503,7 +511,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="download-project-label">
-          <span class="glyphicon glyphicon-cloud-download"></span> 
+          <span class="glyphicon glyphicon-cloud-download"></span>
           Download Project</h4>
       </div>
       <div id="download-project-body" class="modal-body">
@@ -526,7 +534,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="marmoset-submit-label">
-          <span class="glyphicon glyphicon-export"></span> 
+          <span class="glyphicon glyphicon-export"></span>
           Submit to Marmoset</h4>
       </div>
       <div class="modal-body">
@@ -553,7 +561,7 @@
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="download-project-label">
-          <span class="glyphicon glyphicon-warning-sign"></span> 
+          <span class="glyphicon glyphicon-warning-sign"></span>
           An Error Has Occurred</h4>
       </div>
       <div class="modal-body">
@@ -575,7 +583,7 @@
       <div class="modal-header">
         <button type="button" id="confirmation-message-x" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="download-project-label">
-          <span class="glyphicon glyphicon-warning-sign"></span> 
+          <span class="glyphicon glyphicon-warning-sign"></span>
           <span id="confirmation-message-title">Title</span></h4>
       </div>
       <div class="modal-body">

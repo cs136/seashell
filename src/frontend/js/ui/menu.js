@@ -96,7 +96,17 @@ function setupMenu() {
                   });
   });
 
-  $('#toolbar-add-file').popover({
+  $('#toolbar-add-file').on('click', function() {
+    newFileDialog();
+  });
+
+  $('#toolbar-rename-file').on('click', function() {
+    var file = SeashellProject.currentProject.currentFile;
+    $("#rename-file-new-input").val(_.last(file.name));
+    $("#rename-file-dialog").modal("show");
+  });
+
+  $('#toolbar-move-file').popover({
     placement: 'bottom',
     trigger: 'focus',
     content:
@@ -107,12 +117,6 @@ function setupMenu() {
       <li><a href="#">new common source file</a></li>\
     </ul>',
     html: true
-  });
-
-  $('#toolbar-rename-file').on('click', function() {
-    var file = SeashellProject.currentProject.currentFile;
-    $("#rename-file-new-input").val(_.last(file.name));
-    $("#rename-file-dialog").modal("show");
   });
 }
 
