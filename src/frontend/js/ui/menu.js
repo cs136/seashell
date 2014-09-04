@@ -118,11 +118,4 @@ function setupMenu() {
     </ul>',
     html: true
   });
-  $('#toolbar-add-file').on('show.bs.popover', function() {
-    $('#toolbar-add-file > span').tooltip('hide');
-    $('#toolbar-add-file > span').tooltip('disable');
-  });
-  $('#toolbar-add-file').on('hidden.bs.popover', function() {
-    $('#toolbar-add-file > span').tooltip('enable');
-  });
 }
