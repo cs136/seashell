@@ -85,25 +85,15 @@ function setupMenu() {
   $("#toolbar-kill").on("click", handleProgramKill);
   $("#menu-download").on("click", handleDownloadProject);
   $('#toolbar-delete-file').on("click", function() {
-    var warning_msg = 'are you sure? click again';
-    var p = $('#toolbar-delete-file');
-    if (p.attr('data-original-title') != warning_msg)
-    {
-      p.tooltip('hide')
-        .attr('data-original-title', warning_msg)
-        .tooltip('fixTitle')
-        .tooltip('show');
-      return;
-    }
-    p.tooltip('hide').attr('data-original-title', 'delete this file')
-      .tooltip('fixTitle');
-    var file = SeashellProject.currentProject.currentFile;
-    if (!file.is_dir)
-      SeashellProject.currentProject.deleteFile(file)
-        .done(function() {
-          var p = SeashellProject.currentProject;
-          p.openQuestion(p.currentQuestion);
-        });
+    displayConfirmationMessage('delete file',
+                               'are you sure you want to delete the current\
+                               file?',
+                  function() {
+                    var file = SeashellProject.currentProject.currentFile;
+                    if (!file.is_dir)
+                      SeashellProject.currentProject.deleteFile(file)
+                      .done(updateFileMenu);
+                  });
   });
 
   $('#toolbar-add-file').popover({
@@ -118,4 +108,16 @@ function setupMenu() {
     </ul>',
     html: true
   });
+
+  $('#toolbar-rename-file').on('click', function() {
+    var file = SeashellProject.currentProject.currentFile;
+    $("#rename-file-new-input").val(_.last(file.name));
+    $("#rename-file-dialog").modal("show");
+  });
+}
+
+function updateFileMenu()
+{
+  var p = SeashellProject.currentProject;
+  p.openQuestion(p.currentQuestion);
 }

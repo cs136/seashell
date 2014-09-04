@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** 
+/**
  * handleSaveSettings
  * This function will handle saving settings. */
 function handleSaveSettings( ) {
@@ -50,7 +50,7 @@ function handleCommit( ) {
   $("#commit-project-dialog").modal("hide");
 }
 
-/** 
+/**
  * handleNewFile
  * This function will handle creating new files. */
 function handleNewFile( ) {
@@ -74,14 +74,14 @@ function handleNewFolder() {
 }
 
 /**
- * handleDeleteFile 
+ * handleDeleteFile
  * This function will handle deleting files. */
 function handleDeleteFile( ) {
   fileDelete($("#delete-file-dialog").data("file"));
   $("#delete-file-dialog").modal("hide");
 }
 
-/** 
+/**
  * handleNewProject
  * This function will handle creating new projects. */
 function handleNewProject( ) {
@@ -106,7 +106,7 @@ function handleOpenProject(name) {
   $("#open-project-dialog").modal("hide");
 }
 
-/** 
+/**
  * handleDeleteProject
  * This function will handle deleting projects. */
 function handleDeleteProject( ) {
@@ -116,7 +116,7 @@ function handleDeleteProject( ) {
   $("#delete-project-dialog").modal("hide");
 }
 
-/** 
+/**
  * handleRevertProject
  * This function will handle reverting projects. */
 function handleRevertProject( ) {
@@ -194,12 +194,12 @@ function handleUploadFile() {
 }
 
 function handleRename() {
-  var oldf = $("#rename-file-old-input").val();
-  var oldfp = oldf.split("/");
-  oldfp.pop();
-  var newf = $("#rename-file-new-input").val();
-  var file = SeashellProject.currentProject.getFileFromPath(oldf);
-  SeashellProject.currentProject.renameFile(file, (oldfp.length>1 ? oldfp.join("/")+"/" : "")+newf)
+  var p = SeashellProject.currentProject;
+  var file = p.currentFile;
+  var fname = _.last(file.name);
+  var dirname = _.first(file.name, file.name.length - 1).join('/');
+  p.renameFile(file,
+               sprintf('%s/%s', dirname, $("#rename-file-new-input").val()))
     .done(updateFileMenu);
   $("#rename-file-dialog").modal("hide");
 }
