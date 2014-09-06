@@ -452,20 +452,84 @@
 ;;   course  - Name of the course, used in SQL query (i.e. "CS136")
 ;;   assn    - Name of the assignment/project in marmoset
 ;;   project - Name of the project (of the file to be submitted) in seashell
-(define/contract (marmoset-submit course assn project)
-  (-> string? string? string? void?)
+;;   subdirectory - Name of subdirectory/question to submit, or #f
+;;                  to submit everything.
+(define/contract (marmoset-submit course assn project subdirectory)
+  (-> string? string? string? (or/c #f string?) void?)
 
-  (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
-  (with-output-to-file tmpzip
-    (thunk (write-bytes (export-project project))) #:exists 'truncate)
+  (define tmpzip #f)
+  (define tmpdir #f)
 
-  ;; TODO: (better) error handling.  Exceptions received here
-  ;; will be properly caught, but an error message would be nice.
-  (define-values (proc out in err)
-    (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
-  (subprocess-wait proc)
-  (close-output-port in)
-  (close-input-port out)
-  (close-input-port err)
+  (dynamic-wind
+    (thunk
+      (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a"))
+      (set! tmpdir (make-temporary-file "seashell-marmoset-build-~a"
+                                         'directory)))
+    (thunk
+      (cond
+        ;; Two cases - either we're submitting a subdirectory...
+        [subdirectory
+          ;; Here's what we do to ensure correct linkage.
+          ;;
+          ;; common/filesA*                 filesA
+          ;; question/filesB*          -->  filesB
+          ;; question/tests/tests*          tests/
 
-  (delete-file tmpzip))
+          ;; TODO what to do with duplicate file names in common/ and in question/?
+          ;; Right now we toss an exception.
+          (define project-dir
+            (build-project-path project))
+          (define question-dir
+            (check-and-build-path project-dir subdirectory))
+          (define common-dir
+            (build-path project-dir "common"))
+          (parameterize ([current-directory tmpdir])
+            (define (copy-from! base)
+              (fold-files
+                (lambda (path type _)
+                  (match
+                    type
+                    ['dir
+                     (make-directory
+                       (find-relative-path base path))
+                     (values #t #t)]
+                    ['file
+                     (copy-file path
+                                (find-relative-path base path))
+                     (values #t #t)]
+                    [_ (values #t #t)]))
+                base))
+            (copy-from! question-dir)
+            (copy-from! common-dir)
+            (with-output-to-file
+              tmpzip
+              (thunk (zip->output (pathlist-closure (directory-list))))
+              #:exists 'truncate))]
+        ;; Or we're submitting the entire project.
+        [else
+          (with-output-to-file
+            tmpzip
+            (thunk (write-bytes export-project project))
+            #:exists 'truncate)])
+
+      ;; Launch the submit process.
+      (define-values (proc out in err)
+        (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
+
+      ;; Wait until it's done.
+      (subprocess-wait proc)
+      (define stderr-output (port->string err))
+      (define stdout-output (port->string out))
+      (define exit-status (subprocess-status proc))
+      (close-output-port in)
+      (close-input-port out)
+      (close-input-port err)
+      
+      ;; Report errors
+      (unless (zero? exit-status)
+        (raise (exn:project (format "Could not submit project - marmoset_submit returned ~a: (~a) (~a)"
+                                    stderr-output stdout-output)
+                            (current-continuation-marks)))))
+    (thunk
+      (delete-directory/files tmpzip #f)
+      (delete-directory/files tmpdir #f))))
