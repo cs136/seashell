@@ -116,42 +116,11 @@ function SeashellProject(name, callback) {
     promise.done(function(files) {
       p.files = [];
       p.currentErrors = [];
-
       _.forEach(files, function(file) {
         p.placeFile(new SeashellFile(p, file[0], file[1], file[2]));
       });
-
       if (callback)
-        callback(p);
-
-      $('#questions-row').empty();
-      var links =
-        _.chain(files)
-          .sortBy(function(x) { return x[0]; })
-            .map(function(x) {
-              var name = x[0];
-              if (!x[1] || 'common' == name || -1 != name.indexOf('/'))
-                return false;
-              var link = $('<a>', { href: '#',
-                                    text: name,
-                                    class: 'question-link' })
-              link.click(function(x) {
-                p.openQuestion(name);
-                var link = this;
-                _.forEach($('.question-link-active'),
-                          function(x) { x.className = 'question-link'; });
-                link.className = 'question-link-active';
-              });
-              return link;
-            })
-              .filter(_.identity).value();
-      console.log(links);
-      _.forEach(links, function(link) {
-        _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
-      });
-      if (links.length)
-        links[0].click();
-
+        callback(p, files);
     }).fail(function(){
       displayErrorMessage("Project "+name+" could not be opened.");
     });
@@ -297,84 +266,6 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
     this.files = plc(file.name, this.files);
   }
 };
-
-SeashellProject.prototype.openQuestion = function(dir) {
-  var p = this;
-  var result = $.Deferred();
-  socket.listProject(p.name).done(function(files) {
-    function attach_dir_listing_to_node(dir, parent) {
-      function basename(z) { return z.split('.')[0]; }
-      function extension(z) { return z.split('.')[1]; }
-      function dirname(z) {
-        return z.substring(0, z.length - /\/[^\/]+$/.exec(z)[0].length);
-      }
-      var dfiles =
-        _.chain(files)
-          .filter(function(x) { return !x[1] && dirname(x[0]) == dir; })
-            .map(function(x) { return /[^\/]+$/.exec(x[0])[0]; })
-              .value();
-      function has_source_buddy(x)
-      {
-        return ['c', 'h'].indexOf(extension(x)) >= 0 &&
-          _.find(dfiles,
-                 function(y) { return x != y && basename(x) == basename(y); });
-      }
-      function make_file_link(x, caption)
-      {
-        caption = caption || x;
-        var link = $('<a>', { href: '#',
-                              text: caption,
-                              class: 'file-link',
-                              style: 'text-decoration: none'});
-        link.click(function() {
-          var link = this;
-          p.openFilePath(dir + '/' + x);
-          _.forEach($('.file-link-active'),
-                    function(x) { x.className = 'file-link'; });
-          link.className = 'file-link-active';
-        });
-        return link;
-      }
-
-      parent.empty();
-      return _.chain(dfiles)
-        .map(function(x) {
-          var span = $('<span>', { style: 'margin-right: 30px' });
-          if (!has_source_buddy(x))
-          {
-            var link = make_file_link(x);
-            span.append(link);
-            parent.append(span);
-            return link;
-          }
-          if ('c' != extension(x))
-            return null;
-          var link = make_file_link(x, basename(x) + ' c');
-          span.append(link);
-          span.append('<span style="color: #aaa; font-size: 12px">,</span>');
-          span.append(make_file_link(basename(x) + '.h', 'h'));
-          parent.append(span);
-          return link;
-        })
-          .filter(_.identity).value();
-    }
-
-    $('#question-files-list-title').text(dir + '/');
-    $('#folder-option-current-question').text(dir);
-
-    var question_files =
-          attach_dir_listing_to_node(dir, $('#question-files-row'));
-    if (question_files.length)
-      question_files[0].click();
-    attach_dir_listing_to_node('common', $('#common-files-row'));
-    attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
-    p.currentQuestion = dir;
-
-    result.resolve();
-  });
-
-  return result;
-}
 
 SeashellProject.prototype.openFilePath = function(path) {
   var file = this.getFileFromPath(path);

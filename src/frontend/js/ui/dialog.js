@@ -85,14 +85,27 @@ function handleNewProject( ) {
 function handleOpenProject(name) {
   name = name ? name : $("#projects_list").val();
   console.log("Opening project "+name);
-  SeashellProject.open(name, function(proj) {
+  SeashellProject.open(name, function(proj, files) {
     $(".show-on-null-project, .hide-on-null-file").addClass("hide");
     $(".hide-on-null-project, .show-on-null-file").removeClass("hide");
+
     $("#project-menu").text(name);
+
     consoleRefresh();
     updateFileMenu(proj);
+    updateQuestionsMenu(
+      proj,
+      _.chain(files)
+        .filter(function(x) {
+          var name = x[0];
+          return x[1] && 'common' != name && -1 == name.indexOf('/');
+        })
+          .map(function(x) { return x[0]; })
+            .sortBy(_.identity)
+              .value());
+
+    $("#open-project-dialog").modal("hide");
   });
-  $("#open-project-dialog").modal("hide");
 }
 
 /**
