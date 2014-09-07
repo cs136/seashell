@@ -438,8 +438,9 @@
         ('id id)
         ('project project)
         ('assn assn)
-        ('type "marmosetSubmit"))
-        (marmoset-submit "CS136" assn project)
+        ('type "marmosetSubmit")
+        ('subdir subdir))
+        (marmoset-submit "CS136" assn project subdir)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

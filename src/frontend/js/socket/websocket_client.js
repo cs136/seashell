@@ -365,10 +365,11 @@ SeashellWebsocket.prototype.getSettings = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, deferred) {
+SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, deferred) {
   return this.sendMessage({
     type : "marmosetSubmit",
     project: project,
-    assn: assn},
+    assn: assn,
+    subdir: subdir ? subdir : false},
     deferred);
 };
