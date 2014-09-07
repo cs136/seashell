@@ -51,20 +51,6 @@ function handleCommit( ) {
 }
 
 /**
- * handleNewFile
- * This function will handle creating new files. */
-function handleNewFile( ) {
-  var p = SeashellProject.currentProject;
-
-  var folder = $('#new-file-folder option:selected').text();
-  if ('tests' == folder)
-    folder = p.currentQuestion + '/' + folder;
-  var prom = p.createFile(sprintf('%s/%s', folder, $("#new_file_name").val()));
-  if(prom) prom.done(function() { updateFileMenu(p); });
-  $("#new-file-dialog").modal("hide");
-}
-
-/**
  * handleNewFolder
  * Handles creating a new directory in the current project
  */
@@ -126,13 +112,43 @@ function handleRevertProject( ) {
   // TODO: implement
 }
 
-/**
- * newFileDialog
- * Pops up the New File Dialog
- */
-function newFileDialog( ) {
+function showNewFileDialog() {
+  var p = SeashellProject.currentProject;
+  $('#new-file-folder option').filter(function() {
+    return $(this).text() == p.currentQuestion;
+  }).prop('selected', true);
   $('#new_file_name').val('');
+  $("#button-new-file")
+    .unbind('click')
+    .on("click", function() {
+      var folder = $('#new-file-folder option:selected').text();
+      if ('tests' == folder)
+        folder = p.currentQuestion + '/' + folder;
+      var prom =
+            p.createFile(sprintf('%s/%s', folder, $("#new_file_name").val()));
+      if(prom) prom.done(function() { updateFileMenu(p); });
+      $("#new-file-dialog").modal("hide");
+   });
   $('#new-file-dialog').modal('show');
+}
+
+function showRenameMoveFileDialog() {
+  var p = SeashellProject.currentProject;
+  var file = p.currentFile;
+  $('#new_file_name').val(_.last(file.name));
+  $('#new-file-folder option').filter(function() {
+    return $(this).text() == p.currentQuestion;
+  }).prop('selected', true);
+  $('#button-new-file')
+    .unbind('click')
+    .on("click", function() {
+      var dirname = $('#new-file-folder option:selected').text();
+      var new_fname = _.last($("#new_file_name").val().split('/'));
+      p.renameFile(file, sprintf('%s/%s', dirname, new_fname))
+        .done(updateFileMenu);
+      $("#new-file-dialog").modal("hide");
+    });
+  $("#new-file-dialog").modal("show");
 }
 
 /**
@@ -198,14 +214,6 @@ function handleUploadFile() {
 }
 
 function handleRename() {
-  var p = SeashellProject.currentProject;
-  var file = p.currentFile;
-  var fname = _.last(file.name);
-  var dirname = _.first(file.name, file.name.length - 1).join('/');
-  var new_fname = _.last($("#rename-file-new-input").val().split('/'));
-  p.renameFile(file, sprintf('%s/%s', dirname, new_fname))
-    .done(updateFileMenu);
-  $("#rename-file-dialog").modal("hide");
 }
 
 function updateListOfProjects() {
@@ -346,16 +354,11 @@ function setupDialogs() {
   $("#button-new-project").on("click",
       handleNewProject);
   /** Set up the delete-project-dialog. */
-  $("#button-rename-file").on("click",
-    handleRename);
   $("#button-delete-project").on("click",
       handleDeleteProject);
   /** Set up the revert-project-dialg. */
   $("#button-revert-project").on("click",
       handleRevertProject);
-  /** Set up the new-file-dialog. */
-  $("#button-new-file").on("click",
-      handleNewFile);
   $("#button-new-folder").on("click",
     handleNewFolder);
   /** Set up the delete-file-dialog. */

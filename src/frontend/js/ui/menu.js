@@ -96,28 +96,8 @@ function setupMenu() {
                   });
   });
 
-  $('#toolbar-add-file').on('click', function() {
-    newFileDialog();
-  });
-
-  $('#toolbar-rename-file').on('click', function() {
-    var file = SeashellProject.currentProject.currentFile;
-    $("#rename-file-new-input").val(_.last(file.name));
-    $("#rename-file-dialog").modal("show");
-  });
-
-  $('#toolbar-move-file').popover({
-    placement: 'bottom',
-    trigger: 'focus',
-    content:
-    '<ul class="dropdown-menu popover-menu">\
-      <li><a href="#">new source file</a></li>\
-      <li><a href="#">new test</a></li>\
-      <li role="presentation" class="divider"></li>\
-      <li><a href="#">new common source file</a></li>\
-    </ul>',
-    html: true
-  });
+  $('#toolbar-add-file').on('click', showNewFileDialog);
+  $('#toolbar-rename-file').on('click', showRenameMoveFileDialog);
 }
 
 function updateFileMenu()

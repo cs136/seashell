@@ -352,11 +352,14 @@ SeashellProject.prototype.openQuestion = function(dir) {
     }
 
     $('#question-files-list-title').text(dir + '/');
+    $('#folder-option-current-question').text(dir);
 
-    attach_dir_listing_to_node(dir, $('#question-files-row'))[0].click();
+    var question_files =
+          attach_dir_listing_to_node(dir, $('#question-files-row'));
+    if (question_files.length)
+      question_files[0].click();
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(dir + '/tests', $('#test-files-row'));
-    $('#folder-option-current-question').text(dir);
     p.currentQuestion = dir;
 
     result.resolve();
@@ -799,6 +802,7 @@ SeashellProject.prototype.renameFile = function(file, name) {
   return socket.renameFile(this.name, file.fullname(), name)
     .done(function() {
       file.name = name.split("/");
+      p.placeFile(file, true);
     })
     .fail(function() {
       displayErrorMessage("File could not be renamed.");
