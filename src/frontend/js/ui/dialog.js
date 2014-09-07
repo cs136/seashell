@@ -112,12 +112,21 @@ function handleRevertProject( ) {
   // TODO: implement
 }
 
+function selectDefaultFileDialogFolder() {
+  var p = SeashellProject.currentProject;
+  var default_folder =
+    p.currentFile ? p.currentFile.name[p.currentFile.name.length - 2] :
+                    p.currentQuestion;
+  $('#new-file-folder option').filter(function() {
+    return $(this).text() == default_folder;
+  }).prop('selected', true);
+}
+
 function showNewFileDialog() {
   var p = SeashellProject.currentProject;
-  $('#new-file-folder option').filter(function() {
-    return $(this).text() == p.currentQuestion;
-  }).prop('selected', true);
+  selectDefaultFileDialogFolder();
   $('#new_file_name').val('');
+  $('#new-file-label').text('new file');
   $("#button-new-file")
     .unbind('click')
     .on("click", function() {
@@ -136,9 +145,8 @@ function showRenameMoveFileDialog() {
   var p = SeashellProject.currentProject;
   var file = p.currentFile;
   $('#new_file_name').val(_.last(file.name));
-  $('#new-file-folder option').filter(function() {
-    return $(this).text() == p.currentQuestion;
-  }).prop('selected', true);
+  $('#new-file-label').text('rename/move file');
+  selectDefaultFileDialogFolder();
   $('#button-new-file')
     .unbind('click')
     .on("click", function() {
