@@ -98,6 +98,10 @@ function setupMenu() {
 
   $('#toolbar-add-file').on('click', showNewFileDialog);
   $('#toolbar-rename-file').on('click', showRenameMoveFileDialog);
+
+  $('#toolbar-submit-question').on('click', function() {
+    $('#marmoset-submit-dialog').modal('show');
+  });
 }
 
 function updateFileMenu()

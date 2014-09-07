@@ -933,5 +933,5 @@ SeashellProject.prototype.exists = function(fname) {
 }
 
 SeashellProject.prototype.submit = function(marm_project) {
-  return socket.marmosetSubmit(this.name, marm_project);
+  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion);
 }
