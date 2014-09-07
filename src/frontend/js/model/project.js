@@ -117,33 +117,41 @@ function SeashellProject(name, callback) {
       p.files = [];
       p.currentErrors = [];
 
-      for (var i = 0; i < files.length; i++) {
-        /** Lazily load the documents later. */
-        p.placeFile(new SeashellFile(p, files[i][0], files[i][1], files[i][2]));
-      }
+      _.forEach(files, function(file) {
+        p.placeFile(new SeashellFile(p, file[0], file[1], file[2]));
+      });
+
+      if (callback)
+        callback(p);
 
       $('#questions-row').empty();
-      _.chain(files)
-        .sortBy(function(x) { return x[0]; })
-          .forEach(function(x) {
-            if (!x[1] || !/^q[^/]+$/.exec(x[0]))
-              return;
-            var name = x[0];
-            var link = $('<a>', { href: '#',
-                                  text: name,
-                                  class: 'question-link' })
-            link.click(function(x) {
-              p.openQuestion(name);
-              var link = this;
-              _.forEach($('.question-link-active'),
-                        function(x) { x.className = 'question-link'; });
-              link.className = 'question-link-active';
-            });
-            $('#questions-row').append(link);
-            $('#questions-row').append(' ');
-          });
+      var links =
+        _.chain(files)
+          .sortBy(function(x) { return x[0]; })
+            .map(function(x) {
+              var name = x[0];
+              if (!x[1] || 'common' == name || -1 != name.indexOf('/'))
+                return false;
+              var link = $('<a>', { href: '#',
+                                    text: name,
+                                    class: 'question-link' })
+              link.click(function(x) {
+                p.openQuestion(name);
+                var link = this;
+                _.forEach($('.question-link-active'),
+                          function(x) { x.className = 'question-link'; });
+                link.className = 'question-link-active';
+              });
+              return link;
+            })
+              .filter(_.identity).value();
+      console.log(links);
+      _.forEach(links, function(link) {
+        _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
+      });
+      if (links.length)
+        links[0].click();
 
-      if(callback) callback(p);
     }).fail(function(){
       displayErrorMessage("Project "+name+" could not be opened.");
     });
