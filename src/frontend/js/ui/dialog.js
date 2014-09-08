@@ -238,12 +238,28 @@ function handleRename() {
 }
 
 function updateListOfProjects() {
+  var num_in_col = 15; // constant controlling the number of projects listed per column
+
   SeashellProject.getListOfProjects().done(function(projects) {
-    var projects_tag = $("#projects_list");
-    projects_tag.empty();
-    for(var i=0; i < projects.length; i++) {
-      projects_tag.append(
-        $("<option>").attr("value", projects[i]).text(projects[i]));
+    var pdiv = $("#project-list");
+    if(projects) {
+      var html = "Projects:<br /><br /><table>";
+      var w = projects.length / num_in_col;
+      for(var i=0; i < num_in_col; i++) {
+        html += "<tr>";
+        for(var j=0; j < w && (num_in_col*j + i < projects.length); j++) {
+          html += "<td><a class='project-list-item' href='#'>"+projects[(num_in_col*j)+i]+"</a></td>";
+        }
+        html += "</tr>";
+      }
+      html += "</table>";
+      pdiv.html(html);
+      $("a.project-list-item").click(function() {
+        handleOpenProject($(this).text());
+      });
+    }
+    else {
+      pdiv.html("<p><a href='#new-project-dialog' data-toggle='modal' class='btn btn-primary btn-lg' role='button'>Create</a> a project to get started!</p>");
     }
   }).fail(function() {
     displayErrorMessage("List of projects could not be updated.");
@@ -359,7 +375,6 @@ function handleLogout() {
         });
 }
 
-
 /**
  * setupDialogs()
  * Sets up and attaches actions to all the dialogs. */
@@ -399,6 +414,8 @@ function setupDialogs() {
   /** Set up the logout dialog */
   $("#menu-logout").on("click",
       handleLogout);
+  $("#switch-project-link").on("click",
+      handleSwitchProject);
   /** Select the first input element, or last button if no input elements */
   $(".modal").on("shown.bs.modal", function() {
     var inp = $(this).find("input");
