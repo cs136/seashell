@@ -143,10 +143,10 @@ function openQuestion(qname)
       function extension(z) { return z.split('.')[1]; }
       function dirname(z) {
         // Two cases [for backwards compatibility with old versions of Seashell]
-        var result = /\/[^\/]+$/.exec(z)[0];
+        var result = /\/[^\/]+$/.exec(z);
 
         if (result) {
-          return z.substring(0, z.length - result.length);
+          return z.substring(0, z.length - result[0].length);
         } else {
           return ""; // Fallback case [when you hit files in the root directory]
                      // It's possible that students will open projects created with
