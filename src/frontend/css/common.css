@@ -102,6 +102,7 @@ body {
   border: 1px solid #ddd;
   border-bottom: none;
   border-top: none;
+  clear: both;
 }
 
 #console > .CodeMirror .CodeMirror-lines {
