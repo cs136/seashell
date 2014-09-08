@@ -120,7 +120,8 @@ function setupHotkeys() {
 function setupDynamicResizing()
 {
   function updateSizes() {
-    var h = $(window).height() - $('.editor-console').offset().top - 150;
+    var h = _.max([$(window).height() - $('.editor-console').offset().top - 150,
+                   250]);
     if ($(document).width() < 992)
     {
       $('#editor > .CodeMirror').height(h * 0.7);
