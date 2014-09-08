@@ -142,7 +142,17 @@ function openQuestion(qname)
       function basename(z) { return z.split('.')[0]; }
       function extension(z) { return z.split('.')[1]; }
       function dirname(z) {
-        return z.substring(0, z.length - /\/[^\/]+$/.exec(z)[0].length);
+        // Two cases [for backwards compatibility with old versions of Seashell]
+        var result = /\/[^\/]+$/.exec(z)[0];
+
+        if (result) {
+          return z.substring(0, z.length - result.length);
+        } else {
+          return ""; // Fallback case [when you hit files in the root directory]
+                     // It's possible that students will open projects created with
+                     // old versions of Seashell, and at least this won't break the
+                     // interface badly.
+        }
       }
       var dfiles =
         _.chain(files)
