@@ -72,6 +72,33 @@ SeashellProject.new = function(name) {
     });
 }
 
+SeashellProject.prototype.getMarmosetResults = function() {
+  var patt = /a[0-9]+?q[0-9]+?[abcd]?/i;
+  if(patt.test(this.name)) {
+    $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
+        +creds.user+"&p="+this.name,
+      function(data) {
+        var marm_tag = $("#marmoset_results");
+        data = $(data).find("row");
+        data = $.map(data, function(sub) {
+          return [
+            sub.find("field[name=num_public_tests_passed]").text(),
+            sub.find("field[name=num_public_tests]").text(),
+            sub.find("field[name=submission_timestamp]").text()
+          ];
+        });
+        marm_tag.html("");
+        marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
+        for(var i=0; i < data.length; i++) {
+          marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
+        }
+    });
+    return true;
+  }
+  return false;
+}
+
+
 /*
  * Constructor for SeashellProject
  * Parameters:
