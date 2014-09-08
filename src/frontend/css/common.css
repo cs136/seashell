@@ -144,27 +144,24 @@ body {
 .console-input {
   background-color: #fff;
   clear: both;
+  border: 1px solid #ddd;
+  border-top-color: #eee;
 }
 .console-input > input, .console-input > input:focus {
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
   line-height: 1em;
   padding: 0.4em;
   outline: none;
   -webkit-box-shadow: none !important;
   -moz-box-shadow: none !important;
   box-shadow: none !important;
-  border: 1px solid #ddd;
-  border-top-color: #eee;
-  border-left: none;
-  border-radius: 0;
+  border: none;
 }
 .console-input > .input-group-addon {
   background-color: white;
   padding-right: 0;
   padding-left: 5px;
-  border-radius: 0;
-  border-color: #ddd;
-  border-top-color: #eee;
+  border: none;
 }
 /** Callouts. */
 
@@ -364,10 +361,6 @@ div.tooltip .tooltip-inner {
 	  border-left: none;
     border-top: 1px solid #ddd;
 	}
-	#console > .CodeMirror {
-    border-left: none
-  }
-  .console-input > .input-group-addon {
-    border-left: none
-  }
+  #console > .CodeMirror { border-left: none; }
+  .console-input { border-left: none }
 }
