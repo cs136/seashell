@@ -130,7 +130,7 @@ function setupDynamicResizing()
     $('#editor > .CodeMirror').height(h);
     $('#console > .CodeMirror')
       .height(h - $('#console-title').outerHeight() -
-              $('.console-input').outerHeight());
+              $('.console-input').outerHeight() + 2);
   }
 
   $(window).resize(updateSizes);
