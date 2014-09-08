@@ -480,7 +480,11 @@ SeashellProject.prototype.compile = function() {
         var error = errors[i][0], file = errors[i][1];
         var line = errors[i][2], column = errors[i][3];
         var message = errors[i][4];
-        consoleWriteln(sprintf("%s:%d:%d: %s", file, line, column, message));
+        if (/relocation \d+ has invalid symbol index/.exec(message))
+          continue;
+        consoleWriteln(-1 == file.indexOf('final-link-result') ?
+                       sprintf("%s:%d:%d: %s", file, line, column, message) :
+                       message);
       }
     }
 
