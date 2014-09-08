@@ -21,7 +21,6 @@ var editor = null;
 
 /** Sets up the editor. */
 function setupEditor() {
-  /** Set up the linter. */
   CodeMirror.registerHelper("lint", "clike", SeashellProject.linter);
 
   /** Values here are reasonable defaults, and will be overriden
@@ -39,10 +38,7 @@ function setupEditor() {
       {"Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto});
 
-  // set vim save keybinding
   editor.save = function () { SeashellProject.currentProject.save(); };
-
-  // load the user's settings
   refreshSettings();
 }
 

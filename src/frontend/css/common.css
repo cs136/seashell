@@ -358,3 +358,16 @@ div.tooltip .tooltip-inner {
   margin-top: 5px;
   margin-bottom: 5px;
 }
+
+@media (min-width: 992px) {
+	#console-title {
+	  border-left: none;
+    border-top: 1px solid #ddd;
+	}
+	#console > .CodeMirror {
+    border-left: none
+  }
+  .console-input > .input-group-addon {
+    border-left: none
+  }
+}

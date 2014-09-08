@@ -75,6 +75,7 @@ function setupUI() {
   setupMenu();
   setupTooltips();
   setupHotkeys();
+  setupDynamicResizing();
 }
 
 /*
@@ -114,6 +115,26 @@ function setupHotkeys() {
   .keyup(function(e) {
     if(e.keyCode == 17) ctrl = false;
   });
+}
+
+function setupDynamicResizing()
+{
+  function updateSizes() {
+    var h = $(window).height() - $('.editor-console').offset().top - 150;
+    if ($(document).width() < 992)
+    {
+      $('#editor > .CodeMirror').height(h * 0.7);
+      $('#console > .CodeMirror').height(h * 0.3);
+      return;
+    }
+    $('#editor > .CodeMirror').height(h);
+    $('#console > .CodeMirror')
+      .height(h - $('#console-title').outerHeight() -
+              $('.console-input').outerHeight());
+  }
+
+  $(window).resize(updateSizes);
+  $(document).change(updateSizes);
 }
 
 /** Accessor functions. */
