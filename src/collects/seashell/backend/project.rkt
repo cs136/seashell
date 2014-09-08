@@ -531,5 +531,5 @@
                                     stderr-output stdout-output)
                             (current-continuation-marks)))))
     (thunk
-      (delete-directory/files tmpzip #f)
-      (delete-directory/files tmpdir #f))))
+      (delete-directory/files tmpzip #:must-exist? #f)
+      (delete-directory/files tmpdir #:must-exist? #f))))
