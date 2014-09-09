@@ -243,6 +243,14 @@ SeashellWebsocket.prototype.newProject = function(name, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.newProjectFrom = function(name, src_url, deferred) {
+  return this.sendMessage({
+    type : "newProjectFrom",
+    project : name,
+    source : src_url},
+    deferred);
+};
+
 SeashellWebsocket.prototype.deleteProject = function(name, deferred) {
   return this.sendMessage({
     type : "deleteProject",

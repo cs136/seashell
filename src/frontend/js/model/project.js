@@ -65,6 +65,24 @@ function updateMarmosetProjects() {
             });
 }
 
+/**
+ * Fetches new assignment skeletons, if any are available
+ */
+function fetchNewAssignments() {
+    SeashellProject.getListOfProjects().done(function(projects){
+        $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi", function(data){
+            for(var i=0; i<data.length; i++){
+                if(projects.indexOf(data[i]) == -1){
+                    console.log("Fetching assignment template " + data[i] + ".");
+                    socket.newProjectFrom(data[i], "/u2/cs136/public_html/assignment_skeletons/"+data[i]).fail(function(){
+                        displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
+                    });
+                }
+            }
+        });
+    });
+}
+
 SeashellProject.new = function(name) {
   return socket.newProject(name)
     .fail(function() {
