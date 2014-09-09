@@ -60,6 +60,7 @@ function setupUI() {
   /** Clear out everything that can be hidden. */
   $(".hide-on-null-project").addClass("hide");
   $(".show-on-null-project").removeClass("hide");
+  $(".hide-on-null-question").addClass("hide");
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
   $(".userid").text(creds.user).attr("title", "Logged in as "+creds.user);

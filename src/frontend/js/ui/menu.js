@@ -28,10 +28,14 @@ function handleCompileProject() {
 }
 
 function handleRunProject() {
+  consoleClear();
+  $("#input-line").focus();
   return SeashellProject.run();
 }
 
 function handleRunTests() {
+  consoleClear();
+  $("#input-line").focus();
   return SeashellProject.runTests();
 }
 
@@ -76,12 +80,8 @@ function setupMenu() {
     x();
   }
 
-  $("#toolbar-run").on("click", function() {
-    withInputFromConsole(handleRunProject);
-  });
-  $("#toolbar-run-tests").on("click", function() {
-    withInputFromConsole(handleRunTests);
-  });
+  $("#toolbar-run").on("click", handleRunProject);
+  $("#toolbar-run-tests").on("click", handleRunTests);
   $("#toolbar-kill").on("click", handleProgramKill);
   $('#toolbar-delete-file').on("click", function() {
     displayConfirmationMessage('delete file',
@@ -149,6 +149,10 @@ function openQuestion(qname)
 {
   var p = SeashellProject.currentProject;
   var result = $.Deferred();
+  if(!qname) {
+    result.reject();
+    return result;
+  }
   socket.listProject(p.name).done(function(files) {
     function attach_dir_listing_to_node(dir, parent) {
       function basename(z) { return z.split('.')[0]; }
@@ -221,6 +225,7 @@ function openQuestion(qname)
 
     $('#question-files-list-title').text(qname + '/');
     $('#folder-option-current-question').text(qname);
+    $(".hide-on-null-question").removeClass("hide");
 
     var question_files =
           attach_dir_listing_to_node(qname, $('#question-files-row'));
