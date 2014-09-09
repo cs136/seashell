@@ -1,7 +1,7 @@
 /** Fixed height tags. */
 body {
   position: relative; /* For scrollyspy */
-  padding-top: 50px; /* Account for fixed navbar */
+  padding-top: 15px;
 }
 
 #master-container {
@@ -57,6 +57,11 @@ body {
   width: 99.6%;
   border: none;
   height: 20%;
+}
+
+#question-controls {
+  text-align: right;
+  padding-left: 0;
 }
 
 #question-controls button {
@@ -121,7 +126,6 @@ body {
 }
 
 #console-title {
-  border: 1px solid #ddd;
   border-top: none;
   background: #efefef;
   font-size: 18px;
@@ -291,8 +295,8 @@ div.tooltip .tooltip-inner {
 }
 
 .navbar-icons > li > a {
-  padding: 10px 8px;
-  font-size: 16px;
+  padding: 10px 6px;
+  font-size: 12px;
   text-decoration: none;
 }
 
@@ -328,6 +332,10 @@ div.tooltip .tooltip-inner {
 
 #questions-row {
   font-weight: 300;
+}
+
+#questions-row-container {
+  text-align: right;
 }
 
 #project-list table {
@@ -383,10 +391,12 @@ div.tooltip .tooltip-inner {
 @media (min-width: 992px) {
 	#console-title {
 	  border-left: none;
-    border-top: 1px solid #ddd;
 	}
   #console > .CodeMirror { border-left: none; }
   .console-input { border-left: none }
+
+  #question-controls { text-align: left; }
+  #questions-row-container { text-align: left; }
 }
 
 .alert {
