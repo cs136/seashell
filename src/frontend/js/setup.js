@@ -34,6 +34,7 @@ function seashellInit(rest) {
       console.log("User interface set up properly.");
       setInterval(setupDisconnectMonitor, 4000);
       console.log("Websocket disconnection monitor set up properly.");
+      fetchNewAssignments();
       /** Install refresh handler. */
       window.onbeforeunload = function () {
         if(SeashellProject.currentProject && SeashellProject.currentProject.isUnsaved())
