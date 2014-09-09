@@ -101,6 +101,8 @@ function setupMenu() {
   $('#toolbar-submit-question').on('click', function() {
     $('#marmoset-submit-dialog').modal('show');
   });
+
+  _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
 }
 
 function updateFileMenu(proj)
