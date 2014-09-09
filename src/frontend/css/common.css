@@ -129,13 +129,19 @@ body {
   font-weight: 200;
 }
 
-#console-controls {
+.console-controls {
+  margin-top: 1px;
+  margin-right: 7px;
+  font-size: 15px;
+}
+
+#input-controls {
   margin-top: 1px;
   margin-right: 14px;
   font-size: 15px;
 }
 
-#console-clear-button {
+.console-control {
   font-weight: 200;
   font-size: 15px;
   padding: 0;
@@ -144,6 +150,10 @@ body {
   bottom: 2px;
   text-decoration: none;
   font-variant: small-caps;
+}
+
+.console-control:hover {
+  text-decoration: none;
 }
 
 .console-input {

@@ -102,7 +102,9 @@
                  style="position: absolute; right: 13px; z-index: 10">
               <button id="toolbar-run" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px">
-                <span style="font-size: 18px">run</span>
+                <span style="font-size: 18px"
+                      rel="tooltip"
+                      title="control+[R or Enter]">run</span>
               </button>
               <button id="toolbar-kill" class="btn btn-link hidden"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px">
@@ -110,7 +112,8 @@
               </button>
               <button id="toolbar-run-tests" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px">
-                <span style="font-size: 18px">test</span>
+                <span style="font-size: 18px" rel="tooltip"
+                      title="control+T">test</span>
               </button>
             </div>
             <div id="current-file-controls"
@@ -139,9 +142,9 @@
                 <span style="position: relative; bottom: 2px; left: 2px">
                   console
                 </span>
-                <div id="console-controls" class="pull-right">
+                <div class="console-controls pull-right">
                   <button id="console-clear-button"
-                          class="btn btn-link">clear</button>
+                          class="btn btn-link console-control">clear</button>
                 </div>
               </div>
             </div>
@@ -151,11 +154,13 @@
                   <span class="glyphicon glyphicon-chevron-right"></span>
                 </div>
                 <input type="text" class="form-control" id="input-line">
-                <!-- <span class="input-group-btn"> -->
-                <!--   <button class="btn btn-default" -->
-                <!--           type="button" -->
-                <!--           id="send-eof">EOF</button> -->
-                <!-- </span> -->
+                <div class="console-controls"
+                     style="position: absolute; top: 5px; right: 0"
+                     rel="tooltip"
+                     title="control+D">
+                  <button id="send-eof"
+                          class="btn btn-link console-control">eof</button>
+                </div>
               </div>
             </div>
           </div>
