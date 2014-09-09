@@ -256,31 +256,19 @@ function updateProjectsDropdown()
 {
   var dropdown = $('#projects-dropdown');
   dropdown.empty();
-  SeashellProject.getListOfProjects().done(function(projs) {
-    function add_menuitem(caption, handler) {
-      var li = $('<li role="presentation"></li>');
-      var link = $('<a role="menuitem" tabindex="-1" href="#"></a>');
-      link.text(caption);
-      link.on('click', handler);
-      li.append(link);
-      dropdown.append(li);
-      return li;
-    }
-    function add_divider() {
-      dropdown.append('<li role="presentation" class="divider"></li>');
-    }
-
-    dropdown.append('<li role="presentation" class="dropdown-header">\
-                    other projects</li>');
-
-    _.forEach(projs, function(pname) {
-      if (pname != SeashellProject.currentProject.name)
-        add_menuitem(pname, function() { handleOpenProject(pname); });
-    });
-
-    add_divider();
-    add_menuitem('download project…', handleDownloadProject);
-    add_menuitem('new question…',
-                 function() { $('#new-folder-dialog').modal('show'); });
-  });
+  function add_menuitem(caption, handler) {
+    var li = $('<li role="presentation"></li>');
+    var link = $('<a role="menuitem" tabindex="-1" href="#"></a>');
+    link.text(caption);
+    link.on('click', handler);
+    li.append(link);
+    dropdown.append(li);
+    return li;
+  }
+  function add_divider() {
+    dropdown.append('<li role="presentation" class="divider"></li>');
+  }
+  add_menuitem('download assignment…', handleDownloadProject);
+  add_menuitem('new question…',
+               function() { $('#new-folder-dialog').modal('show'); });
 }
