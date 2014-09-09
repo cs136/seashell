@@ -277,8 +277,9 @@ div.tooltip .tooltip-inner {
 }
 
 .navbar-icons > li > a {
-  padding: 10px 12px;
+  padding: 10px 8px;
   font-size: 16px;
+  text-decoration: none;
 }
 
 .question-link {
