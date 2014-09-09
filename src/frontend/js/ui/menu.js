@@ -174,10 +174,12 @@ function openQuestion(qname)
                               style: 'text-decoration: none'});
         link.click(function() {
           var link = this;
-          p.openFilePath(dir + '/' + x);
-          _.forEach($('.file-link-active'),
-                    function(x) { x.className = 'file-link'; });
-          link.className = 'file-link-active';
+          p.openFilePath(dir + '/' + x).done(function(x) {
+            _.forEach($('.file-link-active'),
+                      function(x) { x.className = 'file-link'; });
+            link.className = 'file-link-active';
+            updateDynamicUISizes();
+          });
         });
         return link;
       }

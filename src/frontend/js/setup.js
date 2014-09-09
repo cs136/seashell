@@ -118,25 +118,25 @@ function setupHotkeys() {
   });
 }
 
+function updateDynamicUISizes()
+{
+  var h = _.max([$(window).height() - $('.editor-console').offset().top - 150,
+                 250]);
+  if ($(document).width() < 992)
+  {
+    $('#editor > .CodeMirror').height(h * 0.7);
+    $('#console > .CodeMirror').height(h * 0.3);
+    return;
+  }
+  $('#editor > .CodeMirror').height(h);
+  $('#console > .CodeMirror')
+    .height(h - $('#console-title').outerHeight() -
+            $('.console-input').outerHeight() + 2);
+}
+
 function setupDynamicResizing()
 {
-  function updateSizes() {
-    var h = _.max([$(window).height() - $('.editor-console').offset().top - 150,
-                   250]);
-    if ($(document).width() < 992)
-    {
-      $('#editor > .CodeMirror').height(h * 0.7);
-      $('#console > .CodeMirror').height(h * 0.3);
-      return;
-    }
-    $('#editor > .CodeMirror').height(h);
-    $('#console > .CodeMirror')
-      .height(h - $('#console-title').outerHeight() -
-              $('.console-input').outerHeight() + 2);
-  }
-
-  $(window).resize(updateSizes);
-  $(document).change(updateSizes);
+  $(window).resize(updateDynamicUISizes);
 }
 
 /** Accessor functions. */

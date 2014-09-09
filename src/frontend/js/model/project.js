@@ -296,7 +296,7 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 
 SeashellProject.prototype.openFilePath = function(path) {
   var file = this.getFileFromPath(path);
-  this.openFile(file).done(function() {
+  return this.openFile(file).done(function() {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
     editorDocument(file.document);
