@@ -165,8 +165,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init/place (build-project-path name))
-    (make-directory (check-and-build-path (build-project-path name) "tests")))
+    (seashell-git-init/place (build-project-path name)))
   (void))
 
 ;; (new-project-from name source)
