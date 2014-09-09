@@ -214,6 +214,18 @@ function openQuestion(qname)
       question_files[0].click();
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(qname + '/tests', $('#test-files-row'));
+
+    function show_optional_dir(element, dir)
+    {
+      console.log(element);
+      if (_.find(files, function (x) { return dir == x[0] && x[1]; }))
+        element.show();
+      else
+        element.hide();
+    }
+    show_optional_dir($('#common-files'), 'common');
+    show_optional_dir($('#tests-files'), sprintf('%s/tests', qname));
+
     p.currentQuestion = qname;
 
     result.resolve();
