@@ -108,28 +108,39 @@ function updateFileMenu(proj)
   openQuestion(proj.currentQuestion);
 }
 
-function updateQuestionsMenu(proj, questions)
+function updateQuestionsMenu(proj)
 {
-  $('#questions-row').empty();
-  var links =
-        _.map(questions, function(name) {
-          var link = $('<a>', { href: '#',
-                                text: name,
-                                class: 'question-link' })
-          link.click(function(x) {
-            openQuestion(name);
-            var link = this;
-            _.forEach($('.question-link-active'),
-                      function(x) { x.className = 'question-link'; });
-            link.className = 'question-link-active';
+  socket.listProject(proj.name).done(function(files) {
+    var questions = _.chain(files)
+          .filter(function(x) {
+            var name = x[0];
+            return x[1] && 'common' != name && -1 == name.indexOf('/');
+          })
+            .map(function(x) { return x[0]; })
+              .sortBy(_.identity)
+                .value();
+
+    $('#questions-row').empty();
+    var links =
+          _.map(questions, function(name) {
+            var link = $('<a>', { href: '#',
+                                  text: name,
+                                  class: 'question-link' })
+            link.click(function(x) {
+              openQuestion(name);
+              var link = this;
+              _.forEach($('.question-link-active'),
+                        function(x) { x.className = 'question-link'; });
+              link.className = 'question-link-active';
+            });
+            return link;
           });
-          return link;
-        });
-  _.forEach(links, function(link) {
-    _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
+    _.forEach(links, function(link) {
+      _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
+    });
+    if (links.length)
+      links[0].click();
   });
-  if (links.length)
-    links[0].click();
 }
 
 function openQuestion(qname)
@@ -248,9 +259,10 @@ function updateProjectsDropdown()
       dropdown.append(li);
       return li;
     }
+    function add_divider() {
+      dropdown.append('<li role="presentation" class="divider"></li>');
+    }
 
-    add_menuitem('download project', handleDownloadProject);
-    dropdown.append('<li role="presentation" class="divider"></li>');
     dropdown.append('<li role="presentation" class="dropdown-header">\
                     other projects</li>');
 
@@ -258,5 +270,10 @@ function updateProjectsDropdown()
       if (pname != SeashellProject.currentProject.name)
         add_menuitem(pname, function() { handleOpenProject(pname); });
     });
+
+    add_divider();
+    add_menuitem('download project…', handleDownloadProject);
+    add_menuitem('new question…',
+                 function() { $('#new-folder-dialog').modal('show'); });
   });
 }

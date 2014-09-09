@@ -55,9 +55,12 @@ function handleCommit( ) {
  * Handles creating a new directory in the current project
  */
 function handleNewFolder() {
-  var prom = SeashellProject.currentProject.createDirectory($("#new_folder_name").val());
+  var name = $("#new_folder_name").val().split('/')[0];
+  var prom = SeashellProject.currentProject.createDirectory(name);
   if(prom) prom.done(function() {
-    updateFileMenu(SeashellProject.currentProject);
+    var p = SeashellProject.currentProject;
+    updateQuestionsMenu(p);
+    updateFileMenu(p);
   });
   $("#new-folder-dialog").modal("hide");
 }
@@ -93,16 +96,7 @@ function handleOpenProject(name) {
 
     consoleRefresh();
     updateFileMenu(proj);
-    updateQuestionsMenu(
-      proj,
-      _.chain(files)
-        .filter(function(x) {
-          var name = x[0];
-          return x[1] && 'common' != name && -1 == name.indexOf('/');
-        })
-          .map(function(x) { return x[0]; })
-            .sortBy(_.identity)
-              .value());
+    updateQuestionsMenu(proj);
     updateProjectsDropdown();
 
     $("#open-project-dialog").modal("hide");
