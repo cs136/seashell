@@ -597,9 +597,13 @@ SeashellProject.runTests = function() {
   var p = SeashellProject.currentProject;
   p.compile().done(function() {
     var tests = p.getTestsForFile(p.currentFile);
+    var original_count = tests.length;
     function run_tests() {
       if (!tests.length) {
-        consoleWriteln('# done');
+        consoleWrite('# done');
+        if (!original_count)
+          consoleWrite(' (no tests to run)');
+        consoleWriteln();
         setPlayStopButtonPlaying(false);
         return;
       }
