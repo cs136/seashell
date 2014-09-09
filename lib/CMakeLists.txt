@@ -87,6 +87,7 @@ set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
 set(LIBSSH2_LIBRARY "")
 set(LIBSSH2_FOUND true)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
+set(THREADSAFE ON)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 add_dependencies(git2 libssh2)
 

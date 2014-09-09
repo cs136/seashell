@@ -41,6 +41,31 @@ struct seashell_git_status {
   git_status_list* status;
 };
 
+/**
+ * seashell_git_setup (void)
+ * Performs necessary LLVM setup.
+ */
+static void seashell_git_setup() {
+  git_threads_init();
+}
+
+/**
+ * seashell_git_cleanup (void)
+ * Performs necessary LLVM cleanup.
+ */
+static void seashell_git_cleanup() {
+  git_threads_shutdown();
+}
+
+/** Helper class for making sure LLVM
+ *  gets started up and cleaned up properly.
+ */
+class GITSetup {
+  public:
+    GITSetup() {seashell_git_setup();}
+    ~GITSetup() {seashell_git_cleanup();}
+} GITSetupObject;
+
 
 /**
  * seashell_git_error (void)
