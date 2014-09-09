@@ -34,7 +34,7 @@
   ;; Exceptions are currently passed through the channel.
   (let loop ()
     (with-handlers
-        ([exn:fail? (lambda (exn) (place-channel-put channel (list #f (exn-message exn))))])
+        ([exn:fail? (lambda (exn) (place-channel-put channel (list #t (exn-message exn))))])
       (match (place-channel-get channel)
              [`(seashell-git-get-status/raw ,repo)
                (place-channel-put channel (list #f (seashell-git-get-status/raw repo)))]
