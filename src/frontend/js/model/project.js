@@ -615,7 +615,7 @@ SeashellProject.runTests = function() {
           consoleWriteln({ 'pass' : 'passed',
                            'fail' : sprintf('failed with output:\n%s',
                                             result.data.actual),
-                           'error' : sprintf('failed with error:\n%s',
+                           'error' : sprintf('program failed with error:\n%s',
                                             result.data.actual),
                            'no-expect' : "no `.expect' file found. write one?"}
                          [result.tag]);
