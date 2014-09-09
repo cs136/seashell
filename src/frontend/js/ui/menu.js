@@ -105,9 +105,9 @@ function setupMenu() {
   _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
 }
 
-function updateFileMenu(proj)
+function updateFileMenu()
 {
-  openQuestion(proj.currentQuestion);
+  openQuestion(SeashellProject.currentProject.currentQuestion);
 }
 
 function updateQuestionsMenu(proj)
