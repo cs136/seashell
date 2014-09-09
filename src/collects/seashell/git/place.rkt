@@ -58,7 +58,7 @@
       (match-define (list exn? data)
                     (place-channel-put/get git-place `(seashell-git-get-status/raw ,repo)))
       (when exn?
-        (raise (exn:git data current-continuation-marks)))
+        (raise (exn:git data (current-continuation-marks))))
       (seashell-git-status (wrap-git-gc data)))))
 
 ;; (seashell-git-init/place repo)?
@@ -74,7 +74,7 @@
       (match-define (list exn? data)
                     (place-channel-put/get git-place `(seashell-git-init ,repo)))
       (when exn?
-        (raise (exn:git data current-continuation-marks)))
+        (raise (exn:git data (current-continuation-marks))))
       (void))))
 
 ;; (seashell-git-clone/place from to)?
@@ -91,7 +91,7 @@
       (match-define (list exn? data)
                     (place-channel-put/get git-place `(seashell-git-clone ,from ,to)))
       (when exn?
-        (raise (exn:git data current-continuation-marks)))
+        (raise (exn:git data (current-continuation-marks))))
       (void))))
 
 ;; (seashell-git-commit/place update message)
@@ -108,5 +108,5 @@
       (match-define (list exn? data)
                     (place-channel-put/get git-place `(seashell-git-update ,update ,message)))
       (when exn?
-        (raise (exn:git data current-continuation-marks)))
+        (raise (exn:git data (current-continuation-marks))))
       (void))))
