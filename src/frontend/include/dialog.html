@@ -252,21 +252,40 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="new-file-label">
-        </h4>
+        <h4 class="modal-title" id="new-file-label"></h4>
       </div>
-      <div class="modal-body" style="font-size: 16px;">
-          <div class="form-group" style="text-align: center">
-            <select id="new-file-folder" style="outline: none">
-              <option>common</option>
-              <option id="folder-option-current-question"></option>
-              <option>tests</option>
-            </select>
-            <span>&nbsp;&nbsp;<b>/</b>&nbsp;&nbsp;</span>
-            <input type="text"
-                   id="new_file_name"
-                   placeholder="file name"
-                   style="outline: none; width: 50%; padding-left: 5px">
+      <div class="modal-body" style="font-size: 16px; padding-bottom: 0">
+          <div class="form-group">
+            <div class="row">
+              <div class="col-xs-4 text-right" style="padding-right: 10px">
+                <select id="new-file-folder" style="outline: none">
+                  <option>common</option>
+                  <option id="folder-option-current-question"></option>
+                  <option>tests</option>
+                </select>
+              </div>
+              <div class="col-xs-8" style="padding-left: 0">
+                <span><b>/&nbsp;</b></span>
+                <input type="text"
+                       id="new_file_name"
+                       placeholder="new file name"
+                       style="outline: none; width: 200px; padding-left: 5px">
+              </div>
+            </div>
+            <div class="row" id="upload-file-row">
+              <div class="col-xs-8 col-xs-offset-4">
+                <form id="upload-file-form" class="form-inline" method="POST">
+                  <div class="form-group">
+                    <label for="file-to-upload">
+                      <span class="text-muted">or</span>
+                      upload a file:
+                    </label>
+                    <input type="file" name="file-to-upload"
+                           id="file-to-upload">
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
       </div>
       <div class="modal-footer">
@@ -285,12 +304,14 @@
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="new-folder-label">
           <span class="glyphicon glyphicon-folder-open"></span>
-          New Folder</h4>
+          new question</h4>
       </div>
       <div class="modal-body">
           <div class="form-group">
-            <label for="new_folder_name">Folder Name:</label>
-            <input type="text" id="new_folder_name" class="form-control" placeholder="">
+            <input type="text"
+                   id="new_folder_name"
+                   class="form-control"
+                   placeholder="new question name">
           </div>
       </div>
       <div class="modal-footer">
@@ -472,32 +493,6 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
         <button type="button" id="button-commit-project" class="btn btn-primary">Commit</button>
-      </div>
-    </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
-
-<!-- Upload File dialog -->
-<div class="modal fade" id="upload-file-dialog" tabindex="-1" role="dialog" aria-labelledby="upload-file-label" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="upload-file-label">
-          <span class="glyphicon glyphicon-cloud-upload"></span>
-          Upload File</h4>
-      </div>
-      <div class="modal-body">
-        <form id="upload-file-form" method="POST">
-          <div class="form-group">
-            <label for="file-to-upload">File to upload:</label>
-            <input type="file" name="file-to-upload" id="file-to-upload"></input>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" id="button-upload-file" class="btn btn-primary">Upload</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->

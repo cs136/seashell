@@ -233,23 +233,28 @@ SeashellProject.prototype.createFile = function(fname) {
     return null;
   }
   else {
-    return socket.newFile(this.name, fname).done(function() {
-      var nFile = new SeashellFile(p, fname);
-      var ext = fname.split(".").pop();
-      var def = "\n";
-      if(ext=="c"||ext=="h") {
-        def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
-      }
-      else if(ext=="rkt") {
-        def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
-      }
-      nFile.document = CodeMirror.Doc(def, "text/x-csrc");
-      nFile.document.on("change", function() { handleDocumentChange(nFile); });
-      p.placeFile(nFile);
-      p.openFile(nFile);
-    }).fail(function() {
-      displayErrorMessage("Error creating the file "+fname+".");
-    });
+    var dirname = fname.split('/');
+    dirname.pop();
+    return p.createDirectory(dirname.join('/'))
+      .done(function() {
+        return socket.newFile(p.name, fname).done(function() {
+          var nFile = new SeashellFile(p, fname);
+          var ext = fname.split(".").pop();
+          var def = "\n";
+          if(ext=="c"||ext=="h") {
+            def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
+          }
+          else if(ext=="rkt") {
+            def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
+          }
+          nFile.document = CodeMirror.Doc(def, "text/x-csrc");
+          nFile.document.on("change", function() { handleDocumentChange(nFile); });
+          p.placeFile(nFile);
+          p.openFile(nFile);
+        }).fail(function() {
+          displayErrorMessage("Error creating the file "+fname+".");
+        });
+      });
   }
 };
 
@@ -259,10 +264,8 @@ SeashellProject.prototype.createFile = function(fname) {
 */
 SeashellProject.prototype.createDirectory = function(dname) {
   var p = this;
-  if(this.exists(dname)) {
-    displayErrorMessage("Directory "+dname+" already exists.");
-    return null;
-  }
+  if(this.exists(dname))
+    return $.Deferred().resolve().promise();
   return socket.newDirectory(this.name, dname).done(function() {
     var dirObj = new SeashellFile(p, dname, true);
     p.placeFile(dirObj);
@@ -314,7 +317,7 @@ SeashellProject.prototype.placeFile = function(file, removeFirst) {
 
 SeashellProject.prototype.openFilePath = function(path) {
   var file = this.getFileFromPath(path);
-  this.openFile(file).done(function() {
+  return this.openFile(file).done(function() {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
     editorDocument(file.document);
@@ -326,7 +329,7 @@ SeashellProject.prototype.openFile = function(file) {
     return null;
   this.currentFile = file;
   if (file.document)
-    return { done: function(x) { x(); } }
+    return $.Deferred().resolve().promise();
   return socket.readFile(this.name, file.name.join("/"))
     .done(function(contents) {
         var mime = "text";

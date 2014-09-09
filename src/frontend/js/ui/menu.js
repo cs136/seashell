@@ -83,7 +83,6 @@ function setupMenu() {
     withInputFromConsole(handleRunTests);
   });
   $("#toolbar-kill").on("click", handleProgramKill);
-  $("#menu-download").on("click", handleDownloadProject);
   $('#toolbar-delete-file').on("click", function() {
     displayConfirmationMessage('delete file',
                                'are you sure you want to delete the current\
@@ -102,6 +101,8 @@ function setupMenu() {
   $('#toolbar-submit-question').on('click', function() {
     $('#marmoset-submit-dialog').modal('show');
   });
+
+  _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
 }
 
 function updateFileMenu(proj)
@@ -109,28 +110,39 @@ function updateFileMenu(proj)
   openQuestion(proj.currentQuestion);
 }
 
-function updateQuestionsMenu(proj, questions)
+function updateQuestionsMenu(proj)
 {
-  $('#questions-row').empty();
-  var links =
-        _.map(questions, function(name) {
-          var link = $('<a>', { href: '#',
-                                text: name,
-                                class: 'question-link' })
-          link.click(function(x) {
-            openQuestion(name);
-            var link = this;
-            _.forEach($('.question-link-active'),
-                      function(x) { x.className = 'question-link'; });
-            link.className = 'question-link-active';
+  socket.listProject(proj.name).done(function(files) {
+    var questions = _.chain(files)
+          .filter(function(x) {
+            var name = x[0];
+            return x[1] && 'common' != name && -1 == name.indexOf('/');
+          })
+            .map(function(x) { return x[0]; })
+              .sortBy(_.identity)
+                .value();
+
+    $('#questions-row').empty();
+    var links =
+          _.map(questions, function(name) {
+            var link = $('<a>', { href: '#',
+                                  text: name,
+                                  class: 'question-link' })
+            link.click(function(x) {
+              openQuestion(name);
+              var link = this;
+              _.forEach($('.question-link-active'),
+                        function(x) { x.className = 'question-link'; });
+              link.className = 'question-link-active';
+            });
+            return link;
           });
-          return link;
-        });
-  _.forEach(links, function(link) {
-    _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
+    _.forEach(links, function(link) {
+      _.forEach([link, ' '], function(x) { $('#questions-row').append(x); });
+    });
+    if (links.length)
+      links[0].click();
   });
-  if (links.length)
-    links[0].click();
 }
 
 function openQuestion(qname)
@@ -174,10 +186,12 @@ function openQuestion(qname)
                               style: 'text-decoration: none'});
         link.click(function() {
           var link = this;
-          p.openFilePath(dir + '/' + x);
-          _.forEach($('.file-link-active'),
-                    function(x) { x.className = 'file-link'; });
-          link.className = 'file-link-active';
+          p.openFilePath(dir + '/' + x).done(function(x) {
+            _.forEach($('.file-link-active'),
+                      function(x) { x.className = 'file-link'; });
+            link.className = 'file-link-active';
+            updateDynamicUISizes();
+          });
         });
         return link;
       }
@@ -214,6 +228,17 @@ function openQuestion(qname)
       question_files[0].click();
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(qname + '/tests', $('#test-files-row'));
+
+    function show_optional_dir(element, dir)
+    {
+      if (_.find(files, function (x) { return dir == x[0] && x[1]; }))
+        element.show();
+      else
+        element.hide();
+    }
+    show_optional_dir($('#common-files'), 'common');
+    show_optional_dir($('#tests-files'), sprintf('%s/tests', qname));
+
     p.currentQuestion = qname;
 
     result.resolve();
@@ -227,19 +252,30 @@ function updateProjectsDropdown()
   var dropdown = $('#projects-dropdown');
   dropdown.empty();
   SeashellProject.getListOfProjects().done(function(projs) {
-    dropdown.append('<li role="presentation" class="dropdown-header">\
-                    other projects</li>');
-    _.forEach(projs, function(pname) {
-      if (pname == SeashellProject.currentProject.name)
-        return;
-
+    function add_menuitem(caption, handler) {
       var li = $('<li role="presentation"></li>');
       var link = $('<a role="menuitem" tabindex="-1" href="#"></a>');
-      link.text(pname);
-      link.on('click', function() { handleOpenProject(pname); });
-
+      link.text(caption);
+      link.on('click', handler);
       li.append(link);
       dropdown.append(li);
+      return li;
+    }
+    function add_divider() {
+      dropdown.append('<li role="presentation" class="divider"></li>');
+    }
+
+    dropdown.append('<li role="presentation" class="dropdown-header">\
+                    other projects</li>');
+
+    _.forEach(projs, function(pname) {
+      if (pname != SeashellProject.currentProject.name)
+        add_menuitem(pname, function() { handleOpenProject(pname); });
     });
+
+    add_divider();
+    add_menuitem('download project…', handleDownloadProject);
+    add_menuitem('new question…',
+                 function() { $('#new-folder-dialog').modal('show'); });
   });
 }
