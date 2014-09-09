@@ -221,3 +221,25 @@ function openQuestion(qname)
 
   return result;
 }
+
+function updateProjectsDropdown()
+{
+  var dropdown = $('#projects-dropdown');
+  dropdown.empty();
+  SeashellProject.getListOfProjects().done(function(projs) {
+    dropdown.append('<li role="presentation" class="dropdown-header">\
+                    other projects</li>');
+    _.forEach(projs, function(pname) {
+      if (pname == SeashellProject.currentProject.name)
+        return;
+
+      var li = $('<li role="presentation"></li>');
+      var link = $('<a role="menuitem" tabindex="-1" href="#"></a>');
+      link.text(pname);
+      link.on('click', function() { handleOpenProject(pname); });
+
+      li.append(link);
+      dropdown.append(li);
+    });
+  });
+}

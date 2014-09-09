@@ -103,6 +103,7 @@ function handleOpenProject(name) {
           .map(function(x) { return x[0]; })
             .sortBy(_.identity)
               .value());
+    updateProjectsDropdown();
 
     $("#open-project-dialog").modal("hide");
   });
