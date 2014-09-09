@@ -308,7 +308,7 @@ SeashellProject.prototype.openFile = function(file) {
     return null;
   this.currentFile = file;
   if (file.document)
-    return { done: function(x) { x(); } }
+    return $.Deferred().resolve().promise();
   return socket.readFile(this.name, file.name.join("/"))
     .done(function(contents) {
         var mime = "text";
