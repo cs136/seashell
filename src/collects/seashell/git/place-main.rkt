@@ -43,6 +43,6 @@
              [`(seashell-git-clone ,from ,to)
                (place-channel-put channel (list #f (seashell-git-clone from to)))]
              [`(seashell-git-commit ,update ,message)
-               (place-channel-put channel (list #f (seashell-git-commit update message)))])
-      (loop))))
+               (place-channel-put channel (list #f (seashell-git-commit update message)))]))
+    (loop)))
 
