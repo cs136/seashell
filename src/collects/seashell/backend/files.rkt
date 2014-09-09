@@ -65,7 +65,7 @@
         (raise (exn:project
           (format "Directory already exists, or some other filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
-    (make-directory
+    (make-directory*
       (check-and-build-path (build-project-path project) dir))
     (void)))
 
