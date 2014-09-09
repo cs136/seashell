@@ -87,6 +87,12 @@
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Name of special subdirectory in each user program which contains tests (.in and .expect files)
       (cons 'tests-subdirectory            "tests")
+      ;; Name of special subdirectory in each user program which contains common files.
+      (cons 'common-subdirectory            "common")
+      ;; Location of the Submit tool
+      (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
+      ;; Location of the default project template
+      (cons 'default-project-template       "https://github.com/cs136/seashell-default")
       ;; Location of SSL key.
       (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
       ;; Location of SSL certificate.
