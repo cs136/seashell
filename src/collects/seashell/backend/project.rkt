@@ -336,6 +336,11 @@
 
   (define project-base (build-project-path name))
   (define project-common (check-and-build-path project-base "common"))
+  (define project-common-list
+    (if (directory-exists? project-common)
+      (directory-list project-common #:build? #t)
+      '()))
+  
   (match-define-values (base _ _)
                        (if file (split-path (check-and-build-path project-base file))
                                 (values (check-and-build-path project-base) #f #f)))
@@ -347,19 +352,19 @@
               (equal? (filename-extension file) #"c"))
             (append
               (directory-list base #:build? #t)
-              (directory-list project-common #:build? #t))))
+              project-common-list)))
   (define o-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"o"))
             (append
               (directory-list base #:build? #t)
-              (directory-list project-common #:build? #t))))
+              project-common-list)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages)
     (seashell-compile-files/place `("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
                                     "-gdwarf-4" "-O0"
-                                    "-I" ,(some-system-path->string project-common))
+                                    ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                   '("-lm") c-files o-files))
   ;; TODO Vary binary name by file we're building.
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
@@ -421,7 +426,6 @@
  
   ;; Get the base directory of our file that we're running.
   (define project-base (build-project-path name))
-  (define project-common (check-and-build-path project-base "common"))
   (match-define-values (base _ _)
                        (if file (split-path (check-and-build-path project-base file))
                                 (values (check-and-build-path project-base) #f #f)))
