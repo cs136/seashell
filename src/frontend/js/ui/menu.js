@@ -83,7 +83,6 @@ function setupMenu() {
     withInputFromConsole(handleRunTests);
   });
   $("#toolbar-kill").on("click", handleProgramKill);
-  $("#menu-download").on("click", handleDownloadProject);
   $('#toolbar-delete-file').on("click", function() {
     displayConfirmationMessage('delete file',
                                'are you sure you want to delete the current\
@@ -240,19 +239,24 @@ function updateProjectsDropdown()
   var dropdown = $('#projects-dropdown');
   dropdown.empty();
   SeashellProject.getListOfProjects().done(function(projs) {
-    dropdown.append('<li role="presentation" class="dropdown-header">\
-                    other projects</li>');
-    _.forEach(projs, function(pname) {
-      if (pname == SeashellProject.currentProject.name)
-        return;
-
+    function add_menuitem(caption, handler) {
       var li = $('<li role="presentation"></li>');
       var link = $('<a role="menuitem" tabindex="-1" href="#"></a>');
-      link.text(pname);
-      link.on('click', function() { handleOpenProject(pname); });
-
+      link.text(caption);
+      link.on('click', handler);
       li.append(link);
       dropdown.append(li);
+      return li;
+    }
+
+    add_menuitem('download project', handleDownloadProject);
+    dropdown.append('<li role="presentation" class="divider"></li>');
+    dropdown.append('<li role="presentation" class="dropdown-header">\
+                    other projects</li>');
+
+    _.forEach(projs, function(pname) {
+      if (pname != SeashellProject.currentProject.name)
+        add_menuitem(pname, function() { handleOpenProject(pname); });
     });
   });
 }
