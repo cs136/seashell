@@ -243,7 +243,7 @@ function updateListOfProjects() {
   SeashellProject.getListOfProjects().done(function(projects) {
     var pdiv = $("#project-list");
     if(projects) {
-      var html = "Projects:<br /><br /><table>";
+      var html = "<table>";
       var w = projects.length / num_in_col;
       for(var i=0; i < num_in_col; i++) {
         html += "<tr>";
@@ -414,8 +414,6 @@ function setupDialogs() {
   /** Set up the logout dialog */
   $("#menu-logout").on("click",
       handleLogout);
-  $("#switch-project-link").on("click",
-      handleSwitchProject);
   /** Select the first input element, or last button if no input elements */
   $(".modal").on("shown.bs.modal", function() {
     var inp = $(this).find("input");
