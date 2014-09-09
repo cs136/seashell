@@ -217,7 +217,6 @@ function openQuestion(qname)
 
     function show_optional_dir(element, dir)
     {
-      console.log(element);
       if (_.find(files, function (x) { return dir == x[0] && x[1]; }))
         element.show();
       else
