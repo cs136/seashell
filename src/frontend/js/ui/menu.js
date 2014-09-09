@@ -147,6 +147,8 @@ function updateQuestionsMenu(proj)
 
 function openQuestion(qname)
 {
+  consoleClear();
+
   var p = SeashellProject.currentProject;
   var result = $.Deferred();
   if(!qname) {
