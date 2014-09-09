@@ -25,9 +25,13 @@ body {
   padding-bottom: 50px; /* Account for fixed navbar */
 }
 
-/** Angry red background for when the client is disconnected */
 .disconnected {
-    background-color: #ff0000;
+}
+
+.disconnected a, .disconnected button {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
 }
 
 /** No project display. */
@@ -373,4 +377,8 @@ div.tooltip .tooltip-inner {
 	}
   #console > .CodeMirror { border-left: none; }
   .console-input { border-left: none }
+}
+
+.alert {
+  background-image: none;
 }

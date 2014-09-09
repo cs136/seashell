@@ -22,28 +22,24 @@ var settings = null;
 
 // variable for monitoring disconnection from websocket
 var dccount = 0;
-var disconnect = false;
 
-function setupDisconnectMonitor(){
-    if(dccount >= 3){
-        if(!disconnect){
-            displayErrorMessage("You are not connected to the Seashell server. Any work you do right now will not be saved!");
-            $("#master-container").addClass("disconnected");
-        }
-        disconnect = true;
+function setupDisconnectMonitor() {
+  var max_disconnects = 3;
+
+  if (max_disconnects == dccount++)
+  {
+    $('#disconnection-error-alert').removeClass('hide');
+    $("#master-container").addClass("disconnected");
+    editor.setOption('readOnly', true);
+  }
+  socket.ping().done(function () {
+    if (dccount >= max_disconnects) {
+      $('#disconnection-error-alert').addClass('hide');
+      $("#master-container").removeClass("disconnected");
+      editor.setOption('readOnly', false);
     }
-
-    dccount++;
-
-    var promise = socket.ping();
-    promise.done(function (){
-        if(disconnect){
-            displayErrorMessage("Your connection to the Seashell server has been restored.");
-            $("#master-container").removeClass("disconnected");
-        }
-        disconnect = false;
-        dccount = 0;
-    });
+    dccount = 0;
+  });
 }
 
 /**
