@@ -167,6 +167,9 @@ function openQuestion(qname)
   consoleClear();
   editorClear();
 
+  $(".hide-on-null-file").addClass("hide");
+  $(".show-on-null-file").removeClass("hide");
+
   var p = SeashellProject.currentProject;
   var result = $.Deferred();
   if(!qname) {
@@ -255,6 +258,7 @@ function openQuestion(qname)
     $('#question-files-list-title').text(qname + '/');
     $('#folder-option-current-question').text(qname);
     $(".hide-on-null-question").removeClass("hide");
+    $(".show-on-null-question").addClass("hide");
 
     var question_files =
           attach_dir_listing_to_node(qname, $('#question-files-row'));
@@ -286,6 +290,10 @@ function handleCloseProject() {
   SeashellProject.currentProject.close().done(function() {
     $(".hide-on-null-project").addClass("hide");
     $(".show-on-null-project").removeClass("hide");
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
+    $(".hide-on-null-question").addClass("hide");
+    $(".show-on-null-question").removeClass("hide")
   }).fail(function() {
     displayErrorMessage("Could not successfully close assignment.");
   });
