@@ -316,7 +316,8 @@ SeashellProject.prototype.openFilePath = function(path) {
   return this.openFile(file).done(function() {
     $(".hide-on-null-file").removeClass("hide");
     $(".show-on-null-file").addClass("hide");
-    editorDocument(file.document);
+    if (file.document)
+      editorDocument(file.document);
   });
 };
 
@@ -324,9 +325,12 @@ SeashellProject.prototype.openFile = function(file) {
   if (file.children)
     return null;
   this.currentFile = file;
+  editorShowUnreadableFilePlaceholder(false);
   if (file.document)
     return $.Deferred().resolve().promise();
-  return socket.readFile(this.name, file.name.join("/"))
+
+  var result = $.Deferred();
+  socket.readFile(this.name, file.name.join("/"))
     .done(function(contents) {
         var mime = "text";
         var ext = file.ext();
@@ -336,10 +340,13 @@ SeashellProject.prototype.openFile = function(file) {
           mime = "text/x-scheme";
         file.document = CodeMirror.Doc(contents, mime);
         file.document.on("change", function() { handleDocumentChange(file); });
+        result.resolve();
       })
     .fail(function() {
-        displayErrorMessage("Error reading file "+file.name+".");
+      editorShowUnreadableFilePlaceholder(!file.document);
+      result.resolve();
     });
+  return result;
 };
 
 /*
