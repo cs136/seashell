@@ -87,6 +87,17 @@ function editorDocument(document) {
   editorLint();
 }
 
+/** Sets editor read only. */
+function editorReadOnly(state) {
+  editor.setOption("readOnly", state);
+}
+
+/** Clears the editor, by showing a blank, uneditable document. */
+function editorClear() {
+  editor.swapDoc(new CodeMirror.Doc("", "text/x-src"));
+  editorReadOnly(true);
+}
+
 function editorShowUnreadableFilePlaceholder(show)
 {
   if (!show)
