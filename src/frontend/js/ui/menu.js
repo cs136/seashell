@@ -208,7 +208,7 @@ function openQuestion(qname)
       {
         caption = caption || x;
         var link = $('<a>', { href: '#',
-                              text: caption,
+                              html: caption,
                               class: 'file-link',
                               style: 'text-decoration: none'});
         link.click(function() {
@@ -226,23 +226,25 @@ function openQuestion(qname)
       parent.empty();
       return _.chain(qfiles)
         .map(function(x) {
-          var span = $('<span>', { style: 'margin-right: 30px' });
+          var elt = $('<span>', { style: 'margin-right: 2em;' });
           if (!has_source_buddy(x))
           {
             var link = make_file_link(x);
-            span.append(link);
-            parent.append(span);
+            elt.append(link);
+            parent.append(elt);
             return link;
           }
           if (-1 == ['c', 'in'].indexOf(extension(x)))
             return null;
-          var link = make_file_link(x, basename(x) + ' ' + extension(x));
-          span.append(link);
-          span.append('<span style="color: #aaa; font-size: 12px">,</span>');
+          var link =
+            make_file_link(x, basename(x) + '&nbsp;' + extension(x));
+          elt.append(link);
+          elt.append('<span style="color: #aaa; font-size: 12px">,</span>');
 
           var buddy = source_buddy_for(extension(x));
-          span.append(make_file_link(basename(x) + '.' + buddy, buddy));
-          parent.append(span);
+          elt.append(make_file_link(basename(x) + '.' + buddy, buddy));
+          parent.append(elt);
+          parent.append(' ');
           return link;
         })
           .filter(_.identity).value();
@@ -307,7 +309,6 @@ function updateProjectsDropdown()
       displayErrorMessage("Could not successfully close assignment.");
     });
   });
-  
 
   add_menuitem('delete assignment', function() {
     displayConfirmationMessage("Delete Assignment", "Are you sure you want to delete this assignment?", handleDeleteProject);
