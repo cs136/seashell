@@ -168,9 +168,10 @@ function openQuestion(qname)
         if (result) {
           return z.substring(0, z.length - result[0].length);
         } else {
-          return ""; // Fallback case [when you hit files in the root directory]
-                     // It's possible that students will open projects created with
-                     // old versions of Seashell, and at least this won't break the
+          return ""; // Fallback case [when you hit files in the root
+                     // directory]. It's possible that students will
+                     // open projects created with old versions of
+                     // Seashell, and at least this won't break the
                      // interface badly.
         }
       }
