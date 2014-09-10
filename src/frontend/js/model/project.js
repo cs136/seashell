@@ -69,6 +69,7 @@ function updateMarmosetProjects() {
  * Fetches new assignment skeletons, if any are available
  */
 function fetchNewAssignments() {
+    var def = $.Deferred();
     SeashellProject.getListOfProjects().done(function(projects){
         $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi", function(data){
             for(var i=0; i<data.length; i++){
@@ -76,11 +77,14 @@ function fetchNewAssignments() {
                     console.log("Fetching assignment template " + data[i] + ".");
                     socket.newProjectFrom(data[i], "/u2/cs136/public_html/assignment_skeletons/"+data[i]).fail(function(){
                         displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
+                        def.reject();
                     });
                 }
             }
+            def.resolve();
         });
     });
+    return def.promise();
 }
 
 SeashellProject.new = function(name) {
@@ -90,9 +94,10 @@ SeashellProject.new = function(name) {
     });
 }
 
-SeashellProject.prototype.getMarmosetResults = function() {
-  var patt = /a[0-9]+?q[0-9]+?[abcd]?/i;
-  if(patt.test(this.name)) {
+SeashellProject.prototype.getMarmosetResults = function(question) {
+  var patt = /q[0-9]+?[abcd]?/i;
+  var def = $.Deferred();
+  if(patt.test(question.name)) {
     $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
         +creds.user+"&p="+this.name,
       function(data) {
@@ -110,10 +115,15 @@ SeashellProject.prototype.getMarmosetResults = function() {
         for(var i=0; i < data.length; i++) {
           marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
         }
+        def.resolve(!isNaN(data[0][0]));
+    }).fail(function() {
+      def.reject();
     });
-    return true;
   }
-  return false;
+  else {
+    def.reject();
+  }
+  return def.promise();
 }
 
 
@@ -325,7 +335,7 @@ SeashellProject.prototype.openFilePath = function(path) {
 };
 
 SeashellProject.prototype.openFile = function(file) {
-  if (file.children)
+  if (file.is_dir)
     return null;
   this.currentFile = file;
   if (file.document)
@@ -885,6 +895,19 @@ SeashellProject.prototype.exists = function(fname) {
   }
 }
 
-SeashellProject.prototype.submit = function(marm_project) {
-  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion);
+SeashellProject.prototype.submit = function(question) {
+  var p = this;
+  function fetchMarmosetResults(timeout) {
+    var t = setTimeout(function() {
+      p.getMarmosetResults(question).done(function(test_run) {
+        if(!test_run)
+          fetchMarmosetResults(timeout * 2);
+      });
+    }, timeout);
+  }
+  return socket.marmosetSubmit(this.name, marm_project, question)
+    .done(function() {
+      fetchMarmosetResults(1000);
+    });
 }
+
