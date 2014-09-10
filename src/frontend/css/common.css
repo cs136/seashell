@@ -126,6 +126,7 @@ body {
 }
 
 #console-title {
+  border: 1px solid #ddd;
   border-top: none;
   background: #efefef;
   font-size: 18px;
@@ -390,6 +391,7 @@ div.tooltip .tooltip-inner {
 
 @media (min-width: 992px) {
 	#console-title {
+    border: 1px solid #ddd;
 	  border-left: none;
 	}
   #console > .CodeMirror { border-left: none; }
