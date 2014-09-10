@@ -187,7 +187,9 @@ function openQuestion(qname)
         var source_buddies = ['c', 'h', 'in', 'expect'];
         return source_buddies.indexOf(extension(x)) >= 0 &&
           _.find(qfiles,
-                 function(y) { return x != y && basename(x) == basename(y); });
+                 function(y) { return x != y &&
+                               -1 != source_buddies.indexOf(extension(y)) &&
+                               basename(x) == basename(y); });
       }
       function make_file_link(x, caption)
       {
