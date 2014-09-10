@@ -108,7 +108,9 @@ function setupMenu() {
   $('#toolbar-submit-question').on('click', function() {
     var marm;
     if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
-      SeashellProject.currentProject.submit(marm);
+      displayConfirmationMessage("Marmoset Submit", "Would you like to submit your code to the Marmoset project "+marm+"?", function() {
+        SeashellProject.currentProject.submit(marm);
+      });
     }
     else {
       $('#marmoset-submit-dialog').modal('show');
