@@ -102,7 +102,8 @@ function setupMenu() {
     $('#marmoset-submit-dialog').modal('show');
   });
 
-  _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
+  $('#common-files').css('visibility', 'hidden');
+  $('#tests-files').hide();
 }
 
 function updateFileMenu()
@@ -172,7 +173,7 @@ function openQuestion(qname)
                      // interface badly.
         }
       }
-      var dfiles =
+      var qfiles =
         _.chain(files)
           .filter(function(x) { return !x[1] && dirname(x[0]) == dir; })
             .map(function(x) { return /[^\/]+$/.exec(x[0])[0]; })
@@ -180,7 +181,7 @@ function openQuestion(qname)
       function has_source_buddy(x)
       {
         return ['c', 'h'].indexOf(extension(x)) >= 0 &&
-          _.find(dfiles,
+          _.find(qfiles,
                  function(y) { return x != y && basename(x) == basename(y); });
       }
       function make_file_link(x, caption)
@@ -203,7 +204,7 @@ function openQuestion(qname)
       }
 
       parent.empty();
-      return _.chain(dfiles)
+      return _.chain(qfiles)
         .map(function(x) {
           var span = $('<span>', { style: 'margin-right: 30px' });
           if (!has_source_buddy(x))
@@ -236,15 +237,16 @@ function openQuestion(qname)
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(qname + '/tests', $('#test-files-row'));
 
-    function show_optional_dir(element, dir)
-    {
-      if (_.find(files, function (x) { return !x[0].indexOf(dir) && !x[1]; }))
-        element.show();
-      else
-        element.hide();
+    function dir_has_files(dir) {
+      return _.find(files,
+                    function (x) { return !x[0].indexOf(dir) && !x[1]; });
     }
-    show_optional_dir($('#common-files'), 'common');
-    show_optional_dir($('#tests-files'), sprintf('%s/tests', qname));
+    $('#common-files')
+      .css('visibility', dir_has_files('common') ? 'visible' : 'hidden');
+    if (dir_has_files(sprintf('%s/tests', qname)))
+      $('#tests-files').show();
+    else
+      $('#tests-files').hide();
 
     p.currentQuestion = qname;
 
