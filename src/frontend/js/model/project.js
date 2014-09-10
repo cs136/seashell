@@ -64,6 +64,7 @@ function updateMarmosetProjects() {
             var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
             // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
             SeashellProject.marmosetProjects = assns;
+            marmoset_tag.html("");
             for(var i = 0; i < assns.length; i++){
                 marmoset_tag.append(
                     $("<option>").attr("value", assns[i]).text(assns[i]));
