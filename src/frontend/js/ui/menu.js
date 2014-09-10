@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+function handleSettingsDialog() {
+    refreshSettings();
+}
+
 function handleSaveProject() {
   return SeashellProject.currentProject.save();
 }
@@ -79,6 +83,8 @@ function setupMenu() {
     $('#input-line').focus();
     x();
   }
+
+  $("#settings-dialog").on("click", handleSettingsDialog);
 
   $("#toolbar-run").on("click", handleRunProject);
   $("#toolbar-run-tests").on("click", handleRunTests);
