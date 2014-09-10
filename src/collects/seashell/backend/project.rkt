@@ -445,8 +445,11 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (with-output-to-bytes (thunk
-      (zip->output (pathlist-closure (directory-list)))))))
+    (define output-port (open-output-bytes))
+    (parameterize
+      ([current-output-port output-port])
+      (zip->output (pathlist-closure (directory-list))))
+    (get-output-bytes output-port)))
 
 ;; (marmoset-submit course assn project file) -> void
 ;; Submits a file to marmoset
