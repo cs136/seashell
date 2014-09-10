@@ -86,3 +86,25 @@ function editorDocument(document) {
   editor.refresh();
   editorLint();
 }
+
+function editorShowUnreadableFilePlaceholder(show)
+{
+  if (!show)
+  {
+    editor.setOption('lineNumbers', true);
+    $('#binary-editor-placeholder').remove();
+    return;
+  }
+
+  editorDocument(CodeMirror.Doc('', ''));
+  editor.setOption('lineNumbers', false);
+
+  var placeholder =
+        $('<div id="binary-editor-placeholder" \
+          style="width: 100%; height: 80%; position: absolute; \
+          top: 0; left: 0; z-index: 9"></div>');
+  placeholder.append($('<div style="position: relative; top: 40%">\
+                       <h3 class="text-center text-muted">\
+                       <i>binary file</i></h3></div>'));
+  $('#editor > .CodeMirror').prepend(placeholder);
+}
