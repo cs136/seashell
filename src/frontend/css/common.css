@@ -125,13 +125,20 @@ body {
   padding-left: 20px;
 }
 
-#console-title {
+.editor-console-title {
   border: 1px solid #ddd;
-  border-top: none;
   background: #efefef;
   font-size: 18px;
   padding: 5px 0 3px 18px;
   font-weight: 200;
+}
+
+#editor-title {
+  border-bottom: none;
+}
+
+#console-title {
+  border-top: none;
 }
 
 .console-controls {

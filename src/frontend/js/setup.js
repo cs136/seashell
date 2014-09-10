@@ -121,7 +121,7 @@ function setupHotkeys() {
 
 function updateDynamicUISizes()
 {
-  var h = _.max([$(window).height() - $('.editor-console').offset().top - 150,
+  var h = _.max([$(window).height() - $('.editor-console').offset().top - 60,
                  250]);
   if ($(document).width() < 992)
   {
@@ -130,9 +130,7 @@ function updateDynamicUISizes()
     return;
   }
   $('#editor > .CodeMirror').height(h);
-  $('#console > .CodeMirror')
-    .height(h - $('#console-title').outerHeight() -
-            $('.console-input').outerHeight() + 2);
+  $('#console > .CodeMirror').height(h - $('.console-input').outerHeight() + 1);
 }
 
 function setupDynamicResizing()
