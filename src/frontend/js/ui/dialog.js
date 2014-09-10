@@ -80,6 +80,7 @@ function handleNewProject( ) {
   var name = $("#new_project_name").val();
   SeashellProject.new(name).done(function() {
     handleOpenProject(name);
+    updateListOfProjects();
   });
   $("#new-project-dialog").modal("hide");
 }
