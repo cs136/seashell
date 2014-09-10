@@ -429,6 +429,7 @@
     (match (filename-extension file)
       ['#"rkt" 'racket]
       ['#"c" 'C]
+      ['#"h" 'C] ;; TODO: this is a temporary fix, which we figure out racket vs. C running
       [_ (error "You can only run .c or .rkt files!")]))
 
   ;; Name of program to run.
