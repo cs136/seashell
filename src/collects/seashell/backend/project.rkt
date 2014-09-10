@@ -51,8 +51,9 @@
          net/url
          file/zip)
 
-;; global variable, which is a set of currently locked projects
+;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
+(define lock-semaphore (make-semaphore 1))
 
 ;; (project-name? name) -> bool?
 ;; Predicate for testing if a string is a valid project name.
@@ -63,7 +64,6 @@
       (and (equal? base 'relative) (path-for-some-system? suffix)))
      #t]
     [else #f]))
-
 
 ;; (is-project? name)
 ;; Checks if name is a project that exists.
@@ -218,29 +218,41 @@
 ;;
 ;; Arguments:
 ;;  name - Name of the project.
+;;  thread-to-lock-on - Thread to lock on.
 ;;
 ;; Raises:
 ;;  exn:project if the project does not exist.
 ;;
 ;; Returns:
-;;  #t if the project was successfully locked, #f otherwise
-(define/contract (lock-project name)
-  (-> (and/c project-name? is-project?) boolean?)
-  (cond
-    [(hash-has-key? locked-projects name) #f]
-    [else (hash-set! locked-projects name #t) #t]))
+;;  #t if the project was successfully locked, #f otherwise.
+;; Notes:
+;;  Project is automatically unlocked if the thread dies.
+(define/contract (lock-project name thread-to-lock-on)
+  (-> (and/c project-name? is-project?) thread? boolean?)
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
+        (hash-remove! locked-projects name))
+      (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))))
 
 ;; (force-lock-project name)
 ;; Forcibly locks a project, even if it is already locked
 ;;
 ;; Arguments:
 ;;  name - Name of the project.
+;;  thread-to-lock-on - Thread to lock on.
 ;;
 ;; Raises:
 ;;  exn:project if the project does not exist.
-(define/contract (force-lock-project name)
-  (-> (and/c project-name? is-project?) void?)
-  (hash-set! locked-projects name #t))
+;; Notes:
+;;  Project is automatically unlocked if the thread dies.
+(define/contract (force-lock-project name thread-to-lock-on)
+  (-> (and/c project-name? is-project?) thread? void?)
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (hash-set! locked-projects name thread-to-lock-on))))
 
 ;; (unlock-project name)
 ;; Unlocks a project.
@@ -255,10 +267,13 @@
 ;;  #t if the project was successfully unlocked, #f otherwise
 (define/contract (unlock-project name)
   (-> (and/c project-name? is-project?) boolean?)
-  (cond
-    [(hash-has-key? locked-projects name)
-      (hash-remove! locked-projects name) #t]
-    [else #f]))
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (cond
+        [(hash-has-key? locked-projects name)
+          (hash-remove! locked-projects name) #t]
+        [else #f]))))
 
 ;; (save-project name)
 ;; Commits the current state of a project to Git.

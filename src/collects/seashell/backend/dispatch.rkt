@@ -37,6 +37,7 @@
 (define (conn-dispatch keepalive-chan connection state)
   (define authenticated? #f)
   (define our-challenge (make-challenge))
+  (define thread-to-lock-on (current-thread))
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -273,7 +274,7 @@
         ('id id)
         ('type "lockProject")
         ('project project))
-       (define locked (lock-project project))
+       (define locked (lock-project project thread-to-lock-on))
        `#hash((id . ,id)
               (success . ,locked)
               (result . ,(if locked #t "locked")))]
@@ -281,7 +282,7 @@
         ('id id)
         ('type "forceLockProject")
         ('project project))
-       (force-lock-project project)
+       (force-lock-project project thread-to-lock-on)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
