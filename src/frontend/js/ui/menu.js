@@ -273,4 +273,10 @@ function updateProjectsDropdown()
   add_menuitem('download assignment…', handleDownloadProject);
   add_menuitem('new question…',
                function() { $('#new-folder-dialog').modal('show'); });
+
+  add_divider();
+  add_menuitem('close assignment', function() { /* fill me in */ });
+  add_menuitem('delete assignment', function() {
+    /* fill me in; ask user for confirmation */
+  });
 }
