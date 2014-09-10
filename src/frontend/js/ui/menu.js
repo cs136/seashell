@@ -102,7 +102,8 @@ function setupMenu() {
     $('#marmoset-submit-dialog').modal('show');
   });
 
-  _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
+  $('#common-files').css('visibility', 'hidden');
+  $('#tests-files').hide();
 }
 
 function updateFileMenu()
@@ -121,13 +122,10 @@ function updateQuestionsMenu(proj)
             .map(function(x) { return x[0]; })
               .sortBy(_.identity)
                 .value();
-
     $('#questions-row').empty();
     var links =
           _.map(questions, function(name) {
-            var link = $('<a>', { href: '#',
-                                  text: name,
-                                  class: 'question-link' })
+            var link = $('<a href="#" class="question-link">' + name + '</a>');
             link.click(function(x) {
               openQuestion(name);
               var link = this;
@@ -142,6 +140,10 @@ function updateQuestionsMenu(proj)
     });
     if (links.length)
       links[0].click();
+    if (links.length < 2)
+      $('#questions-row').hide();
+    else
+      $('#questions-row').show();
   });
 }
 
@@ -166,22 +168,29 @@ function openQuestion(qname)
         if (result) {
           return z.substring(0, z.length - result[0].length);
         } else {
-          return ""; // Fallback case [when you hit files in the root directory]
-                     // It's possible that students will open projects created with
-                     // old versions of Seashell, and at least this won't break the
+          return ""; // Fallback case [when you hit files in the root
+                     // directory]. It's possible that students will
+                     // open projects created with old versions of
+                     // Seashell, and at least this won't break the
                      // interface badly.
         }
       }
-      var dfiles =
+      var qfiles =
         _.chain(files)
           .filter(function(x) { return !x[1] && dirname(x[0]) == dir; })
             .map(function(x) { return /[^\/]+$/.exec(x[0])[0]; })
               .value();
+      function source_buddy_for(x) {
+        return { 'c' : 'h', 'in' : 'expect' }[x];
+      }
       function has_source_buddy(x)
       {
-        return ['c', 'h'].indexOf(extension(x)) >= 0 &&
-          _.find(dfiles,
-                 function(y) { return x != y && basename(x) == basename(y); });
+        var source_buddies = ['c', 'h', 'in', 'expect'];
+        return source_buddies.indexOf(extension(x)) >= 0 &&
+          _.find(qfiles,
+                 function(y) { return x != y &&
+                               -1 != source_buddies.indexOf(extension(y)) &&
+                               basename(x) == basename(y); });
       }
       function make_file_link(x, caption)
       {
@@ -203,7 +212,7 @@ function openQuestion(qname)
       }
 
       parent.empty();
-      return _.chain(dfiles)
+      return _.chain(qfiles)
         .map(function(x) {
           var span = $('<span>', { style: 'margin-right: 30px' });
           if (!has_source_buddy(x))
@@ -213,12 +222,14 @@ function openQuestion(qname)
             parent.append(span);
             return link;
           }
-          if ('c' != extension(x))
+          if (-1 == ['c', 'in'].indexOf(extension(x)))
             return null;
-          var link = make_file_link(x, basename(x) + ' c');
+          var link = make_file_link(x, basename(x) + ' ' + extension(x));
           span.append(link);
           span.append('<span style="color: #aaa; font-size: 12px">,</span>');
-          span.append(make_file_link(basename(x) + '.h', 'h'));
+
+          var buddy = source_buddy_for(extension(x));
+          span.append(make_file_link(basename(x) + '.' + buddy, buddy));
           parent.append(span);
           return link;
         })
@@ -236,15 +247,16 @@ function openQuestion(qname)
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(qname + '/tests', $('#test-files-row'));
 
-    function show_optional_dir(element, dir)
-    {
-      if (_.find(files, function (x) { return dir == x[0] && x[1]; }))
-        element.show();
-      else
-        element.hide();
+    function dir_has_files(dir) {
+      return _.find(files,
+                    function (x) { return !x[0].indexOf(dir) && !x[1]; });
     }
-    show_optional_dir($('#common-files'), 'common');
-    show_optional_dir($('#tests-files'), sprintf('%s/tests', qname));
+    $('#common-files')
+      .css('visibility', dir_has_files('common') ? 'visible' : 'hidden');
+    if (dir_has_files(sprintf('%s/tests', qname)))
+      $('#tests-files').show();
+    else
+      $('#tests-files').hide();
 
     p.currentQuestion = qname;
 
@@ -273,4 +285,10 @@ function updateProjectsDropdown()
   add_menuitem('download assignment…', handleDownloadProject);
   add_menuitem('new question…',
                function() { $('#new-folder-dialog').modal('show'); });
+
+  add_divider();
+  add_menuitem('close assignment', function() { /* fill me in */ });
+  add_menuitem('delete assignment', function() {
+    /* fill me in; ask user for confirmation */
+  });
 }
