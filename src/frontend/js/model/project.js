@@ -656,6 +656,7 @@ SeashellProject.prototype.run = function(test) {
       else
         p.currentPID = null;
     }).fail(function() {
+      setPlayStopButtonPlaying(false);
       displayErrorMessage("Project could not be run.");
     });
   }
