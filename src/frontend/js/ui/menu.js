@@ -99,7 +99,13 @@ function setupMenu() {
   $('#toolbar-rename-file').on('click', showRenameMoveFileDialog);
 
   $('#toolbar-submit-question').on('click', function() {
-    $('#marmoset-submit-dialog').modal('show');
+    var marm;
+    if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
+      SeashellProject.currentProject.submit(marm);
+    }
+    else {
+      $('#marmoset-submit-dialog').modal('show');
+    }
   });
 
   _.forEach(['#common-files', '#tests-files'], function (x) { $(x).hide(); });
