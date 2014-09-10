@@ -5,85 +5,92 @@
     This page requires JavaScript to operate properly, or at all.
   </noscript>
 
-  <div class="col-xs-12 col-md-12 col-lg-10 col-lg-offset-1"
-       style="margin-top: 15px">
-    <div class="col-md-4 col-md-offset-1 col-xs-4 col-xs-offset-1">
-      <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
-        <span style="position: relative; bottom: 6px; font-size: 20px">
-          <span style="font-weight: 400">
-            <span class="userid"></span> /
+
+  <div id="disconnection-error-alert"
+       class="alert alert-danger text-center hide" role="alert">
+    <b>d'oh!</b> lost contact with the server. (seashell will keep trying to
+    reconnect, though.)
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12 col-md-12"
+         style="margin-top: 15px">
+      <div class="col-md-6 col-xs-6"
+           style="padding: 0">
+        <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
+          <span style="position: relative; bottom: 0; font-size: 20px">
+            <span style="font-weight: 400">
+              <span class="userid"></span> /
+            </span>
+            <div class="dropdown" style="display: inline">
+              <a role="button"
+                 data-toggle="dropdown"
+                 data-target="#"
+                 href="#"
+                 style="text-decoration: none; color: black">
+                <span id="project-menu"></span><span class="caret"></span>
+              </a>
+              <ul id="projects-dropdown" class="dropdown-menu" role="menu">
+              </ul>
+            </div>
           </span>
-          <div class="dropdown" style="display: inline">
-            <a role="button"
-               data-toggle="dropdown"
-               data-target="#"
-               href="#"
-               style="text-decoration: none; color: black">
-              <span id="project-menu"></span><span class="caret"></span>
-            </a>
-            <ul id="projects-dropdown" class="dropdown-menu" role="menu">
-            </ul>
-          </div>
+        </h2>
+      </div>
+      <div
+         id="questions-row-container"
+         class="col-md-6 col-xs-6"
+         style="font-size: 18px; margin-top: 5px; padding: 0">
+        <span id="questions-row" style="word-spacing: 15px">
         </span>
-      </h2>
-    </div>
-    <div class="col-md-6 col-xs-6 text-right"
-         style="font-size: 18px; margin-top: 5px">
-      <span id="questions-row" style="word-spacing: 15px">
-      </span>
+      </div>
     </div>
   </div>
   <div class="row">
-    <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1"
-         style="padding: 0">
+    <div class="col-md-12 col-xs-12" style="padding: 0">
       <hr style="margin-top: 9px; margin-bottom: 8px"/>
     </div>
   </div>
   <div class="row hide-on-null-question">
-    <div class="col-md-11 col-xs-11">
-      <div id="question-controls" class="text-right"
-           style="position: absolute; right: 11px; z-index: 500;">
-        <a href="#"
-           id="toolbar-add-file"
-           class="btn btn-link"
-           style="padding: 0; margin-right: 15px; outline: 0; text-decoration: none">
-          <span>add file…</span>
-        </a>
-        <button id="toolbar-submit-question"
-                class="btn btn-link"
-                style="padding: 0">
-          <span>submit question</span>
-        </button>
-      </div>
-      <div class="row" style="padding-top: 0" id="common-files">
-        <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
-          <kbd style="font-style: italic">common/</kbd>
+    <div class="col-md-12 col-xs-12">
+      <div class="row" style="padding-top: 0">
+        <div class="col-md-6 col-xs-6" id="common-files">
+          <kbd style="font-style: italic">common/&nbsp;&nbsp;</kbd>
+          <kbd id="common-files-row" style="font-size: 14px">
+          </kbd>
         </div>
-        <kbd id="common-files-row" class="col-md-6 col-xs-6"
-             style="font-size: 14px">
-        </kbd>
+        <div id="question-controls" class="col-md-6 col-xs-6">
+          <a href="#"
+             id="toolbar-add-file"
+             class="btn btn-link"
+             style="padding: 0; margin-right: 15px; outline: 0; text-decoration: none">
+            <span>add file…</span>
+          </a>
+          <button id="toolbar-submit-question"
+                  class="btn btn-link"
+                  style="padding: 0">
+            <span>submit question</span>
+          </button>
+        </div>
       </div>
       <div class="row">
-        <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
-          <kbd style="font-style: italic" id="question-files-list-title"></kbd>
+        <div class="col-md-6 col-xs-6">
+          <kbd style="font-style: italic">
+          <span id="question-files-list-title">
+          </span>&nbsp;&nbsp;</kbd>
+          <kbd id="question-files-row" style="font-size: 14px"></kbd>
         </div>
-        <kbd id="question-files-row" class="col-md-8 col-xs-8"
-             style="font-size: 14px">
-        </kbd>
       </div>
       <div class="row" id="tests-files">
-        <div class="col-md-1 col-md-offset-1 col-xs-1 col-xs-offset-1">
-          <kbd style="font-style: italic">tests/</kbd>
+        <div class="col-md-6 col-xs-6">
+          <kbd style="font-style: italic">tests/&nbsp;&nbsp;</kbd>
+          <kbd id="test-files-row" style="font-size: 14px"></kbd>
         </div>
-        <kbd id="test-files-row" class="col-md-8 col-xs-8"
-             style="font-size: 14px">
-        </kbd>
       </div>
     </div>
   </div>
 
   <div class="row">
-    <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1"
+    <div class="col-md-12 col-xs-12"
          style="padding: 0"
          role="main">
       <div class="editor-console">
@@ -95,7 +102,9 @@
                  style="position: absolute; right: 13px; z-index: 10">
               <button id="toolbar-run" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px">
-                <span style="font-size: 18px">run</span>
+                <span style="font-size: 18px"
+                      rel="tooltip"
+                      title="control+[R or Enter]">run</span>
               </button>
               <button id="toolbar-kill" class="btn btn-link hidden"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px">
@@ -103,7 +112,8 @@
               </button>
               <button id="toolbar-run-tests" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px">
-                <span style="font-size: 18px">test</span>
+                <span style="font-size: 18px" rel="tooltip"
+                      title="control+T">test</span>
               </button>
             </div>
             <div id="current-file-controls"
@@ -132,9 +142,9 @@
                 <span style="position: relative; bottom: 2px; left: 2px">
                   console
                 </span>
-                <div id="console-controls" class="pull-right">
+                <div class="console-controls pull-right">
                   <button id="console-clear-button"
-                          class="btn btn-link">clear</button>
+                          class="btn btn-link console-control">clear</button>
                 </div>
               </div>
             </div>
@@ -144,11 +154,13 @@
                   <span class="glyphicon glyphicon-chevron-right"></span>
                 </div>
                 <input type="text" class="form-control" id="input-line">
-                <!-- <span class="input-group-btn"> -->
-                <!--   <button class="btn btn-default" -->
-                <!--           type="button" -->
-                <!--           id="send-eof">EOF</button> -->
-                <!-- </span> -->
+                <div class="console-controls"
+                     style="position: absolute; top: 5px; right: 0"
+                     rel="tooltip"
+                     title="control+D">
+                  <button id="send-eof"
+                          class="btn btn-link console-control">eof</button>
+                </div>
               </div>
             </div>
           </div>

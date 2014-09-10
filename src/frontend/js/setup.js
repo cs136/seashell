@@ -88,35 +88,32 @@ function setupUI() {
 function setupHotkeys() {
   var ctrl = false;
   $("body").keydown(function(e) {
-    if(ctrl) {
-      switch(e.keyCode) {
-        case 83: // ctrl-s
-          if(SeashellProject.currentProject) {
-            handleSaveProject();
-            e.preventDefault();
-          }
-          break;
-        case 78: // ctrl-n
-          if(SeashellProject.currentProject) {
-            newFileDialog();
-            e.preventDefault();
-          }
-          break;
-        case 82: // ctrl-r
-        case 13: // ctrl-enter
-          if(SeashellProject.currentProject) {
-            handleRunProject();
-            e.preventDefault();
-          }
-          break;
-      }
+    if (!ctrl) {
+      if (17 == e.keyCode)
+        ctrl = true;
+      return;
     }
-    else {
-      if(e.keyCode == 17) ctrl = true;
+    if (!SeashellProject.currentProject)
+      return;
+
+    function when_focused(element, fun) {
+      return function() {
+        if ($(element).is(':focus'))
+          fun();
+      };
+    }
+    var action = { 'r' : handleRunProject, '\r' : handleRunProject,
+                   'd' : when_focused('#input-line', sendEOF),
+                   't' : handleRunTests
+                 }[String.fromCharCode(e.keyCode).toLowerCase()];
+    if (action) {
+      action();
+      e.preventDefault();
     }
   })
   .keyup(function(e) {
-    if(e.keyCode == 17) ctrl = false;
+    if (e.keyCode == 17)
+      ctrl = false;
   });
 }
 

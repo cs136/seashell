@@ -1,7 +1,7 @@
 /** Fixed height tags. */
 body {
   position: relative; /* For scrollyspy */
-  padding-top: 50px; /* Account for fixed navbar */
+  padding-top: 15px;
 }
 
 #master-container {
@@ -25,9 +25,13 @@ body {
   padding-bottom: 50px; /* Account for fixed navbar */
 }
 
-/** Angry red background for when the client is disconnected */
 .disconnected {
-    background-color: #ff0000;
+}
+
+.disconnected a, .disconnected button {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
 }
 
 /** No project display. */
@@ -53,6 +57,11 @@ body {
   width: 99.6%;
   border: none;
   height: 20%;
+}
+
+#question-controls {
+  text-align: right;
+  padding-left: 0;
 }
 
 #question-controls button {
@@ -125,13 +134,19 @@ body {
   font-weight: 200;
 }
 
-#console-controls {
+.console-controls {
+  margin-top: 1px;
+  margin-right: 7px;
+  font-size: 15px;
+}
+
+#input-controls {
   margin-top: 1px;
   margin-right: 14px;
   font-size: 15px;
 }
 
-#console-clear-button {
+.console-control {
   font-weight: 200;
   font-size: 15px;
   padding: 0;
@@ -140,6 +155,10 @@ body {
   bottom: 2px;
   text-decoration: none;
   font-variant: small-caps;
+}
+
+.console-control:hover {
+  text-decoration: none;
 }
 
 .console-input {
@@ -277,8 +296,9 @@ div.tooltip .tooltip-inner {
 }
 
 .navbar-icons > li > a {
-  padding: 10px 12px;
-  font-size: 16px;
+  padding: 10px 6px;
+  font-size: 12px;
+  text-decoration: none;
 }
 
 .question-link {
@@ -313,6 +333,10 @@ div.tooltip .tooltip-inner {
 
 #questions-row {
   font-weight: 300;
+}
+
+#questions-row-container {
+  text-align: right;
 }
 
 #project-list table {
@@ -367,9 +391,20 @@ div.tooltip .tooltip-inner {
 
 @media (min-width: 992px) {
 	#console-title {
+    border: 1px solid #ddd;
 	  border-left: none;
-    border-top: 1px solid #ddd;
 	}
   #console > .CodeMirror { border-left: none; }
   .console-input { border-left: none }
+
+  #question-controls { text-align: left; }
+  #questions-row-container { text-align: left; }
+}
+
+.alert {
+  background-image: none;
+}
+
+input::-ms-clear {
+  display: none;
 }

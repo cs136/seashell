@@ -165,7 +165,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init/place (build-project-path name)))
+    (seashell-git-clone/place (read-config 'default-project-template) (build-project-path name)))
   (void))
 
 ;; (new-project-from name source)
@@ -334,7 +334,7 @@
                         (current-continuation-marks))))
 
   (define project-base (build-project-path name))
-  (define project-common (check-and-build-path project-base "common"))
+  (define project-common (check-and-build-path project-base (read-config 'common-subdirectory)))
   (define project-common-list
     (if (directory-exists? project-common)
       (directory-list project-common #:build? #t)
@@ -485,7 +485,7 @@
           (define question-dir
             (check-and-build-path project-dir subdirectory))
           (define common-dir
-            (build-path project-dir "common"))
+            (build-path project-dir (read-config 'common-subdirectory)))
           (parameterize ([current-directory tmpdir])
             (define (copy-from! base)
               (fold-files
@@ -517,7 +517,7 @@
 
       ;; Launch the submit process.
       (define-values (proc out in err)
-        (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
+        (subprocess #f #f #f (read-config 'submit-tool) course assn tmpzip))
 
       ;; Wait until it's done.
       (subprocess-wait proc)

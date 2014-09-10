@@ -60,7 +60,7 @@ function handleNewFolder() {
   if(prom) prom.done(function() {
     var p = SeashellProject.currentProject;
     updateQuestionsMenu(p);
-    updateFileMenu(p);
+    updateFileMenu();
   });
   $("#new-folder-dialog").modal("hide");
 }
@@ -95,7 +95,7 @@ function handleOpenProject(name) {
     $("#project-menu").text(name);
 
     consoleRefresh();
-    updateFileMenu(proj);
+    updateFileMenu();
     updateQuestionsMenu(proj);
     updateProjectsDropdown();
 
@@ -152,7 +152,7 @@ function showNewFileDialog() {
       var prom =
         p.createFile(sprintf('%s/%s', folder, $("#new_file_name").val()));
       if (prom)
-        prom.done(function() { updateFileMenu(p); });
+        prom.done(updateFileMenu);
     });
   $('#new-file-dialog').modal('show');
 }
@@ -223,7 +223,7 @@ function handleUploadFile() {
         },
         success: function() {
           SeashellProject.currentProject.onUploadSuccess(filename);
-          updateFileMenu(SeashellProject.currentProject);
+          updateFileMenu();
         },
         data: {token: raw},
         url: sprintf("https://%s:%s/upload", creds.host, creds.port)
@@ -233,9 +233,6 @@ function handleUploadFile() {
       displayErrorMessage("Error retrieving file upload ticket.");
     });
   return false;
-}
-
-function handleRename() {
 }
 
 function updateListOfProjects() {
