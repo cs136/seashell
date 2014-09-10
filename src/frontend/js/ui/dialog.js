@@ -141,14 +141,14 @@ function showNewFileDialog() {
     .unbind('click')
     .on("click", function() {
       $("#new-file-dialog").modal("hide");
+      var folder = $('#new-file-folder option:selected').text();
+      if ('tests' == folder)
+        folder = p.currentQuestion + '/' + folder;
       if ($("#file-to-upload").val().length)
       {
         handleUploadFile(folder);
         return;
       }
-      var folder = $('#new-file-folder option:selected').text();
-      if ('tests' == folder)
-        folder = p.currentQuestion + '/' + folder;
       var prom =
         p.createFile(sprintf('%s/%s', folder, $("#new_file_name").val()));
       if (prom)
@@ -168,6 +168,9 @@ function showRenameMoveFileDialog() {
     .unbind('click')
     .on("click", function() {
       var dirname = $('#new-file-folder option:selected').text();
+      if (dirname == 'tests') {
+        dirname = p.currentQuestion + '/' + dirname;
+      }
       var new_fname = _.last($("#new_file_name").val().split('/'));
       p.renameFile(file, sprintf('%s/%s', dirname, new_fname))
         .done(updateFileMenu);
@@ -200,11 +203,15 @@ function handleCommitProject( ) {
 /**
  * handleUploadFile
  * This handles uploading files.
+ *
+ * @param {String} folder - Folder to upload into
  */
-function handleUploadFile() {
+function handleUploadFile(folder) {
+  folder = folder || $('#new-file-folder option:selected').text();
+
   var filename =
         sprintf('%s/%s',
-                $('#new-file-folder option:selected').text(),
+                folder,
                 $("#file-to-upload").val().replace(/.*(\/|\\)/, ''));
   for(var file in SeashellProject.currentProject.files){
     if(file.name == filename){
