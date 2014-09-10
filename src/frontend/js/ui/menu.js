@@ -99,7 +99,13 @@ function setupMenu() {
   $('#toolbar-rename-file').on('click', showRenameMoveFileDialog);
 
   $('#toolbar-submit-question').on('click', function() {
-    $('#marmoset-submit-dialog').modal('show');
+    var marm;
+    if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
+      SeashellProject.currentProject.submit(marm);
+    }
+    else {
+      $('#marmoset-submit-dialog').modal('show');
+    }
   });
 
   $('#common-files').css('visibility', 'hidden');
@@ -287,8 +293,17 @@ function updateProjectsDropdown()
                function() { $('#new-folder-dialog').modal('show'); });
 
   add_divider();
-  add_menuitem('close assignment', function() { /* fill me in */ });
+  add_menuitem('close assignment', function() {
+    SeashellProject.currentProject.close().done(function() {
+      $(".hide-on-null-project").addClass("hide");
+      $(".show-on-null-project").removeClass("hide");
+    }).fail(function() {
+      displayErrorMessage("Could not successfully close assignment.");
+    });
+  });
+  
+
   add_menuitem('delete assignment', function() {
-    /* fill me in; ask user for confirmation */
+    displayConfirmationMessage("Delete Assignment", "Are you sure you want to delete this assignment?", handleDeleteProject);
   });
 }
