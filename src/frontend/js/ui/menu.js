@@ -178,9 +178,13 @@ function openQuestion(qname)
           .filter(function(x) { return !x[1] && dirname(x[0]) == dir; })
             .map(function(x) { return /[^\/]+$/.exec(x[0])[0]; })
               .value();
+      function source_buddy_for(x) {
+        return { 'c' : 'h', 'in' : 'expect' }[x];
+      }
       function has_source_buddy(x)
       {
-        return ['c', 'h'].indexOf(extension(x)) >= 0 &&
+        var source_buddies = ['c', 'h', 'in', 'expect'];
+        return source_buddies.indexOf(extension(x)) >= 0 &&
           _.find(qfiles,
                  function(y) { return x != y && basename(x) == basename(y); });
       }
@@ -214,12 +218,14 @@ function openQuestion(qname)
             parent.append(span);
             return link;
           }
-          if ('c' != extension(x))
+          if (-1 == ['c', 'in'].indexOf(extension(x)))
             return null;
-          var link = make_file_link(x, basename(x) + ' c');
+          var link = make_file_link(x, basename(x) + ' ' + extension(x));
           span.append(link);
           span.append('<span style="color: #aaa; font-size: 12px">,</span>');
-          span.append(make_file_link(basename(x) + '.h', 'h'));
+
+          var buddy = source_buddy_for(extension(x));
+          span.append(make_file_link(basename(x) + '.' + buddy, buddy));
           parent.append(span);
           return link;
         })
