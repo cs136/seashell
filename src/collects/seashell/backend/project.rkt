@@ -519,6 +519,7 @@
                                 (find-relative-path base path))
                      (values #t #t)]
                     [_ (values #t #t)]))
+                #t
                 base))
             (copy-from! question-dir)
             (copy-from! common-dir)
@@ -530,7 +531,7 @@
         [else
           (with-output-to-file
             tmpzip
-            (thunk (write-bytes export-project project))
+            (thunk (write-bytes (export-project project)))
             #:exists 'truncate)])
 
       ;; Launch the submit process.
