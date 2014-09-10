@@ -84,6 +84,7 @@ function setupMenu() {
     x();
   }
 
+  $("#seashell-logo").on("click", handleCloseProject);
   $("#settings-dialog").on("click", handleSettingsDialog);
 
   $("#toolbar-run").on("click", handleRunProject);
@@ -278,6 +279,15 @@ function openQuestion(qname)
   return result;
 }
 
+function handleCloseProject() {
+  SeashellProject.currentProject.close().done(function() {
+    $(".hide-on-null-project").addClass("hide");
+    $(".show-on-null-project").removeClass("hide");
+  }).fail(function() {
+    displayErrorMessage("Could not successfully close assignment.");
+  });
+}
+
 function updateProjectsDropdown()
 {
   var dropdown = $('#projects-dropdown');
@@ -299,14 +309,7 @@ function updateProjectsDropdown()
                function() { $('#new-folder-dialog').modal('show'); });
 
   add_divider();
-  add_menuitem('close assignment', function() {
-    SeashellProject.currentProject.close().done(function() {
-      $(".hide-on-null-project").addClass("hide");
-      $(".show-on-null-project").removeClass("hide");
-    }).fail(function() {
-      displayErrorMessage("Could not successfully close assignment.");
-    });
-  });
+  add_menuitem('close assignment', handleCloseProject);
   
 
   add_menuitem('delete assignment', function() {

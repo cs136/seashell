@@ -408,3 +408,8 @@ div.tooltip .tooltip-inner {
 input::-ms-clear {
   display: none;
 }
+
+#seashell-logo {
+  cursor: pointer;
+}
+
