@@ -232,6 +232,8 @@
   (call-with-semaphore
     lock-semaphore
     (thunk
+      (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
+        (hash-remove! locked-projects name))
       (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))))
 
 ;; (force-lock-project name)
