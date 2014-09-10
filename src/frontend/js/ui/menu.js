@@ -122,13 +122,10 @@ function updateQuestionsMenu(proj)
             .map(function(x) { return x[0]; })
               .sortBy(_.identity)
                 .value();
-
     $('#questions-row').empty();
     var links =
           _.map(questions, function(name) {
-            var link = $('<a>', { href: '#',
-                                  text: name,
-                                  class: 'question-link' })
+            var link = $('<a href="#" class="question-link">' + name + '</a>');
             link.click(function(x) {
               openQuestion(name);
               var link = this;
@@ -143,6 +140,10 @@ function updateQuestionsMenu(proj)
     });
     if (links.length)
       links[0].click();
+    if (links.length < 2)
+      $('#questions-row').hide();
+    else
+      $('#questions-row').show();
   });
 }
 
