@@ -226,12 +226,13 @@ function openQuestion(qname)
       parent.empty();
       return _.chain(qfiles)
         .map(function(x) {
-          var elt = $('<span>', { style: 'margin-right: 2em;' });
+          var elt = $('<span>', { style: 'margin-right: 1em;' });
           if (!has_source_buddy(x))
           {
             var link = make_file_link(x);
             elt.append(link);
             parent.append(elt);
+            parent.append(' ');
             return link;
           }
           if (-1 == ['c', 'in'].indexOf(extension(x)))
