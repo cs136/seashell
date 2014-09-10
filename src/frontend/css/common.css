@@ -404,3 +404,7 @@ div.tooltip .tooltip-inner {
 .alert {
   background-image: none;
 }
+
+input::-ms-clear {
+  display: none;
+}
