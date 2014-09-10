@@ -508,20 +508,26 @@
             (define (copy-from! base)
               (fold-files
                 (lambda (path type _)
-                  (match
-                    type
-                    ['dir
-                     (make-directory
-                       (find-relative-path base path))
-                     (values #t #t)]
-                    ['file
-                     (copy-file path
-                                (find-relative-path base path))
-                     (values #t #t)]
-                    [_ (values #t #t)]))
+                  (cond
+                    [(equal? path base) (values #t #t)]
+                    [else
+                      (match
+                        type
+                        ['dir
+                         (make-directory
+                           (find-relative-path base path))
+                         (values #t #t)]
+                        ['file
+                         (copy-file path
+                                    (find-relative-path base path))
+                         (values #t #t)]
+                        [_ (values #t #t)])]))
+                #t
                 base))
+            
             (copy-from! question-dir)
-            (copy-from! common-dir)
+            (when (directory-exists? common-dir)
+              (copy-from! common-dir))
             (with-output-to-file
               tmpzip
               (thunk (zip->output (pathlist-closure (directory-list))))
@@ -530,7 +536,7 @@
         [else
           (with-output-to-file
             tmpzip
-            (thunk (write-bytes export-project project))
+            (thunk (write-bytes (export-project project)))
             #:exists 'truncate)])
 
       ;; Launch the submit process.

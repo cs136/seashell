@@ -42,10 +42,12 @@ function setupDisconnectMonitor() {
   });
 }
 
+// static variable that holds the list of projects currently available on Marmoset
+SeashellProject.marmosetProjects = [];
+
 /**
- * Updates the list of marmoset projects in the submit dialog.
+ * Updates the list of marmoset projects in the submit dialog, and the marmosetProjects variable.
  */
-// TODO: ensure the student submits with the right filename using fnames array
 function updateMarmosetProjects() {
     $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/project-list.cgi",
         function(data){
@@ -54,6 +56,7 @@ function updateMarmosetProjects() {
             var $rows = $xml.find("row");
             var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
             // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
+            SeashellProject.marmosetProjects = assns;
             for(var i = 0; i < assns.length; i++){
                 marmoset_tag.append(
                     $("<option>").attr("value", assns[i]).text(assns[i]));
@@ -65,6 +68,7 @@ function updateMarmosetProjects() {
  * Fetches new assignment skeletons, if any are available
  */
 function fetchNewAssignments() {
+    var def = $.Deferred();
     SeashellProject.getListOfProjects().done(function(projects){
         $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi", function(data){
             for(var i=0; i<data.length; i++){
@@ -72,11 +76,14 @@ function fetchNewAssignments() {
                     console.log("Fetching assignment template " + data[i] + ".");
                     socket.newProjectFrom(data[i], "/u2/cs136/public_html/assignment_skeletons/"+data[i]).fail(function(){
                         displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
+                        def.reject();
                     });
                 }
             }
+            def.resolve();
         });
     });
+    return def.promise();
 }
 
 SeashellProject.new = function(name) {
@@ -86,30 +93,35 @@ SeashellProject.new = function(name) {
     });
 }
 
-SeashellProject.prototype.getMarmosetResults = function() {
-  var patt = /a[0-9]+?q[0-9]+?[abcd]?/i;
-  if(patt.test(this.name)) {
-    $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
-        +creds.user+"&p="+this.name,
-      function(data) {
-        var marm_tag = $("#marmoset_results");
-        data = $(data).find("row");
-        data = $.map(data, function(sub) {
-          return [
-            sub.find("field[name=num_public_tests_passed]").text(),
-            sub.find("field[name=num_public_tests]").text(),
-            sub.find("field[name=submission_timestamp]").text()
-          ];
-        });
-        marm_tag.html("");
-        marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
-        for(var i=0; i < data.length; i++) {
-          marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
-        }
-    });
-    return true;
-  }
-  return false;
+/*
+  Retrieves the Marmoset public test results for the given question and
+  displays them in a table.
+*/
+SeashellProject.prototype.getMarmosetResults = function(marm_project) {
+  var def = $.Deferred();
+  $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
+      +creds.user+"&p="+marm_project,
+    function(data) {
+      var marm_tag = $("#marmoset_results");
+      data = $(data).find("row");
+      data = $.map(data, function(sub) {
+        return [
+          sub.find("field[name=num_public_tests_passed]").text(),
+          sub.find("field[name=num_public_tests]").text(),
+          sub.find("field[name=submission_timestamp]").text()
+        ];
+      });
+      marm_tag.html("");
+      marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
+      for(var i=0; i < data.length; i++) {
+        console.log("MARM: Submission at "+data[i][2]+": passed "+data[i][0]+" of "+data[i][1]+".");
+        //marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
+      }
+      def.resolve(!isNaN(data[0][0]));
+  }).fail(function() {
+    def.reject();
+  });
+  return def.promise();
 }
 
 
@@ -322,7 +334,7 @@ SeashellProject.prototype.openFilePath = function(path) {
 };
 
 SeashellProject.prototype.openFile = function(file) {
-  if (file.children)
+  if (file.is_dir)
     return null;
   this.currentFile = file;
   editorShowUnreadableFilePlaceholder(false);
@@ -893,6 +905,35 @@ SeashellProject.prototype.exists = function(fname) {
   }
 }
 
-SeashellProject.prototype.submit = function(marm_project) {
-  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion);
+/*
+  Based on the project name and current question, returns the Marmoset assignment name based on the usual convention.
+  If the project name and question do not match the usual convention, returns false.
+*/
+SeashellProject.prototype.currentMarmosetProject = function() {
+  if(/^a[0-9]+$/i.test(this.name) && /^q[0-9]+[a-z]?$/i.test(this.currentQuestion)) {
+    var guess = this.name + this.currentQuestion.replace(/^q/i, "P");
+    if(SeashellProject.marmosetProjects.indexOf(guess) >= 0)
+      return guess;
+  }
+  return false;
 }
+
+/*
+  Submits the currently open question to the given Marmoset project
+*/
+SeashellProject.prototype.submit = function(marm_project) {
+  var p = this;
+  function fetchMarmosetResults(timeout) {
+    var t = setTimeout(function() {
+      p.getMarmosetResults(marm_project).done(function(test_run) {
+        if(!test_run)
+          fetchMarmosetResults(timeout * 2);
+      });
+    }, timeout);
+  }
+  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion)
+    .done(function() {
+      fetchMarmosetResults(1000);
+    });
+}
+

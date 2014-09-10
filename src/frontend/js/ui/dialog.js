@@ -80,6 +80,7 @@ function handleNewProject( ) {
   var name = $("#new_project_name").val();
   SeashellProject.new(name).done(function() {
     handleOpenProject(name);
+    updateListOfProjects();
   });
   $("#new-project-dialog").modal("hide");
 }
@@ -108,7 +109,11 @@ function handleOpenProject(name) {
  * This function will handle deleting projects. */
 function handleDeleteProject( ) {
   if(SeashellProject.currentProject) {
-    SeashellProject.currentProject.remove();
+    SeashellProject.currentProject.remove(function() {
+      updateListOfProjects();
+      $(".hide-on-null-project").addClass("hide");
+      $(".show-on-null-project").removeClass("hide");
+    });
   }
   $("#delete-project-dialog").modal("hide");
 }
