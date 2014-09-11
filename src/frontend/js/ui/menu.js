@@ -84,6 +84,7 @@ function setupMenu() {
     x();
   }
 
+  $("#seashell-logo").on("click", handleCloseProject);
   $("#settings-dialog").on("click", handleSettingsDialog);
 
   $("#toolbar-run").on("click", handleRunProject);
@@ -107,7 +108,9 @@ function setupMenu() {
   $('#toolbar-submit-question').on('click', function() {
     var marm;
     if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
-      SeashellProject.currentProject.submit(marm);
+      displayConfirmationMessage("Marmoset Submit", "Would you like to submit your code to the Marmoset project "+marm+"?", function() {
+        SeashellProject.currentProject.submit(marm);
+      });
     }
     else {
       $('#marmoset-submit-dialog').modal('show');
@@ -162,6 +165,10 @@ function updateQuestionsMenu(proj)
 function openQuestion(qname)
 {
   consoleClear();
+  editorClear();
+
+  $(".hide-on-null-file").addClass("hide");
+  $(".show-on-null-file").removeClass("hide");
 
   var p = SeashellProject.currentProject;
   var result = $.Deferred();
@@ -254,6 +261,7 @@ function openQuestion(qname)
     $('#question-files-list-title').text(qname + '/');
     $('#folder-option-current-question').text(qname);
     $(".hide-on-null-question").removeClass("hide");
+    $(".show-on-null-question").addClass("hide");
 
     var question_files =
           attach_dir_listing_to_node(qname, $('#question-files-row'));
@@ -281,6 +289,19 @@ function openQuestion(qname)
   return result;
 }
 
+function handleCloseProject() {
+  SeashellProject.currentProject.close().done(function() {
+    $(".hide-on-null-project").addClass("hide");
+    $(".show-on-null-project").removeClass("hide");
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
+    $(".hide-on-null-question").addClass("hide");
+    $(".show-on-null-question").removeClass("hide")
+  }).fail(function() {
+    displayErrorMessage("Could not successfully close assignment.");
+  });
+}
+
 function updateProjectsDropdown()
 {
   var dropdown = $('#projects-dropdown');
@@ -302,16 +323,10 @@ function updateProjectsDropdown()
                function() { $('#new-folder-dialog').modal('show'); });
 
   add_divider();
-  add_menuitem('close assignment', function() {
-    SeashellProject.currentProject.close().done(function() {
-      $(".hide-on-null-project").addClass("hide");
-      $(".show-on-null-project").removeClass("hide");
-    }).fail(function() {
-      displayErrorMessage("Could not successfully close assignment.");
-    });
-  });
-
+  add_menuitem('close assignment', handleCloseProject);
   add_menuitem('delete assignment', function() {
-    displayConfirmationMessage("Delete Assignment", "Are you sure you want to delete this assignment?", handleDeleteProject);
+    displayConfirmationMessage
+    ("Delete Assignment", "Are you sure you want to delete this assignment?",
+     handleDeleteProject);
   });
 }

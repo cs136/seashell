@@ -26,20 +26,27 @@ var dccount = 0;
 function setupDisconnectMonitor() {
   var max_disconnects = 3;
 
+  function onReconnect() {
+    if(dccount >= max_disconnects) {
+      $('#disconnection-error-alert').addClass('hide');
+      $("#master-container").removeClass("disconnected");
+      editorReadOnly(false);
+    }
+    dccount = 0;
+  }
+
   if (max_disconnects == dccount++)
   {
     $('#disconnection-error-alert').removeClass('hide');
     $("#master-container").addClass("disconnected");
-    editor.setOption('readOnly', true);
+    editorReadOnly(true);
   }
-  socket.ping().done(function () {
-    if (dccount >= max_disconnects) {
-      $('#disconnection-error-alert').addClass('hide');
-      $("#master-container").removeClass("disconnected");
-      editor.setOption('readOnly', false);
-    }
-    dccount = 0;
-  });
+  if(socket.websocket.readyState == 3) { // if socket is closed
+    socket = new SeashellWebsocket("wss://" + creds.host + ":"+creds.port, creds.key);
+    socket.ready.done(onReconnect);
+  }
+  else
+    socket.ping().done(onReconnect);
 }
 
 // static variable that holds the list of projects currently available on Marmoset
@@ -57,6 +64,7 @@ function updateMarmosetProjects() {
             var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
             // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
             SeashellProject.marmosetProjects = assns;
+            marmoset_tag.html("");
             for(var i = 0; i < assns.length; i++){
                 marmoset_tag.append(
                     $("<option>").attr("value", assns[i]).text(assns[i]));
