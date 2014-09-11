@@ -87,15 +87,12 @@
   (-> string? path? any/c)
   (call-with-semaphore
     git-place-lock
-    (thunk (copy-directory/files from to))))
-    #|
     (thunk
       (match-define (list exn? data)
                     (place-channel-put/get git-place `(seashell-git-clone ,from ,to)))
       (when exn?
         (raise (exn:git data (current-continuation-marks))))
       (void))))
-    |#
 
 ;; (seashell-git-commit/place update message)
 ;; Commits an update.
