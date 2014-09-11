@@ -98,24 +98,29 @@
           <div id="editor"
                class="col-md-6 col-xs-12"
                style="position: relative; padding: 0">
-            <div id="editor-controls"
-                 style="position: absolute; right: 13px; z-index: 10">
-              <button id="toolbar-run" class="btn btn-link"
-                      style="padding-left: 0; padding-right: 0; padding-top: 2px">
-                <span style="font-size: 18px"
-                      rel="tooltip"
-                      title="control+[R or Enter]">run</span>
-              </button>
-              <button id="toolbar-kill" class="btn btn-link hidden"
-                      style="padding-left: 0; padding-right: 0; padding-top: 2px">
-                <span style="font-size: 18px" rel="tooltip"
-                      title="control+C">stop</span>
-              </button>
-              <button id="toolbar-run-tests" class="btn btn-link"
-                      style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px">
-                <span style="font-size: 18px" rel="tooltip"
-                      title="control+T">test</span>
-              </button>
+            <div id="editor-title"
+                 class="col-md-12 col-xs-12 editor-console-title">
+              <span class="glyphicon glyphicon-file"></span>
+              <span style="position: relative; bottom: 2px; left: 2px"> code</span>
+              <div id="editor-controls"
+                   style="position: absolute; right: 13px; top: 0px">
+                <button id="toolbar-run" class="btn btn-link"
+                        style="padding-left: 0; padding-right: 0; padding-top: 2px">
+                  <span style="font-size: 18px"
+                        rel="tooltip"
+                        title="control+[R or Enter]">run</span>
+                </button>
+                <button id="toolbar-kill" class="btn btn-link hidden"
+                        style="padding-left: 0; padding-right: 0; padding-top: 2px">
+                  <span style="font-size: 18px" rel="tooltip"
+                        title="control+C">stop</span>
+                </button>
+                <button id="toolbar-run-tests" class="btn btn-link"
+                        style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px">
+                  <span style="font-size: 18px" rel="tooltip"
+                        title="control+T">test</span>
+                </button>
+              </div>
             </div>
             <div id="current-file-controls"
                  style="position: absolute; bottom: 2px; right: 13px; z-index: 10">
@@ -138,7 +143,8 @@
           </div>
           <div class="col-md-6 col-xs-12" style="padding: 0">
             <div id="console">
-              <div id="console-title" class="col-md-12 col-xs-12">
+              <div id="console-title"
+                   class="col-md-12 col-xs-12 editor-console-title">
                 <span class="glyphicon glyphicon-list-alt"></span>
                 <span style="position: relative; bottom: 2px; left: 2px">
                   console

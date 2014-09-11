@@ -235,7 +235,8 @@ function handleUploadFile(folder) {
         },
         success: function() {
           SeashellProject.currentProject.onUploadSuccess(filename);
-          updateFileMenu();
+          SeashellProject.currentProject.openFilePath(filename)
+            .done(updateFileMenu);
         },
         data: {token: raw},
         url: sprintf("https://%s:%s/upload", creds.host, creds.port)

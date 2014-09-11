@@ -84,6 +84,7 @@ function setupMenu() {
     x();
   }
 
+  $("#seashell-logo").on("click", handleCloseProject);
   $("#settings-dialog").on("click", handleSettingsDialog);
 
   $("#toolbar-run").on("click", handleRunProject);
@@ -107,7 +108,9 @@ function setupMenu() {
   $('#toolbar-submit-question').on('click', function() {
     var marm;
     if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
-      SeashellProject.currentProject.submit(marm);
+      displayConfirmationMessage("Marmoset Submit", "Would you like to submit your code to the Marmoset project "+marm+"?", function() {
+        SeashellProject.currentProject.submit(marm);
+      });
     }
     else {
       $('#marmoset-submit-dialog').modal('show');
@@ -120,7 +123,8 @@ function setupMenu() {
 
 function updateFileMenu()
 {
-  openQuestion(SeashellProject.currentProject.currentQuestion);
+  openQuestion(SeashellProject.currentProject.currentQuestion)
+    .done(focusCurrentFile);
 }
 
 function updateQuestionsMenu(proj)
@@ -139,6 +143,7 @@ function updateQuestionsMenu(proj)
           _.map(questions, function(name) {
             var link = $('<a href="#" class="question-link">' + name + '</a>');
             link.click(function(x) {
+              SeashellProject.currentProject.closeFile(false);
               openQuestion(name);
               var link = this;
               _.forEach($('.question-link-active'),
@@ -159,9 +164,15 @@ function updateQuestionsMenu(proj)
   });
 }
 
+
+
 function openQuestion(qname)
 {
   consoleClear();
+  editorClear();
+
+  $(".hide-on-null-file").addClass("hide");
+  $(".show-on-null-file").removeClass("hide");
 
   var p = SeashellProject.currentProject;
   var result = $.Deferred();
@@ -207,13 +218,15 @@ function openQuestion(qname)
       function make_file_link(x, caption)
       {
         caption = caption || x;
-        var link = $('<a>', { href: '#',
-                              text: caption,
-                              class: 'file-link',
-                              style: 'text-decoration: none'});
+        var path = dir + '/' + x;
+        var link = $('<a href="#" class="file-link"\
+                     style="text-decoration: none">' + caption + '</a>');
+        link.append($('<input>', { type: 'hidden',
+                                   value: path,
+                                   class: 'files-list-crumb' }));
         link.click(function() {
           var link = this;
-          p.openFilePath(dir + '/' + x).done(function(x) {
+          p.openFilePath(path).done(function(x) {
             _.forEach($('.file-link-active'),
                       function(x) { x.className = 'file-link'; });
             link.className = 'file-link-active';
@@ -226,23 +239,26 @@ function openQuestion(qname)
       parent.empty();
       return _.chain(qfiles)
         .map(function(x) {
-          var span = $('<span>', { style: 'margin-right: 30px' });
+          var elt = $('<span>', { style: 'margin-right: 1em;' });
           if (!has_source_buddy(x))
           {
             var link = make_file_link(x);
-            span.append(link);
-            parent.append(span);
+            elt.append(link);
+            parent.append(elt);
+            parent.append(' ');
             return link;
           }
           if (-1 == ['c', 'in'].indexOf(extension(x)))
             return null;
-          var link = make_file_link(x, basename(x) + ' ' + extension(x));
-          span.append(link);
-          span.append('<span style="color: #aaa; font-size: 12px">,</span>');
+          var link =
+            make_file_link(x, basename(x) + '&nbsp;' + extension(x));
+          elt.append(link);
+          elt.append('<span style="color: #aaa; font-size: 12px">,</span>');
 
           var buddy = source_buddy_for(extension(x));
-          span.append(make_file_link(basename(x) + '.' + buddy, buddy));
-          parent.append(span);
+          elt.append(make_file_link(basename(x) + '.' + buddy, buddy));
+          parent.append(elt);
+          parent.append(' ');
           return link;
         })
           .filter(_.identity).value();
@@ -251,11 +267,9 @@ function openQuestion(qname)
     $('#question-files-list-title').text(qname + '/');
     $('#folder-option-current-question').text(qname);
     $(".hide-on-null-question").removeClass("hide");
+    $(".show-on-null-question").addClass("hide");
 
-    var question_files =
-          attach_dir_listing_to_node(qname, $('#question-files-row'));
-    if (question_files.length)
-      question_files[0].click();
+    attach_dir_listing_to_node(qname, $('#question-files-row'));
     attach_dir_listing_to_node('common', $('#common-files-row'));
     attach_dir_listing_to_node(qname + '/tests', $('#test-files-row'));
 
@@ -271,11 +285,40 @@ function openQuestion(qname)
       $('#tests-files').hide();
 
     p.currentQuestion = qname;
+    focusCurrentFile();
 
     result.resolve();
   });
 
   return result;
+}
+
+function focusCurrentFile()
+{
+  var crumbs = $('.files-list-crumb');
+  if (!crumbs.length)
+    return;
+  var p = SeashellProject.currentProject;
+  var file = p.currentFile;
+  var crumb =
+        file
+        && _.find(crumbs, function(x) { return file.fullname() == x.value; })
+        || $(sprintf('.files-list-crumb[value^="%s"]', p.currentQuestion))[0]
+        || crumbs[0];
+  $(crumb).parent().click();
+}
+
+function handleCloseProject() {
+  SeashellProject.currentProject.close().done(function() {
+    $(".hide-on-null-project").addClass("hide");
+    $(".show-on-null-project").removeClass("hide");
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
+    $(".hide-on-null-question").addClass("hide");
+    $(".show-on-null-question").removeClass("hide");
+  }).fail(function() {
+    displayErrorMessage("Could not successfully close assignment.");
+  });
 }
 
 function updateProjectsDropdown()
@@ -299,17 +342,10 @@ function updateProjectsDropdown()
                function() { $('#new-folder-dialog').modal('show'); });
 
   add_divider();
-  add_menuitem('close assignment', function() {
-    SeashellProject.currentProject.close().done(function() {
-      $(".hide-on-null-project").addClass("hide");
-      $(".show-on-null-project").removeClass("hide");
-    }).fail(function() {
-      displayErrorMessage("Could not successfully close assignment.");
-    });
-  });
-  
-
+  add_menuitem('close assignment', handleCloseProject);
   add_menuitem('delete assignment', function() {
-    displayConfirmationMessage("Delete Assignment", "Are you sure you want to delete this assignment?", handleDeleteProject);
+    displayConfirmationMessage
+    ("Delete Assignment", "Are you sure you want to delete this assignment?",
+     handleDeleteProject);
   });
 }
