@@ -95,7 +95,6 @@ function editorReadOnly(state) {
 /** Clears the editor, by showing a blank, uneditable document. */
 function editorClear() {
   editor.swapDoc(new CodeMirror.Doc("", "text/x-src"));
-  editorReadOnly(true);
 }
 
 function editorShowUnreadableFilePlaceholder(show)
