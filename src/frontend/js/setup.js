@@ -121,7 +121,7 @@ function setupHotkeys() {
 
 function updateDynamicUISizes()
 {
-  var min_height = 250, margin_bottom = 60;
+  var min_height = 500, margin_bottom = 60;
   var min_y_element = $('#editor > .CodeMirror');
   var h = Math.max($(window).height()
                    - (min_y_element.offset().top - $(window).scrollTop())
