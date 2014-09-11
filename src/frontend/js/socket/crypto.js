@@ -41,7 +41,11 @@ function SeashellCoder(key) {
 SeashellCoder.addEntropy = function(entropy) {
   if (!entropy) {
     entropy = new Uint32Array(32);
-    window.crypto.getRandomValues(entropy)
+
+    if (window.crypto)
+      window.crypto.getRandomValues(entropy);
+    else if (window.msCrypto)
+      window.msCrypto.getRandomValues(entropy);
   }
   sjcl.random.addEntropy(entropy);
 };

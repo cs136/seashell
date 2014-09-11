@@ -51,8 +51,9 @@
          net/url
          file/zip)
 
-;; global variable, which is a set of currently locked projects
+;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
+(define lock-semaphore (make-semaphore 1))
 
 ;; (project-name? name) -> bool?
 ;; Predicate for testing if a string is a valid project name.
@@ -63,7 +64,6 @@
       (and (equal? base 'relative) (path-for-some-system? suffix)))
      #t]
     [else #f]))
-
 
 ;; (is-project? name)
 ;; Checks if name is a project that exists.
@@ -165,8 +165,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-init/place (build-project-path name))
-    (make-directory (check-and-build-path (build-project-path name) "tests")))
+    (seashell-git-clone/place (read-config 'default-project-template) (build-project-path name)))
   (void))
 
 ;; (new-project-from name source)
@@ -219,29 +218,41 @@
 ;;
 ;; Arguments:
 ;;  name - Name of the project.
+;;  thread-to-lock-on - Thread to lock on.
 ;;
 ;; Raises:
 ;;  exn:project if the project does not exist.
 ;;
 ;; Returns:
-;;  #t if the project was successfully locked, #f otherwise
-(define/contract (lock-project name)
-  (-> (and/c project-name? is-project?) boolean?)
-  (cond
-    [(hash-has-key? locked-projects name) #f]
-    [else (hash-set! locked-projects name #t) #t]))
+;;  #t if the project was successfully locked, #f otherwise.
+;; Notes:
+;;  Project is automatically unlocked if the thread dies.
+(define/contract (lock-project name thread-to-lock-on)
+  (-> (and/c project-name? is-project?) thread? boolean?)
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
+        (hash-remove! locked-projects name))
+      (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))))
 
 ;; (force-lock-project name)
 ;; Forcibly locks a project, even if it is already locked
 ;;
 ;; Arguments:
 ;;  name - Name of the project.
+;;  thread-to-lock-on - Thread to lock on.
 ;;
 ;; Raises:
 ;;  exn:project if the project does not exist.
-(define/contract (force-lock-project name)
-  (-> (and/c project-name? is-project?) void?)
-  (hash-set! locked-projects name #t))
+;; Notes:
+;;  Project is automatically unlocked if the thread dies.
+(define/contract (force-lock-project name thread-to-lock-on)
+  (-> (and/c project-name? is-project?) thread? void?)
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (hash-set! locked-projects name thread-to-lock-on))))
 
 ;; (unlock-project name)
 ;; Unlocks a project.
@@ -256,10 +267,13 @@
 ;;  #t if the project was successfully unlocked, #f otherwise
 (define/contract (unlock-project name)
   (-> (and/c project-name? is-project?) boolean?)
-  (cond
-    [(hash-has-key? locked-projects name)
-      (hash-remove! locked-projects name) #t]
-    [else #f]))
+  (call-with-semaphore
+    lock-semaphore
+    (thunk
+      (cond
+        [(hash-has-key? locked-projects name)
+          (hash-remove! locked-projects name) #t]
+        [else #f]))))
 
 ;; (save-project name)
 ;; Commits the current state of a project to Git.
@@ -335,25 +349,38 @@
                         (current-continuation-marks))))
 
   (define project-base (build-project-path name))
+  (define project-common (check-and-build-path project-base (read-config 'common-subdirectory)))
+  (define project-common-list
+    (if (directory-exists? project-common)
+      (directory-list project-common #:build? #t)
+      '()))
+  
   (match-define-values (base _ _)
                        (if file (split-path (check-and-build-path project-base file))
                                 (values (check-and-build-path project-base) #f #f)))
+
   ;; TODO: Other languages? (C++, maybe?)
   ;; Get *.c files in project.
   (define c-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"c"))
-            (directory-list base #:build? #t)))
+            (append
+              (directory-list base #:build? #t)
+              project-common-list)))
   (define o-files
     (filter (lambda (file)
               (equal? (filename-extension file) #"o"))
-            (directory-list base #:build? #t)))
+            (append
+              (directory-list base #:build? #t)
+              project-common-list)))
   ;; Run the compiler - save the binary to .seashell/${name}-binary,
   ;; if everything succeeds.
   (define-values (result messages)
-    (seashell-compile-files/place '("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
-                                    "-gdwarf-4" "-O0")
+    (seashell-compile-files/place `("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
+                                    "-gdwarf-4" "-O0"
+                                    ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                   '("-lm") c-files o-files))
+  ;; TODO Vary binary name by file we're building.
   (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
   (when result
     (with-output-to-file output-path
@@ -392,24 +419,33 @@
 ;;  pid - Process ID (used as unique identifier for process)
 (define/contract (run-project name file test)
   (-> project-name? string? (or/c #f string?)
-      (or/c integer? (list/c string? string?)))
+      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
-  ;; figure out which language to run with
+  ;; Figure out which language to run with
   (define lang
     (match (filename-extension file)
       ['#"rkt" 'racket]
       ['#"c" 'C]
+      ['#"h" 'C] ;; TODO: this is a temporary fix, which we figure out racket vs. C running
       [_ (error "You can only run .c or .rkt files!")]))
 
+  ;; Name of program to run.
+  ;; TODO Vary by file [target] to run.
   (define program
     (match lang
       ['racket (check-and-build-path (build-project-path name) file)]
       ['C (check-and-build-path (runtime-files-path) (format "~a-binary" name))]))
+ 
+  ;; Get the base directory of our file that we're running.
+  (define project-base (build-project-path name))
+  (match-define-values (base _ _)
+                       (if file (split-path (check-and-build-path project-base file))
+                                (values (check-and-build-path project-base) #f #f)))
 
-  (run-program program (check-and-build-path (build-project-path name)) lang test))
+  (run-program program base lang test))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
@@ -425,8 +461,11 @@
                         (current-continuation-marks))))
   (parameterize
     ([current-directory (build-project-path name)])
-    (with-output-to-bytes
-      (zip->output (pathlist-closure (directory-list))))))
+    (define output-port (open-output-bytes))
+    (parameterize
+      ([current-output-port output-port])
+      (zip->output (pathlist-closure (directory-list))))
+    (get-output-bytes output-port)))
 
 ;; (marmoset-submit course assn project file) -> void
 ;; Submits a file to marmoset
@@ -435,20 +474,90 @@
 ;;   course  - Name of the course, used in SQL query (i.e. "CS136")
 ;;   assn    - Name of the assignment/project in marmoset
 ;;   project - Name of the project (of the file to be submitted) in seashell
-(define/contract (marmoset-submit course assn project)
-  (-> string? string? string? void?)
+;;   subdirectory - Name of subdirectory/question to submit, or #f
+;;                  to submit everything.
+(define/contract (marmoset-submit course assn project subdirectory)
+  (-> string? string? string? (or/c #f string?) void?)
 
-  (define tmpzip (make-temporary-file "seashell-~a.zip" #f "/tmp"))
-  (with-output-to-file tmpzip
-    (thunk (write-bytes (export-project project))) #:exists 'truncate)
-    
-  ;; TODO: (better) error handling.  Exceptions received here
-  ;; will be properly caught, but an error message would be nice.
-  (define-values (proc out in err)
-    (subprocess #f #f #f "/u8/cs_build/bin/marmoset_submit" course assn tmpzip))
-  (subprocess-wait proc)
-  (close-output-port in)
-  (close-input-port out)
-  (close-input-port err)
+  (define tmpzip #f)
+  (define tmpdir #f)
 
-  (delete-file tmpzip))
+  (dynamic-wind
+    (thunk
+      (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a"))
+      (set! tmpdir (make-temporary-file "seashell-marmoset-build-~a"
+                                         'directory)))
+    (thunk
+      (cond
+        ;; Two cases - either we're submitting a subdirectory...
+        [subdirectory
+          ;; Here's what we do to ensure correct linkage.
+          ;;
+          ;; common/filesA*                 filesA
+          ;; question/filesB*          -->  filesB
+          ;; question/tests/tests*          tests/
+
+          ;; TODO what to do with duplicate file names in common/ and in question/?
+          ;; Right now we toss an exception.
+          (define project-dir
+            (build-project-path project))
+          (define question-dir
+            (check-and-build-path project-dir subdirectory))
+          (define common-dir
+            (build-path project-dir (read-config 'common-subdirectory)))
+          (parameterize ([current-directory tmpdir])
+            (define (copy-from! base)
+              (fold-files
+                (lambda (path type _)
+                  (cond
+                    [(equal? path base) (values #t #t)]
+                    [else
+                      (match
+                        type
+                        ['dir
+                         (make-directory
+                           (find-relative-path base path))
+                         (values #t #t)]
+                        ['file
+                         (copy-file path
+                                    (find-relative-path base path))
+                         (values #t #t)]
+                        [_ (values #t #t)])]))
+                #t
+                base))
+            
+            (copy-from! question-dir)
+            (when (directory-exists? common-dir)
+              (copy-from! common-dir))
+            (with-output-to-file
+              tmpzip
+              (thunk (zip->output (pathlist-closure (directory-list))))
+              #:exists 'truncate))]
+        ;; Or we're submitting the entire project.
+        [else
+          (with-output-to-file
+            tmpzip
+            (thunk (write-bytes (export-project project)))
+            #:exists 'truncate)])
+
+      ;; Launch the submit process.
+      (define-values (proc out in err)
+        (subprocess #f #f #f (read-config 'submit-tool) course assn tmpzip))
+
+      ;; Wait until it's done.
+      (subprocess-wait proc)
+      (define stderr-output (port->string err))
+      (define stdout-output (port->string out))
+      (define exit-status (subprocess-status proc))
+      (close-output-port in)
+      (close-input-port out)
+      (close-input-port err)
+      
+      ;; Report errors
+      (unless (zero? exit-status)
+        (raise (exn:project (format "Could not submit project - marmoset_submit returned ~a: (~a) (~a)"
+                                    stderr-output stdout-output)
+                            (current-continuation-marks)))))
+    (thunk
+      (delete-directory/files tmpzip #:must-exist? #f)
+      (delete-directory/files tmpdir #:must-exist? #f))))

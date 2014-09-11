@@ -243,6 +243,14 @@ SeashellWebsocket.prototype.newProject = function(name, deferred) {
     deferred);
 };
 
+SeashellWebsocket.prototype.newProjectFrom = function(name, src_url, deferred) {
+  return this.sendMessage({
+    type : "newProjectFrom",
+    project : name,
+    source : src_url},
+    deferred);
+};
+
 SeashellWebsocket.prototype.deleteProject = function(name, deferred) {
   return this.sendMessage({
     type : "deleteProject",
@@ -365,10 +373,11 @@ SeashellWebsocket.prototype.getSettings = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, deferred) {
+SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, deferred) {
   return this.sendMessage({
     type : "marmosetSubmit",
     project: project,
-    assn: assn},
+    assn: assn,
+    subdir: subdir ? subdir : false},
     deferred);
 };

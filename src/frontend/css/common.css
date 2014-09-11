@@ -1,11 +1,7 @@
 /** Fixed height tags. */
-html {
-  height: 100%;
-}
 body {
   position: relative; /* For scrollyspy */
-  padding-top: 50px; /* Account for fixed navbar */
-  height: 100%;
+  padding-top: 15px;
 }
 
 #master-container {
@@ -21,20 +17,21 @@ body {
   padding: 2px;
 }
 
-/** Height-manipulation */ 
+/** Height-manipulation */
 .content-fill {
-  height: 100%;
   min-height: 100%;
 }
 .content {
-  min-height: 100%;
-  height: 100%;
   padding-bottom: 50px; /* Account for fixed navbar */
 }
 
-/** Angry red background for when the client is disconnected */
 .disconnected {
-    background-color: #ff0000;
+}
+
+.disconnected a, .disconnected button {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
 }
 
 /** No project display. */
@@ -62,50 +59,139 @@ body {
   height: 20%;
 }
 
-/** Editor and the console.  Make sure width + height <= 100%. */
+#question-controls {
+  text-align: right;
+  padding-left: 0;
+}
+
+#question-controls button {
+  text-decoration: none;
+  font-size: 14px;
+}
+
+/** Editor and the console. */
+.CodeMirror {
+	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.CodeMirror-gutter {
+  background-color: white;
+}
+
+.CodeMirror-gutters {
+  border: none; /*: 1px dashed #eee;*/
+}
 
 .editor-console {
-  height: 93%;
+  margin-top: 5px;
+  margin-bottom: none;
 }
 
-.editor-console .tab-content, .editor-console .tab-pane {
-  height: 100%;
+#editor {
 }
 
-.editor {
-  height: 96%;
-  border: 1px solid #ccc;
+#editor > .CodeMirror {
+  height: 25em;
+  border: 1px solid #ddd;
+}
+
+#editor-controls > button {
+  text-decoration: none;
+}
+
+#editor-controls > button > span {
+  font-variant: small-caps;
+}
+
+#console {
+}
+
+#console > .CodeMirror {
+  height: 10em;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-top: none;
   clear: both;
 }
-.editor > .CodeMirror {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+
+#console > .CodeMirror .CodeMirror-lines {
+  padding-bottom: 0;
+  padding-top: 0;
 }
-.console {
-  height: 90%;
-  border: 1px solid #ccc;
-  clear: both;
+
+#console > .CodeMirror .CodeMirror-lines pre {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 20px;
 }
-.console > .CodeMirror {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+
+.editor-console-title {
+  border: 1px solid #ddd;
+  background: #efefef;
+  font-size: 18px;
+  padding: 5px 0 3px 18px;
+  font-weight: 200;
 }
+
+#editor-title {
+  border-bottom: none;
+}
+
+#console-title {
+  border-top: none;
+}
+
+.console-controls {
+  margin-top: 1px;
+  margin-right: 7px;
+  font-size: 15px;
+}
+
+#input-controls {
+  margin-top: 1px;
+  margin-right: 14px;
+  font-size: 15px;
+}
+
+.console-control {
+  font-weight: 200;
+  font-size: 15px;
+  padding: 0;
+  padding-right: 6px;
+  position: relative;
+  bottom: 2px;
+  text-decoration: none;
+  font-variant: small-caps;
+}
+
+.console-control:hover {
+  text-decoration: none;
+}
+
 .console-input {
-  height: 5%;
   background-color: #fff;
-  border: 1px solid #ccc;
   clear: both;
+  border: 1px solid #ddd;
+  border-top-color: #eee;
 }
-.console-input > input {
-  font-family: monospace;
+.console-input input, .console-input input:focus {
+  font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
   line-height: 1em;
   padding: 0.4em;
+  outline: none;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  box-shadow: none !important;
+  border: none;
+}
+.console-input .input-group-addon {
+  background-color: white;
+  padding-right: 0;
+  padding-left: 5px;
   border: none;
 }
 /** Callouts. */
- 
+
 /* Base styles (regardless of theme) */
 .callout {
   margin: 20px 0;
@@ -122,7 +208,7 @@ body {
 .callout .highlight {
   background-color: #fff;
 }
- 
+
 /* Themes for different contexts */
 .callout-danger {
   background-color: #fcf2f2;
@@ -147,6 +233,13 @@ body {
 }
 
 /** Linter */
+.CodeMirror-linenumbers {
+  width: 24px !important;
+}
+.CodeMirror-lint-markers {
+  width: 15px !important;
+}
+
 .CodeMirror-lint-tooltip {
   z-index: 1055;
 }
@@ -155,11 +248,6 @@ body {
 div.tooltip .tooltip-inner {
   max-width: 175px !important;
   white-space: nowrap;
-}
-
-#file-tree {
-  max-width:190px;
-  overflow:hidden;
 }
 
 #test-tab {
@@ -175,7 +263,7 @@ div.tooltip .tooltip-inner {
   padding:10px;
   font-weight:normal;
 }
- 
+
 .test-result-highlight {
   color:#FF0000;
   font-weight:bold;
@@ -194,7 +282,141 @@ div.tooltip .tooltip-inner {
   font-weight:bold;
 }
 
+/* navbar overrides */
+.navbar {
+	min-height: 40px;
+}
+
+.navbar-default {
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+}
+
+.navbar .navbar-collapse {
+  text-align: center;
+}
+
+.navbar-icons > li > a {
+  padding: 10px 6px;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.question-link {
+  opacity: 0.5;
+}
+
+.question-link:hover, .question-link-active:hover {
+  text-decoration: none;
+  opacity: 1;
+  color: black;
+}
+
+.question-link-active {
+  opacity: 1;
+  color: black;
+}
+
+.file-link {
+  opacity: 0.5;
+}
+
+.file-link:hover, .file-link-active:hover {
+  text-decoration: none;
+  opacity: 1;
+  color: black;
+}
+
+.file-link-active {
+  opacity: 1;
+  color: black;
+}
+
+#questions-row {
+  font-weight: 300;
+}
+
+#questions-row-container {
+  text-align: right;
+}
+
+#project-list table {
+  margin: 0 auto;
+}
+
+#project-list table td {
+  padding:3px 20px 3px 20px;
+}
+
 #last-saved {
   color: #444;
   float: right;
 }
+
+.popover-menu {
+  display: block;
+  position: relative;
+  border: none;
+  box-shadow: none;
+  float: none;
+  padding: 0;
+  margin: 0;
+}
+
+#question-controls a, #question-controls button {
+  font-variant: small-caps;
+}
+
+#question-controls .popover {
+  padding: 0;
+}
+
+#question-controls .popover-content {
+  padding: 0;
+  margin: 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+#question-controls .dropdown-menu > li > a:hover,
+#question-controls .dropdown-menu > li > a:focus {
+  color: white;
+  background: none;
+  background-color: black;
+}
+
+#question-controls .divider {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+@media (min-width: 992px) {
+	#console-title {
+    border: 1px solid #ddd;
+	  border-left: none;
+	}
+  #console > .CodeMirror { border-left: none; }
+  .console-input { border-left: none }
+
+  #question-controls { text-align: left; }
+  #questions-row-container { text-align: left; }
+}
+
+.alert {
+  background-image: none;
+}
+
+input::-ms-clear {
+  display: none;
+}
+
+#seashell-logo {
+  cursor: pointer;
+}
+

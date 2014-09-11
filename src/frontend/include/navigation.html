@@ -1,66 +1,27 @@
-<!-- Navigation header begins.  This is manipulated with stuff
-in JavaScript, so placeholder entries are put down as a mock-up.
--->
 <header>
-<nav class="navbar navbar-default navbar-inverse navbar-fixed-top" role="navigation">
-<div class="container">
-  <div class="navbar-header">
-  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#seashell-navbar">
-    <span class="sr-only">Toggle navigation</span>
-    <span class="icon-bar"></span>
-    <span class="icon-bar"></span>
-    <span class="icon-bar"></span>
-    </button>
-  <a class="navbar-brand" href="#">Seashell</a>
-  </div>
-
-  <div class="collapse navbar-collapse" id="seashell-navbar">      
-    <ul class="nav navbar-nav">
-      <li class="dropdown">
-        <a href="#" id="project-menu" class="dropdown-toggle" data-toggle="dropdown">No project open</a>
-        <ul class="dropdown-menu">
-          <li><a href="#new-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-file"></span> New Project</a></li>
-          <li><a href="#open-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-folder-open"></span> Open Project</a></li>
-          <li class="hide-on-null-project"><a href="#delete-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-trash"></span> Delete Project</a></li>
-          <li class="hide-on-null-project divider"></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-save-project"><span class="glyphicon glyphicon-floppy-save"></span> Save</a></li>
-          <li class="hide-on-null-project"><a href="#commit-project-dialog" data-toggle="modal"><span class="text-muted pull-right">Ctrl-s</span><span class="glyphicon glyphicon-export"></span> Commit</a></li>
-          <li class="hide-on-null-project"><a href="#revert-project-dialog" data-toggle="modal"><span class="glyphicon glyphicon-refresh"></span> Revert</a></li>
-          <li class="hide-on-null-project divider"></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-compile"><span class="glyphicon glyphicon-cog"></span> Compile</a></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-run"><span class="text-muted pull-right">Ctrl-Enter</span><span class="glyphicon glyphicon-play"></span> Run</a></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-run-tests"><span class="glyphicon glyphicon-play-circle"></span> Run With Tests</a></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-kill"><span class="glyphicon glyphicon-stop"></span> Stop</a></li>
-          <li class="hide-on-null-project divider"></li>
-          <li class="hide-on-null-project"><a href="#marmoset-submit-dialog" id="menu-submit" data-toggle="modal"><span class="glyphicon glyphicon-export"></span> Submit</a></li>
-          <li class="hide-on-null-project"><a href="#" id="menu-download"><span class="glyphicon glyphicon-cloud-download"></span> Download</a></li>
-        </ul>
-      </li>
-      <li class="hide-on-null-project hide-on-null-file dropdown">
-      <a href="#" class="dropdown-toggle" data-toggle="dropdown">Edit</a>
-      <ul class="dropdown-menu">
-        <li><a href="#" id="menu-undo"><span class="text-muted pull-right">Ctrl-z</span>Undo</a></li>
-        <li><a href="#" id="menu-redo"><span class="text-muted pull-right">Ctrl-y</span>Redo</a></li>
-        <li><a href="#" id="menu-commentLine">Comment lines...</a></li>
-        <li><a href="#" id="menu-commentSelection">Comment selection...</a></li>
-        <li class="divider"></li>
-        <li><a href="#" id="menu-autoformat"><span class="text-muted pull-right">Ctrl-i</span>Autoformat</a></li>
-      </ul>       
-      </li>
-    </ul>
-
-    <ul class="nav navbar-nav navbar-right">
-      <li><a href="mailto:seashell@@cs.uwaterloo.ca" data-toggle="modal">Contact us</a></li>
-      <li class="dropdown">
-      <a href="#" class="dropdown-toggle userid" data-toggle="dropdown">ctdalek</a>
-      <ul class="dropdown-menu">
-        <li><a href="#settings-dialog" data-toggle="modal">Settings</a></li>
-        <li><a id="menu-logout">Logout</a></li>
+  <div class="container" style="text-align: center">
+    <link href="//fonts.googleapis.com/css?family=Unkempt:700" rel="stylesheet" type="text/css">
+    <div id="seashell-logo" class="col-md-6 col-xs-6 text-left" style="padding: 0">
+      <span style="font-family: 'Unkempt', cursive; font-size: 25px; color: #888">seashell</span>
+      <span style="font-size: 14px; color: black; font-variant: small-caps; color: #888; position: absolute">beta</span>
+    </div>
+    <div class="col-md-6 col-xs-6 text-right" style="padding: 0">
+      <ul class="navbar-icons" style="padding-top: 8px;">
+        <li rel="tooltip" data-toggle="tooltip" title="aaah help!" style="display: inline">
+          <a data-toggle="modal" href="#help-dialog">
+            <span class="glyphicon glyphicon-question-sign"></span></a>
+        </li>
+        <li rel="tooltip" data-toggle="tooltip" title="settings" style="display: inline">
+          <a href="#settings-dialog" data-toggle="modal">
+            <span class="glyphicon glyphicon-wrench"></span>
+          </a>
+        </li>
+        <li rel="tooltip" data-toggle="tooltip" title="log out" style="display: inline">
+          <a id="menu-logout" href="#">
+            <span class="glyphicon glyphicon-log-out"></span>
+          </a>
+        </li>
       </ul>
-      </li>
-      <li><a data-toggle="modal" href="#help-dialog">Help</a></li>
-    </ul>
+    </div>
   </div>
-</div>
-</nav>
 </header>

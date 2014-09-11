@@ -34,6 +34,8 @@ function seashellInit(rest) {
       console.log("User interface set up properly.");
       setInterval(setupDisconnectMonitor, 4000);
       console.log("Websocket disconnection monitor set up properly.");
+      fetchNewAssignments().done(updateListOfProjects);
+      updateMarmosetProjects();
       /** Install refresh handler. */
       window.onbeforeunload = function () {
         if(SeashellProject.currentProject && SeashellProject.currentProject.isUnsaved())
@@ -58,11 +60,13 @@ function setupUI() {
   /** Clear out everything that can be hidden. */
   $(".hide-on-null-project").addClass("hide");
   $(".show-on-null-project").removeClass("hide");
+  $(".hide-on-null-question").addClass("hide");
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
-  $(".userid").text(creds.user);
+  $(".userid").text(creds.user).attr("title", "Logged in as "+creds.user);
   $("#main-panel-tabs").tabs();
   $("#master-container").removeClass("hide"); // show the UI
+  updateListOfProjects();
   $("[href=#edit-tab]").click(function() {
     setTimeout(function() {
       editorDocument(SeashellProject.currentProject.currentFile.document);
@@ -74,8 +78,8 @@ function setupUI() {
   setupDialogs();
   setupMenu();
   setupTooltips();
-  setupFileMenu();
   setupHotkeys();
+  setupDynamicResizing();
 }
 
 /*
@@ -85,36 +89,56 @@ function setupUI() {
 function setupHotkeys() {
   var ctrl = false;
   $("body").keydown(function(e) {
-    if(ctrl) {
-      switch(e.keyCode) {
-        case 83: // ctrl-s
-          if(SeashellProject.currentProject) {
-            handleSaveProject();
-            e.preventDefault();
-          }
-          break;
-        case 78: // ctrl-n
-          if(SeashellProject.currentProject) {
-            newFileDialog();
-            e.preventDefault();
-          }
-          break;
-        case 82: // ctrl-r
-        case 13: // ctrl-enter
-          if(SeashellProject.currentProject) {
-            handleRunProject();
-            e.preventDefault();
-          }
-          break;
-      }
+    if (!ctrl) {
+      if (17 == e.keyCode)
+        ctrl = true;
+      return;
     }
-    else {
-      if(e.keyCode == 17) ctrl = true;
+    if (!SeashellProject.currentProject)
+      return;
+
+    function when_focused(element, fun) {
+      return function() {
+        if ($(element).is(':focus'))
+          fun();
+      };
+    }
+    var action = { 'r' : handleRunProject, '\r' : handleRunProject,
+                   'd' : when_focused('#input-line', sendEOF),
+                   't' : handleRunTests,
+                   'c' : handleProgramKill
+                 }[String.fromCharCode(e.keyCode).toLowerCase()];
+    if (action) {
+      action();
+      e.preventDefault();
     }
   })
   .keyup(function(e) {
-    if(e.keyCode == 17) ctrl = false;
+    if (e.keyCode == 17)
+      ctrl = false;
   });
+}
+
+function updateDynamicUISizes()
+{
+  var min_height = 500, margin_bottom = 60;
+  var min_y_element = $('#editor > .CodeMirror');
+  var h = Math.max($(window).height()
+                   - (min_y_element.offset().top - $(window).scrollTop())
+                   - margin_bottom,
+                   min_height);
+  var narrow = $(document).width() < 992;
+  $('#editor > .CodeMirror').height(Math.floor(narrow ? h * 0.7 : h));
+  $('#console > .CodeMirror')
+    .height(Math.ceil((narrow ?
+                       (h * 0.3 - $('#console-title').outerHeight()) : h)
+                      - $('.console-input').outerHeight()
+                      + 1));
+}
+
+function setupDynamicResizing()
+{
+  $(window).resize(updateDynamicUISizes);
 }
 
 /** Accessor functions. */

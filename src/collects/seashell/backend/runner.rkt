@@ -66,11 +66,11 @@
     (unless (port-closed? out-stdout)
       (close-output-port out-stdout))
     (void))
-  
+
   (let loop ()
     (match (sync/timeout 30
-                         handle 
-                         (thread-receive-evt) 
+                         handle
+                         (thread-receive-evt)
                          (if (port-closed? in-stdin)
                            never-evt
                            in-stdin)
@@ -84,13 +84,13 @@
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
        ;; Flush the ports!
-       (define read-stdout 
+       (define read-stdout
          (if (port-closed? raw-stdout)
            eof
            (port->bytes raw-stdout)))
        (unless (eof-object? read-stdout)
          (write-bytes read-stdout out-stdout))
-       (define read-stderr 
+       (define read-stderr
          (if (port-closed? raw-stderr)
            eof
            (port->bytes raw-stderr)))
@@ -158,7 +158,7 @@
 ;;               found, and the string is the output of the program
 (define/contract (run-program binary directory lang test)
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
-      (or/c integer? (list/c string? string?)))
+      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -246,29 +246,31 @@
 ;;  "no-expect" means no .expect file was found, and the string is the output
 ;;  of the program
 (define/contract (diff prog-output expect-file)
-  (-> bytes? string? (list/c string? string?))
+  (-> bytes? string? (list/c string? (or/c string? (hash/c symbol? string?))))
   (cond
-    [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
-      (define-values (handle stdout stdin stderr)
-        (subprocess #f #f #f (read-config 'diff-program) "-U100000" "-" expect-file))
-      (write-bytes prog-output stdin)
-      (close-output-port stdin)
-      (subprocess-wait handle) ;; wait for diff to finish
+   [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
+    (define-values (handle stdout stdin stderr)
+      (subprocess #f #f #f (read-config 'diff-program) "-U100000" "-" expect-file))
+    (write-bytes prog-output stdin)
+    (close-output-port stdin)
+    (subprocess-wait handle) ;; wait for diff to finish
 
-      (define diff-output (port->bytes stdout))
-      (close-input-port stdout)
-      (define diff-err (port->bytes stderr))
-      (close-input-port stderr)
-      
-      (match (subprocess-status handle)
-        [0 (list "pass" "")]
-        [1 (list "fail" (bytes->string/utf-8 diff-output))]
-        [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
-    [else (list "no-expect" (bytes->string/utf-8 prog-output))]))
+    (define diff-output (port->bytes stdout))
+    (close-input-port stdout)
+    (define diff-err (port->bytes stderr))
+    (close-input-port stderr)
+
+    (match (subprocess-status handle)
+      [0 (list "pass" (hash))]
+      [1 (list "fail" `#hash((diff . ,(bytes->string/utf-8 diff-output))
+                             (actual . ,(bytes->string/utf-8 prog-output))
+                             (expected . ,(file->string expect-file))))]
+      [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
+   [else (list "no-expect" (bytes->string/utf-8 prog-output))]))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
-;; 
+;;
 ;; Arguments:
 ;;  pid - PID of program.
 ;; Returns:
@@ -348,7 +350,7 @@
   (-> integer? void?)
   (call-with-semaphore
     program-destroy-semaphore
-    (thunk 
+    (thunk
       (define pgrm (hash-ref program-table pid))
       (match-define (program in-stdin in-stdout in-stderr
                              out-stdin out-stdout out-stderr

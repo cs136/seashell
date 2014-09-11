@@ -21,7 +21,6 @@ var editor = null;
 
 /** Sets up the editor. */
 function setupEditor() {
-  /** Set up the linter. */
   CodeMirror.registerHelper("lint", "clike", SeashellProject.linter);
 
   /** Values here are reasonable defaults, and will be overriden
@@ -39,18 +38,18 @@ function setupEditor() {
       {"Ctrl-I": editorIndent,
        "Ctrl-J": editorGoto});
 
-  // set vim save keybinding
   editor.save = function () { SeashellProject.currentProject.save(); };
-
-  // load the user's settings
   refreshSettings();
 }
 
 function handleDocumentChange(file) {
-  if(!file.unsaved) {
-    file.unsaved = true;
-    $("#edit-tab-item").text("*Editor*");
+  if (file.unsaved !== false) {
+    window.clearTimeout(file.unsaved);
   }
+
+  file.unsaved = window.setTimeout(function () {
+    file.save();
+   }, 1000);
 }
 
 /** Editor indent function. */
@@ -86,4 +85,36 @@ function editorDocument(document) {
   editor.swapDoc(document);
   editor.refresh();
   editorLint();
+}
+
+/** Sets editor read only. */
+function editorReadOnly(state) {
+  editor.setOption("readOnly", state);
+}
+
+/** Clears the editor, by showing a blank, uneditable document. */
+function editorClear() {
+  editor.swapDoc(new CodeMirror.Doc("", "text/x-src"));
+}
+
+function editorShowUnreadableFilePlaceholder(show)
+{
+  if (!show)
+  {
+    editor.setOption('lineNumbers', true);
+    $('#binary-editor-placeholder').remove();
+    return;
+  }
+
+  editorDocument(CodeMirror.Doc('', ''));
+  editor.setOption('lineNumbers', false);
+
+  var placeholder =
+        $('<div id="binary-editor-placeholder" \
+          style="width: 100%; height: 80%; position: absolute; \
+          top: 0; left: 0; z-index: 9"></div>');
+  placeholder.append($('<div style="position: relative; top: 40%">\
+                       <h3 class="text-center text-muted">\
+                       <i>binary file</i></h3></div>'));
+  $('#editor > .CodeMirror').prepend(placeholder);
 }

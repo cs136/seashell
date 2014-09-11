@@ -19,74 +19,48 @@
  */
 var seashell_console = null;
 
-/** Sets up the console. */
 function setupConsole() {
-  var welcomeMessage = '+++ Welcome to Seashell! Messages and program output will appear here. +++';
-  
   seashell_console = CodeMirror($("#console")[0],
-      {value: welcomeMessage,
-       readOnly: true,
+      {readOnly: true,
+       mode: 'text/x-markdown',
        lineWrapping: true,
-       theme: 'blackboard'});
-  
-  // Debugging state for the console.
+       theme: 'default'});
+
   seashell_console.debug = false;
- 
-  // Store the welcome message in seashell_console.
-  seashell_console.welcomeMessage = welcomeMessage;
 
-  // Hook the input button and the EOF button
-  $("#submit-console-input").on("click", consoleInput);
   $("#send-eof").on("click", sendEOF);
-  $("#input-line").keydown(function(e) {
-      if(e.which == 13) consoleInput();
-  });
-
+  $("#input-line").keydown(function(e) { if(e.which == 13) consoleInput(); });
+  $("#console-clear-button").click(consoleClear);
 }
 
-/** Determines if the console is in a debugging state. */
 function consoleDebug() {
   return seashell_console && seashell_console.debug;
 }
 
-/** Refreshes the console.
- *  Call after the console is shown after a hide. */
 function consoleRefresh() {
   seashell_console.refresh();
 }
 
-/** Clears the contents of the output console. */
 function consoleClear() {
-  seashell_console.setValue(seashell_console.welcomeMessage);
+  seashell_console.setValue('');
 }
 
-/** Writes a message to the console.
- *
- * @param {String} message Message to write.
- **/
+function consoleScrollToBottom() {
+  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
+                                   ch: 0});
+}
+
 function consoleWrite(message) {
-  var value = seashell_console.getValue();
-  value += "\n" + message;
-  seashell_console.setValue(value);
-  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
-                                   ch: 0});
+  seashell_console.setValue(seashell_console.getValue() + message);
+  consoleScrollToBottom();
 }
 
-/** Writes a message to the console, in raw mode (no processing done).
- * 
- * @param {String} message Message to write.
- */
-function consoleWriteRaw(message) {
-  var value = seashell_console.getValue();
-  value += message;
-  seashell_console.setValue(value);
-  seashell_console.scrollIntoView({line: seashell_console.lineCount() - 1,
-                                   ch: 0});
+function consoleWriteln(message) {
+  consoleWrite((message || '') + '\n');
 }
 
-/** Handles input on the console */
 function consoleInput() {
-  var input = $("#input-line").val() + "\n";
-  $("#input-line").val("");
+  var input = $('#input-line').val() + '\n';
+  $('#input-line').val('');
   SeashellProject.currentProject.input(input);
 }
