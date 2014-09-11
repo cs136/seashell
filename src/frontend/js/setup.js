@@ -121,16 +121,19 @@ function setupHotkeys() {
 
 function updateDynamicUISizes()
 {
-  var h = _.max([$(window).height() - $('.editor-console').offset().top - 60,
-                 250]);
-  if ($(document).width() < 992)
-  {
-    $('#editor > .CodeMirror').height(h * 0.7);
-    $('#console > .CodeMirror').height(h * 0.3);
-    return;
-  }
-  $('#editor > .CodeMirror').height(h);
-  $('#console > .CodeMirror').height(h - $('.console-input').outerHeight() + 1);
+  var min_height = 250, margin_bottom = 60;
+  var min_y_element = $('#editor > .CodeMirror');
+  var h = Math.max($(window).height()
+                   - (min_y_element.offset().top - $(window).scrollTop())
+                   - margin_bottom,
+                   min_height);
+  var narrow = $(document).width() < 992;
+  $('#editor > .CodeMirror').height(Math.floor(narrow ? h * 0.7 : h));
+  $('#console > .CodeMirror')
+    .height(Math.ceil((narrow ?
+                       (h * 0.3 - $('#console-title').outerHeight()) : h)
+                      - $('.console-input').outerHeight()
+                      + 1));
 }
 
 function setupDynamicResizing()
