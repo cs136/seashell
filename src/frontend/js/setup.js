@@ -130,10 +130,8 @@ function updateDynamicUISizes()
   var narrow = $(document).width() < 992;
   $('#editor > .CodeMirror').height(Math.floor(narrow ? h * 0.7 : h));
   $('#console > .CodeMirror')
-    .height(Math.ceil((narrow ?
-                       (h * 0.3 - $('#console-title').outerHeight()) : h)
-                      - $('.console-input').outerHeight()
-                      + 1));
+    .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h)
+            - $('.console-input').outerHeight());
 }
 
 function setupDynamicResizing()
