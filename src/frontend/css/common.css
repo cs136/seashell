@@ -93,6 +93,7 @@ body {
 #editor > .CodeMirror {
   height: 25em;
   border: 1px solid #ddd;
+  border-top: none;
 }
 
 #editor-controls > button {
@@ -109,8 +110,8 @@ body {
 #console > .CodeMirror {
   height: 10em;
   border: 1px solid #ddd;
-  border-bottom: none;
   border-top: none;
+  border-bottom: 1px solid white;
   clear: both;
 }
 
@@ -127,14 +128,10 @@ body {
 
 .editor-console-title {
   border: 1px solid #ddd;
-  background: #efefef;
+  background: #f4f4f4;
   font-size: 18px;
   padding: 5px 0 3px 18px;
   font-weight: 200;
-}
-
-#editor-title {
-  border-bottom: none;
 }
 
 #console-title {
@@ -419,4 +416,3 @@ input::-ms-clear {
 #seashell-logo {
   cursor: pointer;
 }
-
