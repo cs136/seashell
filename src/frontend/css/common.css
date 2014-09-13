@@ -104,6 +104,12 @@ body {
   font-variant: small-caps;
 }
 
+#current-file-controls {
+  border: 1px solid #ddd;
+  border-top: none;
+  border-bottom-color: #eee;
+}
+
 #console {
 }
 

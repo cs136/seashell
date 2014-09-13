@@ -128,7 +128,9 @@ function updateDynamicUISizes()
                    - margin_bottom,
                    min_height);
   var narrow = $(document).width() < 992;
-  $('#editor > .CodeMirror').height(Math.floor(narrow ? h * 0.7 : h));
+  $('#editor > .CodeMirror')
+    .height(Math.floor(narrow ? h * 0.7 : h)
+            - $('#current-file-controls').outerHeight());
   $('#console > .CodeMirror')
     .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h)
             - $('.console-input').outerHeight());
