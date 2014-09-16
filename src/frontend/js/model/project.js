@@ -82,13 +82,16 @@ function fetchNewAssignments() {
             for(var i=0; i<data.length; i++){
                 if(projects.indexOf(data[i]) == -1){
                     console.log("Fetching assignment template " + data[i] + ".");
-                    socket.newProjectFrom(data[i], "file:///u/cs136/public_html/assignment_skeletons/"+data[i]).fail(function(){
-                        displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
-                        def.reject();
-                    });
+                    socket.newProjectFrom(data[i], "file:///u/cs136/public_html/assignment_skeletons/"+data[i])
+                        .done(function(){
+                            def.resolve();
+                        })
+                        .fail(function(){
+                            displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
+                            def.reject();
+                        });
                 }
             }
-            def.resolve();
         });
     });
     return def.promise();
