@@ -121,6 +121,7 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
       });
       marm_tag.html("");
       marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
+      if(!data[0]) console.log("MARM: No submissions found.");
       for(var i=0; i < data.length; i++) {
         console.log("MARM: Submission at "+data[i][2]+": passed "+data[i][0]+" of "+data[i][1]+".");
         //marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
