@@ -121,11 +121,12 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
       });
       marm_tag.html("");
       marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
+      if(!data[0]) console.log("MARM: No submissions found.");
       for(var i=0; i < data.length; i++) {
         console.log("MARM: Submission at "+data[i][2]+": passed "+data[i][0]+" of "+data[i][1]+".");
         //marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
       }
-      def.resolve(!isNaN(data[0][0]));
+      def.resolve((data[0] != undefined) && !isNaN(data[0][0]));
   }).fail(function() {
     def.reject();
   });
@@ -935,13 +936,13 @@ SeashellProject.prototype.submit = function(marm_project) {
     var t = setTimeout(function() {
       p.getMarmosetResults(marm_project).done(function(test_run) {
         if(!test_run)
-          fetchMarmosetResults(timeout * 2);
+          fetchMarmosetResults(timeout * 1.5);
       });
     }, timeout);
   }
   return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion)
     .done(function() {
-      fetchMarmosetResults(1000);
+      fetchMarmosetResults(2000);
     });
 }
 

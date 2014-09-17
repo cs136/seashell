@@ -162,6 +162,10 @@ function showNewFileDialog() {
   $('#new-file-dialog').modal('show');
 }
 
+function showMarmosetDetailsDialog() {
+  $("#marmoset-details-dialog").modal("show");
+}
+
 function showRenameMoveFileDialog() {
   var p = SeashellProject.currentProject;
   var file = p.currentFile;
@@ -282,12 +286,14 @@ function updateListOfProjects() {
  * This handles submitting files to marmoset.
 */
 function handleMarmosetSubmit() {
-    SeashellProject.currentProject.submit($("#marmoset_project").val())
+    $("#toolbar-submit-results").text("submitting...").removeClass("hide");
+   SeashellProject.currentProject.submit($("#marmoset_project").val())
       .done(function(){
-        // TODO: create some dialog to say that the project was submitted
+        $("#toolbar-submit-results").text("results");
         $("#marmoset-submit-dialog").modal("hide");
     }).fail(function(){
         displayErrorMessage("Failed to submit project to Marmoset.");
+        $("#toolbar-submit-results").addClass("hide");
     });
 }
 
