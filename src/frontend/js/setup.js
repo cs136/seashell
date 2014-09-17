@@ -105,7 +105,7 @@ function setupHotkeys() {
     }
     var action = { 'r' : handleRunProject, '\r' : handleRunProject,
                    'd' : when_focused('#input-line', sendEOF),
-                   't' : handleRunTests,
+                   'u' : handleRunTests,
                    'c' : handleProgramKill
                  }[String.fromCharCode(e.keyCode).toLowerCase()];
     if (action) {
@@ -128,12 +128,12 @@ function updateDynamicUISizes()
                    - margin_bottom,
                    min_height);
   var narrow = $(document).width() < 992;
-  $('#editor > .CodeMirror').height(Math.floor(narrow ? h * 0.7 : h));
+  $('#editor > .CodeMirror')
+    .height(Math.floor(narrow ? h * 0.7 : h)
+            - $('#current-file-controls').outerHeight());
   $('#console > .CodeMirror')
-    .height(Math.ceil((narrow ?
-                       (h * 0.3 - $('#console-title').outerHeight()) : h)
-                      - $('.console-input').outerHeight()
-                      + 1));
+    .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h)
+            - $('.console-input').outerHeight());
 }
 
 function setupDynamicResizing()
