@@ -79,21 +79,33 @@ function fetchNewAssignments() {
     var def = $.Deferred();
     SeashellProject.getListOfProjects().done(function(projects){
         $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi", function(data){
-            for(var i=0; i<data.length; i++){
-                if(projects.indexOf(data[i]) == -1){
-                    console.log("Fetching assignment template " + data[i] + ".");
-                    socket.newProjectFrom(data[i], "file:///u/cs136/public_html/assignment_skeletons/"+data[i])
-                        .done(function(){
-                            def.resolve();
-                        })
-                        .fail(function(){
-                            displayErrorMessage("Failed to fetch " + data[i] + " assignment template.");
-                            def.reject();
-                        });
+        
+            var failed = false; // flag which tracks whether or not any skeleton clones failed
+
+            // recursive function for cloning all available skeletons
+            // does not block; will call def.resolve() once all projects are cloned
+            function tryCloneSkeleton(num){
+                if(num < data.length){
+                    if(projects.indexOf(data[num]) == -1){
+                        console.log("Fetching assignment template " + data[num] + ".");
+                        socket.newProjectFrom(data[num], "file:///u/cs136/public_html/assignment_skeletons/"+data[num])
+                            .done(function(){
+                                tryCloneSkeleton(num+1);
+                            }).fail(function(){
+                                displayErrorMessage("Failed to fetch " + data[num] + " assignment template.");
+                                failed = true;
+                                tryCloneSkeleton(num+1);
+                            });
+                    }
+                }else{
+                    if(failed)  def.reject();
+                    else        def.resolve();
                 }
             }
+            tryCloneSkeleton(0);
         });
     });
+
     return def.promise();
 }
 
