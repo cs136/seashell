@@ -91,7 +91,7 @@ function fetchNewAssignments() {
                         socket.newProjectFrom(data[num], sprintf("file:///u/cs136/public_html/assignment_skeletons/%s", data[num]))
                             .done(function( ) {
                                 tryCloneSkeleton(num + 1);
-                            }).fail(function(_, info) {
+                            }).fail(function( info ) {
                                 displayErrorMessage(sprintf("Failed to fetch %s; %s.", data[num], info));
                                 failed = true;
                                 tryCloneSkeleton(num + 1);
