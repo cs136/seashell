@@ -127,23 +127,20 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
   $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
       +creds.user+"&p="+marm_project,
     function(data) {
-      var marm_tag = $("#marmoset_results");
-      data = $(data).find("row");
-      data = $.map(data, function(sub) {
-        return [
-          sub.find("field[name=num_public_tests_passed]").text(),
-          sub.find("field[name=num_public_tests]").text(),
-          sub.find("field[name=submission_timestamp]").text()
-        ];
-      });
-      marm_tag.html("");
-      marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
-      if(!data[0]) console.log("MARM: No submissions found.");
-      for(var i=0; i < data.length; i++) {
-        console.log("MARM: Submission at "+data[i][2]+": passed "+data[i][0]+" of "+data[i][1]+".");
-        //marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
-      }
-      def.resolve((data[0] != undefined) && !isNaN(data[0][0]));
+      var marm_tag = $("#marmoset-details-body");
+      data = $(data).find("row").first();
+      data = [
+          sub.find("field[name='num_public_tests_passed']").text(),
+          sub.find("field[name='num_public_tests']").text(),
+          sub.find("field[name='submission_timestamp']").text(),
+          sub.find("field[name='build_status']").text(),
+          sub.find("field[name='outcome']").text(),
+          sub.find("field[name='test_name']").text(),
+          sub.find("field[name='short_test_result']").text(),
+          sub.find("field[name='long_test_result']").text()
+      ];
+      marm_tag.html("<table><tr><td>Test outcome</td><td>"+data[4]+"</td></tr><tr><td>Test name</td><td>"+data[5]+"</td></tr><tr><td>Short test result</td><td>"+data[6]+"</td></tr><tr><td>Long test result</td><td>"+data[7]+"</td></tr></table>");
+      def.resolve(data && data[3] == "complete");
   }).fail(function() {
     def.reject();
   });
