@@ -88,14 +88,16 @@ function fetchNewAssignments() {
                 if(num < data.length){
                     if(projects.indexOf(data[num]) == -1){
                         console.log("Fetching assignment template " + data[num] + ".");
-                        socket.newProjectFrom(data[num], "file:///u/cs136/public_html/assignment_skeletons/"+data[num])
-                            .done(function(){
-                                tryCloneSkeleton(num+1);
-                            }).fail(function(){
-                                displayErrorMessage("Failed to fetch " + data[num] + " assignment template.");
+                        socket.newProjectFrom(data[num], sprintf("file:///u/cs136/public_html/assignment_skeletons/%s", data[num]))
+                            .done(function( ) {
+                                tryCloneSkeleton(num + 1);
+                            }).fail(function( info ) {
+                                displayErrorMessage(sprintf("Failed to fetch %s; %s.", data[num], info));
                                 failed = true;
-                                tryCloneSkeleton(num+1);
+                                tryCloneSkeleton(num + 1);
                             });
+                    } else {
+                      tryCloneSkeleton(num + 1);
                     }
                 }else{
                     if(failed)  def.reject();
