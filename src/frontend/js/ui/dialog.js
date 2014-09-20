@@ -98,7 +98,7 @@ function handleOpenProject(name) {
     consoleRefresh();
     updateFileMenu();
     updateQuestionsMenu(proj);
-    updateProjectsDropdown();
+    updateProjectsDropdown(proj);
 
     $("#open-project-dialog").modal("hide");
   });
