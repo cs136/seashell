@@ -452,10 +452,13 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
+;;  #:export-git? - Export the .git directory too?
 ;; Returns:
 ;;  zip - ZIP file as a bytestring.
-(define/contract (export-project name)
-  (-> project-name? bytes?)
+(define/contract (export-project name #:export-git? [export-git? #f])
+  (->* (project-name?)
+       (#:export-git? boolean?)
+       bytes?)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -464,7 +467,11 @@
     (define output-port (open-output-bytes))
     (parameterize
       ([current-output-port output-port])
-      (zip->output (pathlist-closure (directory-list))))
+      (zip->output 
+        (filter (lambda (path)
+                  (or export-git?
+                      (eq? path (find-relative-path ".git" path))))
+                (pathlist-closure (directory-list)))))
     (get-output-bytes output-port)))
 
 ;; (marmoset-submit course assn project file) -> void

@@ -322,7 +322,7 @@ function handleCloseProject() {
   });
 }
 
-function updateProjectsDropdown()
+function updateProjectsDropdown(proj)
 {
   var dropdown = $('#projects-dropdown');
   dropdown.empty();
@@ -344,9 +344,11 @@ function updateProjectsDropdown()
 
   add_divider();
   add_menuitem('close assignment', handleCloseProject);
-  add_menuitem('delete assignment', function() {
-    displayConfirmationMessage
-    ("Delete Assignment", "Are you sure you want to delete this assignment?",
-     handleDeleteProject);
-  });
+
+  if (! /^[aA][0-9]+/.test(proj.name))
+    add_menuitem('delete assignment', function() {
+      displayConfirmationMessage
+      ("Delete Assignment", "Are you sure you want to delete this assignment?",
+       handleDeleteProject);
+    });
 }
