@@ -125,9 +125,14 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
   $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
       +creds.user+"&p="+marm_project,
     function(data) {
-      var marm_tag = $("#marmoset-details-body");
-      data = $(data).find("row").first();
-      data = [
+      if(!data) {
+        def.reject();
+        return;
+      }
+      data = $(data).find("row");
+      data = data.map(function(sub) {
+        return [
+          sub.find("field[name='submission_pk']").text(),
           sub.find("field[name='num_public_tests_passed']").text(),
           sub.find("field[name='num_public_tests']").text(),
           sub.find("field[name='submission_timestamp']").text(),
@@ -136,15 +141,35 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
           sub.find("field[name='test_name']").text(),
           sub.find("field[name='short_test_result']").text(),
           sub.find("field[name='long_test_result']").text()
-      ];
-      marm_tag.html("<table><tr><td>Test outcome</td><td>"+data[4]+"</td></tr><tr><td>Test name</td><td>"+data[5]+"</td></tr><tr><td>Short test result</td><td>"+data[6]+"</td></tr><tr><td>Long test result</td><td>"+data[7]+"</td></tr></table>");
-      def.resolve(data && data[3] == "complete");
+        ];
+      });
+      if(data && data[0][4] == "complete") {
+        var sub_pk = data[0][0];
+        $("#marmoset-details-span").text("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has been tested.");
+        var marm_tag = $("#marmoset-details-tbody");
+        var total = 0, total_passed = 0;
+        for(var i=0; i < data.length && data[i][0] == sub_pk; i++) {
+          total += data[i][2];
+          total_passed += data[i][1];
+          marm_tag.append("<tr><td>"+data[i][6]+"</td><td>"+data[i][5]+"</td><td><pre>"+data[i][7]+"</pre></td><td><pre>"+data[i][8]+"</pre></td></tr>");
+        }
+        $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
+          .removeClass("hide");
+        $("#marmoset-details-table").removeClass("hide");
+      }
+      else {
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has not been tested yet.");
+      }
+      // workaround to convert SQL timestamp to ISO 8601:
+      var t = data[0][3].split(/[- :]/);
+      data[0][3] = new Date(t[0], t[1]-1, t[2], t[3], t[4], t[5]);
+      $("abbr.timeago").attr("title", data[0][3].toISOString()).timeago();
+      def.resolve(data && data[0][4] == "complete");
   }).fail(function() {
     def.reject();
   });
   return def.promise();
 }
-
 
 /*
  * Constructor for SeashellProject

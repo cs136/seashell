@@ -51,7 +51,7 @@
     </div>
   </div>
   <div class="row hide-on-null-question">
-    <div class="col-md-12 col-xs-12">
+    <div id="file-menu" class="col-md-12 col-xs-12">
       <div class="row" style="padding-top: 0">
         <div class="col-md-6 col-xs-8" id="common-files">
           <kbd style="font-style: italic">common/&nbsp;&nbsp;</kbd>
@@ -59,22 +59,27 @@
           </kbd>
         </div>
         <div id="question-controls" class="col-md-6 col-xs-4">
-          <a href="#"
-             id="toolbar-add-file"
-             class="btn btn-link"
-             style="padding: 0; margin-right: 11px; outline: 0; text-decoration: none">
-            <span>add file…</span>
-          </a>
-          <button id="toolbar-submit-question"
+          <div style="display: inline-block; vertical-align: top;">
+            <a href="#"
+              id="toolbar-add-file"
+              class="btn btn-link"
+              style="padding: 0; margin-right: 11px; outline: 0; text-decoration: none">
+              <span>add file…</span>
+            </a>
+          </div>
+          <div style="display:inline-block">
+            <button id="toolbar-submit-question"
                   class="btn btn-link"
                   style="padding: 0; margin-right:11px;">
-            <span>submit question</span>
-          </button>
-          <button id="toolbar-submit-results"
+              <span>submit question</span>
+            </button><br />
+            <button id="toolbar-submit-results"
                   class="btn btn-link hide"
-                  style="padding: 0;">
-            <span></span>
-          </button>
+                  style="padding: 0; float: right; margin-right: 11px; margin-top: -4px;">
+              <span id="toolbar-results-text"></span>
+              <span id="toolbar-results-data" class="hide" style="font-size: 10pt;"></span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="row">
