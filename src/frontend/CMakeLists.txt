@@ -54,3 +54,8 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/codemirror/"
   FILES_MATCHING PATTERN "*"
   PATTERN ".git" EXCLUDE
   PATTERN ".gitignore" EXCLUDE)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/jquery-timeago/"
+  DESTINATION "${SEASHELL_FRONTEND}/jquery-timeago"
+  FILES_MATCHING PATTERN "*"
+  PATTERN ".git" EXCLUDE
+  PATTERN ".gitignore" EXCLUDE)

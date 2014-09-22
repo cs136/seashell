@@ -286,10 +286,11 @@ function updateListOfProjects() {
  * This handles submitting files to marmoset.
 */
 function handleMarmosetSubmit() {
-    $("#toolbar-submit-results").text("submitting...").removeClass("hide");
+    $("#toolbar-results-text").text("submitting...")
+    $("#toolbar-submit-results").removeClass("hide");
    SeashellProject.currentProject.submit($("#marmoset_project").val())
       .done(function(){
-        $("#toolbar-submit-results").text("results");
+        $("#toolbar-results-text").text("results");
         $("#marmoset-submit-dialog").modal("hide");
     }).fail(function(){
         displayErrorMessage("Failed to submit project to Marmoset.");
