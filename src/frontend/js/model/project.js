@@ -124,51 +124,39 @@ SeashellProject.new = function(name) {
 */
 SeashellProject.prototype.getMarmosetResults = function(marm_project) {
   var def = $.Deferred();
-  $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
-      +creds.user+"&p="+marm_project,
-    function(data) {
-      if(!data) {
-        def.reject();
+  $.ajax({
+    url: "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt",
+    data: {user: creds.user, project: marm_project},
+    dataType: "json"})
+  .done(
+    function(result) {
+      if(result.error) {
+        def.reject(result.result);
         return;
       }
-      data = $(data).find("row");
-      data = data.map(function(index, sub) {
-        sub = $(sub);
-        return [[
-          sub.find("field[name='submission_pk']").text(),
-          sub.find("field[name='num_public_tests_passed']").text(),
-          sub.find("field[name='num_public_tests']").text(),
-          sub.find("field[name='submission_timestamp']").text(),
-          sub.find("field[name='build_status']").text(),
-          sub.find("field[name='outcome']").text(),
-          sub.find("field[name='test_name']").text(),
-          sub.find("field[name='short_test_result']").text(),
-          sub.find("field[name='long_test_result']").text()
-        ]];
-      }).get();
-      if(data && data[0][4] == "complete") {
-        var sub_pk = data[0][0];
-        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has been tested.");
+      var data = result.result;
+      if(data.length > 0 && data[0].status == "complete") {
+        var sub_pk = data[0].submission;
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0].timestamp+"</abbr>. Submission has been tested.");
         var marm_tag = $("#marmoset-details-tbody").html("");
-        var total = 0, total_passed = 0;
-        for(var i=0; i < data.length && data[i][0] == sub_pk; i++) {
-          total += parseInt(data[i][2]);
-          total_passed += parseInt(data[i][1]);
-          marm_tag.append("<tr><td>"+data[i][6]+"</td><td>"+data[i][5]+"</td><td><pre>"+data[i][7]+"</pre></td><td><pre>"+data[i][8]+"</pre></td></tr>");
+        var total = data[0].all, total_passed = data[0].passed;
+        for(var i=0; i < data.length && data[i].submission == sub_pk; i++) {
+          marm_tag.append("<tr><td>"+data[i].name+"</td><td>"+data[i].outcome+"</td><td><pre>"+data[i].short+"</pre></td><td><pre>"+data[i].long+"</pre></td></tr>");
         }
         $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
           .removeClass("hide");
+        $("#toolbar-results-text").text(total_passed == total ? "passed" : "failed");
         $("#marmoset-details-table").removeClass("hide")
-        $("#marmoset-details-total").text(total_passed+"/"+total+" scored on public tests.");
+        $("#marmoset-details-total").text(total_passed+"/"+total+" scored on public tests.").removeClass("hide");
+        $("abbr.timeago").attr("title", data[0].timestamp).timeago();
       }
-      else {
-        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has not been tested yet.");
+      else if (data.length > 0) {
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0].timestamp+"</abbr>. Submission has not been tested yet.");
+        $("abbr.timeago").attr("title", data[0].timestamp).timeago();
+      } else {
+        $("#marmoset-details-span").html("No submissions tested yet.");
       }
-      // workaround to convert SQL timestamp to ISO 8601:
-      var t = data[0][3].split(/[- :]/);
-      data[0][3] = new Date(t[0], t[1]-1, t[2], t[3], t[4], t[5]);
-      $("abbr.timeago").attr("title", data[0][3].toISOString()).timeago();
-      def.resolve(data && data[0][4] == "complete");
+      def.resolve(data.length > 0 && data[0].status == "complete");
   }).fail(function() {
     def.reject();
   });
@@ -961,7 +949,7 @@ SeashellProject.prototype.exists = function(fname) {
 */
 SeashellProject.prototype.currentMarmosetProject = function() {
   if(/^a[0-9]+$/i.test(this.name) && /^q[0-9]+[a-z]?$/i.test(this.currentQuestion)) {
-    var guess = this.name + this.currentQuestion.replace(/^q/i, "P");
+    var guess = this.name.replace(/^a/i, "A") + this.currentQuestion.replace(/^q/i, "P");
     if(SeashellProject.marmosetProjects.indexOf(guess) >= 0)
       return guess;
   }
