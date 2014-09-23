@@ -109,7 +109,7 @@ function setupMenu() {
     var marm;
     if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
       displayConfirmationMessage("Marmoset Submit", "Would you like to submit your code to the Marmoset project "+marm+"?", function() {
-        handleMarmosetSubmit();
+        handleMarmosetSubmit(marm);
       });
     }
     else {
