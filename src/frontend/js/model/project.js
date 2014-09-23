@@ -56,20 +56,22 @@ SeashellProject.marmosetProjects = [];
  * Updates the list of marmoset projects in the submit dialog, and the marmosetProjects variable.
  */
 function updateMarmosetProjects() {
-    $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/project-list.cgi",
+    $.ajax({
+            url: "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt",
+            dataType: "json"})
+     .done(
         function(data){
-            var marmoset_tag = $("#marmoset_project");
-            var $xml = $(data);
-            var $rows = $xml.find("row");
-            var assns = $.map($rows.find("field[name=\"project_number\"]"), function (x) {return x.textContent;});
-            // var fnames = $.map($rows.find("field[name=\"title\"]"), function (x) {return x.textContent;});
-            SeashellProject.marmosetProjects = assns;
-            marmoset_tag.html("");
-            for(var i = 0; i < assns.length; i++){
-                marmoset_tag.append(
-                    $("<option>").attr("value", assns[i]).text(assns[i]));
-                }
-            });
+            if (! data.error) {
+              SeashellProject.marmosetProjects = data.map(function (project) {return project.title;});
+              var marmoset_tag = $("#marmoset_project");
+              marmoset_tag.html("");
+              for(var i = 0; i < data.length; i++){
+                  marmoset_tag.append(
+                      $("<option>").attr("value", data[i].project).text(data[i].project));
+                  }
+            }
+        })
+    .fail(function () {});
 }
 
 /**
