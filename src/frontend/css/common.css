@@ -431,3 +431,7 @@ input::-ms-clear {
   float:right;
   text-align:right;
 }
+
+#marmoset-details-table td {
+  padding: 3px;
+}

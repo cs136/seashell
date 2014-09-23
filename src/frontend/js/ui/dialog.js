@@ -284,14 +284,18 @@ function updateListOfProjects() {
 /**
  * handleMarmosetSubmit
  * This handles submitting files to marmoset.
+ * marm: optional Marmoset project to submit to. If left undefined, 
+ *  this function uses the currently selected item in the submit dialog.
 */
-function handleMarmosetSubmit() {
+function handleMarmosetSubmit(marm) {
     $("#toolbar-results-text").text("submitting...")
     $("#toolbar-submit-results").removeClass("hide");
-   SeashellProject.currentProject.submit($("#marmoset_project").val())
+   SeashellProject.currentProject.submit(typeof marm == "string" ? marm : ($("#marmoset_project").val()))
       .done(function(){
         $("#toolbar-results-text").text("results");
         $("#marmoset-submit-dialog").modal("hide");
+        $("#maroset-details-table, #marmoset-details-total").addClass("hide");
+        $("#marmoset-details-text").text("Results will be displayed here when they are available.");
     }).fail(function(){
         displayErrorMessage("Failed to submit project to Marmoset.");
         $("#toolbar-submit-results").addClass("hide");
