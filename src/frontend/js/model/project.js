@@ -127,28 +127,53 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
   $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/pub-test-result.cgi?u="
       +creds.user+"&p="+marm_project,
     function(data) {
-      var marm_tag = $("#marmoset_results");
-      data = $(data).find("row");
-      data = $.map(data, function(sub) {
-        return [
-          sub.find("field[name=num_public_tests_passed]").text(),
-          sub.find("field[name=num_public_tests]").text(),
-          sub.find("field[name=submission_timestamp]").text()
-        ];
-      });
-      marm_tag.html("");
-      marm_tag.append("<tr><td>Tests passed</td><td>Total tests</td><td>Timestamp</td></tr>");
-      for(var i=0; i < data.length; i++) {
-        console.log("MARM: Submission at "+data[i][2]+": passed "+data[i][0]+" of "+data[i][1]+".");
-        //marm_tag.append("<tr><td>"+data[i][0]+"</td><td>"+data[i][1]+"</td><td>"+data[i][2]+"</td></tr>");
+      if(!data) {
+        def.reject();
+        return;
       }
-      def.resolve(!isNaN(data[0][0]));
+      data = $(data).find("row");
+      data = data.map(function(index, sub) {
+        sub = $(sub);
+        return [[
+          sub.find("field[name='submission_pk']").text(),
+          sub.find("field[name='num_public_tests_passed']").text(),
+          sub.find("field[name='num_public_tests']").text(),
+          sub.find("field[name='submission_timestamp']").text(),
+          sub.find("field[name='build_status']").text(),
+          sub.find("field[name='outcome']").text(),
+          sub.find("field[name='test_name']").text(),
+          sub.find("field[name='short_test_result']").text(),
+          sub.find("field[name='long_test_result']").text()
+        ]];
+      }).get();
+      if(data && data[0][4] == "complete") {
+        var sub_pk = data[0][0];
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has been tested.");
+        var marm_tag = $("#marmoset-details-tbody").html("");
+        var total = 0, total_passed = 0;
+        for(var i=0; i < data.length && data[i][0] == sub_pk; i++) {
+          total += parseInt(data[i][2]);
+          total_passed += parseInt(data[i][1]);
+          marm_tag.append("<tr><td>"+data[i][6]+"</td><td>"+data[i][5]+"</td><td><pre>"+data[i][7]+"</pre></td><td><pre>"+data[i][8]+"</pre></td></tr>");
+        }
+        $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
+          .removeClass("hide");
+        $("#marmoset-details-table").removeClass("hide")
+        $("#marmoset-details-total").text(total_passed+"/"+total+" scored on public tests.");
+      }
+      else {
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has not been tested yet.");
+      }
+      // workaround to convert SQL timestamp to ISO 8601:
+      var t = data[0][3].split(/[- :]/);
+      data[0][3] = new Date(t[0], t[1]-1, t[2], t[3], t[4], t[5]);
+      $("abbr.timeago").attr("title", data[0][3].toISOString()).timeago();
+      def.resolve(data && data[0][4] == "complete");
   }).fail(function() {
     def.reject();
   });
   return def.promise();
 }
-
 
 /*
  * Constructor for SeashellProject
@@ -952,13 +977,13 @@ SeashellProject.prototype.submit = function(marm_project) {
     var t = setTimeout(function() {
       p.getMarmosetResults(marm_project).done(function(test_run) {
         if(!test_run)
-          fetchMarmosetResults(timeout * 2);
+          fetchMarmosetResults(timeout * 1.5);
       });
     }, timeout);
   }
   return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion)
     .done(function() {
-      fetchMarmosetResults(1000);
+      fetchMarmosetResults(2000);
     });
 }
 

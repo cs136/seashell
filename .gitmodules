@@ -31,3 +31,6 @@
 [submodule "lib/jstree"]
 	path = lib/jstree
 	url = git://github.com/vakata/jstree.git
+[submodule "lib/jquery-timeago"]
+	path = lib/jquery-timeago
+	url = git://github.com/rmm5t/jquery-timeago

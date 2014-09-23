@@ -109,13 +109,14 @@ function setupMenu() {
     var marm;
     if(marm = SeashellProject.currentProject.currentMarmosetProject()) {
       displayConfirmationMessage("Marmoset Submit", "Would you like to submit your code to the Marmoset project "+marm+"?", function() {
-        SeashellProject.currentProject.submit(marm);
+        handleMarmosetSubmit(marm);
       });
     }
     else {
       $('#marmoset-submit-dialog').modal('show');
     }
   });
+  $("#toolbar-submit-results").click(showMarmosetDetailsDialog);
 
   $('#common-files').css('visibility', 'hidden');
   $('#tests-files').hide();
@@ -321,7 +322,7 @@ function handleCloseProject() {
   });
 }
 
-function updateProjectsDropdown()
+function updateProjectsDropdown(proj)
 {
   var dropdown = $('#projects-dropdown');
   dropdown.empty();
@@ -343,9 +344,11 @@ function updateProjectsDropdown()
 
   add_divider();
   add_menuitem('close assignment', handleCloseProject);
-  add_menuitem('delete assignment', function() {
-    displayConfirmationMessage
-    ("Delete Assignment", "Are you sure you want to delete this assignment?",
-     handleDeleteProject);
-  });
+
+  if (! /^[aA][0-9]+/.test(proj.name))
+    add_menuitem('delete assignment', function() {
+      displayConfirmationMessage
+      ("Delete Assignment", "Are you sure you want to delete this assignment?",
+       handleDeleteProject);
+    });
 }

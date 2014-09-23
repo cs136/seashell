@@ -422,3 +422,16 @@ input::-ms-clear {
 #seashell-logo {
   cursor: pointer;
 }
+
+#file-menu .row:after {
+  clear:left;
+}
+
+#question-controls {
+  float:right;
+  text-align:right;
+}
+
+#marmoset-details-table td {
+  padding: 3px;
+}
