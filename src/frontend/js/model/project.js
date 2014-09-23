@@ -148,21 +148,19 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
       }).get();
       if(data && data[0][4] == "complete") {
         var sub_pk = data[0][0];
-        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has been tested.");
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][3]+"</abbr>. Submission has been tested.");
         var marm_tag = $("#marmoset-details-tbody").html("");
-        var total = 0, total_passed = 0;
+        var total = data[0][2], total_passed = data[0][1];
         for(var i=0; i < data.length && data[i][0] == sub_pk; i++) {
-          total += parseInt(data[i][2]);
-          total_passed += parseInt(data[i][1]);
           marm_tag.append("<tr><td>"+data[i][6]+"</td><td>"+data[i][5]+"</td><td><pre>"+data[i][7]+"</pre></td><td><pre>"+data[i][8]+"</pre></td></tr>");
         }
         $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
           .removeClass("hide");
         $("#marmoset-details-table").removeClass("hide")
-        $("#marmoset-details-total").text(total_passed+"/"+total+" scored on public tests.");
+        $("#marmoset-details-total").text(total_passed+"/"+total+" scored on public tests.").removeClass("hide");
       }
       else {
-        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][2]+"</abbr>. Submission has not been tested yet.");
+        $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0][3]+"</abbr>. Submission has not been tested yet.");
       }
       // workaround to convert SQL timestamp to ISO 8601:
       var t = data[0][3].split(/[- :]/);
