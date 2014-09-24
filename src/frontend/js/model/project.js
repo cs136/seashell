@@ -62,7 +62,7 @@ function updateMarmosetProjects() {
      .done(
         function(data){
             if (! data.error) {
-              SeashellProject.marmosetProjects = data.map(function (project) {return project.title;});
+              SeashellProject.marmosetProjects = data.map(function (project) {return project.project;});
               var marmoset_tag = $("#marmoset_project");
               marmoset_tag.html("");
               for(var i = 0; i < data.length; i++){
