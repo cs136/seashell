@@ -90,6 +90,8 @@ function handleOpenProject(name) {
   name = name ? name : $("#projects_list").val();
   console.log("Opening project "+name);
   SeashellProject.open(name, function(proj, files) {
+    hideMarmosetResults();
+
     $(".show-on-null-project, .hide-on-null-file").addClass("hide");
     $(".hide-on-null-project, .show-on-null-file").removeClass("hide");
 
@@ -301,6 +303,10 @@ function handleMarmosetSubmit(marm) {
         displayErrorMessage("Failed to submit project to Marmoset.");
         $("#toolbar-submit-results").addClass("hide");
     });
+}
+
+function hideMarmosetResults() {
+  $("#marmoset-details-table, #marmoset-details-total, #toolbar-submit-results, #toolbar-results-data").addClass("hide");
 }
 
 function generateDiff(data) {
