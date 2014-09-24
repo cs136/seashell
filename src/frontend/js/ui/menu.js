@@ -172,6 +172,8 @@ function openQuestion(qname)
   consoleClear();
   editorClear();
 
+  hideMarmosetResults();
+
   $(".hide-on-null-file").addClass("hide");
   $(".show-on-null-file").removeClass("hide");
 
