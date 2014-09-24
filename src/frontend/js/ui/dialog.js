@@ -293,7 +293,7 @@ function handleMarmosetSubmit(marm) {
     $("#toolbar-submit-results").removeClass("hide");
    SeashellProject.currentProject.submit(typeof marm == "string" ? marm : ($("#marmoset_project").val()))
       .done(function(){
-        $("#toolbar-results-text").text("results");
+        $("#toolbar-results-text").text("waiting...");
         $("#marmoset-submit-dialog").modal("hide");
         $("#marmoset-details-table, #marmoset-details-total").addClass("hide");
         $("#marmoset-details-text").text("Results will be displayed here when they are available.");
