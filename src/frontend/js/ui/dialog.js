@@ -1,6 +1,4 @@
 /**
-          total += parseInt(data[i][2]);
-          total_passed += parseInt(data[i][1]);
  * Seashell.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
