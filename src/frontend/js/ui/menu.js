@@ -85,7 +85,7 @@ function setupMenu() {
   }
 
   $("#seashell-logo").on("click", handleCloseProject);
-  $("#settings-dialog").on("click", handleSettingsDialog);
+  $("#settings-dialog").on("show.bs.modal", handleSettingsDialog);
 
   $("#toolbar-run").on("click", handleRunProject);
   $("#toolbar-run-tests").on("click", handleRunTests);
