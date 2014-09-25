@@ -130,6 +130,7 @@ function updateFileMenu()
 
 function updateQuestionsMenu(proj)
 {
+  var def = $.Deferred();
   socket.listProject(proj.name).done(function(files) {
     var questions = _.chain(files)
           .filter(function(x) {
@@ -162,10 +163,22 @@ function updateQuestionsMenu(proj)
       $('#questions-row').hide();
     else
       $('#questions-row').show();
+    def.resolve();
   });
+  return def;
 }
 
-
+function openQuestionUI(qname) {
+  SeashellProject.currentProject.closeFile(false);
+  openQuestion(qname).done(function() {
+    var link = $("#questions-row a:contains('"+qname+"')");
+    $(".hide-on-null-file").addClass("hide");
+    $(".show-on-null-file").removeClass("hide");
+    _.forEach($('.question-link-active'),
+      function(x) { x.className = 'question-link'; });
+    link.removeClass("question-link").addClass('question-link-active');
+  });
+}
 
 function openQuestion(qname)
 {
