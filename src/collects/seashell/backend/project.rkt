@@ -563,6 +563,7 @@
       ;; Report errors
       (unless (zero? exit-status)
         (raise (exn:project (format "Could not submit project - marmoset_submit returned ~a: (~a) (~a)"
+                                    exit-status
                                     stderr-output stdout-output)
                             (current-continuation-marks)))))
     (thunk
