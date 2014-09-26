@@ -291,13 +291,16 @@ SeashellProject.prototype.createFile = function(fname) {
           var nFile = new SeashellFile(p, fname);
           var ext = fname.split(".").pop();
           var def = "\n";
+          var doc_type = "text/plain";
           if(ext=="c"||ext=="h") {
             def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
+            doc_type = "text/x-csrc";
           }
           else if(ext=="rkt") {
             def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
+            doc_type = "text/x-scheme";
           }
-          nFile.document = CodeMirror.Doc(def, "text/x-csrc");
+          nFile.document = CodeMirror.Doc(def, doc_type);
           nFile.document.on("change", function() { handleDocumentChange(nFile); });
           p.placeFile(nFile);
           p.openFile(nFile);
