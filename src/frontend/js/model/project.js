@@ -141,9 +141,11 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
         var sub_pk = data[0].submission;
         $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0].timestamp+"</abbr>. Submission has been tested.");
         var marm_tag = $("#marmoset-details-tbody").html("");
-        var total = data[0].all, total_passed = data[0].passed;
+        var total = 0, total_passed = 0;
         for(var i=0; i < data.length && data[i].submission == sub_pk; i++) {
           marm_tag.append("<tr><td>"+data[i].name+"</td><td>"+data[i].outcome+"</td><td><pre>"+data[i].short+"</pre></td><td><pre>"+data[i].long+"</pre></td></tr>");
+          total_passed += (data[i].outcome == "passed" ? data[i].points : 0);
+          total += data[i].points;
         }
         $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
           .removeClass("hide");
