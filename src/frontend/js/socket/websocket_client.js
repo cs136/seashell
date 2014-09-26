@@ -78,8 +78,11 @@ function SeashellWebsocket(uri, key) {
         // error message otherwise. 
         var request = self.requests[response.id];
 
-        console.log("Received response to message with id: "+response.id+".");
-        console.log(response);
+        if (request.type != 'ping') {
+          console.log("Received response to message with id: "+response.id+".");
+          console.log(request);
+          console.log(response);
+        }
 
         if (response.success) {
           if (request.deferred) {
