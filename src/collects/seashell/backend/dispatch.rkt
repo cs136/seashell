@@ -527,8 +527,6 @@
   
   ;; Per-connection event loop.
   (define (main-loop)
-    (logf 'debug "In main loop - current memory usage ~aM." (/ (current-memory-use) #i1048576))
-    
     (match (sync/timeout (/ (read-config 'backend-client-connection-timeout) 1000) connection)
       [#f
        ;; Alarm - write out a message and close the connection.
@@ -548,7 +546,8 @@
         (lambda ()
           (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
           (define result (handle-message message))
-          (logf 'debug "Result of handling message ~s: ~s" message result)
+          (unless (equal? (hash-ref message 'type #f) "ping")
+            (logf 'debug "Result of handling message ~s: ~s" message result))
           (send-message connection result)))
        (main-loop)]))
   
