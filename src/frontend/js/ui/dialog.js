@@ -59,8 +59,9 @@ function handleNewFolder() {
   var prom = SeashellProject.currentProject.createDirectory(name);
   if(prom) prom.done(function() {
     var p = SeashellProject.currentProject;
-    updateQuestionsMenu(p);
-    updateFileMenu();
+    updateQuestionsMenu(p).done(function() {
+      openQuestionUI(name);
+    });
   });
   $("#new-folder-dialog").modal("hide");
 }

@@ -141,9 +141,11 @@ SeashellProject.prototype.getMarmosetResults = function(marm_project) {
         var sub_pk = data[0].submission;
         $("#marmoset-details-span").html("Last submission <abbr class='timeago'>"+data[0].timestamp+"</abbr>. Submission has been tested.");
         var marm_tag = $("#marmoset-details-tbody").html("");
-        var total = data[0].all, total_passed = data[0].passed;
+        var total = 0, total_passed = 0;
         for(var i=0; i < data.length && data[i].submission == sub_pk; i++) {
           marm_tag.append("<tr><td>"+data[i].name+"</td><td>"+data[i].outcome+"</td><td><pre>"+data[i].short+"</pre></td><td><pre>"+data[i].long+"</pre></td></tr>");
+          total_passed += (data[i].outcome == "passed" ? data[i].points : 0);
+          total += data[i].points;
         }
         $("#toolbar-results-data").text("("+total_passed+"/"+total+")")
           .removeClass("hide");
@@ -289,13 +291,16 @@ SeashellProject.prototype.createFile = function(fname) {
           var nFile = new SeashellFile(p, fname);
           var ext = fname.split(".").pop();
           var def = "\n";
+          var doc_type = "text/plain";
           if(ext=="c"||ext=="h") {
             def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n*/\n";
+            doc_type = "text/x-csrc";
           }
           else if(ext=="rkt") {
             def = "#lang racket\n;; File: "+fname+"\n;; Enter a description of this file.\n";
+            doc_type = "text/x-scheme";
           }
-          nFile.document = CodeMirror.Doc(def, "text/x-csrc");
+          nFile.document = CodeMirror.Doc(def, doc_type);
           nFile.document.on("change", function() { handleDocumentChange(nFile); });
           p.placeFile(nFile);
           p.openFile(nFile);
@@ -952,6 +957,9 @@ SeashellProject.prototype.exists = function(fname) {
 SeashellProject.prototype.currentMarmosetProject = function() {
   if(/^a[0-9]+$/i.test(this.name) && /^q[0-9]+[a-z]?$/i.test(this.currentQuestion)) {
     var guess = this.name.replace(/^a/i, "A") + this.currentQuestion.replace(/^q/i, "P");
+    var extended = guess+"Extended";
+    if(SeashellProject.marmosetProjects.indexOf(extended) >= 0)
+      return extended;
     if(SeashellProject.marmosetProjects.indexOf(guess) >= 0)
       return guess;
   }
@@ -963,17 +971,28 @@ SeashellProject.prototype.currentMarmosetProject = function() {
 */
 SeashellProject.prototype.submit = function(marm_project) {
   var p = this;
-  function fetchMarmosetResults(timeout) {
-    var t = setTimeout(function() {
-      p.getMarmosetResults(marm_project).done(function(test_run) {
-        if(!test_run)
-          fetchMarmosetResults(timeout * 1.5);
+
+  var dfd = $.Deferred();
+  p.save().done(function () {
+    function fetchMarmosetResults(timeout) {
+      var t = setTimeout(function() {
+        p.getMarmosetResults(marm_project).done(function(test_run) {
+          if(!test_run)
+            fetchMarmosetResults(timeout * 1.5);
+        });
+      }, timeout);
+    }
+    return socket.marmosetSubmit(p.name, marm_project, p.currentQuestion)
+      .done(function() {
+        fetchMarmosetResults(2000);
+        dfd.resolve();
+      }).fail(function (message) {
+        dfd.reject(message);
       });
-    }, timeout);
-  }
-  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion)
-    .done(function() {
-      fetchMarmosetResults(2000);
-    });
+  }).fail(function (message) {
+    dfd.reject(message);
+  });
+
+  return dfd;
 }
 
