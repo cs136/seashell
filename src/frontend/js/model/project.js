@@ -965,17 +965,28 @@ SeashellProject.prototype.currentMarmosetProject = function() {
 */
 SeashellProject.prototype.submit = function(marm_project) {
   var p = this;
-  function fetchMarmosetResults(timeout) {
-    var t = setTimeout(function() {
-      p.getMarmosetResults(marm_project).done(function(test_run) {
-        if(!test_run)
-          fetchMarmosetResults(timeout * 1.5);
+
+  var dfd = $.Deferred();
+  p.save().done(function () {
+    function fetchMarmosetResults(timeout) {
+      var t = setTimeout(function() {
+        p.getMarmosetResults(marm_project).done(function(test_run) {
+          if(!test_run)
+            fetchMarmosetResults(timeout * 1.5);
+        });
+      }, timeout);
+    }
+    return socket.marmosetSubmit(p.name, marm_project, p.currentQuestion)
+      .done(function() {
+        fetchMarmosetResults(2000);
+        dfd.resolve();
+      }).fail(function (message) {
+        dfd.reject(message);
       });
-    }, timeout);
-  }
-  return socket.marmosetSubmit(this.name, marm_project, this.currentQuestion)
-    .done(function() {
-      fetchMarmosetResults(2000);
-    });
+  }).fail(function (message) {
+    dfd.reject(message);
+  });
+
+  return dfd;
 }
 
