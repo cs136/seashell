@@ -954,6 +954,9 @@ SeashellProject.prototype.exists = function(fname) {
 SeashellProject.prototype.currentMarmosetProject = function() {
   if(/^a[0-9]+$/i.test(this.name) && /^q[0-9]+[a-z]?$/i.test(this.currentQuestion)) {
     var guess = this.name.replace(/^a/i, "A") + this.currentQuestion.replace(/^q/i, "P");
+    var extended = guess+"Extended";
+    if(SeashellProject.marmosetProjects.indexOf(extended) >= 0)
+      return extended;
     if(SeashellProject.marmosetProjects.indexOf(guess) >= 0)
       return guess;
   }
