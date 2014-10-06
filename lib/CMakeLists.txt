@@ -52,15 +52,6 @@ ExternalProject_Add(
   BUILD_COMMAND sh -c "CFLAGS='-fPIC' make"
   INSTALL_COMMAND "")
 
-# sjcl - Stanford JavaScript Crypto Library
-ExternalProject_Add(
-  sjcl
-  URL ${CMAKE_CURRENT_SOURCE_DIR}/sjcl
-  CONFIGURE_COMMAND <SOURCE_DIR>/configure --compress=none --with-all
-  BUILD_IN_SOURCE 1
-  BUILD_COMMAND make -j
-  INSTALL_COMMAND "")
-
 # libssh2 - libssh2 SSH library
 ExternalProject_Add(
   libssh2

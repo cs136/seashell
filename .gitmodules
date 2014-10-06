@@ -16,21 +16,6 @@
 [submodule "lib/libtomcrypt"]
 	path = lib/libtomcrypt
 	url = https://github.com/libtom/libtomcrypt.git
-[submodule "lib/sjcl"]
-	path = lib/sjcl
-	url = https://github.com/bitwiseshiftleft/sjcl.git
-[submodule "lib/sprintf.js"]
-	path = lib/sprintf.js
-	url = https://github.com/alexei/sprintf.js.git
 [submodule "lib/libssh2"]
 	path = lib/libssh2
 	url = git://git.libssh2.org/libssh2.git
-[submodule "lib/form"]
-	path = lib/form
-	url = https://github.com/malsup/form.git
-[submodule "lib/jstree"]
-	path = lib/jstree
-	url = git://github.com/vakata/jstree.git
-[submodule "lib/jquery-timeago"]
-	path = lib/jquery-timeago
-	url = git://github.com/rmm5t/jquery-timeago
