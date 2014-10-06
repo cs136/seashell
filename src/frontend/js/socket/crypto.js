@@ -22,6 +22,7 @@
 /** Make sure we start the entropy collectors before doing anything stupid. */
 sjcl.random.startCollectors();
 
+
 /** Seashell's Encryption/Decryption class.
  * @constructor
  * @param {Array} key - Array of 4 words that represent the 128-bit AES key.
@@ -32,6 +33,37 @@ sjcl.random.startCollectors();
 function SeashellCoder(key) {
   this.cipher = new sjcl.cipher.aes(key);
 }
+
+/** Helper functions for dealing with bytes.  Taken from SJCL. */
+SeashellCoder.Bytes = {
+  /** Convert from a bitArray to an array of bytes. */
+  fromBits: function (arr) {
+    var out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
+    for (i=0; i<bl/8; i++) {
+      if ((i&3) === 0) {
+        tmp = arr[i/4];
+      }
+    out.push(tmp >>> 24);
+    tmp <<= 8;
+  }
+  return out;
+  },
+  /** Convert from an array of bytes to a bitArray. */
+  toBits: function (bytes) {
+    var out = [], i, tmp=0;
+    for (i=0; i<bytes.length; i++) {
+      tmp = tmp << 8 | bytes[i];
+      if ((i&3) === 3) {
+      out.push(tmp);
+      tmp = 0;
+      }
+    }
+    if (i&3) {
+      out.push(sjcl.bitArray.partial(8*(i&3), tmp));
+    }
+    return out;
+  }
+};
 
 /** Adds entropy to the random pool that we use to generate IV's.
  * @static
@@ -58,9 +90,9 @@ SeashellCoder.addEntropy = function(entropy) {
  */
 SeashellCoder.prototype.encrypt = function(frame, plain) {
   var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
-  var ivArr = sjcl.codec.bytes.toBits(iv);
-  var frameArr = sjcl.codec.bytes.toBits(frame);
-  var plainArr = sjcl.codec.bytes.toBits(plain);
+  var ivArr = SeashellCoder.Bytes.toBits(iv);
+  var frameArr = SeashellCoder.Bytes.toBits(frame);
+  var plainArr = SeashellCoder.Bytes.toBits(plain);
   var authArr = sjcl.bitArray.concat(ivArr, plainArr);
   var out = sjcl.mode.gcm.encrypt(this.cipher,
       frameArr,
@@ -70,7 +102,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
   var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
   var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
-  return [sjcl.codec.bytes.fromBits(ivArr), sjcl.codec.bytes.fromBits(codedArr), sjcl.codec.bytes.fromBits(tagArr)];
+  return [SeashellCoder.Bytes.fromBits(ivArr), SeashellCoder.Bytes.fromBits(codedArr), SeashellCoder.Bytes.fromBits(tagArr)];
 };
 
 /** Decrypts an array of bytes and verifies the extra authenticated data.
@@ -81,16 +113,16 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
  * @returns {Array} Decrypted data, or will throw an exception.  Consult SJCL
  * documentation. */
 SeashellCoder.prototype.decrypt = function(coded, iv, tag, plain) {
-  var ivArr = sjcl.codec.bytes.toBits(iv);
-  var plainArr = sjcl.codec.bytes.toBits(plain);
+  var ivArr = SeashellCoder.Bytes.toBits(iv);
+  var plainArr = SeashellCoder.Bytes.toBits(plain);
   var authArr = sjcl.bitArray.concat(ivArr, plainArr);
-  var codedArr = sjcl.codec.bytes.toBits(coded);
-  var tagArr = sjcl.codec.bytes.toBits(tag);
+  var codedArr = SeashellCoder.Bytes.toBits(coded);
+  var tagArr = SeashellCoder.Bytes.toBits(tag);
   var cryptedArr = sjcl.bitArray.concat(codedArr, tagArr);
   var result = sjcl.mode.gcm.decrypt(this.cipher,
       cryptedArr,
       ivArr,
       authArr,
       128);
-  return sjcl.codec.bytes.fromBits(result);
+  return SeashellCoder.Bytes.fromBits(result);
 };
