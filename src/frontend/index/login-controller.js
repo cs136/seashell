@@ -21,13 +21,13 @@ angular.module('loginForm', [])
   .controller('LoginController', ['$scope',
       function($scope) {
         "use strict";
-        $scope.error = false;
-        $scope.user = {};
-        $scope.busy = false;
-        $scope.login = function(user) {
-          $scope.busy = true;
-          $scope.error = false;
-          var target = sprintf("https://%s:%s/cgi-bin/login.cgi",
+        this.error = false;
+        this.user ="";
+        this.busy = false;
+        this.login = function(user) {
+          this.busy = true;
+          this.error = false;
+          var target = sprintf("https://%s%s/cgi-bin/login.cgi",
               document.location.host,
               document.location.pathname.substring(0, document.location.pathname.lastIndexOf('/')));
           $.ajax({url: target,
@@ -36,21 +36,21 @@ angular.module('loginForm', [])
                   dataType: "json"})
             .done(function(data) {
               $scope.$apply(function () {
-                $scope.busy = false;
+                this.busy = false;
                 if(data.error !== undefined) {
-                  $scope.error = sprintf("An error was encountered while logging in: %s (code %d)", data.error.message,
+                  this.error = sprintf("An error was encountered while logging in: %s (code %d)", data.error.message,
                     data.error.code);
                 } else if (data.port !== undefined) {
                   createCookie("seashell-session", JSON.stringify(data));
                   console.log("All done login!");
                   top.location = "frontend.html";
                 } else {
-                  $scope.error = "An internal error occurred: " + textStatus;
+                  this.error = "An internal error occurred: " + textStatus;
                 }});
             }).fail(function(error) {
               $scope.$apply(function () {
-                $scope.busy = false;
-                $scope.error = error;
+                this.busy = false;
+                this.error = error;
               });
             });
         };
