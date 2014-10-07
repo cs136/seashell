@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('loginForm', [])
-  .controller('LoginController', ['$scope',
-      function($scope) {
+angular.module('login-app', ['ngCookies'])
+  .controller('LoginController', ['$scope','$cookieStore',
+      function($scope, $cookieStore) {
         "use strict";
         this.error = false;
         this.user ="";
@@ -41,7 +41,7 @@ angular.module('loginForm', [])
                   this.error = sprintf("An error was encountered while logging in: %s (code %d)", data.error.message,
                     data.error.code);
                 } else if (data.port !== undefined) {
-                  createCookie("seashell-session", JSON.stringify(data));
+                  $cookieStore.put("seashell-session", data);
                   console.log("All done login!");
                   top.location = "frontend.html";
                 } else {
