@@ -18,8 +18,8 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('login-app', ['ngCookies'])
-  .controller('LoginController', ['$scope','$cookieStore',
-      function($scope, $cookieStore) {
+  .controller('LoginController', ['$scope', '$cookieStore', '$window',
+      function($scope, $cookieStore, $window) {
         "use strict";
         var self = this;
         self.error = false;
@@ -29,8 +29,8 @@ angular.module('login-app', ['ngCookies'])
           self.busy = true;
           self.error = false;
           var target = sprintf("https://%s%s/cgi-bin/login.cgi",
-              document.location.host,
-              document.location.pathname.substring(0, document.location.pathname.lastIndexOf('/')));
+              $window.location.host,
+              $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
           $.ajax({url: target,
                   type: "POST",
                   data: {"u": self.user, "p": self.password},
@@ -45,7 +45,7 @@ angular.module('login-app', ['ngCookies'])
                 } else if (data.port !== undefined) {
                   $cookieStore.put("seashell-session", data);
                   console.log("All done login!");
-                  top.location = "frontend.html";
+                  $window.top.location = "frontend.html";
                 } else {
                   self.error = "An internal error occurred: " + textStatus;
                   console.log(error);
