@@ -6,9 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Seashell</title>
 
-    <link rel="stylesheet" type="text/css" href="index/signin.css">
-    <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    @(include "index/styles.html")
 	</head>
   <body>
     <header>
@@ -39,12 +37,6 @@
         </div>
       </form>
     </div>
-    <script type="text/javascript" src="//code.jquery.com/jquery-1.9.1.js"></script>
-    <script type="text/javascript" src="//code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/sprintf/0.0.7/sprintf.min.js"></script>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular.min.js"></script>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular-cookies.js"></script>
-
-    <script type="text/javascript" src="index/login-controller.js"></script>
+    @(include "index/scripts.html")
 	</body>
 </html>
