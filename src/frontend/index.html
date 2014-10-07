@@ -25,25 +25,25 @@
         <h2 class="form-signing-heading">Please sign in with your student.cs credentials</h2>
 
         <input type="text" class="form-control" placeholder="Username" ng-model="login.user"
-          ng-disabled="busy" />
+          ng-disabled="login.busy" />
         <input type="password" class="form-control" placeholder="Password" ng-model="login.password"
-          ng-disabled="busy" />
+          ng-disabled="login.busy" />
         <button class="btn btn-lg btn-primary btn-block" name="login-submit" type="submit"
-          ng-click="login.login()" ng-disabled="busy">Sign in</button>
+          ng-click="login.login()" ng-disabled="login.busy">Sign in</button>
 
         <div class="alert alert-info" ng-show="login.busy">
           Logging in...
         </div>
         <div class="alert alert-warning" ng-show="login.error">
-          {{error}}
+          {{login.error}}
         </div>
       </form>
     </div>
     <script type="text/javascript" src="//code.jquery.com/jquery-1.9.1.js"></script>
     <script type="text/javascript" src="//code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/sprintf/0.0.7/sprintf.min.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular.min.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular-cookies.js"></script>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular.min.js"></script>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.4/angular-cookies.js"></script>
 
     <script type="text/javascript" src="index/login-controller.js"></script>
 	</body>

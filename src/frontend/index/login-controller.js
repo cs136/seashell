@@ -15,42 +15,46 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('login-app', ['ngCookies'])
   .controller('LoginController', ['$scope','$cookieStore',
       function($scope, $cookieStore) {
         "use strict";
-        this.error = false;
-        this.user ="";
-        this.busy = false;
-        this.login = function(user) {
-          this.busy = true;
-          this.error = false;
+        var self = this;
+        self.error = false;
+        self.user = "";
+        self.busy = false;
+        self.login = function(user) {
+          self.busy = true;
+          self.error = false;
           var target = sprintf("https://%s%s/cgi-bin/login.cgi",
               document.location.host,
               document.location.pathname.substring(0, document.location.pathname.lastIndexOf('/')));
           $.ajax({url: target,
                   type: "POST",
-                  data: {"u": user.user, "p": user.password},
+                  data: {"u": self.user, "p": self.password},
                   dataType: "json"})
             .done(function(data) {
               $scope.$apply(function () {
-                this.busy = false;
+                self.busy = false;
                 if(data.error !== undefined) {
-                  this.error = sprintf("An error was encountered while logging in: %s (code %d)", data.error.message,
+                  self.error = sprintf("An error was encountered while logging in: %s (code %d)", data.error.message,
                     data.error.code);
+                  console.log(self.error);
                 } else if (data.port !== undefined) {
                   $cookieStore.put("seashell-session", data);
                   console.log("All done login!");
                   top.location = "frontend.html";
                 } else {
-                  this.error = "An internal error occurred: " + textStatus;
+                  self.error = "An internal error occurred: " + textStatus;
+                  console.log(error);
                 }});
             }).fail(function(error) {
               $scope.$apply(function () {
-                this.busy = false;
-                this.error = error;
+                self.busy = false;
+                self.error = error;
+                console.log(self.error);
               });
             });
         };
