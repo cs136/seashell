@@ -7,61 +7,87 @@ angular.module('frontend-app')
       self.projects = [["A1", "Proj"], ["A2"]];
     }])
 
-  // websocket service
-  .service('socket', ['$q', '$window', '$interval', 'cookieStore', function($q, $window, $interval, cookie) {
+  /**
+   * WebSocket service:
+   *  provides:
+   *    register_disconnect_callback
+   *    register_reconnect_callback
+   *    register_fail_callback
+   *    connect
+   *    socket
+   */
+  .service('socket', ['$scope', '$q', '$window', '$interval', 'cookieStore', function($scope, $q, $window, $interval, cookie) {
+    "use strict";
     var self = this;
-    self.s = null;
+    self.socket = null;
 
-    var dccount = 0;
+    var timeout_count = 0;
+    var timeout_callbacks = [];
+    var timein_callbacks = [];
+    var timeout_interval = null;
     var disconnect_callbacks = [];
-    var reconnect_callbacks = [];
-    var creds = cookie.get("creds");
+    var connect_callbacks = [];
+    var failure_callbacks = [];
 
+    /** Registers callbacks to run when the socket has not seen activity
+     *  in some while, and when messages are received after a timeout has passed.
+     */
+    self.register_timeout_callback = function(cb) {
+      timeout_callbacks.push(cb);
+    };
+    self.register_timein_callback = function(cb) {
+      timein_callbacks.push(cb);
+    };
+    /** Registers callbacks to run when the socket loses/gains connectivity. */
     self.register_disconnect_callback = function(cb) {
       disconnect_callbacks.push(cb);
     };
-    self.register_reconnect_callback = function(cb) {
-      reconnect_callbacks.push(cb);
+    self.register_connect_callback = function(cb) {
+      connect_callbacks.push(cb);
+    };
+    /** Registers callback to run when the socket has run into an error. */
+    self.register_fail_callback = function(cb) {
+      failure_callbacks.push(cb);
     };
 
-    function connectSocket() {
-      self.s = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-      return $q.when(self.s.ready)
+    /** Connects the socket, sets up the disconnection monitor. */ 
+    self.connect = function () {
+      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get("creds").host, cookie.get("creds").port),
+                                          cookie.get("creds").key,
+                                          /** Failure - probably want to prompt the user to attempt to reconnect/
+                                           *  log in again.
+                                           */
+                                          function () {
+                                            $scope.$apply(function () {
+                                              $interval.stop(timeout_interval);
+                                              _.each(failure_callbacks, call);
+                                            });
+                                          },
+                                          /** Socket closed - probably want to prompt the user to reconnect? */
+                                          function () {
+                                            $scope.apply(function () {
+                                              $interval.stop(timeout_interval);
+                                              _.each(disconnect_callbacks, call);
+                                            });
+                                          });
+      return $q.when(self.socket.ready)
         .then(function () {
           console.log("Seashell socket set up properly.");
-          $interval(setupDisconnectMonitor, 4000);
+          timeout_interval = $interval(function () {
+            if (timeout_count++ === 3) {
+              _.each(timeout_callbacks, call);
+            }
+            $q.when(self.socket.ping())
+              .then(function () {
+                if (timeout_count >= 3) {
+                  _.each(timein_callbacks, call);
+                }
+                timeout_count = 0;
+              });
+          }, 4000);
           console.log("Websocket disconnection monitor set up properly.");
+          /** Run the callbacks. */
+          _.each(connect_callbacks, call);
         });
-    }
-
-    function setupDisconnectMonitor() {
-      var max_dcs = 3;
-
-      function onReconnect() {
-        _.each(reconnect_callbacks, call);
-        dccount = 0;
-      }
-      
-      if(max_dcs == dccount++) {
-        _.each(disconnect_callbacks, call);
-      }
-      if(self.s.websocket.readyState == 3) { // if socket is closed
-        $q.when(self.s.ready).then(onReconnect);
-      }
-      else {
-        $q.when(self.s.ping).then(onReconnect);
-      }
-    }
-
-    SeashellCoder.addEntropy();
-    if(creds) {
-      self.s = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-      var qprom = $q.when(self.s.ready);
-      qprom.catch(function() {
-        displayErrorMessage("Seashell socket could not be set up.");
-      });
-    }
-    else {
-      $window.location.replace("/seashell/");
-    }
+    };
   }]);
