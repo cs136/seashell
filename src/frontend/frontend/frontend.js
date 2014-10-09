@@ -9,30 +9,50 @@ angular.module('frontend-app')
     }])
 
   // websocket service
-  .service('socket', ['$window', function($window) {
+  .service('socket', ['$q', '$window', '$interval', 'cookieStore', function($q, $window, $interval, cookie) {
     var self = this;
+    var dccount = 0;
+    var disconnect_callbacks = [];
+    var reconnect_callbacks = [];
+
+    self.register_disconnect_callback = function(cb) {
+      disconnect_callbacks.push(cb);
+    }
+    self.register_reconnect_callback = function(cb) {
+      reconnect_callbacks.push(cb);
+    }
+
+    function setupDisconnectMonitor() {
+      var max_dcs = 3;
+
+      function onReconnect() {
+        _.each(reconnect_callbacks, call);
+        dccount = 0;
+      }
+      
+      if(max_dcs == dccount++) {
+        _.each(disconnect_callbacks, call);
+      }
+      if(self.s.websocket.readyState == 3) { // if socket is closed
+        self.s = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
+        $q.when(self.s.ready).done(onReconnect);
+      }
+      else {
+        $q.when(self.s.ping).done(onReconnect);
+      }
+    }
+
     SeashellCoder.addEntropy();
-    creds = read_login_credentials();
+    var creds = cookie.get("creds");
     if(creds) {
       self.s = new SeashellWebsocket("wss://" + creds.host + ":" + creds.port, creds.key);
-      self.s.ready.done(function() {
+      var qprom = $q.when(self.s.ready);
+      qprom.done(function() {
         console.log("Seashell socket set up properly.");
-        setupUI();
-        console.log("User interface set up properly.");
-        setInterval(setupDisconnectMonitor, 4000);
+        $interval(setupDisconnectMonitor, 4000);
         console.log("Websocket disconnection monitor set up properly.");
-        fetchNewAssignments().done(updateListOfProjects);
-        updateMarmosetProjects();
-        /** Install refresh handler */
-        window.onbeforeunload = function() {
-          if(SeashellProject.currentProject && SeashellProject.currentProject.isUnsaved())
-            return "Are you sure you want to leave Seashell? Unsaved data may be lost.";
-        };
-        /** Run the rest of the code. */
-        if(rest)
-          rest();
       });
-      self.s.ready.fail(function() {
+      qprom.fail(function() {
         displayErrorMessage("Seashell socket could not be set up.");
       });
     }
