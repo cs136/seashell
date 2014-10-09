@@ -443,10 +443,12 @@ SeashellProject.prototype.isUnsaved = function() {
 SeashellFile.prototype.save = function() {
   if(this.unsaved !== false) {
     var f = this;
+    var thisTimer = f.unsaved;
     return socket.writeFile(this.project.name, this.fullname(), this.document.getValue())
       .done(function() {
         f.last_saved = Date.now();
-        f.unsaved = false;
+        // only unset the unsaved flag if another modification has not been made
+        if(f.unsaved == thisTimer) f.unsaved = false;
       })
       .fail(function() {
         displayErrorMessage("File "+f.fullname()+" could not be saved.");
