@@ -187,9 +187,16 @@
   </div>
 </div>
 <!-- This is shown when no project is active. -->
-<div class="container content-fill show-on-null-project no-project">
+<div class="container content-fill show-on-null-project no-project" ng-controller="ProjectList as plist">
   <p style="text-align: center"><a href="#new-project-dialog" data-toggle="modal"
     class="btn btn-primary btn-lg" role="button">Create a Project</a></p>
-  <p style="text-align: center" id="project-list"></p>
+  <p style="text-align: center" id="project-list">
+    <table>
+    <tr ng-repeat="project-row in plist.projects">
+      <td ng-repeat="project in project-row">
+        <a href="#" class="project-list-item">{{project}}</a>
+      </td>
+    </tr>
+  </p>
 </div>
 <!-- Here ends the body. -->
