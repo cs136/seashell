@@ -22,6 +22,7 @@ angular.module('jquery-cookie', [])
     var self = this;
     self.add = $.cookie;
     self.remove = $.removeCookie;
+    self.get = $.cookie;
   })
   .service('cookieStore', ['cookie', function(cookie) {
     var self = this;
@@ -29,4 +30,7 @@ angular.module('jquery-cookie', [])
       cookie.add(name, JSON.stringify(value), opts);
     };
     self.remove = cookie.removeCookie;
+    self.get = function(name) {
+      return JSON.parse(cookie.get(name));
+    }
   }]);
