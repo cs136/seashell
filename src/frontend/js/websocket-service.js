@@ -21,11 +21,12 @@ angular.module('websocket-service', ['jquery-cookie'])
   /**
    * WebSocket service:
    *  provides:
-   *    register_disconnect_callback
-   *    register_reconnect_callback
-   *    register_fail_callback
-   *    connect
-   *    socket
+   *    register_disconnect_callback |
+   *    register_reconnect_callback  | Callbacks to be invoked on change of socket connectivity.
+   *    register_fail_callback       | 
+   *    register_timein/out_callback |
+   *    connect                      - Connects the socket
+   *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
   .service('socket', ['$scope', '$q', '$interval', 'cookieStore', function($scope, $q, $interval, cookie) {
     "use strict";
