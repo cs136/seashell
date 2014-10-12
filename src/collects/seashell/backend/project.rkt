@@ -261,10 +261,7 @@
 ;;  name - Name of the project.
 ;;
 ;; Raises:
-;;  exn:project if the project does not exist.
-;;
-;; Returns:
-;;  #t if the project was successfully unlocked, #f otherwise
+;;  exn:project if the project does not exist, or an error occurred.
 (define/contract (unlock-project name)
   (-> (and/c project-name? is-project?) boolean?)
   (call-with-semaphore
@@ -273,7 +270,7 @@
       (cond
         [(hash-has-key? locked-projects name)
           (hash-remove! locked-projects name) #t]
-        [else #f]))))
+        [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
 ;; (save-project name)
 ;; Commits the current state of a project to Git.
