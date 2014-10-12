@@ -1,0 +1,11 @@
+<p style="text-align: center"><a href="#new-project-dialog" data-toggle="modal"
+  class="btn btn-primary btn-lg" role="button">Create a Project</a></p>
+<p style="text-align: center">
+  <table>
+  <tr ng-repeat="project-row in plist.projects">
+    <td ng-repeat="project in project-row">
+      <a href="{{project}}" class="project-list-item">{{project}}</a>
+    </td>
+  </tr>
+  </table>
+</p>
