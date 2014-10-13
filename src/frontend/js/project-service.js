@@ -156,7 +156,7 @@ angular.module('project-service', ['websocket-service', 'marmoset-service'])
                               skel)))
                            .done(function () {
                              if (failed) {
-                               $q.defer().reject("Propagating failure...");
+                               return $q.defer().reject("Propagating failure...");
                              }
                            })
                            .catch(function (info) {
