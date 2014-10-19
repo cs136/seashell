@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="frontend-app">
+<html lang="en" ng-app="frontend-app" class="ng-scope">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,11 +8,10 @@
     <title>Seashell</title>
   </head>
   <body>
-<div class="hide" id="master-container">
+<div>
 @(include "frontend/navigation.html")
 @(include "frontend/body.html")
 </div>
-@(include "frontend/dialog.html")
 @(include "frontend/scripts.html")
   </body>
 </html>

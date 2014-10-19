@@ -32,6 +32,7 @@ angular.module('websocket-service', ['jquery-cookie'])
     "use strict";
     var self = this;
     self.socket = null;
+    self.connected = false;
 
     var timeout_count = 0;
     var timeout_callbacks = [];
@@ -70,13 +71,21 @@ angular.module('websocket-service', ['jquery-cookie'])
                                            *  log in again.
                                            */
                                           function () {
-                                            $scope.$apply(function () {
-                                              $interval.stop(timeout_interval);
-                                              _.each(failure_callbacks, call);
-                                            });
+                                            /** Report connect failures as disconnections. */
+                                            if (self.connected) {
+                                              $scope.$apply(function () {
+                                                $interval.stop(timeout_interval);
+                                                _.each(failure_callbacks, call);
+                                              });
+                                            } else {
+                                              $scope.apply(function () {
+                                                $interval.stop(timeout_interval);
+                                                _.each(disconnect_callbacks, call);});
+                                            }
                                           },
                                           /** Socket closed - probably want to prompt the user to reconnect? */
                                           function () {
+                                            self.connected = false;
                                             $scope.apply(function () {
                                               $interval.stop(timeout_interval);
                                               _.each(disconnect_callbacks, call);
@@ -97,6 +106,7 @@ angular.module('websocket-service', ['jquery-cookie'])
                 timeout_count = 0;
               });
           }, 4000);
+          self.connected = true;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(connect_callbacks, call);
