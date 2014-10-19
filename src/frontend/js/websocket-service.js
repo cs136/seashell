@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('websocket-service', ['jquery-cookie'])
+angular.module('seashell-websocket', ['jquery-cookie'])
   /**
    * WebSocket service:
    *  provides:
@@ -28,7 +28,7 @@ angular.module('websocket-service', ['jquery-cookie'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$scope', '$q', '$interval', 'cookieStore', function($scope, $q, $interval, cookie) {
+  .service('socket', ['$rootScope', '$q', '$interval', 'cookieStore', function($scope, $q, $interval, cookie) {
     "use strict";
     var self = this;
     self.socket = null;
@@ -75,12 +75,12 @@ angular.module('websocket-service', ['jquery-cookie'])
                                             if (self.connected) {
                                               $scope.$apply(function () {
                                                 $interval.stop(timeout_interval);
-                                                _.each(failure_callbacks, call);
+                                                _.each(failure_callbacks, function (x) {x();});
                                               });
                                             } else {
                                               $scope.apply(function () {
                                                 $interval.stop(timeout_interval);
-                                                _.each(disconnect_callbacks, call);});
+                                                _.each(disconnect_callbacks, function (x) {x();});});
                                             }
                                           },
                                           /** Socket closed - probably want to prompt the user to reconnect? */
@@ -88,7 +88,7 @@ angular.module('websocket-service', ['jquery-cookie'])
                                             self.connected = false;
                                             $scope.apply(function () {
                                               $interval.stop(timeout_interval);
-                                              _.each(disconnect_callbacks, call);
+                                              _.each(disconnect_callbacks, function (x) {x();});
                                             });
                                           });
       return $q.when(self.socket.ready)
@@ -96,12 +96,12 @@ angular.module('websocket-service', ['jquery-cookie'])
           console.log("Seashell socket set up properly.");
           timeout_interval = $interval(function () {
             if (timeout_count++ === 3) {
-              _.each(timeout_callbacks, call);
+              _.each(timeout_callbacks, function (x) {x();});
             }
             $q.when(self.socket.ping())
               .then(function () {
                 if (timeout_count >= 3) {
-                  _.each(timein_callbacks, call);
+                  _.each(timein_callbacks, function (x) {x();});
                 }
                 timeout_count = 0;
               });
@@ -109,7 +109,7 @@ angular.module('websocket-service', ['jquery-cookie'])
           self.connected = true;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
-          _.each(connect_callbacks, call);
+          _.each(connect_callbacks, function (x) {x();});
         });
     };
   }]);

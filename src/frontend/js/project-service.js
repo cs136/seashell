@@ -17,13 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('project-service', ['websocket-service', 'marmoset-service'])
+angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
   /**
    * Project [factory] service.
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$scope', '$q', 'socket', 'marmoset',
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset',
     function($scope, $q, ws, marmoset) {
       "use strict";
       var self = this;

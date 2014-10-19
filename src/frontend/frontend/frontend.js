@@ -17,10 +17,11 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('frontend-app', ['websocket-service', 'project-service'])
+angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie'])
   // Main controller
-  .controller('FrontendController', ['socket', '$scope',
-      function (ws) {
+  .controller('FrontendController', ['$scope', 'socket',
+      function ($scope, ws) {
+        "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
