@@ -7,11 +7,9 @@
     @(include "frontend/styles.html")
     <title>Seashell</title>
   </head>
-  <body>
-<div>
+  <body ng-controller="FrontendController as frontend">
 @(include "frontend/navigation.html")
 @(include "frontend/body.html")
-</div>
 @(include "frontend/scripts.html")
   </body>
 </html>

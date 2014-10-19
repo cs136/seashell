@@ -26,6 +26,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
+        self.ready = false;
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -34,5 +35,5 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_disconnect_callback(function () {self.disconnected = true;});
         
         ws.register_fail_callback(function () {self.failed = true;});
-        ws.connect();
+        ws.connect().then(function () {self.ready = true});
       }]);
