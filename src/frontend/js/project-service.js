@@ -35,18 +35,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * SeashellProject.
          *
          * @constructor Constructor for a new SeashellProject.
-         *  Project is not ready until .init() is called.
+         *  Project is not ready until .init() is called, unless
+         *  read_only is true.
          */
-        function SeashellProject (name) {
+        function SeashellProject (name, read_only) {
           var self = this;
 
           self.name = name;
+          self.read_only = read_only;
         }
       
         /**
          * SeashellProject.init()
          *
-         * Initializes a project.
+         * Initializes a project.  A read-only project is already initialized.
          * @param force-lock - Forcibly lock this project?
          * @returns {Angular.$q} Deferred that resolves when this is done,
          *  or an error:
@@ -82,12 +84,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return $q.when(ws.socket.listProject(self.name))
             .then(function (files) {
               return _.map(_.filter(_.map(files, function (file)
-                      {return [file[0].split(), file[1]];}),
+                      {return [file[0].split("/"), file[1]];}),
                       function (file) {
-                        return file[0].length == 1 && file[0] !== "common" && !file[1];
+                        return file[0].length == 1 && file[0] !== "common" && file[1];
                       }),
                       function (file) {
-                        return file[0];
+                        return file[0][0];
                       });
             });
         };
@@ -178,6 +180,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       };
 
       /**
+       * Deletes a project.
+       * @param {String} name - Name of project.
+       * @returns {Angular.$q -> ?} Angular deferred that resolves when
+       * the project is deleted.
+       */
+      self.delete = function (name) {
+        return $q.when(socket.deleteProject(name));
+      };
+
+      /**
        * Creates a new project.
        *
        * @param {String} name - Name of project.
@@ -195,12 +207,19 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       /** 
        * Opens an existing project.
        * @param {String} name
+       * @param {bool} read_only - Open read-only?  If set true, 
+       *  does not allow write operations on this project, but
+       *  also does not lock the project.
        * @param {boolean/optional} force-lock? - Forcibly lock project.
        * @returns {Angular.$q -> SeashellProject/String}
        *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
        *  (or a error message on error)
        */
-      self.open = function(name, force_lock) {
-        return (new SeashellProject(name)).init(force_lock);
+      self.open = function(name, read_only, force_lock) {
+        if (read_only) {
+          return new SeashellProject(name, read_only);
+        } else {
+          return (new SeashellProject(name)).init(force_lock);
+        }
       };
     }]);  

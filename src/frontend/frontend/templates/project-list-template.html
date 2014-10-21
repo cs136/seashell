@@ -1,13 +1,20 @@
-<!--
-<table ng-controller="ProjectListController as projects" class="table">
+<table class="table">
+  <tr>
+    <th><a ui-sref="new-project">New assignment</a></td>
+    <th colspan="2">Questions...</td>
+  </tr>
   <tr ng-repeat="project in projects.list">
     <td>
       <a href="#/projects/{{project}}" class="project-list-item">{{project}}</a>
     </td>
     <td>
-      <a ng-repeat="question in projects.question-list[project]" href="#/projects/{{project}}/question/{{question}}">{{question}}</a>
-    </td>
+      <span ng-repeat="question in projects.question_list[project]">
+       <a href="#/projects/{{project}}/question/{{question}}">{{question}}</a>
+       <span ng-show="!$last"> | </span>
+     </span>
+   </td>
+   <td>
+     <a ui-sref="delete-project({project: project})">delete...</a>
+   </td>
   </tr>
 </table>
--->
-Hi

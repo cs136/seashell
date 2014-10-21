@@ -37,6 +37,40 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_fail_callback(function () {self.failed = true;});
         ws.connect().finally(function () {self.ready.resolve(true);});
       }])
+  // Controller for Project Lists
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q', function ($scope, projects, $q) {
+    var self = this;
+    self.list = [];
+    self.question_list = {};
+    self.state = "list-projects";
+
+    /** Run this every time the state associated with this controller is loaded.
+     *  Returns a deferred that resolves when the state is properly loaded */
+    self.refresh = function () {
+      return projects.list().then(function (projects_list) {
+        self.list = projects_list;
+
+        return $q.when(_.map(projects_list, function (project) {
+          return projects.open(project, true).questions().then(function (questions) {
+            self.question_list[project] = questions;
+          });
+        }));
+      });
+    };
+
+    /** Make refresh be called on any state transition to this state,
+     *  and on the first time through this state. */
+    $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
+      if (toState === self.state) {
+        self.refresh();
+      }
+    });
+    self.refresh();
+  }])
+  // Controller for Project Deletion
+  .controller('ProjectDeletion', ['$scope', '$stateParams', 'projects', function ($scope, $stateParams, projects) {
+    $scope.project = $stateParams.project;
+  }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
@@ -44,5 +78,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       .state("list-projects", {
         url: "/",
         templateUrl: "frontend/templates/project-list-template.html",
-        });
+        controller: "ProjectListController as projects"
+        })
+      .state("delete-project", {
+        url: "/delete",
+        onEnter: function () {
+          return;
+        }});
   }]);
