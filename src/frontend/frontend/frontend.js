@@ -36,17 +36,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         
         ws.register_fail_callback(function () {self.failed = true;});
         ws.connect().finally(function () {self.ready.resolve(true);});
-      }]);
+      }])
   // Configuration for routes
-  /*
-  .config(function ($stateProvider, $urlRouteProvider) {
-    $urlRouteProvider.otherwise('/');
+  .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
+    $urlRouterProvider.otherwise('/');
     $stateProvider
       .state("list-projects", {
-        templateUrl: "project-list-template.html",
-        resolve: {wsReady: ['socket',
-          function (ws) {
-            return ws.ready;
-          }]}
+        url: "/",
+        templateUrl: "frontend/project-list-template.html",
         });
-  });*/
+  }]);
