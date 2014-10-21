@@ -39,7 +39,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.connect().finally(function () {self.ready.resolve(true);});
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q', function ($scope, projects, $q) {
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q', '$modal', function ($scope, projects, $q, $modal) {
     var self = this;
     self.list = [];
     self.question_list = {};
@@ -59,6 +59,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     };
 
+    /** Delete onClick handler. */
+    self.delete = function(project) {
+      $modal.open({
+        templateUrl: "frontend/templates/delete-project-template.html",
+        controller: ['$scope', function ($scope) {
+          $scope.project = project;
+        }]
+      }).result.then(function () {
+        projects.delete(project);
+      });
+    };
+
     /** Make refresh be called on any state transition to this state,
      *  and on the first time through this state. */
     $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
@@ -68,11 +80,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     });
     self.refresh();
   }])
-  // Controller for Project Deletion
-  .controller('ProjectDeletionController',
-      ['$scope', '$stateParams', 'projects', function ($scope, $stateParams, projects) {
-        $scope.project = $stateParams.project;
-  }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
@@ -81,18 +88,5 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/",
         templateUrl: "frontend/templates/project-list-template.html",
         controller: "ProjectListController as projects"
-        })
-      .state("list-projects.delete-project", {
-        url: "delete/:project",
-        onEnter: ['$modal', 'projects', '$stateParams', '$state',
-        function ($modal, projects, $stateParams, $state) {
-          $modal.open({
-            templateUrl: "frontend/templates/delete-project-template.html",
-            controller: 'ProjectDeletionController',
-          }).result.then(function () {
-            projects.delete($stateParams.project);
-          }).finally(function () {
-            $state.transitionTo("list-projects");
-          });}]
         });
   }]);
