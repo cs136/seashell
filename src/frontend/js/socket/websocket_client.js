@@ -165,7 +165,11 @@ SeashellWebsocket.prototype._sendMessage = function(message, deferred) {
 };
 
 /** Sends a message along the connection, ensuring that
- *  the server and client are properly authenticated. */
+ *  the server and client are properly authenticated. 
+ *
+ *  If the socket has not been properly authenticated,
+ *  sends the message after the socket has been properly
+ *  authenticated/set up. */
 SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   var self = this;
   deferred = deferred || $.Deferred();
@@ -173,7 +177,12 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   if (self.authenticated) {
     return self._sendMessage(message, deferred);
   } else {
-    return deferred.reject(null).promise();
+    self.ready.done(function () {
+      self._sendMessage(message, deferred);
+    }).fail(function (result) {
+      deferred.reject(result);
+    });
+    return deferred.promise();
   }
 };
 
