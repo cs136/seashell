@@ -43,6 +43,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     $stateProvider
       .state("list-projects", {
         url: "/",
-        templateUrl: "frontend/project-list-template.html",
+        templateUrl: "frontend/templates/project-list-template.html",
         });
   }]);
