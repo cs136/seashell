@@ -17,7 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router'])
+angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
+    'ui.bootstrap'])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q',
       function ($scope, ws, $q) {
@@ -61,15 +62,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     /** Make refresh be called on any state transition to this state,
      *  and on the first time through this state. */
     $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
-      if (toState === self.state) {
+      if (toState.name === self.state) {
         self.refresh();
       }
     });
     self.refresh();
   }])
   // Controller for Project Deletion
-  .controller('ProjectDeletion', ['$scope', '$stateParams', 'projects', function ($scope, $stateParams, projects) {
-    $scope.project = $stateParams.project;
+  .controller('ProjectDeletionController',
+      ['$scope', '$stateParams', 'projects', function ($scope, $stateParams, projects) {
+        $scope.project = $stateParams.project;
   }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
@@ -80,9 +82,17 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         templateUrl: "frontend/templates/project-list-template.html",
         controller: "ProjectListController as projects"
         })
-      .state("delete-project", {
-        url: "/delete",
-        onEnter: function () {
-          return;
-        }});
+      .state("list-projects.delete-project", {
+        url: "delete/:project",
+        onEnter: ['$modal', 'projects', '$stateParams', '$state',
+        function ($modal, projects, $stateParams, $state) {
+          $modal.open({
+            templateUrl: "frontend/templates/delete-project-template.html",
+            controller: 'ProjectDeletionController',
+          }).result.then(function () {
+            projects.delete($stateParams.project);
+          }).finally(function () {
+            $state.transitionTo("list-projects");
+          });}]
+        });
   }]);

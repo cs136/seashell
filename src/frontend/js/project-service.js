@@ -186,7 +186,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        * the project is deleted.
        */
       self.delete = function (name) {
-        return $q.when(socket.deleteProject(name));
+        return $q.when(ws.socket.deleteProject(name));
       };
 
       /**
@@ -198,7 +198,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  (or a error message on error)
        */
       self.create = function (name) {
-        return $q.when(socket.newProject(name)).
+        return $q.when(ws.socket.newProject(name)).
           then(function () {
             return (new SeashellProject(name)).init();
           });
