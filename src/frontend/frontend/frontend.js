@@ -19,6 +19,41 @@
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap'])
+  // Delete Project Modal Service
+  .factory('DeleteProjectModal', ['$modal', 'projects',
+      function ($modal, projects) {
+        return function (project) {
+          return $modal.open({
+            templateUrl: "frontend/templates/delete-project-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.project = project;
+            }]
+          }).result.then(function () {
+            projects.delete(project);
+          });
+        };
+      }])
+  // New Project Modal Service
+  .factory('NewProjectModal', ['$modal', 'projects',
+      function ($modal, projects) {
+        return function () {
+          return $modal.open({
+            templateUrl: "frontend/templates/new-project-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.new_project_name = "";
+              $scope.newProject = function () {
+                if ($scope.new_project_name === "") {
+                  return false;
+                } else {
+                  $scope.$close();
+                }
+              };
+            }]
+          }).result.then(function () {
+            /** Move to new project. */
+          });
+        };
+      }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q',
       function ($scope, ws, $q) {
@@ -27,7 +62,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
-        self.ready = $q.defer();
+        self.ready = false;
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -36,10 +71,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_disconnect_callback(function () {self.disconnected = true;});
         
         ws.register_fail_callback(function () {self.failed = true;});
-        ws.connect().finally(function () {self.ready.resolve(true);});
+        ws.connect().finally(function () {self.ready = true;});
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q', '$modal', function ($scope, projects, $q, $modal) {
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal',
+      function ($scope, projects, $q, deleteProjectModal) {
     var self = this;
     self.list = [];
     self.question_list = {};
@@ -61,13 +97,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
     /** Delete onClick handler. */
     self.delete = function(project) {
-      $modal.open({
-        templateUrl: "frontend/templates/delete-project-template.html",
-        controller: ['$scope', function ($scope) {
-          $scope.project = project;
-        }]
-      }).result.then(function () {
-        projects.delete(project);
+      deleteProjectModal(project).then(function () {
+        self.refresh();
       });
     };
 
@@ -88,5 +119,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/",
         templateUrl: "frontend/templates/project-list-template.html",
         controller: "ProjectListController as projects"
-        });
+        })
+      .state("list-projects.new-project", {
+        url: "new",
+        onEnter: ["$state", "NewProjectModal",
+          function ($state, newProjectModal) {
+            return newProjectModal().catch(function () {
+              $state.transitionTo("list-projects");
+            });
+        }]});
   }]);
