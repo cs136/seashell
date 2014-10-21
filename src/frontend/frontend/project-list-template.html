@@ -1,11 +1,13 @@
-<p style="text-align: center"><a href="#new-project-dialog" data-toggle="modal"
-  class="btn btn-primary btn-lg" role="button">Create a Project</a></p>
-<p style="text-align: center">
-  <table>
-  <tr ng-repeat="project-row in plist.projects">
-    <td ng-repeat="project in project-row">
-      <a href="{{project}}" class="project-list-item">{{project}}</a>
+<!--
+<table ng-controller="ProjectListController as projects" class="table">
+  <tr ng-repeat="project in projects.list">
+    <td>
+      <a href="#/projects/{{project}}" class="project-list-item">{{project}}</a>
+    </td>
+    <td>
+      <a ng-repeat="question in projects.question-list[project]" href="#/projects/{{project}}/question/{{question}}">{{question}}</a>
     </td>
   </tr>
-  </table>
-</p>
+</table>
+-->
+Hi

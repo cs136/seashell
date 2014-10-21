@@ -29,10 +29,10 @@
         <button class="btn btn-lg btn-primary btn-block" name="login-submit" type="submit"
           ng-disabled="login.busy">Sign in</button>
 
-        <div class="alert alert-info" ng-show="login.busy">
+        <div class="alert alert-info" ng-show="login.busy" ng-cloak>
           Logging in...
         </div>
-        <div class="alert alert-danger" ng-show="login.error">
+        <div class="alert alert-danger" ng-show="login.error" ng-cloak>
           {{login.error}}
         </div>
       </form>

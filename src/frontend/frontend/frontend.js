@@ -17,16 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie'])
+angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router'])
   // Main controller
-  .controller('FrontendController', ['$scope', 'socket',
-      function ($scope, ws) {
+  .controller('FrontendController', ['$scope', 'socket', '$q',
+      function ($scope, ws, $q) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
-        self.ready = false;
+        self.ready = $q.defer();
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -35,5 +35,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_disconnect_callback(function () {self.disconnected = true;});
         
         ws.register_fail_callback(function () {self.failed = true;});
-        ws.connect().finally(function () {self.ready = true});
+        ws.connect().finally(function () {self.ready.resolve(true);});
       }]);
+  // Configuration for routes
+  /*
+  .config(function ($stateProvider, $urlRouteProvider) {
+    $urlRouteProvider.otherwise('/');
+    $stateProvider
+      .state("list-projects", {
+        templateUrl: "project-list-template.html",
+        resolve: {wsReady: ['socket',
+          function (ws) {
+            return ws.ready;
+          }]}
+        });
+  });*/

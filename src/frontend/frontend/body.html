@@ -4,19 +4,19 @@
     This page requires JavaScript to operate properly, or at all.
   </noscript>
 
-  <div ng-show="frontend.timeout"
+  <div ng-show="frontend.timeout" ng-cloak
     class="alert alert-danger text-center" role="alert">
     <b>d'oh!</b> lost contact with the server. (seashell will keep trying to
     reconnect, though.)
   </div>
 
-  <div ng-show="frontend.failed"
+  <div ng-show="frontend.failed" ng-cloak
     class="alert alert-danger text-center" role="alert">
     <b>d'oh!</b> Something bad happened!  Try reconnecting <a ng-click="frontend.reconnect()">again</a>, or
     logging in <a href="https://www.student.cs.uwaterloo.ca/seashell">again</a>.
   </div>
 
-  <div ng-show="frontend.disconnected"
+  <div ng-show="frontend.disconnected" ng-cloak
     class="alert alert-danger text-center" role="alert">
     <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a ng-click="frontend.reconnect()">here</a>.)
   </div> 

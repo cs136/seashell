@@ -74,20 +74,20 @@ angular.module('seashell-websocket', ['jquery-cookie'])
                                             /** Report connect failures as disconnections. */
                                             if (self.connected) {
                                               $scope.$apply(function () {
-                                                $interval.stop(timeout_interval);
+                                                $interval.cancel(timeout_interval);
                                                 _.each(failure_callbacks, function (x) {x();});
                                               });
                                             } else {
-                                              $scope.apply(function () {
-                                                $interval.stop(timeout_interval);
+                                              $scope.$apply(function () {
+                                                $interval.cancel(timeout_interval);
                                                 _.each(disconnect_callbacks, function (x) {x();});});
                                             }
                                           },
                                           /** Socket closed - probably want to prompt the user to reconnect? */
                                           function () {
                                             self.connected = false;
-                                            $scope.apply(function () {
-                                              $interval.stop(timeout_interval);
+                                            $scope.$apply(function () {
+                                              $interval.cancel(timeout_interval);
                                               _.each(disconnect_callbacks, function (x) {x();});
                                             });
                                           });
