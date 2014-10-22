@@ -19,9 +19,23 @@
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap'])
+  // Error service.
+  .service('error-service', function () {
+    var self = this;
+    self.errors = [];
+
+    self.report = function (error, shorthand) {
+      if (shorthand || error) {
+        self.errors.push({shorthand: shorthand, error: error});
+      }
+    };
+    self.suppress = function (index) {
+      self.errors.splice(index, 1);
+    };
+  })
   // Delete Project Modal Service
-  .factory('DeleteProjectModal', ['$modal', 'projects',
-      function ($modal, projects) {
+  .factory('DeleteProjectModal', ['$modal', 'projects', 'error-service',
+      function ($modal, projects, errors) {
         return function (project) {
           return $modal.open({
             templateUrl: "frontend/templates/delete-project-template.html",
@@ -29,13 +43,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.project = project;
             }]
           }).result.then(function () {
-            projects.delete(project);
+            return projects.delete(project);
+          }).catch(function (error) {
+            errors.report(error, sprintf("Could not delete project %s!", project));
           });
         };
       }])
   // New Project Modal Service
-  .factory('NewProjectModal', ['$modal', 'projects',
-      function ($modal, projects) {
+  .factory('NewProjectModal', ['$modal', 'projects', 'error-service',
+      function ($modal, projects, errors) {
         return function () {
           return $modal.open({
             templateUrl: "frontend/templates/new-project-template.html",
@@ -51,18 +67,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }]
           }).result.then(function () {
             /** Move to new project. */
+          }).catch(function (error) {
+            errors.report(error, sprintf("Could not create project %s!", project));
           });
         };
       }])
   // Main controller
-  .controller('FrontendController', ['$scope', 'socket', '$q',
-      function ($scope, ws, $q) {
+  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
+      function ($scope, ws, $q, errors) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
         self.ready = false;
+        self.errors = errors;
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -74,8 +93,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.connect().finally(function () {self.ready = true;});
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal',
-      function ($scope, projects, $q, deleteProjectModal) {
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service',
+      function ($scope, projects, $q, deleteProjectModal, errors) {
     var self = this;
     self.list = [];
     self.question_list = {};
@@ -92,6 +111,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.question_list[project] = questions;
           });
         }));
+      }).catch(function (error) {
+        errors.report(error, "Could not generate list of projects.");
       });
     };
 
