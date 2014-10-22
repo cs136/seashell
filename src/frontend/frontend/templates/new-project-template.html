@@ -4,12 +4,12 @@
     <span class="glyphicon glyphicon-file"></span>
     New Project</h4>
 </div>
-<form name="newProjectForm" novalidate ng-submit="newProjectForm.valid && newProject()">
+<form name="newProjectForm" novalidate ng-submit="newProjectForm.$valid && newProject()">
 <div class="modal-body">
   <div class="form-group"
     ng-class="{'has-error': newProjectForm.new_project_name.$invalid}">
       <label for="new_project_name">Project Name:</label>
-      <input type="text" ng-model="project" required  name="new_project_name" class="form-control">
+      <input type="text" ng-model="new_project_name" required  name="new_project_name" class="form-control">
       <span class="help-block" ng-show="newProjectForm.new_project_name.$invalid">Required</span>
     </div>
 </div>

@@ -25,7 +25,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.errors = [];
 
     self.report = function (error, shorthand) {
-      if (shorthand || error) {
+      if (error) {
         self.errors.push({shorthand: shorthand, error: error});
       }
     };
@@ -73,26 +73,69 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 if ($scope.new_project_name === "") {
                   return false;
                 } else {
+                  // TODO: goto new project here.
                   $scope.$close();
                 }
               };
             }]
-          }).result.then(function () {
-            /** Move to new project. */
-          }).catch(function (error) {
-            errors.report(error, sprintf("Could not create project %s!", project));
           });
         };
       }])
+  // Settings service.
+  .service('settings-service', ['$rootScope', '$modal', 'socket', 'error-service', '$q',
+      function ($rootScope, $modal, ws, errors, $q) {
+        var self = this;
+        self.settings =  {
+          font_size  : 10,
+          edit_mode  : "standard",
+          tab_width  : 4,
+          text_style : "neat"
+        };
+        self.notify = [];
+
+        function notifyChanges () {
+          _.forEach(self.notify, function (x) {x();});
+        }
+
+        self.load = function () {
+          return $q.when(ws.socket.getSettings()).then(function (settings) {
+            if (settings)
+              self.settings = settings;
+            notifyChanges();
+          }).catch(function (message) {
+            errors.report(message, "Could not load settings from server.");
+          });
+        };
+
+        self.save = function () {
+          return $q.when(ws.socket.saveSettings(self.settings));
+        };
+
+        self.dialog = function () {
+          return $modal.open({
+            templateUrl: "frontend/templates/settings-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.temp = _.clone(self.settings);
+              $scope.saveSettings = function () {
+                $scope.$close();
+                self.settings = $scope.temp;
+                self.save().then(notifyChanges).catch(
+                  function (error) {
+                    errors.report(error, "Could not save settings!");
+                  });
+                return true;
+              };}]
+            });
+        };
+      }])
   // Main controller
-  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window',
-      function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window) {
+  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
+      function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
-        self.ready = false;
         self.errors = errors;
 
         // Help function
@@ -108,6 +151,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
         };
+        // Settings
+        self.settings = function () {
+          settings.dialog();
+        };
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -116,7 +163,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_disconnect_callback(function () {self.disconnected = true;});
         
         ws.register_fail_callback(function () {self.failed = true;});
-        ws.connect().finally(function () {self.ready = true;});
+
+        /** TODO: This may need to go somewhere else. */
+        ws.connect().then(function () {
+              return settings.load();
+            }).finally(function ()
+            {
+            }).catch(function (error) {
+              errors.report(error, 'Startup error.');
+            });
       }])
   // Controller for Project Lists
   .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service',
