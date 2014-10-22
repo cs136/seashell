@@ -14,7 +14,7 @@
      </span>
    </td>
    <td>
-     <a ng-click="projects.delete(project)" href="">delete...</a>
+     <a ng-show="projects.isDeletable(project)" ng-click="projects.delete(project)" href="">delete...</a>
    </td>
   </tr>
 </table>

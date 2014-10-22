@@ -29,8 +29,8 @@ angular.module('jquery-cookie', [])
     self.add = function(name, value, opts) {
       cookie.add(name, JSON.stringify(value), opts);
     };
-    self.remove = cookie.removeCookie;
+    self.remove = cookie.remove;
     self.get = function(name) {
       return JSON.parse(cookie.get(name));
-    }
+    };
   }]);

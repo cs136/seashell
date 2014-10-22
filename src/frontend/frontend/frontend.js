@@ -33,6 +33,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.errors.splice(index, 1);
     };
   })
+  // Confirmation message modal service.
+  .factory('ConfirmationMessageModal', ['$modal',
+      function ($modal) {
+        return function (title, message) {
+          return $modal.open({
+            templateUrl: "frontend/templates/confirmation-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.title = title;
+              $scope.message = message;
+            }]});
+        };
+      }])
   // Delete Project Modal Service
   .factory('DeleteProjectModal', ['$modal', 'projects', 'error-service',
       function ($modal, projects, errors) {
@@ -73,8 +85,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
       }])
   // Main controller
-  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
-      function ($scope, ws, $q, errors) {
+  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window',
+      function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -82,6 +94,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.failed = false;
         self.ready = false;
         self.errors = errors;
+
+        // Help function
+        self.help = function () {
+          $modal.open({templateUrl: "frontend/templates/help-template.html"});
+        };
+        // Logout
+        self.logout = function () {
+          confirm("Log out of Seashell",
+            "Do you wish to logout?  Any unsaved data will be lost.")
+            .result.then(function () {
+              cookieStore.remove("creds");
+              $window.top.location = "https://cas.uwaterloo.ca/logout";
+            });
+        };
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
@@ -123,6 +149,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     };
 
+    // Tests if project is deleteable
+    self.isDeletable = function(project) {
+      return ! /^[aA][0-9]+/.test(project);
+    };
     /** Make refresh be called on any state transition to this state,
      *  and on the first time through this state. */
     $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
