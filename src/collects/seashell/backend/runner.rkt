@@ -107,7 +107,7 @@
        (match (thread-receive)
          ['kill
           (logf 'info "Program with PID ~a killed." pid)
-          (set-program-exit-status! program 254)
+          (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
           (close)])]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
