@@ -68,9 +68,10 @@
     (void))
 
   (let loop ()
+    (define receive-evt (thread-receive-evt))
     (match (sync/timeout 30
                          handle
-                         (thread-receive-evt)
+                         receive-evt
                          (if (port-closed? in-stdin)
                            never-evt
                            in-stdin)
@@ -102,7 +103,7 @@
        (set-program-exit-status! pgrm 255)
        (subprocess-kill handle #t)
        (close)]
-      [(? (lambda (evt) (eq? thread-receive-evt evt))) ;; Received a signal.
+      [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
        (match (thread-receive)
          ['kill
           (logf 'info "Program with PID ~a killed." pid (subprocess-status handle))
