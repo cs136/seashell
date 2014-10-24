@@ -93,7 +93,7 @@
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
-              (write (serialize `(,pid ,test-name "failed" (list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
          [_ (write (serialize `(,pid ,test-name "error" (subprocess-status handle) ,stderr)) out-stdout)])
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
