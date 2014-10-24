@@ -25,6 +25,7 @@
          seashell/backend/runner
          seashell/git
          racket/async-channel
+         racket/serialize
          json)
 
 (provide conn-dispatch)
@@ -49,6 +50,69 @@
     (-> ws-connection? jsexpr? void?)
     (ws-send connection (jsexpr->bytes message)))
 
+  ;; (project-test-thread project pid test)
+  ;; Helper thread for dealing with output from running tests.
+  ;; Arguments:
+  ;;  project - Name of project
+  ;;  pid - PID of process
+  ;;  test - Name of test
+  ;; Returns:
+  ;;  Thread that is running the I/O.
+  (define (project-test-thread project pid test)
+    (thread (thunk
+      ;; These ports do not need to be closed; they
+      ;; are Racket pipes and automatically garbage collected.
+      (define stdout (program-stdout pid))
+      (define stderr (program-stderr pid))
+      (define stdin (program-stdin pid))
+      (define wait-evt (program-wait-evt pid))
+
+      ;; Close stderr and stdin, as they are not used in test mode.
+      (close-output-port stdin)
+      (close-input-port stderr)
+
+      (with-handlers
+        ;; Data connection failure.  Quit.
+        [(exn:websocket? 
+           (lambda (exn)
+             (logf 'error "Data connection failure: ~a.  Terminating project ~a (PID ~a)." (exn-message exn)
+                   project pid)
+             (program-kill pid)
+             (program-destroy-handle pid)))]
+        ;; Block on stdout and on the websocket.
+        (match (sync (ws-connection-closed-evt connection) (wrap-evt stdout (compose deserialize read)))
+           [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+            ;; Connection died.
+            (program-kill pid)
+            (program-destroy-handle pid)]
+           [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed"))))
+            (send-message connection `#hash((id . -4) (success . #t)
+                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
+           [(list pid test-name "error" exit-code stderr)
+            (send-message connection `#hash((id . -4) (success . #t)
+                                           (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
+                                                                        (exit_code . ,exit-code)
+                                                                        (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
+           [(list pid test-name "no-expect" stdout stderr)
+            (send-message connection `#hash((id . -4) (success . #t)
+                                           (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
+                                                           (stdout . ,(bytes->string/utf-8 stdout #\?))
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
+           [(list pid test-name "failed" diff stderr stdout)
+            (send-message connection `#hash((id . -4) (success . #t)
+                                           (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
+                                                           (diff . ,(map
+                                                              (lambda (x)
+                                                                (if (list? x)
+                                                                  (map (lambda (y)
+                                                                         (if (bytes? y) (bytes->string/utf-8 y #\?)
+                                                                           y))
+                                                                       x)
+                                                                  (bytes->string/utf-8 x #\?)))
+                                                              diff))
+                                                           (stdout . ,(bytes->string/utf-8 stdout #\?))
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))])))))
+  
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
   ;; projects.
@@ -205,12 +269,13 @@
         ('project name)
         ('file file)
         ('test test))
-       (define result (match (run-project name file test)
-        [(list tag data) (logf 'debug "data is ~a\n" data) `#hash((tag . ,tag) (data . ,data))] ;; run with test
-        [pid (project-runner-thread name pid) pid]))          ;; run without test
+       (define pid (run-project name file test))
+       (if test
+         (project-test-thread name pid test) 
+         (project-runner-thread name pid))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,result))]
+              (result . ,pid))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)

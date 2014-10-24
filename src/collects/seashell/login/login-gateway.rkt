@@ -66,6 +66,14 @@
                   (address ,(format "Seashell-Login/1.0 running on Racket ~a" (version)))))))
   (exit 1))
 
+;; report-error
+;; Wraps report-error/X
+(define (report-error code message [traceback ""])
+  (if (equal? (get-cgi-method) "POST")
+    (report-error/json code message)
+    (report-error/html code message traceback)))
+
+
 ;; password-based-login/ajax
 ;; AJAX-based password login.
 ;;
@@ -81,13 +89,13 @@
   (define uname
     (let ((l (extract-bindings 'u bdgs)))
       (unless (= (length l) 1)
-        (report-error/json 3 "Bad username provided."))
+        (report-error 3 "Bad username provided."))
       (first l)))
 
   (define passwd
     (let ((l (extract-bindings 'p bdgs)))
       (unless (= (length l) 1)
-        (report-error/json 3 "Bad password provided."))
+        (report-error 3 "Bad password provided."))
       (first l)))
 
   ;; Binding for tunnel process outside scope of with-limits.
@@ -101,7 +109,7 @@
                              (subprocess-kill tun-proc #t))
                            (when tun
                              (tunnel-close tun))
-                           (report-error/json 7 "Login timed out."))])
+                           (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Spawn backend process on backend host.
       (set! tun
@@ -109,11 +117,11 @@
           ([exn:tunnel?
              (match-lambda
                [(exn:tunnel message marks 7)
-                (report-error/json 5 "Invalid credentials.")]
+                (report-error 5 "Invalid credentials.")]
                [(exn:tunnel message marks 6)
-                (report-error/json 6 "Invalid host key. See server log.")]
+                (report-error 6 "Invalid host key. See server log.")]
                [(exn:tunnel message marks code)
-                (report-error/json 4 (format "Session could not be started (internal error, code=~a)." code))])])
+                (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
           (password:tunnel-launch uname passwd)))
 
       (set! tun-proc (tunnel-process tun))
@@ -130,7 +138,7 @@
       (define be-creds (read (tunnel-in tun)))
 
       (when (eof-object? be-creds)
-        (report-error/json 4 (format "Session could not be started; tunnel unexpectedly died!")))
+        (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
 
       (logf 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
@@ -138,7 +146,7 @@
 
       ;; Check for graceful exit.
       (when (not (= 0 (subprocess-status (tunnel-process tun))))
-        (report-error/json 4 (format "Session could not be started (internal error, code=~a)."
+        (report-error 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
 
       ;; Close the tunnel
@@ -164,7 +172,21 @@
 
   ;; Check the user id
   (unless (= 0 (seashell_uw_check_remote_user))
-    (report-error/html 1 "Invalid credentials!"))
+    (report-error 1 "Invalid credentials!"))
+
+  ;; Terminate existing Seashell instance
+  (unless (empty? (get-bindings "reset" bdgs))
+    (with-handlers ([exn:fail:filesystem (lambda (x) #f)])
+      (define creds (call-with-input-file (build-path (read-config 'seashell))
+                                          (compose deserialize read)))
+      (define creds-host (hash-ref creds 'host))
+      (define creds-pid (hash-ref creds 'pid))
+      (system* (read-config 'ssh-binary)
+               creds-host
+               "-x"
+               "-o" "PreferredAuthentications" "hostbased"
+               "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
+               (format "kill ~a" creds-pid))))
 
   ;; Timeout the login process.
   (with-handlers
@@ -173,7 +195,7 @@
                              (subprocess-kill tun-proc #t))
                            (when tun
                              (tunnel-close tun))
-                           (report-error/html 7 "Login timed out."))])
+                           (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Spawn backend process on backend host.
       (set! tun (uw:tunnel-launch))
@@ -191,7 +213,7 @@
       (define be-creds (read (tunnel-in tun)))
 
       (when (eof-object? be-creds)
-        (report-error/html 4 (format "Session could not be started; tunnel unexpectedly died!")))
+        (report-error 4 (format "Session could not be started; tunnel unexpectedly died!")))
 
       (logf 'debug "Waiting for tunnel shutdown.")
       ;; Wait for tunnel shutdown.
@@ -199,7 +221,7 @@
 
       ;; Check for graceful exit.
       (when (not (= 0 (subprocess-status (tunnel-process tun))))
-        (report-error/html 4 (format "Session could not be started (internal error, code=~a)."
+        (report-error 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
 
       ;; Close the tunnel
@@ -225,10 +247,10 @@
   ;; Check that HTTPS was set.
   (unless
     (equal? (getenv "HTTPS") "on")
-    (report-error/html 1 "Requires SSL."))
+    (report-error 1 "Requires SSL."))
   
   (with-handlers
-    ([exn:fail? (lambda (exn) (report-error/html 1 (exn-message exn) (format-stack-trace
+    ([exn:fail? (lambda (exn) (report-error 1 (exn-message exn) (format-stack-trace
                                                                        (exn-continuation-marks exn))))])
     ;; Install configuration.
     (config-refresh!)

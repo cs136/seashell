@@ -56,6 +56,11 @@ function SeashellWebsocket(uri, key, failure, closes) {
     callback : null,
     deferred : null
   };
+  // Test result
+  self.requests[-4] = {
+    callback : SeashellProject.testResultNotify,
+    deferred : null
+  };
 
   self.websocket = new WebSocket(uri);
 

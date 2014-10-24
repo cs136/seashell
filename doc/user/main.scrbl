@@ -8,5 +8,7 @@ This section provides documentation relevant to users of Seashell.
 
 @include-section["getting-started.scrbl"]
 
-@include-section["testing-programs.scrbl"]
+@include-section["faq.scrbl"]
+
+@include-section["error-codes.scrbl"]
 
