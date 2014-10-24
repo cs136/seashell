@@ -175,9 +175,9 @@
     (report-error 1 "Invalid credentials!"))
 
   ;; Terminate existing Seashell instance
-  (unless (empty? (get-bindings "reset" bdgs))
-    (with-handlers ([exn:fail:filesystem (lambda (x) #f)])
-      (define creds (call-with-input-file (build-path (read-config 'seashell))
+  (unless (empty? (extract-bindings "reset" bdgs))
+    (with-handlers ([exn:fail:filesystem? (lambda (x) #f)])
+      (define creds (call-with-input-file (build-path (read-config 'seashell) "creds")
                                           (compose deserialize read)))
       (define creds-host (hash-ref creds 'host))
       (define creds-pid (hash-ref creds 'pid))

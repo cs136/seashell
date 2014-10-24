@@ -396,7 +396,7 @@ function handleResetSeashell(){
         "Reset Seashell",
         "Do you want to reset your seashell instance?",
         function (){
-            window.location.replace("https://www.student.cs.uwaterloo.ca/~" + creds.user + "/seashell/index.cgi?reset");
+            window.location.replace("https://www.student.cs.uwaterloo.ca/~" + creds.user + "/cs136/seashell/index.cgi?reset='reset'");
         });
 }
 
