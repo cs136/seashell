@@ -666,6 +666,8 @@ SeashellProject.testResultNotify = function(ign, result) {
                      "no-expect" : "No .expect file found. Program output:\n"+result.stdout,
                      "failed"  : "Test failed. Program output:\n"+result.stdout
                    }[result.result]);
+    if(result.result == "killed")
+      p.testQueue = [];
     if(!p.testQueue.length) {
       consoleWrite("# done");
       consoleWriteln();
@@ -674,7 +676,7 @@ SeashellProject.testResultNotify = function(ign, result) {
     }
     else {
       var test = p.testQueue.shift();
-      consoleWrite(sprintf("# Running test '%s'...", name));
+      consoleWrite(sprintf("# Running test '%s'... ", test));
       p.run(test).fail(function() { console.log("Test error"); })
         .done(function(res) {
           p.currentPID = res;
@@ -693,7 +695,7 @@ SeashellProject.runTests = function() {
     var tests = p.getTestsForFile(p.currentFile);
     if(tests.length) {
       p.testQueue = tests;
-      testResultNotify(null);
+      SeashellProject.testResultNotify(null, { "pid" : null });
     }
     else {
       consoleWriteln(" No tests to run.");
@@ -749,7 +751,9 @@ SeashellProject.prototype.run = function(test) {
  * Kills the running project.
  */
 SeashellProject.prototype.kill = function() {
-  return socket.programKill(this.currentPID);
+  return socket.programKill(this.currentPID).done(function() {
+    SeashellProject.currentProject.currentPID = null;
+  });
 }
 
 /*
