@@ -97,11 +97,6 @@
                                          (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
                                                          (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                          (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
-         [(list pid test-name "error" exit-code stderr)
-          (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
-                                                         (exit_code . ,exit-code)
-                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "failed" diff stderr)
           (send-message `#hash((id . -4) (success . #t)
                                          (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
