@@ -56,7 +56,8 @@
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
-  (close-input-port raw-stdin)
+  (close-input-port in-stdin)
+  (close-output-port out-stderr)
 
   ;; Send test input to program and wait. 
   (write-bytes input raw-stdin)
@@ -66,7 +67,6 @@
   (define (close)
     (close-input-port raw-stdout)
     (close-input-port raw-stderr)
-    (close-output-port out-stderr)
     (close-output-port out-stdout))
 
   (define receive-evt (thread-receive-evt))
@@ -93,14 +93,14 @@
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
-              (write (serialize `(,pid ,test-name "failed" (list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
-         [_ (write (serialize `(,pid ,test-name "error" (subprocess-status handle) ,stderr)) out-stdout)])
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
+         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
        (subprocess-kill handle #t)
-       (write (serialize `(,pid ,test-name "timeout")))
+       (write (serialize `(,pid ,test-name "timeout")) out-stdout)
        (close)]
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
        (match (thread-receive)
@@ -108,7 +108,7 @@
           (logf 'info "Program with PID ~a killed." pid)
           (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
-          (write (serialize `(,pid ,test-name "killed")))
+          (write (serialize `(,pid ,test-name "killed")) out-stdout)
           (close)])]))
   (void))
 
@@ -282,10 +282,10 @@
                   (if test
                     (program-control-test-thread result
                                                  test
-                                                 (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".in")))
                                                  (with-handlers
                                                    ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                                                   (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".expect")))))
                     (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table
