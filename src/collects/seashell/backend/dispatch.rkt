@@ -25,6 +25,7 @@
          seashell/backend/runner
          seashell/git
          racket/async-channel
+         racket/serialize
          json)
 
 (provide conn-dispatch)
@@ -78,31 +79,33 @@
            (program-kill pid)
            (program-destroy-handle pid)))]
       ;; Block on stdout and on the websocket.
-      (match (sync (ws-connection-closed-evt connection) stdout)
+      (match (sync (ws-connection-closed-evt connection) (wrap-evt stdout (compose deserialize read)))
          [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
           ;; Connection died.
           (program-kill pid)
           (program-destroy-handle pid)]
-         [(and result (list _ _ (or "timeout" "killed" "passed")))
-          (send-message `#hash((id . -4) (success . #t) (result . ,result)))]
+         [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed"))))
+          (send-message `#hash((id . -4) (success . #t)
+                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . ,test-res)))))]
          [(list pid test-name "error" exit-code stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . (,pid ,test-name "error" ,exit-code
-                                                         ,(bytes->string/utf-8 stderr #\?)))))]
+                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "error")
+                                                                      (exit-code . ,exit-code)
+                                                                      (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "no-expect" stdout stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . (,pid ,test-name "no-expect"
-                                                         ,(bytes->string/utf-8 stdout #\?)
-                                                         ,(bytes->string/utf-8 stderr #\?)))))]
+                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "no-expect")
+                                                         (stdout . ,(bytes->string/utf-8 stdout #\?))
+                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "error" exit-code stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . (,pid ,test-name "no-expect"
-                                                         ,(bytes->string/utf-8 stdout #\?)
-                                                         ,(bytes->string/utf-8 stderr #\?)))))]
+                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "no-expect")
+                                                         (exit-code . ,exit-code)
+                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "failed" diff stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . (,pid ,test-name "failed"
-                                                         ,(map
+                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "failed")
+                                                         (diff . ,(map
                                                             (lambda (x)
                                                               (if (list? x)
                                                                 (map (lambda (y)
@@ -110,8 +113,8 @@
                                                                          y))
                                                                      x)
                                                                 (bytes->string/utf-8 x #\?)))
-                                                            diff)
-                                                         (bytes->string/utf-8 stderr #\?)))))])))
+                                                            diff))
+                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))])))
   
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
