@@ -282,10 +282,10 @@
                   (if test
                     (program-control-test-thread result
                                                  test
-                                                 (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".in")))
                                                  (with-handlers
                                                    ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                                                   (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".expect")))))
                     (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table
