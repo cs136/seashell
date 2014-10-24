@@ -100,7 +100,7 @@
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
        (subprocess-kill handle #t)
-       (write (serialize `(,pid ,test-name "timeout")))
+       (write (serialize `(,pid ,test-name "timeout")) out-stdout)
        (close)]
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
        (match (thread-receive)
@@ -108,7 +108,7 @@
           (logf 'info "Program with PID ~a killed." pid)
           (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
-          (write (serialize `(,pid ,test-name "killed")))
+          (write (serialize `(,pid ,test-name "killed")) out-stdout)
           (close)])]))
   (void))
 
