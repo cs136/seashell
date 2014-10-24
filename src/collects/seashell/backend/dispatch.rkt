@@ -86,25 +86,25 @@
           (program-destroy-handle pid)]
          [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed"))))
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . ,test-res)))))]
+                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
          [(list pid test-name "error" exit-code stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "error")
-                                                                      (exit-code . ,exit-code)
+                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
+                                                                      (exit_code . ,exit-code)
                                                                       (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "no-expect" stdout stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "no-expect")
+                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
                                                          (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                          (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "error" exit-code stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "no-expect")
-                                                         (exit-code . ,exit-code)
+                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
+                                                         (exit_code . ,exit-code)
                                                          (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
          [(list pid test-name "failed" diff stderr)
           (send-message `#hash((id . -4) (success . #t)
-                                         (result . #hash((pid . ,pid) (test-name . ,test-name) (result . "failed")
+                                         (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
                                                          (diff . ,(map
                                                             (lambda (x)
                                                               (if (list? x)
