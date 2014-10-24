@@ -17,7 +17,9 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
-         seashell/seashell-config)
+         seashell/seashell-config
+         seashell/diff
+         racket/serialize)
 
 (provide run-program program-stdin program-stdout program-stderr
          program-wait-evt program-kill program-status program-destroy-handle)
@@ -34,6 +36,82 @@
 (define program-new-semaphore (make-semaphore 1))
 (define program-destroy-semaphore (make-semaphore 1))
 
+;; (program-control-test-thread program)
+;; Control thread helper for running a program with a test file.
+;; 
+;; Arguments:
+;;  program - Program structure.
+;;  test-name - Name of test.
+;;  input - input of test.
+;;  expected - expected output.
+;; Returns:
+;;  Nothing.
+(define/contract (program-control-test-thread pgrm test-name input expected)
+  (-> program? string? bytes? (or/c #f bytes?))
+  (match-define (program in-stdin in-stdout in-stderr
+                         out-stdin out-stdout out-stderr
+                         raw-stdin raw-stdout raw-stderr
+                         handle control exit-status
+                         destroyed-semaphore)
+    pgrm)
+  (define pid (subprocess-pid handle))
+  ;; Close ports we don't use.
+  (close-input-port raw-stdin)
+
+  ;; Send test input to program and wait. 
+  (write-bytes input raw-stdin)
+  (close-output-port raw-stdin)
+
+  ;; Helper to close ports
+  (define (close)
+    (close-input-port raw-stdout)
+    (close-input-port raw-stderr)
+    (close-output-port out-stderr)
+    (close-output-port out-stdout))
+
+  (define receive-evt (thread-receive-evt))
+  (let loop ()
+    (match (sync/timeout 30
+                         handle
+                         receive-evt)
+      [(? (lambda (evt) (eq? handle evt))) ;; Program quit
+       (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
+       (set-program-exit-status! pgrm (subprocess-status handle))
+       ;; Read stdout, stderr.
+       (define stdout (port->bytes raw-stdout))
+       (define stderr (port->bytes raw-stderr))
+
+       (match (subprocess-status handle)
+         [0
+          ;; Three cases:
+          (cond
+            [(not expected)
+             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
+            [(equal? stdout expected)
+             (write (serialize `(,pid ,test-name "passed")) out-stdout)]
+            [else
+              ;; Split expected and output, difference them.
+              (define output-lines (regexp-split #rx"\n" stdout))
+              (define expected-lines (regexp-split #rx"\n" expected))
+              (write (serialize `(,pid ,test-name "failed" (list-diff expected-lines output-lines) ,stderr)) out-stdout)])]
+         [_ (write (serialize `(,pid ,test-name "error" (subprocess-status handle) ,stderr)) out-stdout)])
+       (close)]
+      [#f ;; Program timed out (30 seconds pass without any event)
+       (logf 'info "Program with PID ~a timed out." pid)
+       (set-program-exit-status! pgrm 255)
+       (subprocess-kill handle #t)
+       (write (serialize `(,pid ,test-name "timeout")))
+       (close)]
+      [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
+       (match (thread-receive)
+         ['kill
+          (logf 'info "Program with PID ~a killed." pid)
+          (set-program-exit-status! pgrm 254)
+          (subprocess-kill handle #t)
+          (write (serialize `(,pid ,test-name "killed")))
+          (close)])]))
+  (void))
+
 ;; (program-control-thread program)
 ;; Control thread helper for a running program.
 ;;
@@ -41,7 +119,7 @@
 ;;  program - Program structure.
 ;; Returns:
 ;;  Nothing.
-(define (program-control-thread pgrm)
+(define/contract (program-control-thread pgrm)
   (-> program? void?)
   (match-define (program in-stdin in-stdout in-stderr
                          out-stdin out-stdout out-stderr
@@ -136,7 +214,8 @@
        (when (eof-object? read)
          (close-input-port raw-stderr)
          (close-output-port out-stderr))
-       (loop)])))
+       (loop)]))
+  (void))
 
 ;; (run-program binary directory lang test)
 ;;  Runs a program.
@@ -151,15 +230,11 @@
 ;;               diffed against tests/foo.expect
 ;;
 ;; Returns:
-;;  test is #f - the PID of the program, immediately (without waiting for the
-;;               program to terminate)
-;;  otherwise  - a tag and a string; 'pass means the test passed and the
-;;               string is empty, 'fail means the test failed and the
-;;               string is a diff, and 'no-expect means no .expect file was
-;;               found, and the string is the output of the program
+;;  PID - handle representing the run.  On a test, test results are written
+;;    to stdout.  On an interactive run, data is forwarded to/from
+;;    the program.
 (define/contract (run-program binary directory lang test)
-  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?)
-      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
+  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) integer?)
   (call-with-semaphore
     program-new-semaphore
     (thunk
@@ -188,22 +263,6 @@
                                    "-t" (some-system-path->string (read-config 'seashell-racket-runtime-library))
                                    "-u" binary)])))
 
-        (cond
-          [test (define test-base-file (some-system-path->string (build-path directory (read-config 'tests-subdirectory) test)))
-                (define prog-input (file->bytes (string-append test-base-file ".in")))
-                (write-bytes prog-input raw-stdin)
-                (close-output-port raw-stdin)
-                (subprocess-wait handle)
-
-                (define prog-output (port->bytes raw-stdout))
-                (close-input-port raw-stdout)
-                (define prog-stderr (port->bytes raw-stderr))
-                (close-input-port raw-stderr)
-
-                (match (subprocess-status handle)
-                  [0 (diff prog-output (string-append test-base-file ".expect"))]
-                  [_ (list "error" (bytes->string/utf-8 prog-stderr))])]
-          [else
             ;; Construct the I/O ports.
             (define-values (in-stdout out-stdout) (make-pipe))
             (define-values (in-stdin out-stdin) (make-pipe))
@@ -217,7 +276,17 @@
                                     out-stdin out-stdout out-stderr
                                     raw-stdin raw-stdout raw-stderr
                                     handle #f #f destroyed-semaphore))
-            (define control-thread (thread (thunk (program-control-thread result))))
+            (define control-thread
+              (thread
+                (thunk
+                  (if test
+                    (program-control-test-thread result
+                                                 test
+                                                 (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (with-handlers
+                                                   ([exn:fail:filesystem? (lambda (exn) #f)])
+                                                   (file->bytes (build-path (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                    (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table
             (define pid (subprocess-pid handle))
@@ -233,41 +302,7 @@
             (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
             (hash-set! program-table pid result)
             (logf 'info "Binary ~a running as PID ~a." binary pid)
-            pid])))))
-
-;; (diff prog-output expect-file)
-;; Returns a diff between the program output and the .expect file
-;;
-;; Arguments:
-;;  prog-output - the output of the program
-;;  expect-file - the .expect file with which to compare the program output
-;; Returns:
-;;  a tag and a string; "pass" means the test passed and the string is
-;;  empty, "fail" means the test failed and the string is a diff, and
-;;  "no-expect" means no .expect file was found, and the string is the output
-;;  of the program
-(define/contract (diff prog-output expect-file)
-  (-> bytes? string? (list/c string? (or/c string? (hash/c symbol? string?))))
-  (cond
-   [(file-exists? expect-file) ;; if expect file exists, produce diff of output and expect file
-    (define-values (handle stdout stdin stderr)
-      (subprocess #f #f #f (read-config 'diff-program) "-U100000" "-" expect-file))
-    (write-bytes prog-output stdin)
-    (close-output-port stdin)
-    (subprocess-wait handle) ;; wait for diff to finish
-
-    (define diff-output (port->bytes stdout))
-    (close-input-port stdout)
-    (define diff-err (port->bytes stderr))
-    (close-input-port stderr)
-
-    (match (subprocess-status handle)
-      [0 (list "pass" (hash))]
-      [1 (list "fail" `#hash((diff . ,(bytes->string/utf-8 diff-output))
-                             (actual . ,(bytes->string/utf-8 prog-output))
-                             (expected . ,(file->string expect-file))))]
-      [es (raise (format "`diff` failed with exit status ~a! stderr dump:\n~a" es diff-err))])]
-   [else (list "no-expect" (bytes->string/utf-8 prog-output))]))
+            pid))))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
