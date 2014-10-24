@@ -47,7 +47,7 @@
 ;; Returns:
 ;;  Nothing.
 (define/contract (program-control-test-thread pgrm test-name input expected)
-  (-> program? string? bytes? (or/c #f bytes?))
+  (-> program? string? bytes? (or/c #f bytes?) void?)
   (match-define (program in-stdin in-stdout in-stderr
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
