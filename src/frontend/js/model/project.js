@@ -655,7 +655,7 @@ SeashellProject.run = function() {
   return null;
 };
 
-SeashellProject.testResultNotify(result) {
+SeashellProject.testResultNotify = function(ign, result) {
   var p = SeashellProject.currentProject;
   if(result.pid == p.currentPID) {
     consoleWriteln({ "timeout" : "Program timed out.",
