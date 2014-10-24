@@ -56,7 +56,8 @@
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
-  (close-input-port raw-stdin)
+  (close-input-port in-stdin)
+  (close-output-port out-stderr)
 
   ;; Send test input to program and wait. 
   (write-bytes input raw-stdin)
@@ -66,7 +67,6 @@
   (define (close)
     (close-input-port raw-stdout)
     (close-input-port raw-stderr)
-    (close-output-port out-stderr)
     (close-output-port out-stdout))
 
   (define receive-evt (thread-receive-evt))
