@@ -79,7 +79,7 @@ angular.module('seashell-websocket', ['jquery-cookie'])
 
     /** Connects the socket, sets up the disconnection monitor. */ 
     self.connect = function () {
-      if (!rawCookie.get("creds")) {
+      if (!rawCookie.get("seashell-session")) {
         self.failed = true;
         $timeout(function () {
           _.each(failure_callbacks, function (x) {x();});
@@ -87,8 +87,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
         return $q.reject("No credentials found!");
       }
 
-      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get("creds").host, cookie.get("creds").port),
-                                          cookie.get("creds").key,
+      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get("seashell-session").host, cookie.get("seashell-session").port),
+                                          cookie.get("seashell-session").key,
                                           /** Failure - probably want to prompt the user to attempt to reconnect/
                                            *  log in again.
                                            */

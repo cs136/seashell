@@ -147,7 +147,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           confirm("Log out of Seashell",
             "Do you wish to logout?  Any unsaved data will be lost.")
             .result.then(function () {
-              cookieStore.remove("creds");
+              cookieStore.remove("seashell-session");
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
         };

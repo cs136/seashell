@@ -49,7 +49,7 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          */
         self.results = function(project) {
           return $q.wrap($.ajax({url: test_url,
-                                 data: {user: cookieStore.get("creds").user,
+                                 data: {user: cookieStore.get("seashell-session").user,
                                        project: project},
                                  dataType: "json"}));
         };
