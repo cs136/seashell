@@ -145,9 +145,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function (projects) {
               return $q.when($.ajax({url: list_url, dataType: "json"}))
                 .catch(function () {
-                  var f_defer = $q.defer();
-                  f_defer.reject("Could not fetch list of skeletons!");
-                  return f_defer.promise;
+                  return $q.reject("Could not fetch list of skeletons!");
                 })
                 .then(function (skels) {
                   var new_projects = _.filter(skels,
@@ -165,17 +163,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                               template)))
                            .then(function () {
                              if (failed) {
-                               var f_cont = $q.defer();
-                               f_cont.reject("Propagating failure...");
-                               return f_cont.promise;
+                               return $q.reject("Propagating failure...");
                              }
                            })
                            .catch(function (info) {
                              console.log(sprintf("Could not clone %s! (%s)", template, failed));
-                             failed_projects.push(template);
-                             var f_cont = $q.defer();
-                             f_cont.reject("Propagating failure...");
-                             return f_cont.promise;
+                             return $q.reject("Propagating failure...");
                            });
                         }
                         return in_continuation.then(
@@ -184,7 +177,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                       },
                       start.promise)
                     .then(function() {return (new_projects);})
-                    .catch(function() {var f_cont = $q.defer(); f_cont.reject(failed_projects); return f_cont.promise;});
+                    .catch(function() {return $q.reject(failed_projects);});
                 });
             });
       };
