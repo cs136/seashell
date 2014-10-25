@@ -28,11 +28,13 @@ angular.module('seashell-websocket', ['jquery-cookie'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$rootScope', '$q', '$interval', 'cookieStore', function($scope, $q, $interval, cookie) {
+  .service('socket', ['$rootScope', '$q', '$interval', 'cookie', 'cookieStore', '$timeout',
+      function($scope, $q, $interval, rawCookie, cookie, $timeout) {
     "use strict";
     var self = this;
     self.socket = null;
     self.connected = false;
+    self.failed = false;
 
     var timeout_count = 0;
     var timeout_callbacks = [];
@@ -52,36 +54,50 @@ angular.module('seashell-websocket', ['jquery-cookie'])
       timein_callbacks.push(cb);
     };
     /** Registers callbacks to run when the socket loses/gains connectivity. */
-    self.register_disconnect_callback = function(cb) {
+    self.register_disconnect_callback = function(cb, runNow) {
       disconnect_callbacks.push(cb);
+
+      if (runNow && !self.connected) {
+        $timeout(cb, 0);
+      }
     };
-    self.register_connect_callback = function(cb) {
+    self.register_connect_callback = function(cb, runNow) {
       connect_callbacks.push(cb);
+
+      if (runNow && self.connected) {
+        $timeout(cb, 0);
+      }
     };
     /** Registers callback to run when the socket has run into an error. */
-    self.register_fail_callback = function(cb) {
+    self.register_fail_callback = function(cb, runNow) {
       failure_callbacks.push(cb);
+      
+      if (runNow && self.failed) {
+        $timeout(cb, 0);
+      }
     };
 
     /** Connects the socket, sets up the disconnection monitor. */ 
     self.connect = function () {
+      if (!rawCookie.get("creds")) {
+        self.failed = true;
+        $timeout(function () {
+          _.each(failure_callbacks, function (x) {x();});
+        }, 0);
+        return $q.reject("No credentials found!");
+      }
+
       self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get("creds").host, cookie.get("creds").port),
                                           cookie.get("creds").key,
                                           /** Failure - probably want to prompt the user to attempt to reconnect/
                                            *  log in again.
                                            */
                                           function () {
-                                            /** Report connect failures as disconnections. */
-                                            if (self.connected) {
-                                              $scope.$apply(function () {
-                                                $interval.cancel(timeout_interval);
-                                                _.each(failure_callbacks, function (x) {x();});
-                                              });
-                                            } else {
-                                              $scope.$apply(function () {
-                                                $interval.cancel(timeout_interval);
-                                                _.each(disconnect_callbacks, function (x) {x();});});
-                                            }
+                                            self.failed = true;
+                                            $scope.$apply(function () {
+                                              $interval.cancel(timeout_interval);
+                                              _.each(failure_callbacks, function (x) {x();});
+                                            });
                                           },
                                           /** Socket closed - probably want to prompt the user to reconnect? */
                                           function () {
@@ -107,6 +123,7 @@ angular.module('seashell-websocket', ['jquery-cookie'])
               });
           }, 4000);
           self.connected = true;
+          self.failed = false;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(connect_callbacks, function (x) {x();});

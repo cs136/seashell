@@ -168,6 +168,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                            })
                            .catch(function (info) {
                              console.log(sprintf("Could not clone %s! (%s)", template, failed));
+                             failed_projects.push(template);
                              return $q.reject("Propagating failure...");
                            });
                         }

@@ -159,10 +159,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
 
-        ws.register_connect_callback(function () {self.disconnected = false; self.timeout = false; self.failed = false;});
-        ws.register_disconnect_callback(function () {self.disconnected = true;});
+        ws.register_connect_callback(function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
+        ws.register_disconnect_callback(function () {self.disconnected = true;}, true);
         
-        ws.register_fail_callback(function () {self.failed = true;});
+        ws.register_fail_callback(function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
   .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service',
@@ -226,7 +226,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         }]});
   }])
-  .run(['cookies', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
+  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
     /** TODO: This may need to go somewhere else. */
     ws.connect()
         .then(function () {
