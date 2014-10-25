@@ -16,7 +16,7 @@
     logging in <a href="https://www.student.cs.uwaterloo.ca/seashell">again</a>.
   </div>
 
-  <div ng-show="frontend.disconnected"
+  <div ng-show="frontend.disconnected && !frontend.failed"
     class="alert alert-danger text-center" role="alert">
     <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a ng-click="frontend.reconnect()">here</a>.)
   </div>
