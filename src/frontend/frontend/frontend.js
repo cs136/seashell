@@ -155,6 +155,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.settings = function () {
           settings.dialog();
         };
+        // Reconnect
+        self.reconnect = function () {
+          ws.connect();
+        };
 
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});

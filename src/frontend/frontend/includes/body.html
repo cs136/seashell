@@ -12,13 +12,13 @@
 
   <div ng-show="frontend.failed"
     class="alert alert-danger text-center" role="alert">
-    <b>d'oh!</b> Something bad happened!  Try reconnecting <a ng-click="frontend.reconnect()">again</a>, or
+    <b>d'oh!</b> Something bad happened!  Try reconnecting <a ng-click="frontend.reconnect()" href="">again</a>, or
     logging in <a href="https://www.student.cs.uwaterloo.ca/seashell">again</a>.
   </div>
 
   <div ng-show="frontend.disconnected && !frontend.failed"
     class="alert alert-danger text-center" role="alert">
-    <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a ng-click="frontend.reconnect()">here</a>.)
+    <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>.)
   </div>
 
   
