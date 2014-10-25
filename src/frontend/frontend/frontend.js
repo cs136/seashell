@@ -163,15 +163,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_disconnect_callback(function () {self.disconnected = true;});
         
         ws.register_fail_callback(function () {self.failed = true;});
-
-        /** TODO: This may need to go somewhere else. */
-        ws.connect().then(function () {
-              return settings.load();
-            }).finally(function ()
-            {
-            }).catch(function (error) {
-              errors.report(error, 'Startup error.');
-            });
       }])
   // Controller for Project Lists
   .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service',
@@ -234,4 +225,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $state.transitionTo("list-projects");
             });
         }]});
+  }])
+  .run(['cookies', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
+    /** TODO: This may need to go somewhere else. */
+    ws.connect()
+        .then(function () {
+          return settings.load().catch(function (error) {
+            errors.report(error, 'Could not load settings!');
+          });
+        })
+        .then(function () {
+          return projects.fetch().catch(function (projects) {
+            errors.report(projects, 'Could not fetch projects.');
+          });
+        });
   }]);

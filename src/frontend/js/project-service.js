@@ -144,37 +144,47 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return self.list()
             .then(function (projects) {
               return $q.when($.ajax({url: list_url, dataType: "json"}))
+                .catch(function () {
+                  var f_defer = $q.defer();
+                  f_defer.reject("Could not fetch list of skeletons!");
+                  return f_defer.promise;
+                })
                 .then(function (skels) {
                   var new_projects = _.filter(skels,
                       function (skel) {
                         return projects.indexOf(skel) == -1;
                       });
                   var failed_projects = [];
+                  var start = $q.defer();
+                  start.resolve();
                   return _.foldl(new_projects,
                       function(in_continuation, template) {
                         function clone(failed) {
                           return $q.when(ws.socket.newProjectFrom(template,
                              sprintf(skel_template,
-                              skel)))
-                           .done(function () {
+                              template)))
+                           .then(function () {
                              if (failed) {
-                               return $q.defer().reject("Propagating failure...");
+                               var f_cont = $q.defer();
+                               f_cont.reject("Propagating failure...");
+                               return f_cont.promise;
                              }
                            })
                            .catch(function (info) {
+                             console.log(sprintf("Could not clone %s! (%s)", template, failed));
                              failed_projects.push(template);
+                             var f_cont = $q.defer();
+                             f_cont.reject("Propagating failure...");
+                             return f_cont.promise;
                            });
                         }
-                        in_continuation.then(
+                        return in_continuation.then(
                            function () {return clone(false);},
                            function () {return clone(true);}); 
                       },
-                      $q.defer().resolve())
+                      start.promise)
                     .then(function() {return (new_projects);})
-                    .catch(function() {return (failed_projects);});
-                })
-                .catch(function () {
-                  return ("Could not fetch list of skeletons!");
+                    .catch(function() {var f_cont = $q.defer(); f_cont.reject(failed_projects); return f_cont.promise;});
                 });
             });
       };
