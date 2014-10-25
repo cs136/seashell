@@ -165,8 +165,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_fail_callback(function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service',
-      function ($scope, projects, $q, deleteProjectModal, errors) {
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service', 'socket',
+      function ($scope, projects, $q, deleteProjectModal, errors, ws) {
     var self = this;
     self.list = [];
     self.question_list = {};
@@ -195,18 +195,27 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     };
 
+    /** Fetch onClick handler. */
+    self.fetch = function () {
+      return projects.fetch().catch(function (projects) {
+        errors.report(projects, 'Could not fetch projects.');
+      }).then(function () {
+        self.refresh();
+      });
+    };
+
     // Tests if project is deleteable
     self.isDeletable = function(project) {
       return ! /^[aA][0-9]+/.test(project);
     };
     /** Make refresh be called on any state transition to this state,
-     *  and on the first time through this state. */
+     *  and when the socket connects successfully. */
     $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
       if (toState.name === self.state) {
         self.refresh();
       }
     });
-    self.refresh();
+    ws.register_connect_callback(function () {self.refresh();}, true);
   }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
@@ -230,13 +239,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     /** TODO: This may need to go somewhere else. */
     ws.connect()
         .then(function () {
-          return settings.load().catch(function (error) {
-            errors.report(error, 'Could not load settings!');
-          });
-        })
-        .then(function () {
           return projects.fetch().catch(function (projects) {
             errors.report(projects, 'Could not fetch projects.');
           });
         });
+    // Reload settings on (re)connect.
+    ws.register_connect_callback(function () {
+      return settings.load().catch(function (error) {
+        errors.report(error, 'Could not load settings!');
+      });
+    });
   }]);

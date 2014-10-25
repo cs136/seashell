@@ -1,7 +1,8 @@
 <table class="table">
   <tr>
-    <th><a ui-sref="list-projects.new-project">New assignment</a></td>
-    <th colspan="2">Questions...</td>
+    <th><a ui-sref="list-projects.new-project">New assignment</a></th>
+    <th>Questions...</th>
+    <th><a href="" ng-click="projects.fetch()">fetch</a> | <a href="" ng-click="projects.refresh()">refresh</a></th>
   </tr>
   <tr ng-repeat="project in projects.list">
     <td>
