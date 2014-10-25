@@ -184,7 +184,7 @@
       (system* (read-config 'ssh-binary)
                creds-host
                "-x"
-               "-o" "PreferredAuthentications" "hostbased"
+               "-o" "PreferredAuthentications hostbased"
                "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
                (format "kill ~a" creds-pid))))
 
