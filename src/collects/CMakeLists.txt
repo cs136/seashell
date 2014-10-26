@@ -31,7 +31,7 @@ add_custom_command(OUTPUT login.cgi
                    DEPENDS ${seashell_collects})
 add_custom_command(OUTPUT seashell-user-launcher
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-user-launcher"
-                           ${CMAKE_CURRENT_SOURCE_DIR}/seashell-user-launcher.rkt
+                           ++lib seashell/compiler/place-main ++lib seashell/git/place-main ${CMAKE_CURRENT_SOURCE_DIR}/seashell-user-launcher.rkt
                    DEPENDS ${seashell_collects})
 add_custom_target(seashell-all-collects ALL DEPENDS login.cgi seashell-user-launcher)
 # Install step.
