@@ -21,9 +21,8 @@ cmake_minimum_required(VERSION 2.6)
 # Grab our dependencies.
 file(GLOB_RECURSE seashell_collects "${CMAKE_CURRENT_SOURCE_DIR}" *.rkt)
 # Copy the source directory to the build directory.
-add_custom_target(seashell-all-collects
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/seashell" "${CMAKE_CURRENT_BINARY_DIR}/seashell"
-  DEPENDS ${seashell_collects})
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/seashell" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+     FILES_MATCHING PATTERN *.rkt)
 # Install the configuration.
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt")
@@ -33,7 +32,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
 add_custom_command(OUTPUT seashell-main
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-main"
                            ++lib seashell/compiler/place-main ++lib seashell/git/place-main "${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt"
-                           DEPENDS seashell-all-collects ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt)
+                           DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt)
 add_custom_target(seashell-binary ALL DEPENDS seashell-main)
 # Install step.
 # First add helper scripts.
