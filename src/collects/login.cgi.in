@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "${CMAKE_INSTALL_PREFIX}/bin/seashell" "-l"
+exec "${CMAKE_INSTALL_PREFIX}/bin/seashell-main" "-l"
