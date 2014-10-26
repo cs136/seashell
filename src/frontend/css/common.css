@@ -341,11 +341,11 @@ div.tooltip .tooltip-inner {
   color: black;
 }
 
-#questions-row {
+.questions-row {
   font-weight: 300;
 }
 
-#questions-row-container {
+.questions-row-container {
   text-align: right;
 }
 

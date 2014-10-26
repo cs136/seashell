@@ -1,3 +1,4 @@
+  <!-- Editor header. -->
   <div class="row">
     <div class="col-xs-12 col-md-12"
          style="margin-top: 15px">
@@ -6,28 +7,27 @@
         <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
           <span style="position: relative; bottom: 0; font-size: 20px">
             <span style="font-weight: 400">
-              <span class="userid"></span> /
+              <span class="userid">{{editView.userid}}</span> /
             </span>
             <div class="dropdown" style="display: inline">
               <a role="button"
-                 data-toggle="dropdown"
-                 data-target="#"
-                 href="#"
+                 class="dropdown-toggle"
                  style="text-decoration: none; color: black">
-                <span id="project-menu"></span><span class="caret"></span>
+                 <span>{{editView.project.name}}</span><span class="caret"></span>
               </a>
               <ul id="projects-dropdown" class="dropdown-menu" role="menu">
+                <!-- TODO: add items here. -->
               </ul>
             </div>
           </span>
         </h2>
       </div>
       <div
-         id="questions-row-container"
-         class="col-md-6 col-xs-6"
+         class="col-md-6 col-xs-6 questions-row-container"
          style="font-size: 18px; margin-top: 5px; padding: 0">
-        <span id="questions-row" style="word-spacing: 15px">
-        </span>
+         <span class="questions-row" style="word-spacing: 15px">
+           <!-- TODO: bind list of questions here. -->
+         </span>
       </div>
     </div>
   </div>
@@ -36,50 +36,55 @@
       <hr style="margin-top: 9px; margin-bottom: 8px"/>
     </div>
   </div>
-  <div class="row hide-on-null-question">
-    <div id="file-menu" class="col-md-12 col-xs-12">
+  <div class="row ">
+    <div class="col-md-12 col-xs-12">
       <div class="row" style="padding-top: 0">
         <div class="col-md-6 col-xs-8" id="common-files">
           <kbd style="font-style: italic">common/&nbsp;&nbsp;</kbd>
-          <kbd id="common-files-row" style="font-size: 14px">
+          <kbd style="font-size: 14px">
+            <!-- TODO: bind list of common files here. -->
           </kbd>
         </div>
-        <div id="question-controls" class="col-md-6 col-xs-4">
+        <div class="col-md-6 col-xs-4">
           <div style="display: inline-block; vertical-align: top;">
-            <a href="#"
-              id="toolbar-add-file"
+            <!-- TODO: add ngClick here. -->
+            <a href=""
               class="btn btn-link"
               style="padding: 0; margin-right: 11px; outline: 0; text-decoration: none">
               <span>add file…</span>
             </a>
           </div>
           <div style="display:inline-block">
-            <button id="toolbar-submit-question"
+            <!-- TODO: add ngClick here. -->
+            <button
                   class="btn btn-link"
                   style="padding: 0; margin-right:11px;">
               <span>submit question</span>
             </button><br />
-            <button id="toolbar-submit-results"
+            <!-- TODO: bind Marmoset Results Here. -->
+            <button
                   class="btn btn-link hide"
                   style="padding: 0; float: right; margin-right: 11px; margin-top: -4px;">
-              <span id="toolbar-results-text"></span>
-              <span id="toolbar-results-data" class="hide" style="font-size: 10pt;"></span>
+              <span></span>
+              <span class="hide" style="font-size: 10pt;"></span>
             </button>
           </div>
         </div>
       </div>
       <div class="row">
         <div class="col-md-6 col-xs-12">
+          <!-- TODO: bind question files here. -->
           <kbd style="font-style: italic">
-          <span id="question-files-list-title">
+          <span>
           </span>&nbsp;&nbsp;</kbd>
-          <kbd id="question-files-row" style="font-size: 14px"></kbd>
+          <kbd style="font-size: 14px"></kbd>
         </div>
       </div>
-      <div class="row" id="tests-files">
+      <!-- TODO: bind test files here. -->
+      <div class="row">
         <div class="col-md-6 col-xs-12">
           <kbd style="font-style: italic">tests/&nbsp;&nbsp;</kbd>
-          <kbd id="test-files-row" style="font-size: 14px"></kbd>
+          <kbd style="font-size: 14px"></kbd>
         </div>
       </div>
     </div>
