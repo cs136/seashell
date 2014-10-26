@@ -66,8 +66,13 @@ ExternalProject_Add(
 # Global overrides 
 set(CMAKE_BUILD_TYPE "Release")
 
-# llvm/clang/compiler-rt (no overrides).
+# llvm/clang/compiler-rt (overrides).
+set(LLVM_BUILD_TOOLS OFF)
+set(LLVM_TARGETS_TO_BUILD "X86")
+set(CLANG_INCLUDE_DOCS OFF)
 add_subdirectory(llvm)
+add_custom_target(_build_clang ALL)
+add_dependencies(_build_clang clang)
 
 # libgit2 overrides.
 # (Libraries) - the set of libraries needs to stay in sync with libssh2.  These are overrides
