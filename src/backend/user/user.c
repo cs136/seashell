@@ -74,8 +74,8 @@ int main() {
       return 1;
     }
 
-    char * argv[] = {SEASHELL_USER_LAUNCHER, NULL};
-    execv(SEASHELL_USER_LAUNCHER, argv);
+    char * argv[] = {SEASHELL_MAIN, "-s"};
+    execv(SEASHELL_MAIN, argv);
 
     perror("Could not execv() the Seashell backend:");
     return 1;

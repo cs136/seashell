@@ -24,6 +24,6 @@
 
 #define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
-#define SEASHELL_USER_LAUNCHER (INSTALL_PREFIX "/bin/seashell-user-launcher")
+#define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 
 #endif
