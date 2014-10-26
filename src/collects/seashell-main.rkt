@@ -24,6 +24,7 @@
 (begin
   (define mode (make-parameter 'version))
   (command-line
+    #:usage-help "Seashell multi-tool binary."
     #:once-each
     [("-l" "--login") "Run the login tool." (mode 'login)]
     [("-s" "--server") "Run the server." (mode 'server)]
