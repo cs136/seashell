@@ -169,8 +169,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_fail_callback(function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q', 'DeleteProjectModal', 'error-service', 'socket',
-      function ($scope, projects, $q, deleteProjectModal, errors, ws) {
+  .controller('ProjectListController', ['$rootScope', 'projects', '$q',
+      'NewProjectModal', 'DeleteProjectModal', 'error-service', 'socket',
+      function ($scope, projects, $q, newProjectModal, deleteProjectModal, errors, ws) {
     var self = this;
     self.list = [];
     self.question_list = {};
@@ -195,6 +196,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     /** Delete onClick handler. */
     self.delete = function(project) {
       deleteProjectModal(project).then(function () {
+        self.refresh();
+      });
+    };
+
+    /** New Project Handler */
+    self.new = function() {
+      newProjectModal().then(function () {
         self.refresh();
       });
     };
@@ -230,14 +238,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         templateUrl: "frontend/templates/project-list-template.html",
         controller: "ProjectListController as projects"
         })
-      .state("list-projects.new-project", {
-        url: "new",
-        onEnter: ["$state", "NewProjectModal",
-          function ($state, newProjectModal) {
-            return newProjectModal().catch(function () {
-              $state.transitionTo("list-projects");
-            });
-        }]});
+      .state("edit-project", {
+        url: "/edit/{project}",
+        templateUrl: "frontend/templates/project-editor-template.html",
+        controller: "ProjectEditController as editView"
+      })
+      .state("edit-project.edit-file", {
+        url: "/{part}/{file}",
+        templateUrl: "frontend/templates/project-editor-file-template.html",
+        controller: "ProjectEditFileController as editFileView"
+      });
   }])
   .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
     /** TODO: This may need to go somewhere else. */
