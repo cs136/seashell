@@ -44,7 +44,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           self.name = name;
           self.read_only = read_only;
         }
-      
+
+        function SeashellFile(project, name, is_dir, last_saved) {
+          var self = this;
+          self.name = name.split("/");
+          self.project = project;
+          self.children = is_dir ? null : [];
+          self.is_dir = is_dir ? true : false;
+          self.last_saved = last_saved ? last_saved : Date.now();
+          self.unsaved = false;
+        }
+
+        SeashellFile.prototype.fullname = function() {
+          var self = this;
+          return self.name.join("/");
+        }
+
         /**
          * SeashellProject.init()
          *
@@ -117,6 +132,168 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return {common: common, question: question_files, tests: tests};
             });
         };
+
+        /**
+         * SeashellProject.createFile(fname)
+         * 
+         * Creates a new file in the project with the given name.
+         */
+        SeashellProject.prototype.createFile = function(fname) {
+          var self = this;
+          if(self.exists(fname)) {
+            return $q.reject("A file with that name already exists.");
+          }
+          else {
+            var dir = fname.split("/");
+            dir.pop();
+            return $q.when(ws.socket.createDirectory(dir.join("/"))
+              .then(function() {
+                return $q.when(ws.socket.newFile(self.name, fname))
+                  .then(function() {
+                    var nFile = new SeashellFile(self, fname);
+                    var ext = fname.split(".").pop();
+                    var def = "\n";
+                    var doc_type = "text/plain";
+                    if(ext=="c"||ext=="h") {
+                      def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n */\n";
+                      doc_type = "text/x-csrc";
+                    }
+                    else if(ext=="rkt") {
+                      def = "#lang racket\n;;  File: "+fname+"\n;; Enter a description of this file.\n";
+                      doc_type = "text/x-scheme";
+                    }
+                    self.placeFile(nFile);
+                    self.openFile(nFile);
+                  })
+                  .catch(function() {
+                    return $q.reject("Could not create new file.");
+                  });
+                })
+                .catch(function() {
+                  return $q.reject("Could not create new directory for file.");
+                });
+            }
+        };
+
+        /**
+         * SeashellProject.createDirectory(dname)
+         *
+         * Creates a new directory in the project at the given path.
+         */
+        SeashellProject.prototype.createDirectory = function(dname) {
+          var self = this;
+          if(self.exists(dname))
+            return $q.resolve();
+          return $q.when(ws.socket.newDirectory(self.name, dname)
+            .then(function() {
+              var dirObj = new SeashellFile(self, dname, true);
+              self.placeFile(dirObj);
+            })
+            .catch(function() {
+              $q.reject("Could not create new directory.");
+            });
+        };
+
+        /**
+         * SeashellProject.placeFile(file, removeFirst)
+         *
+         * Places a SeashellFile (file param) in the internal directory
+         *  structure of the project. If removeFirst is true, the file
+         *  will be removed from the structure and then replaced.
+         */
+        SeashellProject.prototype.placeFile = function(file, removeFirst) {
+          function rmv(aof) {
+            for(var i=0; i<aof.length; i++) {
+              if(aof[i].children)
+                aof[i].children = rmv(f.children);
+              else if(aof[i] === file)
+                return aof.splice(i, 1);
+            }
+            return aof;
+          }
+          function plc(aod, aof) {
+            if(aod.length > 1) {
+              for(var i=0; i<aof.length; i++) {
+                if(aof[i].is_dir && aof[i].name[aof[i].name.length-1] == aod[0])
+                  aof[i].children = plc(aod.slice(1), aof[i].children);
+              }
+            }
+            else
+              aof.push(file);
+            return aof;
+          }
+          if(removeFirst)
+            self.files = rmv(self.files);
+          if(file)
+            self.files = plc(file.name, self.files);
+        };
+
+        /**
+         * SeashellProject.openFilePath(path)
+         *
+         * Opens the file located at the given path, relative to the
+         *  project root.
+         */
+        SeashellProject.prototype.openFilePath = function(path) {
+          var self = this;
+          var file = self.getFileFromPath(path);
+          return self.openFile(file);
+        }
+
+        SeashellProject.prototype.openFile = function(file) {
+          var self = this;
+          if(file.is_dir)
+            return $q.reject("Cannot open a directory in editor.");
+          self.currentFile = file;
+          return $q.when(ws.socket.readFile(self.name, file.name.join("/")))
+            .then(function(contents) {
+              var mime = "text/plain";
+              var ext = file.ext();
+              if(ext == "c"||ext == "h")
+                mime = "text/x-csrc";
+              else if(ext == "rkt")
+                mime = "text/x-scheme";
+              // TODO: Actually hook this up to CodeMirror
+            })
+            .catch(function() {
+              return $q.reject("Could not open file.");
+            });
+        };
+
+        /**
+         * SeashellProject.save()
+         *
+         * Saves all unsaved files in the project.
+         */
+        SeashellProject.prototype.save = function() {
+          var self = this;
+          var proms = [];
+          function save_arr(aof) {
+            for(var f=0; f < aof.length; f++) {
+              if(aof[f].is_dir) save_arr(aof[f].children);
+              else proms.push(aof[f].save());
+            }
+          }
+          save_arr(self.files);
+          return $q.when($.when.apply(null, proms))
+            .catch(function() {
+              return $q.reject("Failed to save project.");
+            });
+        };
+
+        /**
+         * SeashellProject.isUnsaved()
+         *
+         * Predicate, returns true if there exists an unsaved file
+         *  in the project.
+         */
+        SeashellProject.prototype.isUnsaved = function() {
+          var self = this;
+          return _.foldl(self.files, function(b, f) {
+            return f.isUnsaved() || b;
+          }, false);
+        };
+
       return SeashellProject;})();
 
 
