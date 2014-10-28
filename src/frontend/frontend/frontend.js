@@ -239,7 +239,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "ProjectListController as projects"
         })
       .state("edit-project", {
-        url: "/edit/{project}",
+        url: "/{project}/{question}",
         templateUrl: "frontend/templates/project-editor-template.html",
         controller: "ProjectEditController as editView"
       })
