@@ -393,6 +393,19 @@ function handleRunWithTests() {
 }
 
 /**
+ * handleResetSeashell
+ * This handles resetting seashell, by killing the user's existing session.
+*/
+function handleResetSeashell(){
+    displayConfirmationMessage(
+        "Reset Seashell",
+        "Do you want to reset your seashell instance?",
+        function (){
+            window.location.replace("https://www.student.cs.uwaterloo.ca/~" + creds.user + "/cs136/seashell/index.cgi?reset='reset'");
+        });
+}
+
+/**
  * handleLogout
  * This handles logging out of seashell.
 */
@@ -446,6 +459,8 @@ function setupDialogs() {
       handleMarmosetSubmit);
   $("#button-run-with-tests").on("click",
       handleRunWithTests);
+  $("#reset-seashell").on("click",
+      handleResetSeashell);
   /** Set up the logout dialog */
   $("#menu-logout").on("click",
       handleLogout);

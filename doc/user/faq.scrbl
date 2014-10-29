@@ -8,7 +8,7 @@
 
 @section{What does error code ___ mean?}
 
-TODO: link to the error code page.
+See the @secref["seashell-error-codes"] section.
 
 @section{Why can't I delete a question/assignment in Seashell?}
 
