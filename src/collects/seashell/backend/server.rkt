@@ -37,6 +37,7 @@
          web-server/http/request-structs
          web-server/dispatchers/dispatch
          ffi/unsafe/atomic
+         mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
          (prefix-in filter: web-server/dispatchers/dispatch-filter))
 
@@ -294,6 +295,7 @@
           `#hash((key . ,(seashell-crypt-key->client key))
                  (host . ,host)
                  (port . ,start-result)
+                 (pid . ,(getpid))
                  (ping-port . ,ping-port)
                  (user . ,username)))
         

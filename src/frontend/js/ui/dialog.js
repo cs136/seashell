@@ -231,27 +231,32 @@ function handleUploadFile(folder) {
       return false;
     }
   }
-  socket.getUploadFileToken(SeashellProject.currentProject.name, filename)
-    .done(function (token) {
-      var raw = JSON.stringify(token);
-      var options = {
-        target: null,
-        dataType: null,
-        error: function() {
-          displayErrorMessage("File could not be successfully uploaded.");
-        },
-        success: function() {
-          SeashellProject.currentProject.onUploadSuccess(filename);
-          SeashellProject.currentProject.openFilePath(filename)
-            .done(updateFileMenu);
-        },
-        data: {token: raw},
-        url: sprintf("https://%s:%s/upload", creds.host, creds.port)
-      };
-      $("#upload-file-form").ajaxSubmit(options);
-    }).fail(function() {
-      displayErrorMessage("Error retrieving file upload ticket.");
-    });
+  SeashellProject.currentProject.createDirectory(folder).done(function() {
+    socket.getUploadFileToken(SeashellProject.currentProject.name, filename)
+      .done(function (token) {
+        var raw = JSON.stringify(token);
+        var options = {
+          target: null,
+          dataType: null,
+          error: function() {
+            displayErrorMessage("File could not be successfully uploaded.");
+          },
+          success: function() {
+            SeashellProject.currentProject.onUploadSuccess(filename);
+
+            SeashellProject.currentProject.openFilePath(filename)
+              .done(updateFileMenu);
+          },
+          data: {token: raw},
+          url: sprintf("https://%s:%s/upload", creds.host, creds.port)
+        };
+        $("#upload-file-form").ajaxSubmit(options);
+      }).fail(function() {
+        displayErrorMessage("Error retrieving file upload ticket.");
+      });
+  }).fail(function() {
+    displayErrorMessage("Failed to create directory for uploaded file");
+  });
   return false;
 }
 
@@ -388,6 +393,19 @@ function handleRunWithTests() {
 }
 
 /**
+ * handleResetSeashell
+ * This handles resetting seashell, by killing the user's existing session.
+*/
+function handleResetSeashell(){
+    displayConfirmationMessage(
+        "Reset Seashell",
+        "Do you want to reset your seashell instance?",
+        function (){
+            window.location.replace("https://www.student.cs.uwaterloo.ca/~" + creds.user + "/cs136/seashell/index.cgi?reset='reset'");
+        });
+}
+
+/**
  * handleLogout
  * This handles logging out of seashell.
 */
@@ -441,6 +459,8 @@ function setupDialogs() {
       handleMarmosetSubmit);
   $("#button-run-with-tests").on("click",
       handleRunWithTests);
+  $("#reset-seashell").on("click",
+      handleResetSeashell);
   /** Set up the logout dialog */
   $("#menu-logout").on("click",
       handleLogout);

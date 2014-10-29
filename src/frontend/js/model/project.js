@@ -655,37 +655,51 @@ SeashellProject.run = function() {
   return null;
 };
 
+SeashellProject.testResultNotify = function(ign, result) {
+  var p = SeashellProject.currentProject;
+  if(result.pid == p.currentPID) {
+    consoleWriteln({ "timeout" : "Program timed out.",
+                     "killed"  : "Test was stopped manually.",
+                     "passed"  : "Test passed.",
+                     "error"   : "Error: Program exited with code "+result.exit_code
+                                  +".\n"+result.stderr,
+                     "no-expect" : "No .expect file found. Program output:\n"+result.stdout,
+                     "failed"  : "Test failed. Program output:\n"+result.stdout
+                   }[result.result]);
+    if(result.result == "killed")
+      p.testQueue = [];
+    if(!p.testQueue.length) {
+      consoleWrite("# done");
+      consoleWriteln();
+      setPlayStopButtonPlaying(false);
+      p.testQueue = p.currentTest = p.currentPID = null;
+    }
+    else {
+      var test = p.testQueue.shift();
+      consoleWrite(sprintf("# Running test '%s'... ", test));
+      p.run(test).fail(function() { console.log("Test error"); })
+        .done(function(res) {
+          p.currentPID = res;
+          p.currentTest = test;
+        });
+    }
+  }
+  else {
+    displayErrorMessage("Can only run one program at a time.");
+  }
+}
+
 SeashellProject.runTests = function() {
   var p = SeashellProject.currentProject;
   p.compile().done(function() {
     var tests = p.getTestsForFile(p.currentFile);
-    var original_count = tests.length;
-    function run_tests() {
-      if (!tests.length) {
-        consoleWrite('# done');
-        if (!original_count)
-          consoleWrite(' (no tests to run)');
-        consoleWriteln();
-        setPlayStopButtonPlaying(false);
-        return;
-      }
-      var name = tests.shift();
-      consoleWrite(sprintf("# run test '%s'... ", name));
-      p.run(name)
-        .fail(function() { console.log("TODO: internal test error"); })
-        .done(function(result) {
-          consoleWriteln({ 'pass' : 'passed',
-                           'fail' : sprintf('failed with output:\n%s',
-                                            result.data.actual),
-                           'error' : sprintf('program failed with error:\n%s',
-                                            result.data.actual),
-                           'no-expect' : "no `.expect' file found. write one?"}
-                         [result.tag]);
-
-          run_tests();
-        });
+    if(tests.length) {
+      p.testQueue = tests;
+      SeashellProject.testResultNotify(null, { "pid" : null });
     }
-    run_tests();
+    else {
+      consoleWriteln(" No tests to run.");
+    }
   });
 };
 
@@ -737,7 +751,9 @@ SeashellProject.prototype.run = function(test) {
  * Kills the running project.
  */
 SeashellProject.prototype.kill = function() {
-  return socket.programKill(this.currentPID);
+  return socket.programKill(this.currentPID).done(function() {
+    SeashellProject.currentProject.currentPID = null;
+  });
 }
 
 /*

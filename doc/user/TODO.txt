@@ -1,4 +1,0 @@
-- Determine a standard for displaying buttons on the website in the documentation.
-- Add pictures.
-- Add Youtube video links.
-- Syntax highlighting?

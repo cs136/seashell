@@ -44,11 +44,12 @@ function handleRunTests() {
 }
 
 function handleProgramKill() {
+  var print_msg = !SeashellProject.currentProject.currentTest;
   SeashellProject.currentProject.kill()
     .done(function() {
       setPlayStopButtonPlaying(false);
       editor.focus();
-      consoleWriteln("# stopped by user (that's you!)");
+      if(print_msg) consoleWriteln("# Program stopped by user.");
     });
 }
 
