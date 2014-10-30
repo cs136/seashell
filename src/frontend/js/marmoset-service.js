@@ -24,6 +24,7 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
         var self = this;
         var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
         var test_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt"; 
+        var project_cache = null;
 
         /**
          * List projects.
@@ -33,9 +34,19 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          *    objects containing:
          *      .project - Marmoset project name.
          */
-        self.projects = function () {
+        self.projects_hard = function () {
           return $q.wrap($.ajax({url: list_url,
-                                 dataType: "json"})); 
+                                 dataType: "json"}))
+                   .then(function(list) {
+                     project_cache = list;
+                   });
+        };
+
+        self.projects = function() {
+          if(project_cache === null) {
+            return self.projects_hard();
+          }
+          return project_cache;
         };
 
         /**

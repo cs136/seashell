@@ -60,6 +60,44 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self.name.join("/");
         }
 
+        SeashellFile.prototype.save = function() {
+          var self = this;
+          if(self.unsaved !== false) {
+            var thisTimer = f.unsaved;
+            //TODO: Decide how to adjust this to account for single document being loaded model
+            //   after switching to Angular frontend
+            //   - most likely: save before switching files.
+            return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), self.document))
+              .then(function() {
+                self.last_saved = Date.now();
+                // only set as unsaved if no modification has been made
+                if(self.unsaved == thisTimer) self.unsaved = false;
+              });
+          }
+          return $q.resolve();
+        }
+
+        SeashellFile.prototype.isUnsaved = function() {
+          var self = this;
+          if(self.is_dir)
+            return _.foldl(self.children, function(b, f) {
+              return f.isUnsaved() || b;
+            }, false);
+          return self.unsaved !== false;
+        }
+
+        SeashellFile.prototype.lastSavedString = function() {
+          var self = this;
+          var d = new Date(self.last_saved);
+          return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + " " + d.getHours()
+            + ":" + d.getMinutes() + ":" + d.getSeconds();
+        }
+
+        SeashellFile.prototype.ext = function() {
+          var self = this;
+          return self.name[self.name.length-1].split(".").pop();
+        }
+
         /**
          * SeashellProject.init()
          *
@@ -77,16 +115,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           } else {
             return $q.when(ws.socket.forceLockProject(self.name)).then(function () {return this;});
           }
-        };
-
-        /**
-         * SeashellProject.close()
-         *
-         * Closes a project.
-         */
-        SeashellProject.prototype.close = function() {
-          var self = this;
-          return $q.when(ws.socket.unlockProject(self.name)); 
         };
 
         /** SeashellProject.questions()
@@ -188,9 +216,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function() {
               var dirObj = new SeashellFile(self, dname, true);
               self.placeFile(dirObj);
-            })
-            .catch(function() {
-              $q.reject("Could not create new directory.");
             });
         };
 
@@ -254,9 +279,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               else if(ext == "rkt")
                 mime = "text/x-scheme";
               // TODO: Actually hook this up to CodeMirror
-            })
-            .catch(function() {
-              return $q.reject("Could not open file.");
             });
         };
 
@@ -275,10 +297,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             }
           }
           save_arr(self.files);
-          return $q.when($.when.apply(null, proms))
-            .catch(function() {
-              return $q.reject("Failed to save project.");
-            });
+          return $q.when($.when.apply(null, proms));
         };
 
         /**
@@ -292,6 +311,289 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return _.foldl(self.files, function(b, f) {
             return f.isUnsaved() || b;
           }, false);
+        };
+
+        /**
+         * SeashellProject.close(save)
+         *
+         * Closes the project. If the save param is true, saves the project
+         *  before closing.
+         */
+        SeashellProject.prototype.close = function(save) {
+          var self = this;
+          var proms = [];
+          proms.push(ws.socket.unlockProject(self.name));
+          if(save) proms.push(self.save());
+          $window.clearInterval(self.saveInterval);
+          SeashellProject.currentProject = null;
+          delete self;
+          return $q.when($.when.apply(proms));
+        };
+
+        /**
+         * SeashellProject.closeFile(save)
+         *
+         * Closes the currently open file. If the save param is true, saves
+         *  the file before closing.
+         */
+        SeashellProject.prototype.closeFile = function(save) {
+          var self = this;
+          if(self.currentFile) {
+            if(save) self.currentFile.save();
+            self.currentFile = null;
+          }
+        };
+
+        /**
+         * SeashellProject.deleteFile(file)
+         *
+         * Deletes the given SeashellFile and removes it from the project's
+         *  files list.
+         */
+        SeashellProject.prototype.deleteFile = function(file) {
+          var self = this;
+          if(file === self.currentFile) self.closeFile(false);
+
+          function rmv(aof) {
+            for(var f=0; f<aof.length; f++) {
+              if(aof[f] == file) {
+                aof.splice(f,1);
+                return aof;
+              }
+              else if(aof[f].children) {
+                aof[f].children = rmv(aof[f].children);
+              }
+            }
+            return aof;
+          }
+
+          if(file.is_dir) {
+            return $q.when(ws.socket.deleteDirectory(self.name, file.fullname()))
+              .then(function() { self.files = rmv(self.files); });
+          }
+          return $q.when(ws.socket.deleteFile(self.name, file.fullname()))
+            .then(function() { self.files = rmv(self.files); });
+        };
+
+        /**
+         * SeashellProject.remove()
+         *
+         * Deletes the SeashellProject.
+         */
+        SeashellProject.prototype.remove = function() {
+          var self = this;
+          var def = $q.defer();
+          self.close().then(function() {
+            $q.when(ws.socket.deleteProject(self.name))
+              .then(function() {
+                def.resolve();
+              });
+            });
+          return def;
+        };
+
+        /**
+         * SeashellProject.compile()
+         *
+         * Compiles the project.
+         */
+        SeashellProject.prototype.compile = function() {
+          var self = this;
+          var def = $q.defer();
+          self.save().then(function() {
+            $q.when(ws.socket.compileProject(self.name, self.currentFile.fullname(), def));
+          });
+          //TODO: process results of compilation elsewhere
+          return def;
+        };
+
+        /**
+         * SeashellProject.run(test)
+         * 
+         * Runs the project. If the test param is set, runs with that test.
+         */
+        SeashellProject.prototype.run = function(test) {
+          var self = this;
+          var ext = self.currentFile.ext();
+          var comp_prom = ext == "rkt" ? self.save() : self.compile();
+          var def = $q.defer();
+
+          $q.when(comp_prom).then(function(msgs) {
+            $q.when(ws.socket.runProject(self.name, self.currentFile.fullname(), test ? test : false))
+              .then(function(pid) {
+                def.resolve(msgs, pid);
+              }, function() {
+                def.reject(msgs);
+              });
+          }, function(errs) {
+            def.reject(errs);
+          });
+          return def;
+        };
+
+        /**
+         * SeashellProject.kill()
+         *
+         * Kills the current running program.
+         */
+        SeashellProject.prototype.kill = function() {
+          var self = this;
+          return $q.when(ws.socket.programKill(self.currentPID)
+            .then(function() {
+              self.currentPID = null;
+            });
+        };
+
+        /**
+         * SeashellProject.getUploadToken(filename)
+         *
+         * Gets a file upload token for the given filename.
+         */
+        SeashellProject.prototype.getUploadToken = function(filename) {
+          var self = this;
+          return $q.when(ws.socket.getUploadFileToken(self.name, filename));
+        };
+
+        /**
+         * SeashellProject.onUploadSuccess(filename)
+         *
+         * Function meant to be used as a callback when file upload is
+         *  complete.
+         */
+        SeashellProject.prototype.onUploadSuccess = function(filename) {
+          var self = this;
+          self.placeFile(new SeashellFile(self, filename));
+        };
+
+        /**
+         * SeashellProject.input(input)
+         *
+         * Sends user input to the current running program's stdin
+         */
+        SeashellProject.prototype.input = function(input) {
+          var self = this;
+          return $q.when(ws.socket.programInput(self.currentPID, input));
+        };
+
+        /**
+         * SeashellProject.getDownloadToken()
+         *
+         * Gets a project download token.
+         */
+        SeashellProject.prototype.getDownloadToken = function() {
+          var self = this;
+          return $q.when(ws.socket.getExportToken(self.name));
+        };
+
+        /**
+         * SeashellProject.renameFile(file, name)
+         *
+         * Renames the given file.
+         *  - file: the SeashellFile to rename
+         *  - name: a path from project root representing the location to rename to
+         */
+        SeashellProject.prototype.renameFile = function(file, name) {
+          var self = this;
+          return $q.when(ws.socket.renameFile(self.name, file.fullname(), name))
+            .then(function() {
+              file.name = name.split("/");
+              self.placeFile(file, true);
+            });
+        };
+
+        /**
+         * SeashellProject.getFileFromPath(path)
+         *
+         * Given a path from project root, returns the corresponding
+         *  SeashellFile, or false if it does not exist.
+         */
+        SeashellProject.prototype.getFileFromPath = function(path) {
+          function find(array, p) {
+            for(var i=0; i<array.length; i++) {
+              if(array[i].name[array[i].name.length-1] == p[0]) {
+                if(p.length == 1) return array[i];
+                else return find(array[i].children, p.slice(1));
+              }
+            }
+            return false;
+          }
+          return find(self.files, path.split("/"));
+        };
+
+        /**
+         * SeashellProject.getTestsForFile(file)
+         *
+         * Returns a list of tests for the given SeashellFile.
+         */
+        SeashellProject.prototype.getTestsForFile = function(file) {
+          var self = this;
+          var testDir = self.getFileFromPath(file.name[0]+"/tests");
+          var arr = [];
+          if(testDir && testDir.is_dir) {
+            for(var i=0; i < testDir.children.length; i++) {
+              if(testDir.children[i].ext() == "in") {
+                var name = testDir.children[i].name[testDir.children[i].name.length-1];
+                name = name.split(".");
+                name.pop();
+                arr.push(name.join("."));
+              }
+            }
+          }
+          return arr;
+        };
+
+        /**
+         * SeashellProject.exists(fname)
+         *
+         * Predicate, returns true if the given path exists in the project.
+         */
+        SeashellProject.prototype.exists = function(fname) {
+          var self = this;
+          function check(aof) {
+            for(var f=0; f<aof.length; f++) {
+              if(aof[f].fullname() == fname) return true;
+              if(aof[f].is_dir) {
+                if(check(aof[f].children)) return true;
+              }
+            }
+            return false;
+          }
+          return check(self.files);
+        }
+
+        /**
+         * SeashellProject.currentMarmosetProject()
+         *
+         * Guesses the appropriate Marmoset project to submit to.
+         *  If guessing fails, returns false.
+         */
+        SeashellProject.prototype.currentMarmosetProject = function() {
+          var self = this;
+          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(self.currentQuestion) {
+            var guess = self.name.replace(/^a/i, "A") + self.currentQuestion.replace(/^q/i, "Q");
+            var extended = guess+"Extended";
+            if(marmoset.projects().indexOf(extended) >= 0)
+              return extended;
+            if(marmoset.projects().indexOf(guess) >= 0)
+              return guess;
+          }
+          return false;
+        };
+
+        /**
+         * SeashellProject.submit(marm_project)
+         *
+         * Submits the current question to the given Marmoset project.
+         */
+        SeashellProject.prototype.submit = function(marm_project) {
+          var self = this;
+          var def = $q.defer();
+          self.save().then(function() {
+            $q.when(ws.socket.marmosetSubmit(self.name, marm_project ,self.currentQuestion))
+              .then(function() { def.resolve(); },
+                    function() { def.reject(); });
+          });
+          return def;
         };
 
       return SeashellProject;})();
