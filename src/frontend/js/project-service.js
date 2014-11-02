@@ -75,7 +75,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               });
           }
           return $q.resolve();
-        }
+        };
 
         SeashellFile.prototype.isUnsaved = function() {
           var self = this;
@@ -84,19 +84,57 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return f.isUnsaved() || b;
             }, false);
           return self.unsaved !== false;
-        }
+        };
 
         SeashellFile.prototype.lastSavedString = function() {
           var self = this;
           var d = new Date(self.last_saved);
           return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + " " + d.getHours()
             + ":" + d.getMinutes() + ":" + d.getSeconds();
-        }
+        };
 
         SeashellFile.prototype.ext = function() {
           var self = this;
           return self.name[self.name.length-1].split(".").pop();
-        }
+        };
+
+        SeashellFile.prototype.rmv = function(path) {
+          var self = this;
+          if(path.length == 1) {
+            self.children = _.filter(self.children, function(c) {
+              return path[0] != c.name[c.name.length-1];
+            });
+          }
+          else {
+            _.filter(self.children, function(c) {
+              return path[0] == c.name[c.name.length-1];
+            })[0].rmv(path.slice(1));
+          }
+        };
+
+        SeashellFile.prototype.place = function(file, path) {
+          var self = this;
+          path = path ? path : file.name;
+          if(path.length == 1)
+            self.children.push(file);
+          else {
+            _.filter(self.children, function(c) {
+              return path[0] == c.name[c.name.length-1];
+            })[0].place(file, path.slice(1));
+          }
+        };
+
+        SeashellFile.prototype.find = function(path) {
+          var self = this;
+          if(path.length == 1) {
+            if(self.name[self.name.length-1] == path[0])
+              return self;
+            return false;
+          }
+          return _.filter(self.children, function(c) {
+            return c.is_dir && c.name[c.name.length-1] == path[0];
+          })[0].find(path.slice(1));
+        };
 
         /**
          * SeashellProject.init()
@@ -110,11 +148,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.init = function(force_lock) {
           var self = this;
+          var proms = [];
+          proms.push(ws.socket.listProject(self.name)
+            .then(function(files) {
+              self.root = new SeashellFile(self, "", true);
+              _.map(files, function(f) {
+                root.place(new SeashellFile(self, f[0], f[1], f[2]));
+              });
+            }));
           if (!force_lock) {
-            return $q.when(ws.socket.lockProject(self.name)).then(function () {return this;});
+            proms.push(ws.socket.lockProject(self.name));
           } else {
-            return $q.when(ws.socket.forceLockProject(self.name)).then(function () {return this;});
+            proms.push(ws.socket.forceLockProject(self.name));
           }
+          return $q.when($.when.apply(proms));
         };
 
         /** SeashellProject.questions()
@@ -227,30 +274,28 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *  will be removed from the structure and then replaced.
          */
         SeashellProject.prototype.placeFile = function(file, removeFirst) {
-          function rmv(aof) {
-            for(var i=0; i<aof.length; i++) {
-              if(aof[i].children)
-                aof[i].children = rmv(f.children);
-              else if(aof[i] === file)
-                return aof.splice(i, 1);
-            }
-            return aof;
+          function rmv(dir) {
+            dir.children = _.foldl(dir.children, function(chil, c) {
+              if(c === file) return chil;
+              else if(!c.is_dir) return chil.push(c);
+              else return chil.push(rmv(c));
+            });
+            return dir;
           }
-          function plc(aod, aof) {
-            if(aod.length > 1) {
-              for(var i=0; i<aof.length; i++) {
-                if(aof[i].is_dir && aof[i].name[aof[i].name.length-1] == aod[0])
-                  aof[i].children = plc(aod.slice(1), aof[i].children);
-              }
+          function plc(loc, dir) {
+            if(loc.length == 1) 
+              dir.children.push(file);
+            else {
+              _.map(dir.children, function(c) {
+                if(c.is_dir && c.name[c.name.length-1] == loc[0])
+                  plc(loc.slice(1), c);
+              });
             }
-            else
-              aof.push(file);
-            return aof;
           }
           if(removeFirst)
-            self.files = rmv(self.files);
+            self.root = rmv(self.root);
           if(file)
-            self.files = plc(file.name, self.files);
+            plc(file.name, self.root);
         };
 
         /**
@@ -265,21 +310,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self.openFile(file);
         }
 
-        SeashellProject.prototype.openFile = function(file) {
+        SeashellProject.prototype.openFile = function(path) {
           var self = this;
           if(file.is_dir)
             return $q.reject("Cannot open a directory in editor.");
-          self.currentFile = file;
-          return $q.when(ws.socket.readFile(self.name, file.name.join("/")))
-            .then(function(contents) {
-              var mime = "text/plain";
-              var ext = file.ext();
-              if(ext == "c"||ext == "h")
-                mime = "text/x-csrc";
-              else if(ext == "rkt")
-                mime = "text/x-scheme";
-              // TODO: Actually hook this up to CodeMirror
-            });
+          self.currentFile = self.root.find(path.split("/"));
+          return $q.when(ws.socket.readFile(self.name, path));
         };
 
         /**
@@ -288,16 +324,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Saves all unsaved files in the project.
          */
         SeashellProject.prototype.save = function() {
-          var self = this;
-          var proms = [];
-          function save_arr(aof) {
-            for(var f=0; f < aof.length; f++) {
-              if(aof[f].is_dir) save_arr(aof[f].children);
-              else proms.push(aof[f].save());
-            }
-          }
-          save_arr(self.files);
-          return $q.when($.when.apply(null, proms));
+          return $q.when(self.root.save());
         };
 
         /**
@@ -308,9 +335,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.isUnsaved = function() {
           var self = this;
-          return _.foldl(self.files, function(b, f) {
-            return f.isUnsaved() || b;
-          }, false);
+          return self.root.isUnsaved();
         };
 
         /**
@@ -324,24 +349,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var proms = [];
           proms.push(ws.socket.unlockProject(self.name));
           if(save) proms.push(self.save());
-          $window.clearInterval(self.saveInterval);
           SeashellProject.currentProject = null;
           delete self;
           return $q.when($.when.apply(proms));
-        };
-
-        /**
-         * SeashellProject.closeFile(save)
-         *
-         * Closes the currently open file. If the save param is true, saves
-         *  the file before closing.
-         */
-        SeashellProject.prototype.closeFile = function(save) {
-          var self = this;
-          if(self.currentFile) {
-            if(save) self.currentFile.save();
-            self.currentFile = null;
-          }
         };
 
         /**
@@ -380,13 +390,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Deletes the SeashellProject.
          */
-        SeashellProject.prototype.remove = function() {
-          var self = this;
-          var def = $q.defer();
-          self.close().then(function() {
-            $q.when(ws.socket.deleteProject(self.name))
-              .then(function() {
-                def.resolve();
               });
             });
           return def;
@@ -609,100 +612,107 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        */
       self.list = function() {
         return $q.when(ws.socket.getProjects());
-      };
+        SeashellFile.prototype.ext = function() {
+          var self = this;
+          return self.name[self.name.length-1].split(".").pop();
+        }
 
-      /**
-       * Fetches new assignments.
-       *
-       * @returns {Angular.$q -> [projects]/[failed projects]/String} Deferred object
-       *  that will resolve
-       *  to the list of new assignments cloned, or a list of assignments that failed
-       *  to clone, or a error message.
-      */
-      self.fetch = function() {
-        return self.list()
-            .then(function (projects) {
-              return $q.when($.ajax({url: list_url, dataType: "json"}))
-                .catch(function () {
-                  return $q.reject("Could not fetch list of skeletons!");
-                })
-                .then(function (skels) {
-                  var new_projects = _.filter(skels,
-                      function (skel) {
-                        return projects.indexOf(skel) == -1;
+        /**
+         * SeashellProject.init()
+         *
+         * Initializes a project.  A read-only project is already initialized.
+         * @param force-lock - Forcibly lock this project?
+         * @returns {Angular.$q} Deferred that resolves when this is done,
+         *  or an error:
+         *    "locked" - Project is locked.
+         *    other    - Error message.
+         */
+        SeashellProject.prototype.init = function(force_lock) {
+          var self = this;
+          var proms = [];
+          proms.push(ws.socket.listProject(self.name)
+            .then(function(files) {
+              self.root = new SeashellFile(self, "", true);
+              _.map(files, function(f) {
+                self.placeFile(new SeashellFile(self, f[0], f[1], f[2]));
+              });
+            }));
+          if (!force_lock) {
+            proms.push(ws.socket.lockProject(self.name));
+          } else {
+            proms.push(ws.socket.forceLockProject(self.name));
+          }
+          return $q.when($.when.apply(proms));
+        };
+
+        /** SeashellProject.questions()
+         *
+         * Lists all questions.
+         * @returns {Angular.$q -> [string]} Promise that resolves to the list of questions.
+         */
+        SeashellProject.prototype.questions = function() {
+          var self = this;
+          return $q.when(ws.socket.listProject(self.name))
+            .then(function (files) {
+              return _.map(_.filter(_.map(files, function (file)
+                      {return [file[0].split("/"), file[1]];}),
+                      function (file) {
+                        return file[0].length == 1 && file[0] !== "common" && file[1];
+                      }),
+                      function (file) {
+                        return file[0][0];
                       });
-                  var failed_projects = [];
-                  var start = $q.defer();
-                  start.resolve();
-                  return _.foldl(new_projects,
-                      function(in_continuation, template) {
-                        function clone(failed) {
-                          return $q.when(ws.socket.newProjectFrom(template,
-                             sprintf(skel_template,
-                              template)))
-                           .then(function () {
-                             if (failed) {
-                               return $q.reject("Propagating failure...");
-                             }
-                           })
-                           .catch(function (info) {
-                             console.log(sprintf("Could not clone %s! (%s)", template, failed));
-                             failed_projects.push(template);
-                             return $q.reject("Propagating failure...");
-                           });
-                        }
-                        return in_continuation.then(
-                           function () {return clone(false);},
-                           function () {return clone(true);}); 
-                      },
-                      start.promise)
-                    .then(function() {return (new_projects);})
-                    .catch(function() {return $q.reject(failed_projects);});
-                });
             });
-      };
+        };
 
-      /**
-       * Deletes a project.
-       * @param {String} name - Name of project.
-       * @returns {Angular.$q -> ?} Angular deferred that resolves when
-       * the project is deleted.
-       */
-      self.delete = function (name) {
-        return $q.when(ws.socket.deleteProject(name));
-      };
+        /**
+         * SeashellProject.filesFor(question)
+         *
+         * Lists all files present in a question.
+         */
+        SeashellProject.prototype.filesFor = function(question) {
+          var self = this;
+          return $q.when(ws.socket.listProject(self.name))
+            .then(function (files) {
+              files = _.map(files, function (file) {return [file[0].split("/"), file[1], file[2]];});
+              var common = _.filter(files, function (file) {return file[0][0] === "common" && !file[1];});
+              var question_files = _.filter(files, function (file) {
+                    return file[0][0] === question && !file[1] &&
+                      (file[0].length == 1 ||
+                       (file[0].length >= 2 && file[0][1] !== "tests"));
+                  });
+              var tests = _.filter(files, function (file) {
+                return (file[0].length >= 2 && file[0][1] === "tests" && !file[1]);
+              });
 
-      /**
-       * Creates a new project.
-       *
-       * @param {String} name - Name of project.
-       * @returns {Angular.$q -> SeashellProject/String}
-       *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
-       *  (or a error message on error)
-       */
-      self.create = function (name) {
-        return $q.when(ws.socket.newProject(name)).
-          then(function () {
-            return (new SeashellProject(name)).init();
-          });
-      };
+              return {common: common, question: question_files, tests: tests};
+            });
+        };
 
-      /** 
-       * Opens an existing project.
-       * @param {String} name
-       * @param {bool} read_only - Open read-only?  If set true, 
-       *  does not allow write operations on this project, but
-       *  also does not lock the project.
-       * @param {boolean/optional} force-lock? - Forcibly lock project.
-       * @returns {Angular.$q -> SeashellProject/String}
-       *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
-       *  (or a error message on error)
-       */
-      self.open = function(name, read_only, force_lock) {
-        if (read_only) {
-          return new SeashellProject(name, read_only);
+        /**
+         * SeashellProject.createFile(fname)
+         * 
+         * Creates a new file in the project with the given name.
+         */
+        SeashellProject.prototype.createFile = function(fname) {
+          var self = this;
+          if(self.exists(fname)) {
+            return $q.reject("A file with that name already exists.");
+          }
+          else {
+            var dir = fname.split("/");
+            dir.pop();
+            return $q.when(ws.socket.createDirectory(dir.join("/"))
+              .then(function() {
         } else {
           return (new SeashellProject(name)).init(force_lock);
         }
       };
     }]);  
+/**
+ * Angular bindings for Seashell projects.
+ * Copyright (C) 2013-2014 The Seashell Maintainers.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or

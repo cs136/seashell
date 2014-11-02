@@ -64,4 +64,4 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
                                        project: project},
                                  dataType: "json"}));
         };
-      }]);
+     }]);
