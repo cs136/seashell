@@ -131,10 +131,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return self;
             return false;
           }
-          return _.filter(self.children, function(c) {
+          var res = _.filter(self.children, function(c) {
             return c.is_dir && c.name[c.name.length-1] == path[0];
-          })[0].find(path.slice(1));
+          });
+          return res ? res[0].find(path.slice(1)) : false;
         };
+
+        function getPath(project, folder, fname) {
+          if(folder == "common") return "common/"+fname;
+          if(folder == "tests") return project.currentQuestion+"/tests/"+fname;
+          return project.currentQuestion+"/"+fname;
+        }
 
         /**
          * SeashellProject.init()
@@ -213,41 +220,29 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * 
          * Creates a new file in the project with the given name.
          */
-        SeashellProject.prototype.createFile = function(fname) {
+        SeashellProject.prototype.createFile = function(folder, fname, contents) {
           var self = this;
-          if(self.exists(fname)) {
-            return $q.reject("A file with that name already exists.");
+          var path = getPath();
+          var dirp;
+          if(folder=="tests") {
+            dirp = $q.when(ws.socket.createDirectory(self.currentQuestion+"/tests"));
+          }
+          else if(folder=="common") {
+            dirp = $q.when(ws.socket.createDirectory("common");
           }
           else {
-            var dir = fname.split("/");
-            dir.pop();
-            return $q.when(ws.socket.createDirectory(dir.join("/"))
+            dirp = $q.defer().resolve();
+          }
+          if(self.root.find(path)) {
+            return $q.reject("A file with that name already exists.");
+          }
+          return dirp.then(function() {
+            return $q.when(ws.socket.newFile(self.name, path))
               .then(function() {
-                return $q.when(ws.socket.newFile(self.name, fname))
-                  .then(function() {
-                    var nFile = new SeashellFile(self, fname);
-                    var ext = fname.split(".").pop();
-                    var def = "\n";
-                    var doc_type = "text/plain";
-                    if(ext=="c"||ext=="h") {
-                      def = "/**\n * File: "+fname+"\n * Enter a description of this file.\n */\n";
-                      doc_type = "text/x-csrc";
-                    }
-                    else if(ext=="rkt") {
-                      def = "#lang racket\n;;  File: "+fname+"\n;; Enter a description of this file.\n";
-                      doc_type = "text/x-scheme";
-                    }
-                    self.placeFile(nFile);
-                    self.openFile(nFile);
-                  })
-                  .catch(function() {
-                    return $q.reject("Could not create new file.");
-                  });
-                })
-                .catch(function() {
-                  return $q.reject("Could not create new directory for file.");
-                });
-            }
+                self.root.place(new SeashellFile(self, path));
+                return $q.when(ws.socket.writeFile(self.name, path, contents));
+              });
+          });
         };
 
         /**
@@ -255,47 +250,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Creates a new directory in the project at the given path.
          */
-        SeashellProject.prototype.createDirectory = function(dname) {
+        SeashellProject.prototype.createQuestion = function(name) {
           var self = this;
-          if(self.exists(dname))
-            return $q.resolve();
-          return $q.when(ws.socket.newDirectory(self.name, dname)
+          if(self.root.find(name))
+            return $q.reject("Question already exists.");
+          return $q.when(ws.socket.newDirectory(self.name, name)
             .then(function() {
-              var dirObj = new SeashellFile(self, dname, true);
-              self.placeFile(dirObj);
+              self.root.place(new SeashellFile(self, name, true));
             });
-        };
-
-        /**
-         * SeashellProject.placeFile(file, removeFirst)
-         *
-         * Places a SeashellFile (file param) in the internal directory
-         *  structure of the project. If removeFirst is true, the file
-         *  will be removed from the structure and then replaced.
-         */
-        SeashellProject.prototype.placeFile = function(file, removeFirst) {
-          function rmv(dir) {
-            dir.children = _.foldl(dir.children, function(chil, c) {
-              if(c === file) return chil;
-              else if(!c.is_dir) return chil.push(c);
-              else return chil.push(rmv(c));
-            });
-            return dir;
-          }
-          function plc(loc, dir) {
-            if(loc.length == 1) 
-              dir.children.push(file);
-            else {
-              _.map(dir.children, function(c) {
-                if(c.is_dir && c.name[c.name.length-1] == loc[0])
-                  plc(loc.slice(1), c);
-              });
-            }
-          }
-          if(removeFirst)
-            self.root = rmv(self.root);
-          if(file)
-            plc(file.name, self.root);
         };
 
         /**
@@ -350,7 +312,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           proms.push(ws.socket.unlockProject(self.name));
           if(save) proms.push(self.save());
           SeashellProject.currentProject = null;
-          delete self;
           return $q.when($.when.apply(proms));
         };
 
@@ -360,29 +321,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Deletes the given SeashellFile and removes it from the project's
          *  files list.
          */
-        SeashellProject.prototype.deleteFile = function(file) {
+        SeashellProject.prototype.deleteFile = function(folder, fname) {
           var self = this;
-          if(file === self.currentFile) self.closeFile(false);
-
-          function rmv(aof) {
-            for(var f=0; f<aof.length; f++) {
-              if(aof[f] == file) {
-                aof.splice(f,1);
-                return aof;
-              }
-              else if(aof[f].children) {
-                aof[f].children = rmv(aof[f].children);
-              }
-            }
-            return aof;
+          var path = getPath(self, folder, fname);
+          var file = self.root.find(path.split("/"));
+          if(!file) {
+            return $q.reject("That file does not exist.");
           }
-
-          if(file.is_dir) {
-            return $q.when(ws.socket.deleteDirectory(self.name, file.fullname()))
-              .then(function() { self.files = rmv(self.files); });
-          }
-          return $q.when(ws.socket.deleteFile(self.name, file.fullname()))
-            .then(function() { self.files = rmv(self.files); });
+          return $q.when(ws.socket.deleteFile(self.name, path)
+            .then(function() {
+              self.root.remove(file);
+            });
         };
 
         /**
@@ -390,9 +339,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Deletes the SeashellProject.
          */
-              });
-            });
-          return def;
+        SeashellProject.prototype.remove = function() {
+          var self = this;
+          return self.close().then(function() {
+            return $q.when(ws.socket.deleteProject(self.name));
+          });
         };
 
         /**
