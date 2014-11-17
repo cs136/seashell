@@ -58,7 +58,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellFile.prototype.fullname = function() {
           var self = this;
           return self.name.join("/");
-        }
+        };
+
+        SeashellFile.prototype.rename = function(name) {
+          var self = this;
+          return $q.when(ws.socket.renameFile(self.project.name, self.fullname(), name)
+            .then(function() {
+              self.name = name.split("/");
+            });
+        };
 
         SeashellFile.prototype.save = function() {
           var self = this;
@@ -416,7 +424,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.onUploadSuccess = function(filename) {
           var self = this;
-          self.placeFile(new SeashellFile(self, filename));
+          self.root.place(new SeashellFile(self, filename));
         };
 
         /**
@@ -448,11 +456,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.renameFile = function(file, name) {
           var self = this;
-          return $q.when(ws.socket.renameFile(self.name, file.fullname(), name))
-            .then(function() {
-              file.name = name.split("/");
-              self.placeFile(file, true);
-            });
+          return file.rename(name);
         };
 
         /**
@@ -563,100 +567,100 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        */
       self.list = function() {
         return $q.when(ws.socket.getProjects());
-        SeashellFile.prototype.ext = function() {
-          var self = this;
-          return self.name[self.name.length-1].split(".").pop();
-        }
+      };
 
-        /**
-         * SeashellProject.init()
-         *
-         * Initializes a project.  A read-only project is already initialized.
-         * @param force-lock - Forcibly lock this project?
-         * @returns {Angular.$q} Deferred that resolves when this is done,
-         *  or an error:
-         *    "locked" - Project is locked.
-         *    other    - Error message.
-         */
-        SeashellProject.prototype.init = function(force_lock) {
-          var self = this;
-          var proms = [];
-          proms.push(ws.socket.listProject(self.name)
-            .then(function(files) {
-              self.root = new SeashellFile(self, "", true);
-              _.map(files, function(f) {
-                self.placeFile(new SeashellFile(self, f[0], f[1], f[2]));
-              });
-            }));
-          if (!force_lock) {
-            proms.push(ws.socket.lockProject(self.name));
-          } else {
-            proms.push(ws.socket.forceLockProject(self.name));
-          }
-          return $q.when($.when.apply(proms));
-        };
-
-        /** SeashellProject.questions()
-         *
-         * Lists all questions.
-         * @returns {Angular.$q -> [string]} Promise that resolves to the list of questions.
-         */
-        SeashellProject.prototype.questions = function() {
-          var self = this;
-          return $q.when(ws.socket.listProject(self.name))
-            .then(function (files) {
-              return _.map(_.filter(_.map(files, function (file)
-                      {return [file[0].split("/"), file[1]];}),
-                      function (file) {
-                        return file[0].length == 1 && file[0] !== "common" && file[1];
-                      }),
-                      function (file) {
-                        return file[0][0];
+      /**
+       * Fetches new assignments.
+       *
+       * @returns {Angular.$q -> [projects]/[failed projects]/String} Deferred object
+       *  that will resolve
+       *  to the list of new assignments cloned, or a list of assignments that failed
+       *  to clone, or a error message.
+      */
+      self.fetch = function() {
+        return self.list()
+            .then(function (projects) {
+              return $q.when($.ajax({url: list_url, dataType: "json"}))
+                .catch(function () {
+                  return $q.reject("Could not fetch list of skeletons!");
+                })
+                .then(function (skels) {
+                  var new_projects = _.filter(skels,
+                      function (skel) {
+                        return projects.indexOf(skel) == -1;
                       });
+                  var failed_projects = [];
+                  var start = $q.defer();
+                  start.resolve();
+                  return _.foldl(new_projects,
+                      function(in_continuation, template) {
+                        function clone(failed) {
+                          return $q.when(ws.socket.newProjectFrom(template,
+                             sprintf(skel_template,
+                              template)))
+                           .then(function () {
+                             if (failed) {
+                               return $q.reject("Propagating failure...");
+                             }
+                           })
+                           .catch(function (info) {
+                             console.log(sprintf("Could not clone %s! (%s)", template, failed));
+                             failed_projects.push(template);
+                             return $q.reject("Propagating failure...");
+                           });
+                        }
+                        return in_continuation.then(
+                           function () {return clone(false);},
+                           function () {return clone(true);}); 
+                      },
+                      start.promise)
+                    .then(function() {return (new_projects);})
+                    .catch(function() {return $q.reject(failed_projects);});
+                });
             });
-        };
+      };
 
-        /**
-         * SeashellProject.filesFor(question)
-         *
-         * Lists all files present in a question.
-         */
-        SeashellProject.prototype.filesFor = function(question) {
-          var self = this;
-          return $q.when(ws.socket.listProject(self.name))
-            .then(function (files) {
-              files = _.map(files, function (file) {return [file[0].split("/"), file[1], file[2]];});
-              var common = _.filter(files, function (file) {return file[0][0] === "common" && !file[1];});
-              var question_files = _.filter(files, function (file) {
-                    return file[0][0] === question && !file[1] &&
-                      (file[0].length == 1 ||
-                       (file[0].length >= 2 && file[0][1] !== "tests"));
-                  });
-              var tests = _.filter(files, function (file) {
-                return (file[0].length >= 2 && file[0][1] === "tests" && !file[1]);
-              });
+      /**
+       * Deletes a project.
+       * @param {String} name - Name of project.
+       * @returns {Angular.$q -> ?} Angular deferred that resolves when
+       * the project is deleted.
+       */
+      self.delete = function (name) {
+        return $q.when(ws.socket.deleteProject(name));
+      };
 
-              return {common: common, question: question_files, tests: tests};
-            });
-        };
+      /**
+       * Creates a new project.
+       *
+       * @param {String} name - Name of project.
+       * @returns {Angular.$q -> SeashellProject/String}
+       *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
+       *  (or a error message on error)
+       */
+      self.create = function (name) {
+        return $q.when(ws.socket.newProject(name)).
+          then(function () {
+            return (new SeashellProject(name)).init();
+          });
+      };
 
-        /**
-         * SeashellProject.createFile(fname)
-         * 
-         * Creates a new file in the project with the given name.
-         */
-        SeashellProject.prototype.createFile = function(fname) {
-          var self = this;
-          if(self.exists(fname)) {
-            return $q.reject("A file with that name already exists.");
-          }
-          else {
-            var dir = fname.split("/");
-            dir.pop();
-            return $q.when(ws.socket.createDirectory(dir.join("/"))
-              .then(function() {
+      /** 
+       * Opens an existing project.
+       * @param {String} name
+       * @param {bool} read_only - Open read-only?  If set true, 
+       *  does not allow write operations on this project, but
+       *  also does not lock the project.
+       * @param {boolean/optional} force-lock? - Forcibly lock project.
+       * @returns {Angular.$q -> SeashellProject/String}
+       *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
+       *  (or a error message on error)
+       */
+      self.open = function(name, read_only, force_lock) {
+        if (read_only) {
+          return new SeashellProject(name, read_only);
         } else {
           return (new SeashellProject(name)).init(force_lock);
         }
       };
-    }]);  
+    }]);
