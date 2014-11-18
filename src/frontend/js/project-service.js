@@ -129,20 +129,28 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         /**
          * _removeFromTree
          *
-         * Deletes the local information for the file located at path.
+         * Deletes the file located at path.
+         * Default is to delete the file in the backend as well.
+         * Set soft_delete to true to prevent backend deletion.
          */
-        SeashellFile.prototype._removeFromTree = function(path) {
+        SeashellFile.prototype._removeFromTree = function(path, soft_delete) {
           var self = this;
           if(path.length == 1) {
-            self.children = _.filter(self.children, function(c) {
-              return path[0] != c.name[c.name.length-1];
+            var split = _.groupBy(self.children, function(c) {
+              return path[0] != c.name[c.name.length-1] ? 1 : 0;
             });
+            if(!split[0])
+              return $q.reject("File does not exist.");
+            self.children = split[1];
+            if(!soft_delete)
+              return $q.when(ws.socket.deleteFile(self.project.name, split[0][0].fullname()));
           }
           else {
             _.filter(self.children, function(c) {
               return path[0] == c.name[c.name.length-1];
-            })[0]._removeFromTree(path.slice(1));
+            })[0]._removeFromTree(path.slice(1), soft_delete);
           }
+            return $q.defer().resolve().promise;
         };
 
         /**
@@ -372,14 +380,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.deleteFile = function(folder, fname) {
           var self = this;
           var path = getPath(self, folder, fname);
-          var file = self.root.find(path.split("/"));
-          if(!file) {
-            return $q.reject("That file does not exist.");
-          }
-          return $q.when(ws.socket.deleteFile(self.name, path))
-            .then(function() {
-              self.root.remove(file);
-            });
+          return self.root._removeFromTree(path);
         };
 
         /**
