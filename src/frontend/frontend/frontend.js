@@ -185,8 +185,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.list = projects_list;
 
         return $q.when(_.map(projects_list, function (project) {
-          return projects.open(project, 'none').then(function (project) {
-            var questions = project.questions();
+          return projects.open(project, 'none').then(function (project_object) {
+            var questions = project_object.questions();
             self.question_list[project] = questions;
           });
         }));
