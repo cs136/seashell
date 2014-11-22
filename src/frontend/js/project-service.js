@@ -420,9 +420,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Gets a file upload token for the given filename.
          */
-        SeashellProject.prototype.getUploadToken = function(filename) {
+        SeashellProject.prototype.getUploadToken = function(question, folder, filename) {
           var self = this;
-          return $q.when(ws.socket.getUploadFileToken(self.name, filename));
+          return $q.when(ws.socket.getUploadFileToken(self.name, self._getPath(question, folder, filename)));
         };
 
         /**
@@ -463,10 +463,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *  - file: the SeashellFile to rename
          *  - name: a path from project root representing the location to rename to
          */
-        SeashellProject.prototype.renameFile = function(question, folder, file, newName) {
+        SeashellProject.prototype.renameFile = function(question, folder, file, newFolder, newName) {
           var self = this;
           var path = self._getPath(question, folder, file);
-          return self.root.find(path).rename(name);
+          var target = self._getPath(question, newFolder, newName); 
+          if (self.root.find(path))
+            return self.root.find(path).rename(target);
+          else
+            return $q.reject("No file found!");
         };
 
 
@@ -493,34 +497,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.exists(fname)
-         *
-         * Predicate, returns true if the given path exists in the project.
-         */
-        SeashellProject.prototype.exists = function(fname) {
-          var self = this;
-          function check(aof) {
-            for(var f=0; f<aof.length; f++) {
-              if(aof[f].fullname() == fname) return true;
-              if(aof[f].is_dir) {
-                if(check(aof[f].children)) return true;
-              }
-            }
-            return false;
-          }
-          return check(self.files);
-        };
-
-        /**
          * SeashellProject.currentMarmosetProject()
          *
          * Guesses the appropriate Marmoset project to submit to.
          *  If guessing fails, returns false.
          */
-        SeashellProject.prototype.currentMarmosetProject = function() {
+        SeashellProject.prototype.currentMarmosetProject = function(question) {
           var self = this;
-          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(self.currentQuestion)) {
-            var guess = self.name.replace(/^a/i, "A") + self.currentQuestion.replace(/^q/i, "Q");
+          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(question)) {
+            var guess = self.name.replace(/^a/i, "A") + question.replace(/^q/i, "Q");
             var extended = guess+"Extended";
             if(marmoset.projects().indexOf(extended) >= 0)
               return extended;
@@ -535,15 +520,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Submits the current question to the given Marmoset project.
          */
-        SeashellProject.prototype.submit = function(marm_project) {
+        SeashellProject.prototype.submit = function(marm_project, question) {
           var self = this;
-          var def = $q.defer();
-          self.save().then(function() {
-            $q.when(ws.socket.marmosetSubmit(self.name, marm_project ,self.currentQuestion))
-              .then(function() { def.resolve(); },
-                    function() { def.reject(); });
-          });
-          return def;
+          return $q.when(ws.socket.marmosetSubmit(self.name, marm_project, question));
         };
 
       return SeashellProject;})();
@@ -640,19 +619,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       /** 
        * Opens an existing project.
        * @param {String} name
-       * @param {bool} read_only - Open read-only?  If set true, 
-       *  does not allow write operations on this project, but
-       *  also does not lock the project.
-       * @param {boolean/optional} force-lock? - Forcibly lock project.
+       * @param {string} One of "lock", "none", "force-lock"
        * @returns {Angular.$q -> SeashellProject/String}
        *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
        *  (or a error message on error)
        */
-      self.open = function(name, read_only, force_lock) {
-        if (read_only) {
-          return new SeashellProject(name, read_only);
-        } else {
-          return (new SeashellProject(name)).init(force_lock);
-        }
+      self.open = function(name, lock) {
+        return (new SeashellProject(name)).init(lock);
       };
     }]);
