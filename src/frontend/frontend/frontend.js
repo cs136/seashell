@@ -55,9 +55,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.project = project;
             }]
           }).result.then(function () {
-            return projects.delete(project);
-          }).catch(function (error) {
-            errors.report(error, sprintf("Could not delete project %s!", project));
+            return projects.delete(project).catch(
+                function (error) {
+                  errors.report(error, sprintf("Could not delete project %s!", project));
+                });
           });
         };
       }])
