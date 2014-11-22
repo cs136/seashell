@@ -38,11 +38,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *  Project is not ready until .init() is called, unless
          *  read_only is true.
          */
-        function SeashellProject (name, read_only) {
+        function SeashellProject (name) {
           var self = this;
 
           self.name = name;
-          self.read_only = read_only;
         }
 
         /**
@@ -58,7 +57,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           self.name = name.split("/");
           self.project = project;
-          self.children = is_dir ? null : [];
+          self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
         }
@@ -257,20 +256,21 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           lock = lock || "lock";
           self.lock = lock;
 
-          var proms = [];
-          proms.push(ws.socket.listProject(self.name)
+          var result = $q.when();
+          if (lock === "lock") {
+            result = result.then($q.when(ws.socket.lockProject(self.name)));
+          } else if (lock === "force-lock") {
+            result = result.then($q.when(ws.socket.forceLockProject(self.name)));
+          }
+          result = result.then(function () {
+            return $q.when(ws.socket.listProject(self.name))
             .then(function(files) {
               self.root = new SeashellFile(self, "", true);
               _.map(files, function(f) {
-                root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]));
+                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]));
               });
-            }));
-          if (!force_lock) {
-            proms.push(ws.socket.lockProject(self.name));
-          } else {
-            proms.push(ws.socket.forceLockProject(self.name));
-          }
-          return $q.when($.when.apply(proms));
+            });});
+          return result.then(function () {return self;});
         };
 
         /** SeashellProject.questions()
