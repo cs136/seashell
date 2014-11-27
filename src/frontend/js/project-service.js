@@ -184,7 +184,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             var match = _.filter(self.children, function(c) {
               return path[0] == c.name[c.name.length-1];
             });
-            if(match)
+            if(match.length>0)
               match[0]._placeInTree(file, path.slice(1), soft_place);
             else {
               var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1), true);
@@ -267,7 +267,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function(files) {
               self.root = new SeashellFile(self, "", true);
               _.map(files, function(f) {
-                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]));
+                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
               });
             });});
           return result.then(function () {return self;});
@@ -281,7 +281,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.questions = function() {
           var self = this;
           return _.map(_.filter(self.root.list(),
-                                function (f) {return f.is_dir;}),
+                                function (f) {return f.is_dir && f.filename() != "common";}),
                        function (f) {return f.filename();});
         };
 
