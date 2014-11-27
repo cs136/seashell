@@ -16,7 +16,33 @@
                  <span>{{editView.project.name}}</span><span class="caret"></span>
               </a>
               <ul id="projects-dropdown" class="dropdown-menu" role="menu">
+                <li role="presentation">
+                  <a href="#" tabindex="-1" role="menuitem" ngClick=editView.download()>
+                    download assignment...
+                  </a>
+                </li>
+                <li role="presentation">
+                  <a href="#" tabindex="-1" role="menuitem" ngClick=editView.newQuestion()>
+                    new question...
+                  </a>
+                </li>
+                <li class="divider" role="presentation"></li>
+                <li role="presentation">
+                  <a href="#" tabindex="-1" role="menuitem" ngClick=editView.newQuestion()>
+                    new question...
+                  </a>
+                </li>
                 <!-- TODO: add items here. -->
+                <li role="presentation" ng-show="editView.canDelete()">
+                  <a href="#" tabindex="-1" role="menuitem" ngClick=editView.delete()>
+                    delete assignment...
+                  </a>
+                </li>
+                <li role="presentation">
+                  <a href="#" tabindex="-1" role="menuitem" ngClick=editView.close()>
+                    close assignment...
+                  </a>
+                </li>
               </ul>
             </div>
           </span>
@@ -26,7 +52,11 @@
          class="col-md-6 col-xs-6 questions-row-container"
          style="font-size: 18px; margin-top: 5px; padding: 0">
          <span class="questions-row" style="word-spacing: 15px">
-           <!-- TODO: bind list of questions here. -->
+            <a ng-repeat="question in editView.project.questions()"
+              ng-class="{question-link-active: question === editView.currentQuestion,
+                         question-link: question !=== editView.currentQuestion}">
+              {{question}}
+            </a>     
          </span>
       </div>
     </div>
