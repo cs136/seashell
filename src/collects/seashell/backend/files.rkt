@@ -54,7 +54,7 @@
                   (current-continuation-marks)))))]
     (close-output-port (open-output-file
                          (check-and-build-path (build-project-path project) file)
-                         #:exists 'append)))
+                         #:exists 'error)))
   (void))
 
 (define/contract (new-directory project dir)
