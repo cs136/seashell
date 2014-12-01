@@ -231,6 +231,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     });
     ws.register_connect_callback(function () {self.refresh();}, true);
   }])
+  .controller("ProjectEditController", ['$stateParams', '$rootScope', 'projects', '$q',
+    function($stateParams, $scope, projects, $q) {
+      var self = this;
+      self.currentQuestion = null;
+      self.currentProject = null;
+      self.currentProjectProm = projects.open($stateParams.project)
+        .then(function(proj) {
+          self.currentProject = proj;
+        });
+
+      $scope.$on('$stateChangeStart', function(ev, toState, toPar, fromState, fromPar) {
+        if(toState.search("edit-project")==-1)
+          currentProjectProm.then(function() {
+            self.currentProject.close();
+          }));
+      });
+    }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
