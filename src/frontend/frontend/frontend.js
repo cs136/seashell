@@ -231,21 +231,29 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     });
     ws.register_connect_callback(function () {self.refresh();}, true);
   }])
-  .controller("ProjectEditController", ['$stateParams', '$rootScope', 'projects', '$q',
-    function($stateParams, $scope, projects, $q) {
+  .controller("ProjectEditController", ['$state', '$stateParams', '$rootScope', 'projects', '$q', 'error-service', 'cookieStore',
+    function($state, $stateParams, $scope, projects, $q, errors, cookie) {
       var self = this;
-      self.currentQuestion = null;
-      self.currentProject = null;
-      self.currentProjectProm = projects.open($stateParams.project)
+      self.state = 'edit-project';
+      self.question = null;
+      self.project = null;
+      self.userid = cookie.get("seashell-session").user;
+
+      self.projectPromise = projects.open($stateParams.project)
         .then(function(proj) {
-          self.currentProject = proj;
+          self.project = proj;
+        })
+        .catch(function (error) {
+          errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+          $state.go('list-projects');
         });
 
+      // Close project once we navigate away from this state.
       $scope.$on('$stateChangeStart', function(ev, toState, toPar, fromState, fromPar) {
-        if(toState.search("edit-project")==-1)
-          currentProjectProm.then(function() {
-            self.currentProject.close();
-          }));
+        if(toState.name.search(self.state) == -1)
+          self.projectPromise.then(function() {
+            self.project.close();
+          });
       });
     }])
   // Configuration for routes
@@ -260,7 +268,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       .state("edit-project", {
         url: "/{project}/{question}",
         templateUrl: "frontend/templates/project-editor-template.html",
-        controller: "ProjectEditController as editView"
+        controller: "ProjectEditController as editView",
+        params: {question: {value: null}, project: {}}
       })
       .state("edit-project.edit-file", {
         url: "/{part}/{file}",
