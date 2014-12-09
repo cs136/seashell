@@ -4,12 +4,12 @@
     <th>Questions...</th>
     <th><a href="" ng-click="projects.fetch()">fetch</a> | <a href="" ng-click="projects.refresh()">refresh</a></th>
   </tr>
-  <tr ng-repeat="project in projects.list">
+  <tr ng-repeat="project in projects.projectList.list">
     <td>
       <a ui-sref="edit-project({project: '{{project}}'})" class="project-list-item">{{project}}</a>
     </td>
     <td>
-      <span ng-repeat="question in projects.question_list[project]">
+      <span ng-repeat="question in projects.projectList.question_list[project]">
        <a ui-sref="edit-project({project: '{{project}}', question: '{{question}}'})">{{question}}</a>
        <span ng-show="!$last"> | </span>
      </span>

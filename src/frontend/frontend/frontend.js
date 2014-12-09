@@ -162,49 +162,32 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
 
         // This won't leak memory, as FrontendController stays in scope all the time.
-        ws.register_timein_callback(function () {self.timeout = false;});
-        ws.register_timeout_callback(function () {self.timeout = true;});
-        ws.register_connect_callback(function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
-        ws.register_disconnect_callback(function () {self.disconnected = true;}, true);
-        ws.register_fail_callback(function () {self.failed = true;}, true);
+        ws.register_callback('timein', function () {self.timeout = false;});
+        ws.register_callback('timeout', function () {self.timeout = true;});
+        ws.register_callback('connected',
+            function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
+        ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
+        ws.register_callback('failed', function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['$rootScope', 'projects', '$q',
-      'NewProjectModal', 'DeleteProjectModal', 'error-service', 'socket',
-      function ($scope, projects, $q, newProjectModal, deleteProjectModal, errors, ws) {
+  .controller('ProjectListController', ['projectList',
+      'NewProjectModal', 'DeleteProjectModal', 'error-service',
+      function (projectList, newProjectModal, deleteProjectModal, errors) {
     var self = this;
-    self.list = [];
-    self.question_list = {};
+    self.projectList = projectList;
     self.state = "list-projects";
-
-    /** Run this every time the state associated with this controller is loaded.
-     *  Returns a deferred that resolves when the state is properly loaded */
-    self.refresh = function () {
-      return projects.list().then(function (projects_list) {
-        self.list = projects_list;
-
-        return $q.when(_.map(projects_list, function (project) {
-          return projects.open(project, 'none').then(function (project_object) {
-            var questions = project_object.questions();
-            self.question_list[project] = questions;
-          });
-        }));
-      }).catch(function (error) {
-        errors.report(error, "Could not generate list of projects.");
-      });
-    };
 
     /** Delete onClick handler. */
     self.delete = function(project) {
       deleteProjectModal(project).then(function () {
-        self.refresh();
+        self.projectList.refresh();
       });
     };
 
     /** New Project Handler */
     self.new = function() {
       newProjectModal().then(function () {
-        self.refresh();
+        self.projectList.refresh();
       });
     };
 
@@ -213,7 +196,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       return projects.fetch().catch(function (projects) {
         errors.report(projects, 'Could not fetch projects.');
       }).then(function () {
-        self.refresh();
+        self.projectList.refresh();
       });
     };
 
@@ -221,12 +204,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.isDeletable = function(project) {
       return ! /^[aA][0-9]+/.test(project);
     };
-
-    // Refresh when the socket connects [and when we enter this state].
-    // (There are no nested states here)
-    //
-    // TODO would be nice if this held a weak reference instead.
-    ws.register_connect_callback(function () {self.refresh();}, true);
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'projects', 'error-service',
@@ -243,10 +220,46 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       .state("list-projects", {
         url: "/",
         templateUrl: "frontend/templates/project-list-template.html",
-        controller: "ProjectListController as projects"
+        controller: "ProjectListController as projects",
+        resolve: {projectList: ['$q', 'projects', 'error-service', 'socket', function ($q, projects, errors, ws) {
+            return new function () {
+              var self = this;
+              self.list = [];
+              self.question_list = [];
+              /** Run this every time the state associated with this controller is loaded.
+               *  Returns a deferred that resolves when the state is properly loaded */
+              self.refresh = function () {
+                return projects.list().then(function (projects_list) {
+                  self.list = projects_list;
+
+                  return $q.when(_.map(projects_list, function (project) {
+                    return projects.open(project, 'none').then(function (project_object) {
+                      var questions = project_object.questions();
+                      self.question_list[project] = questions;
+                    });
+                  }));
+                }).catch(function (error) {
+                  errors.report(error, "Could not generate list of projects.");
+                });
+              };
+              /** Store the key into our callback [this is important, as a new object
+               *  is created every time into this state, and we'll have to remove the CB
+               *  as to not leave a dangling reference]. 
+               *
+               *  Great manual memory management in JavaScript.
+               */
+              var cb_key = ws.register_callback('connected', function () {self.refresh();}, true);
+              self.destroy = function () {
+                ws.unregister_callback(cb_key);
+              };
+            }();
+          }]},
+        onExit: ['projectList', function (projectList) {
+          projectList.destroy();
+        }]
         })
       .state("edit-project", {
-        url: "/p/{project}",
+        url: "/project/{project}",
         templateUrl: "frontend/templates/project-template.html",
         controller: "ProjectController as projectView",
         resolve: {openProject: ['projects', '$stateParams', function(projects, $stateParams) {
@@ -274,7 +287,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         });
     // Reload settings on (re)connect.
-    ws.register_connect_callback(function () {
+    ws.register_callback('connected', function () {
       return settings.load().catch(function (error) {
         errors.report(error, 'Could not load settings!');
       });

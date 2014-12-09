@@ -37,44 +37,27 @@ angular.module('seashell-websocket', ['jquery-cookie'])
     self.failed = false;
 
     var timeout_count = 0;
-    var timeout_callbacks = [];
-    var timein_callbacks = [];
     var timeout_interval = null;
-    var disconnect_callbacks = [];
-    var connect_callbacks = [];
-    var failure_callbacks = [];
+    var key = 0;
+    var callbacks = {};
 
     /** Registers callbacks to run when the socket has not seen activity
      *  in some while, and when messages are received after a timeout has passed.
      */
-    self.register_timeout_callback = function(cb) {
-      timeout_callbacks.push(cb);
-    };
-    self.register_timein_callback = function(cb) {
-      timein_callbacks.push(cb);
-    };
-    /** Registers callbacks to run when the socket loses/gains connectivity. */
-    self.register_disconnect_callback = function(cb, runNow) {
-      disconnect_callbacks.push(cb);
+    self.register_callback = function(type, cb, now) {
+      callbacks[key] = {type: type, cb: cb, now: now};
 
-      if (runNow && !self.connected) {
+      if (type === 'disconnected' && !self.connected && now) {
+        $timeout(cb, 0);
+      } else if (type === 'connected' && self.connected && now) {
+        $timeout(cb, 0);
+      } else if (type === 'failed' && self.failed && now) {
         $timeout(cb, 0);
       }
+      return key++;
     };
-    self.register_connect_callback = function(cb, runNow) {
-      connect_callbacks.push(cb);
-
-      if (runNow && self.connected) {
-        $timeout(cb, 0);
-      }
-    };
-    /** Registers callback to run when the socket has run into an error. */
-    self.register_fail_callback = function(cb, runNow) {
-      failure_callbacks.push(cb);
-      
-      if (runNow && self.failed) {
-        $timeout(cb, 0);
-      }
+    self.unregister_callback = function (key) {
+      delete callbacks[key];
     };
 
     /** Connects the socket, sets up the disconnection monitor. */ 
@@ -82,7 +65,9 @@ angular.module('seashell-websocket', ['jquery-cookie'])
       if (!rawCookie.get("seashell-session")) {
         self.failed = true;
         $timeout(function () {
-          _.each(failure_callbacks, function (x) {x();});
+          _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
+                       function (x) {return x.cb;}),
+            function (x) {x();});
         }, 0);
         return $q.reject("No credentials found!");
       }
@@ -96,7 +81,9 @@ angular.module('seashell-websocket', ['jquery-cookie'])
                                             self.failed = true;
                                             $scope.$apply(function () {
                                               $interval.cancel(timeout_interval);
-                                              _.each(failure_callbacks, function (x) {x();});
+                                              _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
+                                                           function (x) {return x.cb;}),
+                                                function (x) {x();});
                                             });
                                           },
                                           /** Socket closed - probably want to prompt the user to reconnect? */
@@ -104,7 +91,9 @@ angular.module('seashell-websocket', ['jquery-cookie'])
                                             self.connected = false;
                                             $scope.$apply(function () {
                                               $interval.cancel(timeout_interval);
-                                              _.each(disconnect_callbacks, function (x) {x();});
+                                              _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'disconnected';}),
+                                                           function (x) {return x.cb;}),
+                                                function (x) {x();});
                                             });
                                           });
       return $q.when(self.socket.ready)
@@ -112,12 +101,16 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           console.log("Seashell socket set up properly.");
           timeout_interval = $interval(function () {
             if (timeout_count++ === 3) {
-              _.each(timeout_callbacks, function (x) {x();});
+              _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'timeout';}),
+                           function (x) {return x.cb;}),
+                function (x) {x();});
             }
             $q.when(self.socket.ping())
               .then(function () {
                 if (timeout_count >= 3) {
-                  _.each(timein_callbacks, function (x) {x();});
+                  _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'timein';}),
+                               function (x) {return x.cb;}),
+                    function (x) {x();});
                 }
                 timeout_count = 0;
               });
@@ -126,7 +119,9 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           self.failed = false;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
-          _.each(connect_callbacks, function (x) {x();});
+          _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'connected';}),
+                       function (x) {return x.cb;}),
+            function (x) {x();});
         });
     };
   }]);
