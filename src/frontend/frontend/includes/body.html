@@ -20,7 +20,6 @@
     class="alert alert-danger text-center" role="alert">
     <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>.)
   </div>
-
   
   <alert ng-repeat="error in frontend.errors.errors"
     type="danger" close="frontend.errors.suppress($index)" role="alert">

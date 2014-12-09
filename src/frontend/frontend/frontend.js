@@ -161,12 +161,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           ws.connect();
         };
 
+        // This won't leak memory, as FrontendController stays in scope all the time.
         ws.register_timein_callback(function () {self.timeout = false;});
         ws.register_timeout_callback(function () {self.timeout = true;});
-
         ws.register_connect_callback(function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
         ws.register_disconnect_callback(function () {self.disconnected = true;}, true);
-        
         ws.register_fail_callback(function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
@@ -222,39 +221,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.isDeletable = function(project) {
       return ! /^[aA][0-9]+/.test(project);
     };
-    /** Make refresh be called on any state transition to this state,
-     *  and when the socket connects successfully. */
-    $scope.$on('$stateChangeStart', function(_0, toState, _1, _2) {
-      if (toState.name === self.state) {
-        self.refresh();
-      }
-    });
+
+    // Refresh when the socket connects [and when we enter this state].
+    // (There are no nested states here)
+    //
+    // TODO would be nice if this held a weak reference instead.
     ws.register_connect_callback(function () {self.refresh();}, true);
   }])
-  .controller("ProjectEditController", ['$state', '$stateParams', '$rootScope', 'projects', '$q', 'error-service', 'cookieStore',
-    function($state, $stateParams, $scope, projects, $q, errors, cookie) {
+  // Project controller.
+  .controller("ProjectController", ['$state', '$stateParams', '$scope', 'projects', 'error-service',
+      'openProject',
+    function($state, $stateParams, $scope,  errors, openProject) {
       var self = this;
       self.state = 'edit-project';
-      self.question = null;
-      self.project = null;
-      self.userid = cookie.get("seashell-session").user;
-
-      self.projectPromise = projects.open($stateParams.project)
-        .then(function(proj) {
-          self.project = proj;
-        })
-        .catch(function (error) {
-          errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-          $state.go('list-projects');
-        });
-
-      // Close project once we navigate away from this state.
-      $scope.$on('$stateChangeStart', function(ev, toState, toPar, fromState, fromPar) {
-        if(toState.name.search(self.state) == -1)
-          self.projectPromise.then(function() {
-            self.project.close();
-          });
-      });
+      self.project = openProject;
     }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
@@ -266,15 +246,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "ProjectListController as projects"
         })
       .state("edit-project", {
-        url: "/{project}/{question}",
-        templateUrl: "frontend/templates/project-editor-template.html",
-        controller: "ProjectEditController as editView",
-        params: {question: {value: null}, project: {}}
+        url: "/p/{project}",
+        templateUrl: "frontend/templates/project-template.html",
+        controller: "ProjectController as projectView",
+        resolve: {openProject: ['projects', '$stateParams', function(projects, $stateParams) {
+          return projects.open($stateParams.project).catch(function (error) {
+            errors.report(error, sprintf("Could not open project %s!", self.arguments.project));
+            $state.go('list-projects');
+          });
+        }]},
+        onExit: ['openProject', function (project) {
+          project.close();
+        }]
       })
       .state("edit-project.edit-file", {
-        url: "/{part}/{file}",
+        url: "/edit?part&file",
         templateUrl: "frontend/templates/project-editor-file-template.html",
-        controller: "ProjectEditFileController as editFileView"
+        controller: "ProjectEditFileController as editView"
       });
   }])
   .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {

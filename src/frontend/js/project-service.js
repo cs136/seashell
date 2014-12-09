@@ -210,15 +210,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if (typeof path === "string") {
             return self.find(_.filter(path.split("/"), function (s) {return s.length > 0;}));
           } else {
-            if(path.length == 1) {
-              if(self.name[self.name.length-1] == path[0])
-                return self;
+            if (self.is_dir && path.length > 0) {
+              var res = _.filter(self.children, function(c) {
+                return c.filename() === path[0];
+              });
+              return res.length > 0 ? res[0].find(path.slice(1)) : false;
+            }
+            else if(path.length === 0) {
+              return self;
+            } else {
               return false;
             }
-            var res = _.filter(self.children, function(c) {
-              return c.is_dir && c.name[c.name.length-1] == path[0];
-            });
-            return res ? res[0].find(path.slice(1)) : false;
           }
         };
 
@@ -303,7 +305,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                       _.map(_.filter(self.root.find(self._getPath(question, "tests")).list(),
                                       function (f) {return !f.is_dir;}),
                              function (f) {return f.filename();}) : [];
-          return {common: common, question: question, tests: tests};
+          return {common: common, question: quest, tests: tests};
         };
 
         /**

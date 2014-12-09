@@ -6,11 +6,11 @@
   </tr>
   <tr ng-repeat="project in projects.list">
     <td>
-      <a href="#/{{project}}/" class="project-list-item">{{project}}</a>
+      <a ui-sref="edit-project({project: '{{project}}'})" class="project-list-item">{{project}}</a>
     </td>
     <td>
       <span ng-repeat="question in projects.question_list[project]">
-       <a href="#/{{project}}/{{question}}">{{question}}</a>
+       <a ui-sref="edit-project({project: '{{project}}', question: '{{question}}'})">{{question}}</a>
        <span ng-show="!$last"> | </span>
      </span>
    </td>
