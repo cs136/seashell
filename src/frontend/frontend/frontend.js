@@ -68,14 +68,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function () {
           return $modal.open({
             templateUrl: "frontend/templates/new-project-template.html",
-            controller: ['$scope', function ($scope) {
+            controller: ['$scope', '$state', 'projects', 'error-service',
+            function ($scope, $state, projects, errors) {
               $scope.new_project_name = "";
               $scope.newProject = function () {
                 if ($scope.new_project_name === "") {
                   return false;
                 } else {
-                  // TODO: goto new project here.
                   $scope.$close();
+                  projects.create($scope.new_project_name).then(function () {
+                    $state.go('edit-project', {project: $scope.new_project_name});
+                  }).catch(function (error) {
+                    errors.report(error, sprintf("Could not create project %s!", $scope.new_project_name));
+                  });
                 }
               };
             }]
@@ -170,9 +175,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_callback('failed', function () {self.failed = true;}, true);
       }])
   // Controller for Project Lists
-  .controller('ProjectListController', ['projectList',
+  .controller('ProjectListController', ['projectList', 'projects',
       'NewProjectModal', 'DeleteProjectModal', 'error-service',
-      function (projectList, newProjectModal, deleteProjectModal, errors) {
+      function (projectList, projects, newProjectModal, deleteProjectModal, errors) {
     var self = this;
     self.projectList = projectList;
     self.state = "list-projects";
@@ -215,6 +220,30 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.userid = cookies.get('seashell-session').user;
       self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
     }])
+  // Editor Controller
+  .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
+      'openProject', function ($state, openQuestion, $scope, errors, openProject) {
+        var self = this;
+        self.question = openQuestion;
+        self.project = openProject;
+        self.common_files = [];
+        self.question_files = [];
+        self.tests = [];
+        
+        self.refresh = function () {
+          var result = self.project.filesFor(self.question);
+          self.common_files = result.common;
+          self.question_files = result.question;
+          self.tests = result.tests;
+        };
+       
+        try { 
+          self.refresh();
+        } catch (e) {
+          errors.report({}, sprintf("Could not open question %s!", self.question));
+          $state.go("edit-project");
+        }
+      }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
@@ -275,14 +304,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         }]
       })
       .state("edit-project.editor", {
-        url: "/editor?part&file",
-        templateUrl: "frontend/templates/project-editor-file-template.html",
-        controller: "ProjectEditFileController as editView",
-        params: {part: null, file: null}
+        url: "/edit/{question}",
+        templateUrl: "frontend/templates/project-editor-template.html",
+        controller: "EditorController as editView",
+        resolve: {openQuestion: ['$stateParams', function($stateParams) {
+          return $stateParams.question;
+        }]}
       });
   }])
   .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
-    /** TODO: This may need to go somewhere else. */
     ws.connect()
         .then(function () {
           return projects.fetch().catch(function (projects) {

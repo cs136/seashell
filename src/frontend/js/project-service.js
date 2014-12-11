@@ -607,14 +607,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        * Creates a new project.
        *
        * @param {String} name - Name of project.
+       * @param {bool} return_project - Return new project or not?
        * @returns {Angular.$q -> SeashellProject/String}
        *  Angular deferred that resolves to the new, _ready_ SeashellProject instance.
        *  (or a error message on error)
        */
-      self.create = function (name) {
+      self.create = function (name, return_project) {
         return $q.when(ws.socket.newProject(name)).
           then(function () {
-            return (new SeashellProject(name)).init();
+            if (return_project)
+              return (new SeashellProject(name)).init();
           });
       };
 

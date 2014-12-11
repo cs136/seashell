@@ -1,7 +1,5 @@
-<!-- Project View Template.  This is mainly an empty template
-     used to embed the editView controller.  Maybe one day
-     this'll also embed some other project-related stuff (project
-     settings...) -->
+<!-- Project View Template.  This contains the
+  project/question selector. -->
 <!-- Project Dropdown -->
 <div class="row">
   <div class="col-xs-12 col-md-12"
@@ -57,14 +55,20 @@
        class="col-md-6 col-xs-6 questions-row-container"
        style="font-size: 18px; margin-top: 5px; padding: 0">
        <span class="questions-row" style="word-spacing: 15px">
-         <a ng-repeat="question in editView.questions"
-            ui-sref="edit({part: '{{question}}'})"
+         <a ng-repeat="question in projectView.project.questions()"
+            ui-sref="edit-project.editor({question: '{{question}}'})"
             class="question-link"
             ui-sref-active="question-link-active">
             {{question}}
           </a>     
        </span>
     </div>
+  </div>
+</div>
+<!-- Seperator -->
+<div class="row">
+  <div class="col-md-12 col-xs-12" style="padding: 0">
+    <hr style="margin-top: 9px; margin-bottom: 8px"/>
   </div>
 </div>
 <div ui-view></div>

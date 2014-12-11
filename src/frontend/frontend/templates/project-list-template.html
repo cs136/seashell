@@ -1,6 +1,6 @@
 <table class="table">
   <tr>
-    <th><a href="" ng-click="self.new()">New assignment</a></th>
+    <th><a href="" ng-click="projects.new()">New assignment</a></th>
     <th>Questions...</th>
     <th><a href="" ng-click="projects.fetch()">fetch</a> | <a href="" ng-click="projects.refresh()">refresh</a></th>
   </tr>
@@ -10,7 +10,7 @@
     </td>
     <td>
       <span ng-repeat="question in projects.projectList.question_list[project]">
-       <a ui-sref="edit-project({project: '{{project}}', question: '{{question}}'})">{{question}}</a>
+       <a ui-sref="edit-project.editor({project: '{{project}}', question: '{{question}}'})">{{question}}</a>
        <span ng-show="!$last"> | </span>
      </span>
    </td>
