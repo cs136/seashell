@@ -206,12 +206,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     };
   }])
   // Project controller.
-  .controller("ProjectController", ['$state', '$stateParams', '$scope', 'projects', 'error-service',
-      'openProject',
-    function($state, $stateParams, $scope,  errors, openProject) {
+  .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
+      'openProject', 'cookieStore',
+    function($state, $stateParams, $scope,  errors, openProject, cookies) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
+      self.userid = cookies.get('seashell-session').user;
+      self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
     }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
@@ -262,9 +264,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/project/{project}",
         templateUrl: "frontend/templates/project-template.html",
         controller: "ProjectController as projectView",
-        resolve: {openProject: ['projects', '$stateParams', function(projects, $stateParams) {
+        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service', function(projects, $state, $stateParams, errors) {
           return projects.open($stateParams.project).catch(function (error) {
-            errors.report(error, sprintf("Could not open project %s!", self.arguments.project));
+            errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
             $state.go('list-projects');
           });
         }]},
@@ -272,10 +274,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           project.close();
         }]
       })
-      .state("edit-project.edit-file", {
-        url: "/edit?part&file",
+      .state("edit-project.editor", {
+        url: "/editor?part&file",
         templateUrl: "frontend/templates/project-editor-file-template.html",
-        controller: "ProjectEditFileController as editView"
+        controller: "ProjectEditFileController as editView",
+        params: {part: null, file: null}
       });
   }])
   .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
