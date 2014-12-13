@@ -229,14 +229,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.common_files = [];
         self.question_files = [];
         self.tests = [];
-        
+       
+        /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
           var result = self.project.filesFor(self.question);
           self.common_files = result.common;
           self.question_files = result.question;
           self.tests = result.tests;
         };
-       
+
+        /** Adds file to the project. */
+        self.add_file = function () {
+        };
+
+        /** Submits the current question. */
+        self.submit_question = function () {
+        };
+
+        /** Displays Marmoset Results. */
+        self.marmoset_results = function () {
+        };
+      
+        /** Try to load the question, and go back to the project if we can't. */ 
         try { 
           self.refresh();
         } catch (e) {
