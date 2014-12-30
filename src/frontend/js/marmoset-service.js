@@ -24,29 +24,29 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
         var self = this;
         var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
         var test_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt"; 
-        var project_cache = null;
+        var project_list = [];
+
+        /**
+         * Refreshs project list.
+         */
+        self.refresh = function() {
+          $q.when($.ajax({url: list_url,
+                          dataType: "json"}))
+            .then(function (projects) {
+              project_list = projects;
+            });
+        };
+        /** Load projects (initially) */
+        self.refresh();
 
         /**
          * List projects.
          *
-         * @returns Angular promise that resolves to:
-         *  a list of:
-         *    objects containing:
-         *      .project - Marmoset project name.
+         * @returns
+         *  a list of project names:
          */
-        self.projects_hard = function () {
-          return $q.wrap($.ajax({url: list_url,
-                                 dataType: "json"}))
-                   .then(function(list) {
-                     project_cache = list;
-                   });
-        };
-
-        self.projects = function() {
-          if(project_cache === null) {
-            return self.projects_hard();
-          }
-          return project_cache;
+        self.projects = function () {
+          return _.map(project_list, function (x) {return x.project;});
         };
 
         /**

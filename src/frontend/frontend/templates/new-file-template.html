@@ -7,12 +7,11 @@
   <div ng-class="{'has-error': inputError}" class="form-group">
     <div class="row">
       <div class="col-xs-4 text-right" style="padding-right: 10px">
-        <select ng-model="new_file_folder" style="outline: none">
+        <select ng-model="new_file_folder" style="outline: none" class="form-control">
           <option>common</option>
           <option>{{question}}</option>
           <option>tests</option>
         </select>
-        <span><b>/&nbsp;</b></span>
       </div>
       <div class="col-xs-8" style="padding-left: 0">
         <input type="text"
@@ -25,15 +24,14 @@
       </div>
     </div>
     <div class="row" id="upload-file-row">
-      <div class="col-xs-8 col-xs-offset-4">
-          <div class="form-group">
-            <label for="file-to-upload">
-              <span class="text-muted">or</span>
-              upload files:
-            </label>
-            <input type="file" name="file-to-upload" multiple
-                   filelist-bind="new_file_upload">
-          </div>
+      <div class="col-xs-8 col-xs-offset-4 form-group" style="padding-left: 0">
+          <label for="file-to-upload">
+            <span class="text-muted">or</span>
+            upload files:
+          </label>
+          <input type="file" name="file-to-upload" multiple
+                 class="form-control"
+                 filelist-bind="new_file_upload">
       </div>
     </div>
 </div>

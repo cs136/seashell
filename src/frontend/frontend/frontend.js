@@ -93,7 +93,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       link: function (scope, elem, attrs) {
         elem.bind('change', function (event) {
           scope.$apply(function () {
-            $parse(attrs['filelistBind']).assign(scope, event.target.files);
+            $parse(attrs.filelistBind).assign(scope, event.target.files);
           });
         });
       }
@@ -137,8 +137,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                              });
                     };
                     reader.onerror = function () {
-                      errors.report({}, sprintf("Could not read file %s!", filename));
-                      deferred.resolve();
+                      $timeout(function () {
+                        errors.report({}, sprintf("Could not read file %s!", filename));
+                        notify(true, false, project, question, $scope.new_file_folder, filename);
+                      });
                     };
                     reader.readAsDataURL(file);
 
@@ -173,6 +175,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               };
             }]
           }).result;
+        };
+      }])
+  // Submit to Marmoset Modal
+  .factory('SubmitMarmosetModal', ['$modal', 'error-service',
+      function ($modal, errors) {
+        return function (project, question, notify) {
+          notify = notify || function () {};
+          return $modal.open({
+            templateUrl: "frontend/templates/marmoset-submit-template.html",
+            controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
+            function ($scope, $state, errors, $q, marmoset) {
+              $scope.marmoset_projects = marmoset.projects();
+              $scope.selected_project = project.currentMarmosetProject(question) || undefined;
+              $scope.submit = function() {
+              };
+            }]});
         };
       }])
   // Settings service.
@@ -310,7 +328,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
-      'openProject', 'NewFileModal', function ($state, openQuestion, $scope, errors, openProject, newFileModal) {
+      'openProject', 'NewFileModal', 'SubmitMarmosetModal',
+      function ($state, openQuestion, $scope, errors, openProject, newFileModal, submitMarmosetModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -335,6 +354,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         /** Submits the current question. */
         self.submit_question = function () {
+          submitMarmosetModal(self.project, self.question);
         };
 
         /** Displays Marmoset Results. */

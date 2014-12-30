@@ -518,13 +518,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.submit(marm_project)
+         * SeashellProject.submit(question, project)
          *
          * Submits the current question to the given Marmoset project.
          */
-        SeashellProject.prototype.submit = function(marm_project, question) {
+        SeashellProject.prototype.submit = function(question, project) {
           var self = this;
-          return $q.when(ws.socket.marmosetSubmit(self.name, marm_project, question));
+          return $q.when(ws.socket.marmosetSubmit(self.name, project || self.currentMarmosetProject(question), question));
         };
 
       return SeashellProject;})();
