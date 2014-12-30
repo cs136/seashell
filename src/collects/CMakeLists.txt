@@ -20,9 +20,28 @@ cmake_minimum_required(VERSION 2.6)
 
 # Grab our dependencies.
 file(GLOB_RECURSE seashell_collects "${CMAKE_CURRENT_SOURCE_DIR}" *.rkt)
-# Copy the source directory to the build directory.
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/seashell" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
-     FILES_MATCHING PATTERN *.rkt)
+# Copy files from source directory to destination directory, substituting any
+# variables.  Create destination directory if it does not exist.
+macro(copy_and_configure srcDir destDir)
+    message(STATUS "Configuring directory ${destDir} from ${srcDir}.")
+    make_directory("${destDir}")
+
+    file(GLOB templateFiles RELATIVE ${srcDir} ${srcDir}/*)
+    foreach(templateFile ${templateFiles})
+        set(srcTemplatePath "${srcDir}/${templateFile}")
+        if(NOT IS_DIRECTORY "${srcTemplatePath}")
+            message(STATUS "Configuring file ${templateFile}")
+            configure_file(
+                    "${srcTemplatePath}"
+                    "${destDir}/${templateFile}"
+                    @ONLY)
+        else()
+            copy_and_configure("${srcTemplatePath}" "${destDir}/${templateFile}")
+        endif(NOT IS_DIRECTORY "${srcTemplatePath}")
+    endforeach(templateFile)
+endmacro(copy_and_configure)
+copy_and_configure("${CMAKE_CURRENT_SOURCE_DIR}/seashell" "${CMAKE_CURRENT_BINARY_DIR}/seashell")
+
 # Install the configuration.
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt")

@@ -376,17 +376,16 @@
               (success . #t)
               (result . ,(make-download-token project)))]
       ;; File functions.
-      [(? (lambda (expr)
-           (and (hash? expr)
-                (hash-has-key? expr 'id)
-                (hash-has-key? expr 'project)
-                (hash-has-key? expr 'file)
-                (equal? "newFile" (hash-ref expr 'type #f))))
-          expr)
-       (new-file (hash-ref expr 'project) (hash-ref expr 'file)
-                 (string->bytes/utf-8 (hash-ref expr 'contents #""))
-                 (string->symbol (hash-ref expr 'encoding "uri")))
-       `#hash((id . ,(hash-ref expr 'id))
+      [(hash-table
+         ('id id)
+         ('type "newFile")
+         ('project project)
+         ('file file)
+         (_ _) ...)
+       (new-file project file
+                 (string->bytes/utf-8 (hash-ref message 'contents ""))
+                 (string->symbol (hash-ref message 'encoding "raw")))
+       `#hash((id . ,id)
               (success . #t)
               (result . #t))]
       [(hash-table
