@@ -153,10 +153,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   // Write default contents.
                   if (extension === 'c' || extension === 'h') {
                       result = project.createFile($scope.new_file_folder, question, filename, 
-                                        sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n"), filename);
+                                        sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n", filename));
                   } else if (extension === 'rkt') {
                       result = project.createFile($scope.new_file_folder, question, filename,
-                                        sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n"), filename);
+                                        sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n", filename));
                   } else {
                       result = project.createFile($scope.new_file_folder, question, filename);
                   }
@@ -189,6 +189,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.marmoset_projects = marmoset.projects();
               $scope.selected_project = project.currentMarmosetProject(question) || undefined;
               $scope.submit = function() {
+                $scope.$close();
+                project.submit(question, $scope.selected_project)
+                       .catch(function (error) {
+                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
+                       });
               };
             }]});
         };
