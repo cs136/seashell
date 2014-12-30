@@ -19,6 +19,8 @@
 (require seashell/backend/project
          seashell/seashell-config
          seashell/log
+         net/uri-codec
+         net/base64
          json)
 
 (provide exn:project:file
@@ -44,17 +46,27 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file exists.
-(define/contract (new-file project file)
-  (-> (and/c project-name? is-project?) path-string? void?)
+(define/contract (new-file project file contents encoding)
+  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) void?)
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (close-output-port (open-output-file
-                         (check-and-build-path (build-project-path project) file)
-                         #:exists 'error)))
+    (with-output-to-file (check-and-build-path (build-project-path project) file)
+                         (thunk 
+                           (write-bytes (cond
+                             [(eq? encoding 'url)
+                              (match-define 
+                                (list mime charset b64? data)
+                                (regexp-match #rx"data:([^;]*)?(?:;([^;]*))?(?:;(base64))?,(.*)" contents))
+                              (if b64?
+                                (base64-decode data)
+                                (string->bytes/utf-8 (uri-decode (bytes->string/utf-8 data))))]
+                             [else
+                               contents])))
+                         #:exists 'error)
   (void))
 
 (define/contract (new-directory project dir)
@@ -130,7 +142,7 @@
   (-> (and/c project-name? is-project?) path-string? bytes? void?)
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
-                       #:exists 'truncate/replace)
+                       #:exists 'must-truncate)
   (void))
 
 ;; (list-files project)
