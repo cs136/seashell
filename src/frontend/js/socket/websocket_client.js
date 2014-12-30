@@ -304,12 +304,21 @@ SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.newFile = function(name, file_name, deferred) {
-  return this.sendMessage({
-    type : "newFile",
-    project : name,
-    file : file_name},
-    deferred);
+SeashellWebsocket.prototype.newFile = function(name, file_name, contents, encoding, deferred) {
+  if (contents) 
+    return this.sendMessage({
+      type : "newFile",
+      project : name,
+      file : file_name,
+      contents : contents,
+      encoding : encoding || "raw"},
+      deferred);
+  else
+    return this.sendMessage({
+      type : "newFile",
+      project : name,
+      file : file_name},
+      deferred);
 };
 
 SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {

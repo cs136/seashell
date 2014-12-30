@@ -42,7 +42,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             controller: ['$scope', function ($scope) {
               $scope.title = title;
               $scope.message = message;
-            }]});
+            }]}).result;
         };
       }])
   // Delete Project Modal Service
@@ -84,7 +84,95 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 }
               };
             }]
+          }).result;
+        };
+      }])
+  // Directive for binding file uploads.
+  .directive('filelistBind', ['$parse', function ($parse) {
+    return {
+      link: function (scope, elem, attrs) {
+        elem.bind('change', function (event) {
+          scope.$apply(function () {
+            $parse(attrs['filelistBind']).assign(scope, event.target.files);
           });
+        });
+      }
+    };
+  }])
+  // New File Modal Service
+  .factory('NewFileModal', ['$modal', 'error-service',
+      function ($modal, errors) {
+        return function (project, question, notify) {
+          notify = notify || function () {};
+          return $modal.open({
+            templateUrl: "frontend/templates/new-file-template.html",
+            controller: ['$scope', '$state', 'error-service', '$q',
+            function ($scope, $state, errors, $q) {
+              $scope.new_file_name = "";
+              $scope.new_file_folder = question;
+              $scope.new_file_upload = [];
+              $scope.question = question;
+              $scope.inputError = false;
+              $scope.newFile = function () {
+                // 4 cases: file name specified AND file to upload
+                //          no file name AND file to upload
+                //          file name AND no file to upload
+                //          no file name AND no file to upload
+                if ($scope.new_file_upload.length > 0 && $scope.new_file_name.length > 0) {
+                  $scope.inputError = "Can't specify file name when uploading files!";
+                  return false;
+                } else if ($scope.new_file_upload.length > 0 && $scope.new_file_name.length === 0) {
+                  // For each file, upload.
+                  _.forEach($scope.new_file_upload, function (file) {
+                    var filename = file.name; // NOTE: does not contain path information!
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                      project.createFile($scope.new_file_folder, question, filename, reader.result, "url")
+                             .then(function () {
+                               notify(true, true, project, question, $scope.new_file_folder, filename);
+                             })
+                             .catch(function (error) {
+                               notify(true, false, project, question, $scope.new_file_folder, filename);
+                               errors.report(error, sprintf("Could not upload file %s!", filename));
+                             });
+                    };
+                    reader.onerror = function () {
+                      errors.report({}, sprintf("Could not read file %s!", filename));
+                      deferred.resolve();
+                    };
+                    reader.readAsDataURL(file);
+
+                  });
+                  $scope.$close();
+                } else if ($scope.new_file_upload.length === 0 && $scope.new_file_name.length > 0) {
+                  var filename = $scope.new_file_name;
+                  var extension = filename.split('.').pop();
+                  var result = null;
+                  // Write default contents.
+                  if (extension === 'c' || extension === 'h') {
+                      result = project.createFile($scope.new_file_folder, question, filename, 
+                                        sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n"), filename);
+                  } else if (extension === 'rkt') {
+                      result = project.createFile($scope.new_file_folder, question, filename,
+                                        sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n"), filename);
+                  } else {
+                      result = project.createFile($scope.new_file_folder, question, filename);
+                  }
+                  result.then(function () {
+                    notify(false, true, project, question, $scope.new_file_folder, filename);
+                  })
+                  .catch(function (error) {
+                    notify(false, false, project, question, $scope.new_file_folder, filename);
+                    errors.report(error, sprintf("Could not create file %s!", filename));
+                  });
+                  $scope.close();
+                } else {
+                  $scope.inputError = "Need to specify file!";
+                  return false;
+                }
+              };
+            }]
+          }).result;
         };
       }])
   // Settings service.
@@ -152,7 +240,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.logout = function () {
           confirm("Log out of Seashell",
             "Do you wish to logout?  Any unsaved data will be lost.")
-            .result.then(function () {
+            .then(function () {
               cookieStore.remove("seashell-session");
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
@@ -222,7 +310,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
-      'openProject', function ($state, openQuestion, $scope, errors, openProject) {
+      'openProject', 'NewFileModal', function ($state, openQuestion, $scope, errors, openProject, newFileModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -240,6 +328,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         /** Adds file to the project. */
         self.add_file = function () {
+          newFileModal(self.project, self.question, function () {
+            self.refresh();
+          });
         };
 
         /** Submits the current question. */
