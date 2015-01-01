@@ -193,6 +193,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 project.submit(question, $scope.selected_project)
                        .catch(function (error) {
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
+                         notify(false, $scope.selected_project);
+                       }).then(function () {
+                         notify(true, $scope.selected_project);
                        });
               };
             }]}).result;
@@ -333,15 +336,26 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
-      'openProject', 'NewFileModal', 'SubmitMarmosetModal',
-      function ($state, openQuestion, $scope, errors, openProject, newFileModal, submitMarmosetModal) {
+      'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
+      function ($state, openQuestion, $scope, errors,
+        openProject, newFileModal, submitMarmosetModal,
+        $interval, marmoset) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
         self.tests = [];
-        self.marmoset_short_results = "";
+        self.marmoset_short_results = null;
+        self.marmoset_refresh_interval = undefined;
+        self.marmoset_timeout = 1000;
+
+        // Destroy interval when scope goes away.
+        function cancelMarmosetRefresh() {
+          return self.marmoset_refresh_interval &&
+            $interval.cancel(self.marmoset_refresh_interval);
+        }
+        $scope.$on('$destroy', cancelMarmosetRefresh);
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
@@ -360,18 +374,54 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         /** Submits the current question. */
         self.submit_question = function () {
-          submitMarmosetModal(self.project, self.question, function (success) {
+          submitMarmosetModal(self.project, self.question, function (success, target) {
             if (!success) {
-              self.marmoset_short_results = "Failed to submit!";
+              self.marmoset_short_results = "failed to submit!";
             } else {
-              self.marmoset_short_results = "Submitted; waiting on tests...";
+              var submitTime = new Date();
+              cancelMarmosetRefresh();
+              self.marmoset_refresh_interval = $interval(function () {
+                marmoset.results(self.project.name).then(function (result) {
+                  if (result.error) {
+                    self.marmoset_short_results = "errored!";
+                    errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
+                  } else {
+                    cancelMarmosetRefresh();
+                    var data = result.result;
 
-              (function refresh() {
-
-              })();
+                    if (data.length > 0 && data[0].status == "complete") {
+                      var sub_pk = data[0].submission;
+                      var related = _.filter(data, function (entry) {
+                        return entry.submission === sub_pk;
+                      });
+                      var total = 0, passed = 0;
+                      for (var i = 0; i < related.length; i++) {
+                        total += related[i].points;
+                        total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                      }
+                      
+                      self.marmoset_short_results = 
+                        sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
+                                total_passed, total);
+                    } else if (data.length > 0) {
+                        sprintf("received %s (waiting on tests)",
+                                $.timeago(data[0].timestamp));
+                          
+                    } else {
+                      self.marmoset_short_results = 
+                        sprintf("submitted %s (waiting on receipt)",
+                                $.timeago(submitTime));
+                    }
+                  }
+                }).catch(function (error) {
+                  errors.report(error, sprintf("Could not fetch results for %s!", target));
+                  self.marmoset_short_results = "could not fetch results...";
+                  cancelMarmosetRefresh();
+                });
+              }, self.marmoset_timeout);
             }
           }).then(function () {
-            self.marmoset_short_results = "Submitting...";
+            self.marmoset_short_results = "submitting...";
           });
         };
 
