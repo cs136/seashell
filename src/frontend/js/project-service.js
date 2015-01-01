@@ -23,8 +23,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset',
-    function($scope, $q, ws, marmoset) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http',
+    function($scope, $q, ws, marmoset, $http) {
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
@@ -553,11 +553,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       self.fetch = function() {
         return self.list()
             .then(function (projects) {
-              return $q.when($.ajax({url: list_url, dataType: "json"}))
+              return $http({url: list_url})
                 .catch(function () {
                   return $q.reject("Could not fetch list of skeletons!");
                 })
-                .then(function (skels) {
+                .then(function (results) {
+                  var skels = results.data;
                   var new_projects = _.filter(skels,
                       function (skel) {
                         return projects.indexOf(skel) == -1;

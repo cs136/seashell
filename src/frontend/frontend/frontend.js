@@ -195,7 +195,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
                        });
               };
-            }]});
+            }]}).result;
         };
       }])
   // Settings service.
@@ -341,6 +341,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.common_files = [];
         self.question_files = [];
         self.tests = [];
+        self.marmoset_short_results = "";
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
@@ -359,7 +360,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         /** Submits the current question. */
         self.submit_question = function () {
-          submitMarmosetModal(self.project, self.question);
+          submitMarmosetModal(self.project, self.question, function (success) {
+            if (!success) {
+              self.marmoset_short_results = "Failed to submit!";
+            } else {
+              self.marmoset_short_results = "Submitted; waiting on tests...";
+
+              (function refresh() {
+
+              })();
+            }
+          }).then(function () {
+            self.marmoset_short_results = "Submitting...";
+          });
         };
 
         /** Displays Marmoset Results. */

@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('marmoset-bindings', ['jquery-cookie'])
-  .service('marmoset', ['$q', 'cookieStore',
-      function ($q, cookieStore) {
+  .service('marmoset', ['$q', 'cookieStore', '$http',
+      function ($q, cookieStore, $http) {
         "use strict";
         var self = this;
         var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
@@ -30,10 +30,9 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          * Refreshs project list.
          */
         self.refresh = function() {
-          $q.when($.ajax({url: list_url,
-                          dataType: "json"}))
-            .then(function (projects) {
-              project_list = projects;
+          $http({url: list_url})
+            .then(function (results) {
+              project_list = results.data;
             });
         };
         /** Load projects (initially) */
@@ -59,9 +58,11 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          *      Marmoset results for the specified project.
          */
         self.results = function(project) {
-          return $q.wrap($.ajax({url: test_url,
-                                 data: {user: cookieStore.get("seashell-session").user,
-                                       project: project},
-                                 dataType: "json"}));
+          return $http({url: test_url,
+                             params: {user: cookieStore.get("seashell-session").user,
+                                      project: project}})
+                 .then(function (result) {
+                   return result.data;
+                 });
         };
      }]);
