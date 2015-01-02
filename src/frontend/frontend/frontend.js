@@ -201,6 +201,17 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }]}).result;
         };
       }])
+  // Marmoset Results Modal
+  .factory('MarmosetResultModal', ['$modal', 'error-service',
+      function ($modal, errors) {
+        return function (target) {
+          return $modal.open({
+            templateUrl: "frontend/templates/marmoset-results-template.html",
+            controller: ['$scope', '$tate', 'error-service', 'marmoset',
+              function ($scope, $state, errors, marmoset) {
+              }]});
+        };
+      }])
   // Settings service.
   .service('settings-service', ['$rootScope', '$modal', 'socket', 'error-service', '$q',
       function ($rootScope, $modal, ws, errors, $q) {
