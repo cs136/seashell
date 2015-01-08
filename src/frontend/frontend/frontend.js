@@ -18,7 +18,7 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap'])
+    'ui.bootstrap', 'ui.codemirror'])
   // Error service.
   .service('error-service', function () {
     var self = this;
@@ -513,6 +513,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "EditorController as editView",
         resolve: {openQuestion: ['$stateParams', function($stateParams) {
           return $stateParams.question;
+        }]}
+      })
+      .state("edit-project.editor.edit", {
+        url: "/file/{file}",
+        templateUrl: "frontend/templates/project-editor-editview-template.html",
+        controller: "EditFileController as editFileView",
+        resolve: {openFile: ['$stateParams', function($stateParams) {
+          return $stateParams.file;
         }]}
       });
   }])
