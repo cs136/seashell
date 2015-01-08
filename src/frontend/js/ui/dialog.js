@@ -231,27 +231,32 @@ function handleUploadFile(folder) {
       return false;
     }
   }
-  socket.getUploadFileToken(SeashellProject.currentProject.name, filename)
-    .done(function (token) {
-      var raw = JSON.stringify(token);
-      var options = {
-        target: null,
-        dataType: null,
-        error: function() {
-          displayErrorMessage("File could not be successfully uploaded.");
-        },
-        success: function() {
-          SeashellProject.currentProject.onUploadSuccess(filename);
-          SeashellProject.currentProject.openFilePath(filename)
-            .done(updateFileMenu);
-        },
-        data: {token: raw},
-        url: sprintf("https://%s:%s/upload", creds.host, creds.port)
-      };
-      $("#upload-file-form").ajaxSubmit(options);
-    }).fail(function() {
-      displayErrorMessage("Error retrieving file upload ticket.");
-    });
+  SeashellProject.currentProject.createDirectory(folder).done(function() {
+    socket.getUploadFileToken(SeashellProject.currentProject.name, filename)
+      .done(function (token) {
+        var raw = JSON.stringify(token);
+        var options = {
+          target: null,
+          dataType: null,
+          error: function() {
+            displayErrorMessage("File could not be successfully uploaded.");
+          },
+          success: function() {
+            SeashellProject.currentProject.onUploadSuccess(filename);
+
+            SeashellProject.currentProject.openFilePath(filename)
+              .done(updateFileMenu);
+          },
+          data: {token: raw},
+          url: sprintf("https://%s:%s/upload", creds.host, creds.port)
+        };
+        $("#upload-file-form").ajaxSubmit(options);
+      }).fail(function() {
+        displayErrorMessage("Error retrieving file upload ticket.");
+      });
+  }).fail(function() {
+    displayErrorMessage("Failed to create directory for uploaded file");
+  });
   return false;
 }
 
