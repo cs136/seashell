@@ -167,7 +167,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     notify(false, false, project, question, $scope.new_file_folder, filename);
                     errors.report(error, sprintf("Could not create file %s!", filename));
                   });
-                  $scope.close();
+                  $scope.$close();
                 } else {
                   $scope.inputError = "Need to specify file!";
                   return false;

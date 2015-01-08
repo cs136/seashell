@@ -191,7 +191,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             if(match.length>0)
               return match[0]._placeInTree(file, path.slice(1), soft_place, contents, encoding);
             else {
-              var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1), true);
+              var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
               return $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname()))
                 .then(function() {
                   self.children.push(dir);
