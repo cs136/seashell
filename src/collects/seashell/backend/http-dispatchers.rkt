@@ -184,6 +184,6 @@
     (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
     (match-define (binding:file _ _ _ content) (bindings-assq #"file-to-upload" bindings))
     (match-define (list project filename) (check-upload-token (bytes->jsexpr raw-token)))
-    (write-file project filename content)
+    (new-file project filename content 'raw)
     (standard-empty-response request)))
 (define upload-file-dispatcher (lift:make upload-file-page))

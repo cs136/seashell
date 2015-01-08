@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Seashell</title>
 
-    @(include "index/styles.html")
+    @(include "index/includes/styles.html")
 	</head>
   <body>
     <header>
@@ -19,24 +19,24 @@
       </div>
     </header>
     <div class="container" ng-controller="LoginController as login">
-      <form class="form-signin" role="form">
+      <form class="form-signin" role="form" ng-submit="login.login()">
         <h2 class="form-signing-heading">Please sign in with your student.cs credentials</h2>
 
-        <input type="text" class="form-control" placeholder="Username" ng-model="login.user"
+        <input type="text" class="form-control" placeholder="Username" ng-model="login.user" id="user"
           ng-disabled="login.busy" />
-        <input type="password" class="form-control" placeholder="Password" ng-model="login.password"
+        <input type="password" class="form-control" placeholder="Password" ng-model="login.password" id="password"
           ng-disabled="login.busy" />
         <button class="btn btn-lg btn-primary btn-block" name="login-submit" type="submit"
-          ng-click="login.login()" ng-disabled="login.busy">Sign in</button>
+          ng-disabled="login.busy">Sign in</button>
 
-        <div class="alert alert-info" ng-show="login.busy">
+        <div class="alert alert-info" ng-show="login.busy" ng-cloak>
           Logging in...
         </div>
-        <div class="alert alert-danger" ng-show="login.error">
+        <div class="alert alert-danger" ng-show="login.error" ng-cloak>
           {{login.error}}
         </div>
       </form>
     </div>
-    @(include "index/scripts.html")
+    @(include "index/includes/scripts.html")
 	</body>
 </html>

@@ -377,11 +377,14 @@
               (result . ,(make-download-token project)))]
       ;; File functions.
       [(hash-table
-        ('id id)
-        ('type "newFile")
-        ('project project)
-        ('file file))
-       (new-file project file)
+         ('id id)
+         ('type "newFile")
+         ('project project)
+         ('file file)
+         (_ _) ...)
+       (new-file project file
+                 (string->bytes/utf-8 (hash-ref message 'contents ""))
+                 (string->symbol (hash-ref message 'encoding "raw")))
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

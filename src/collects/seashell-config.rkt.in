@@ -16,7 +16,12 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide read-config config-set! config-refresh!)
+(provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)
+
+;; Versioning information.
+(define SEASHELL_VERSION "@SEASHELL_VERSION@")
+(define SEASHELL_BRANCH "@GIT_BRANCH@")
+(define SEASHELL_COMMIT "@GIT_COMMIT_HASH@")
 
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not

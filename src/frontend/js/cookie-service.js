@@ -1,5 +1,5 @@
 /**
- * Seashell.
+ * Angular bindings for $.cookie
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,15 +15,22 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _SEASHELL_H_
-#define _SEASHELL_H_
-
-/** Common definitions. **/
-
-#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
-#define SEASHELL_DEBUG @SEASHELL_DEBUG@
-#define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
-
-#endif
+angular.module('jquery-cookie', [])
+  .service('cookie', function () {
+    var self = this;
+    self.add = $.cookie;
+    self.remove = $.removeCookie;
+    self.get = $.cookie;
+  })
+  .service('cookieStore', ['cookie', function(cookie) {
+    var self = this;
+    self.add = function(name, value, opts) {
+      cookie.add(name, JSON.stringify(value), opts);
+    };
+    self.remove = cookie.remove;
+    self.get = function(name) {
+      return JSON.parse(cookie.get(name));
+    };
+  }]);

@@ -326,6 +326,9 @@ div.tooltip .tooltip-inner {
   color: black;
 }
 
+.file-text {
+  font-family: monospace;
+}
 .file-link {
   opacity: 0.5;
 }
@@ -341,11 +344,11 @@ div.tooltip .tooltip-inner {
   color: black;
 }
 
-#questions-row {
+.questions-row {
   font-weight: 300;
 }
 
-#questions-row-container {
+.questions-row-container {
   text-align: right;
 }
 

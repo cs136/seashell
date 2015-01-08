@@ -63,7 +63,7 @@
                         (pre ,traceback))
                       '(""))
                   (hr)
-                  (address ,(format "Seashell-Login/1.0 running on Racket ~a" (version)))))))
+                  (address ,(format "Seashell-Login/~a running on Racket ~a" SEASHELL_VERSION (version)))))))
   (exit 1))
 
 ;; report-error

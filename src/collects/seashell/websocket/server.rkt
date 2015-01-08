@@ -72,7 +72,7 @@
      op
      (list* (make-header #"Upgrade" #"WebSocket")
             (make-header #"Connection" #"Upgrade")
-            (make-header #"Server" #"Seashell/WebSocket/1.0")
+            (make-header #"Server" #"Seashell/WebSocket")
             (make-header #"Sec-Websocket-Accept" (handshake-solution-server key))
             conn-headers))
 

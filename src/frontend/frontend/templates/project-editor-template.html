@@ -1,0 +1,76 @@
+<!-- Editor header. -->
+
+  <!-- File List -->
+  <div class="row">
+    <div class="col-md-12 col-xs-12">
+      <div class="row" style="padding-top: 0">
+        <div class="col-md-6 col-xs-8" id="common-files">
+          <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
+          <span class="file-text" style="font-size: 14px">
+            <a ng-repeat="file in editView.common_files" 
+              ui-sref="file({part: 'common', file: '{{file}}'})"
+              ui-sref-active='file-link-active'
+              ui-sref='file-link'>
+              {{file}}
+            </a>
+          </span>
+        </div>
+        <div id='question-controls' class="col-md-6 col-xs-4">
+          <a href=""
+            ng-click="editView.add_file()"
+            class="btn btn-link"
+            style="border: 0; padding: 0; outline: 0; text-decoration: none">
+            <span>add file…</span>
+          </a>
+          <a href=""
+                ng-click="editView.submit_question()"
+                class="btn btn-link"
+                style="border: 0; padding: 0; outline:0; text-decoration: none">
+            <span>submit question</span>
+          </a>
+          <span ng-show="editView.marmoset_short_results">
+            <br>
+            <a href=""
+                  ng-click="editView.marmoset_results()"
+                  ng-show="editView.marmoset_short_results"
+                  class="btn btn-link"
+                  style="border: 0; padding: 0; float: right; margin-top: 0px; outline: 0; text-decoration: none">
+              <span>{{editView.marmoset_short_results}}</span>
+            </a>
+          </span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 col-xs-12">
+          <span class="file-text" style="font-style: italic">
+            <span>{{editView.question}}/
+          </span>&nbsp;&nbsp;</span>
+          <span class="file-text" style="font-size: 14px">
+            <a ng-repeat="file in editView.question_files"
+              ui-sref="file({part: 'question', file: '{{file}}'})"
+              class="file-link"
+              ui-sref-active="file-link-active">
+              {{file}}
+            </a>
+          </span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 col-xs-12">
+          <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
+          <span class="file-text" style="font-size: 14px">
+            <a ng-repeat="file in editView.test_files"
+              ui-sref="test(file: '{{file}}')"
+              class="file-link"
+              ui-sref-active="file-link-active">
+              {{file}}
+            </a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- File/Test editor goes here. -->
+  <div ui-view></div>

@@ -23,6 +23,8 @@
  * @constructor
  * @param {String} uri - URI to connect to.  Should look like wss://[IP of linux student environment host]:[some port]/.
  * @param {Array} key - Array of 4 words that represent the 128-bit session key.
+ * @param {Function} failure - Callback to run when the socket fails.
+ * @param {Function} close - Callback to run when the socket closes.
  *
  * Implementor's note - this class must maintain consistent with
  * the code written in server.rkt.
@@ -31,9 +33,9 @@
  *  ws = new SeashellWebsocket( ... )
  *
  * Code should not attempt to use the socket until after the ready Deferred
-  can be resolved.
+ *   can be resolved.
  */
-function SeashellWebsocket(uri, key) {
+function SeashellWebsocket(uri, key, failure, closes) {
   var self = this;
 
   self.coder = new SeashellCoder(key);
@@ -42,17 +44,12 @@ function SeashellWebsocket(uri, key) {
   self.ready = $.Deferred();
   self.authenticated = false;
   self.server_nonce = null;
+  self.failure = failure;
+  self.closes = closes;
 
   // Ready to authenticate [-1]
   self.requests[-1] = {
     deferred : $.Deferred().done(self._authenticate)
-  };
-  // Failure [-2]
-  self.requests[-2] = {
-    callback : function(s, msg) {
-      displayErrorMessage(msg);
-    },
-    deferred : null
   };
   // Program I/O [-3]
   self.requests[-3] = { 
@@ -61,14 +58,17 @@ function SeashellWebsocket(uri, key) {
   };
   // Test result
   self.requests[-4] = {
-    callback : SeashellProject.testResultNotify,
+    callback : null,
     deferred : null
   };
 
   self.websocket = new WebSocket(uri);
 
   self.websocket.onerror = function() {
-    self.requests[-2].callback(false, "An error has occurred with the websocket.");
+    return self.failure && self.failure();
+  };
+  self.websocket.onclose = function() {
+    return self.closes && self.closes();
   };
 
   this.websocket.onmessage = function(message) {
@@ -170,7 +170,11 @@ SeashellWebsocket.prototype._sendMessage = function(message, deferred) {
 };
 
 /** Sends a message along the connection, ensuring that
- *  the server and client are properly authenticated. */
+ *  the server and client are properly authenticated. 
+ *
+ *  If the socket has not been properly authenticated,
+ *  sends the message after the socket has been properly
+ *  authenticated/set up. */
 SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   var self = this;
   deferred = deferred || $.Deferred();
@@ -178,7 +182,12 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   if (self.authenticated) {
     return self._sendMessage(message, deferred);
   } else {
-    return deferred.reject(null).promise();
+    self.ready.done(function () {
+      self._sendMessage(message, deferred);
+    }).fail(function (result) {
+      deferred.reject(result);
+    });
+    return deferred.promise();
   }
 };
 
@@ -295,12 +304,21 @@ SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.newFile = function(name, file_name, deferred) {
-  return this.sendMessage({
-    type : "newFile",
-    project : name,
-    file : file_name},
-    deferred);
+SeashellWebsocket.prototype.newFile = function(name, file_name, contents, encoding, deferred) {
+  if (contents) 
+    return this.sendMessage({
+      type : "newFile",
+      project : name,
+      file : file_name,
+      contents : contents,
+      encoding : encoding || "raw"},
+      deferred);
+  else
+    return this.sendMessage({
+      type : "newFile",
+      project : name,
+      file : file_name},
+      deferred);
 };
 
 SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
