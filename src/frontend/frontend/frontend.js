@@ -448,6 +448,35 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $state.go("edit-project");
         }
       }])
+  .controller('EditFileController', ['$state', '$scope', '$interval', 'openProject', 'openQuestion',
+      'openFolder', 'openFile', 'error-service',
+      function($state, $scope, $interval, openProject, openQuestion, openFolder, openFile, error) {
+        var self = this;
+        self.project = openProject;
+        self.question = openQuestion;
+        self.folder = openFolder;
+        self.file = openFile;
+
+        self.ext = self.file.split(".")[1];
+        var mime = "text/plain";
+        switch(self.ext) {
+          case "c":
+          case "h":
+            mime = "text/x-c";
+          case "rkt":
+            mime = "text/x-scheme";
+        }
+
+        $scope.editorOptions = {
+          lineWrapping: true,
+          lineNumbers: true,
+          mode: mime,
+          theme: "midnight"
+        };
+        $scope.consoleOptions = {
+          lineWrapping: true
+        };
+      }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
@@ -515,13 +544,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           return $stateParams.question;
         }]}
       })
-      .state("edit-project.editor.edit", {
-        url: "/file/{file}",
+      .state("edit-project.editor.file", {
+        url: "/file/{part}/{file}",
         templateUrl: "frontend/templates/project-editor-editview-template.html",
         controller: "EditFileController as editFileView",
         resolve: {openFile: ['$stateParams', function($stateParams) {
-          return $stateParams.file;
-        }]}
+            return $stateParams.file;
+          }],
+          openFolder: ['$stateParams', function($stateParams) {
+            return $stateParams.part;
+          }]}
       });
   }])
   .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
