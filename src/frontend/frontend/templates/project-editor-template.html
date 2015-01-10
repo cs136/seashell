@@ -47,7 +47,7 @@
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <a ng-repeat="file in editView.question_files"
-              ui-sref="file({part: 'question', file: '{{file}}'})"
+              ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
               class="file-link"
               ui-sref-active="file-link-active">
               {{file}}
