@@ -55,12 +55,12 @@
        class="col-md-6 col-xs-6 questions-row-container"
        style="font-size: 18px; margin-top: 5px; padding: 0">
        <span class="questions-row" style="word-spacing: 15px">
-         <a ng-repeat="question in projectView.project.questions()"
+         <span ng-repeat="question in projectView.project.questions()">
+         <a
             ui-sref="edit-project.editor({question: '{{question}}'})"
             class="question-link"
-            ui-sref-active="question-link-active">
-            {{question}}
-          </a>     
+            ui-sref-active="question-link-active">{{question}}</a> 
+         </span>
        </span>
     </div>
   </div>
