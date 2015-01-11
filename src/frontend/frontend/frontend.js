@@ -467,13 +467,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             mime = "text/x-scheme";
         }
 
-        $scope.editorOptions = {
+        
+        self.editorOptions = {
           lineWrapping: true,
           lineNumbers: true,
           mode: mime,
           theme: "midnight"
         };
-        $scope.consoleOptions = {
+        self.consoleOptions = {
           lineWrapping: true
         };
       }])
