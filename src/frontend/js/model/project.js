@@ -922,7 +922,7 @@ function refreshSettings(succ, fail){
         editor.setOption("keyMap", "default");
     }
     editor.setOption("tabSize", settings["tab_width"]);
-    editor.setOption("indentUnit", settings["tab_width"]);
+    editor.setOption("indentUnit", parseInt(settings["tab_width"]));
     editor.setOption("theme", settings["text_style"]);
     // TODO: implement expandtab
 
