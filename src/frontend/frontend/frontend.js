@@ -449,9 +449,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $state.go("edit-project");
         }
       }])
-  .controller('EditFileController', ['$state', '$scope', '$interval', 'openProject', 'openQuestion',
+  .controller('EditFileController', ['$state', '$scope', '$timeout', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service',
-      function($state, $scope, $interval, openProject, openQuestion, openFolder, openFile, error) {
+      function($state, $scope, $timeout, openProject, openQuestion, openFolder, openFile, error) {
         var self = this;
         self.project = openProject;
         self.question = openQuestion;
@@ -468,12 +468,36 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             mime = "text/x-scheme";
         }
 
+        self.contents = "";
+        self.project.openFile(self.question, self.folder, self.file)
+          .then(function(conts) {
+            self.contents = conts;
+          });
+
+        $scope.$on("$destroy", function() {
+          if(self.timeout)
+            $timeout.cancel(self.timeout);
+          self.project.saveFile(self.question, self.folder, self.file, self.contents);
+        });
         
+        self.timeout = null;
+
+        self.editorLoad = function(editor) {
+          editor.on("change", function() {
+            if(self.timeout)
+              $timeout.cancel(self.timeout);
+            self.timeout = $timeout(function() {
+              self.project.saveFile(self.question, self.folder, self.file, self.contents);
+            }, 2000);
+          });
+        };
+
         self.editorOptions = {
           lineWrapping: true,
           lineNumbers: true,
           mode: mime,
-          theme: "midnight"
+          theme: "midnight",
+          onLoad: self.editorLoad
         };
         self.consoleOptions = {
           lineWrapping: true
