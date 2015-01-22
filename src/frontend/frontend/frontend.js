@@ -99,6 +99,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
       function ($modal, errors) {
