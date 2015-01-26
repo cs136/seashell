@@ -9,12 +9,12 @@
             <span>{{editView.question}}/
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <a ng-repeat="file in editView.question_files"
+            <span ng-repeat="file in editView.question_files">
+            <a
               ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
               class="file-link"
-              ui-sref-active="file-link-active">
-              {{file}}
-            </a>
+              ui-sref-active="file-link-active">{{file}}</a>
+            </span> 
           </span>
         </div>
         <div id='question-controls' class="col-md-6 col-xs-4">
@@ -46,12 +46,12 @@
         <div class="col-md-6 col-xs-8" id="common-files">
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <a ng-repeat="file in editView.common_files" 
+            <span ng-repeat="file in editView.common_files">
+            <a
               ui-sref="file({part: 'common', file: '{{file}}'})"
               ui-sref-active='file-link-active'
-              ui-sref='file-link'>
-              {{file}}
-            </a>
+              ui-sref='file-link'>{{file}}</a> 
+            </span>
           </span>
         </div>
       </div>
@@ -59,12 +59,12 @@
         <div class="col-md-6 col-xs-12">
           <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <a ng-repeat="file in editView.test_files"
+            <span ng-repeat="file in editView.test_files">
+            <a
               ui-sref="test(file: '{{file}}')"
               class="file-link"
-              ui-sref-active="file-link-active">
-              {{file}}
-            </a>
+              ui-sref-active="file-link-active">{{file}}</a> 
+            </span>
           </span>
         </div>
       </div>

@@ -457,6 +457,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.question = openQuestion;
         self.folder = openFolder;
         self.file = openFile;
+        self.isBinaryFile = false;
+        self.ready = false;
 
         self.ext = self.file.split(".")[1];
         var mime = "text/plain";
@@ -472,19 +474,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts;
+            self.ready = true;
+          }).catch(function () {
+            // TODO: error handling
+            self.isBinaryFile = true;
           });
 
         $scope.$on("$destroy", function() {
           if(self.timeout)
             $timeout.cancel(self.timeout);
-          self.project.saveFile(self.question, self.folder, self.file, self.contents);
+          if(self.ready)
+            self.project.saveFile(self.question, self.folder, self.file, self.contents);
         });
         
         self.timeout = null;
 
         self.editorLoad = function(editor) {
           editor.on("change", function() {
-            if(self.timeout)
+            if(self.ready)
               $timeout.cancel(self.timeout);
             self.timeout = $timeout(function() {
               self.project.saveFile(self.question, self.folder, self.file, self.contents);
