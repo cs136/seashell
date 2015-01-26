@@ -406,25 +406,46 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.compile()
+         * SeashellProject._compile()
          *
          * Compiles the project.
          */
-        SeashellProject.prototype.compile = function(question, folder, filename) {
+        SeashellProject.prototype._compile = function(question, folder, filename) {
           var self = this;
-          self.save().then(function() {
+          return self.save().then(function() {
             return $q.when(ws.socket.compileProject(self.name, self.currentFile.fullname()));
+          }).then(function (messages) {
+            return {status: "passed", messages: messages};
+          }).catch(function (messages) {
+            return $q.reject({status: "failed", messages: messages});
           });
         };
 
         /**
-         * SeashellProject.run(test)
+         * SeashellProject._run(test)
          * 
          * Runs the project. If the test param is set, runs with that test.
          */
-        SeashellProject.prototype.run = function(question, folder, filename, test) {
+        SeashellProject.prototype._run = function(question, folder, filename, test) {
           var self = this;
           return $q.when(ws.socket.runProject(self.name, self._getPath(question, folder, filename), test ? test : false));
+        };
+
+        /**
+         * SeashelLProject.run(...)
+         * Compiles [if necessary] and runs the project.
+         */
+        SeashellProject.prototype.run = function(question, folder, filename, test) {
+          var self = this;
+          // TODO: handle racket files.
+          self._compile(question, folder, filename)
+              .then(function (compileResult) {
+                return self._run(question, folder, filename, test).then(function (pid) {
+                  return {status: "running", messages: compileResult, pid: pid};
+                }).catch (function (error) {
+                  return {status: "failed", error: error, messages: messages};
+                });
+              });
         };
 
         /**
