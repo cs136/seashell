@@ -509,6 +509,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.consoleOptions = {
           lineWrapping: true
         };
+
+        self.runFile = function() {
+          self.project.run(self.question, self.folder, self.file, self.contents, false)
+            .then(function(res) {
+              console.log(res);
+            });
+        };
       }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
