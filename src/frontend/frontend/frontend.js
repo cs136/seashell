@@ -357,7 +357,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.state = 'edit-project';
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
-      self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
