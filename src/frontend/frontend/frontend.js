@@ -527,6 +527,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
+<<<<<<< HEAD
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
@@ -550,6 +551,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
             self.refreshSettings();
           });
+=======
+        self.runFile = function() {
+          self.project.run(self.question, self.folder, self.file, self.contents, false)
+            .then(function(res) {
+              console.log(res);
+            });
+        };
+>>>>>>> 401fb50deab589542eb7ec8e4103974047b59b88
       }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {

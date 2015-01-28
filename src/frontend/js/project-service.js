@@ -410,10 +410,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Compiles the project.
          */
-        SeashellProject.prototype._compile = function(question, folder, filename) {
+        SeashellProject.prototype._compile = function(question, folder, filename, data) {
           var self = this;
-          return self.save().then(function() {
-            return $q.when(ws.socket.compileProject(self.name, self.currentFile.fullname()));
+          return self.saveFile(question, folder, filename, data).then(function() {
+            return $q.when(ws.socket.compileProject(self.name, self._getPath(question, folder, filename)));
           }).then(function (messages) {
             return {status: "passed", messages: messages};
           }).catch(function (messages) {
@@ -435,10 +435,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * SeashelLProject.run(...)
          * Compiles [if necessary] and runs the project.
          */
-        SeashellProject.prototype.run = function(question, folder, filename, test) {
+        SeashellProject.prototype.run = function(question, folder, filename, data, test) {
           var self = this;
           // TODO: handle racket files.
-          self._compile(question, folder, filename)
+          return self._compile(question, folder, filename, data)
               .then(function (compileResult) {
                 return self._run(question, folder, filename, test).then(function (pid) {
                   return {status: "running", messages: compileResult, pid: pid};
