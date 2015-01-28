@@ -98,6 +98,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
         };
 
+        SeashellFile.prototype.read = function() {
+          var self = this;
+          return $q.when(ws.socket.readFile(self.project.name, self.fullname()));
+        }
+
         /**
          * write(data)
          * Writes data to the file.
@@ -332,19 +337,34 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.read(path)
+         * SeashellProject.openFile(question, folder, filename)
          *
          * Reads the file located at the given path, relative to the
          *  project root.
          */
         SeashellProject.prototype.openFile = function(question, folder, filename) {
           var self = this;
-          var file = self.root.find(_self.getPath(question, folder, filename));
+          var file = self.root.find(self._getPath(question, folder, filename));
           if(!file)
             return $q.reject("Cannot open file!");
           if(file.is_dir)
             return $q.reject("Cannot open a directory in editor.");
           return file.read();
+        };
+
+        /**
+         * Seashellproject.saveFile(question, folder, filename)
+         *
+         * Saves the file at the given location.
+         */
+        SeashellProject.prototype.saveFile = function(question, folder, filename, data) {
+          var self = this;
+          var file = self.root.find(self._getPath(question, folder, filename));
+          if(!file)
+            return $q.reject("Cannot save nonexistant file");
+          if(file.is_dir)
+            return $q.reject("Cannot save a directory.");
+          return file.write(data);
         };
 
         /**
@@ -386,25 +406,46 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.compile()
+         * SeashellProject._compile()
          *
          * Compiles the project.
          */
-        SeashellProject.prototype.compile = function(question, folder, filename) {
+        SeashellProject.prototype._compile = function(question, folder, filename) {
           var self = this;
-          self.save().then(function() {
+          return self.save().then(function() {
             return $q.when(ws.socket.compileProject(self.name, self.currentFile.fullname()));
+          }).then(function (messages) {
+            return {status: "passed", messages: messages};
+          }).catch(function (messages) {
+            return $q.reject({status: "failed", messages: messages});
           });
         };
 
         /**
-         * SeashellProject.run(test)
+         * SeashellProject._run(test)
          * 
          * Runs the project. If the test param is set, runs with that test.
          */
-        SeashellProject.prototype.run = function(question, folder, filename, test) {
+        SeashellProject.prototype._run = function(question, folder, filename, test) {
           var self = this;
           return $q.when(ws.socket.runProject(self.name, self._getPath(question, folder, filename), test ? test : false));
+        };
+
+        /**
+         * SeashelLProject.run(...)
+         * Compiles [if necessary] and runs the project.
+         */
+        SeashellProject.prototype.run = function(question, folder, filename, test) {
+          var self = this;
+          // TODO: handle racket files.
+          self._compile(question, folder, filename)
+              .then(function (compileResult) {
+                return self._run(question, folder, filename, test).then(function (pid) {
+                  return {status: "running", messages: compileResult, pid: pid};
+                }).catch (function (error) {
+                  return {status: "failed", error: error, messages: messages};
+                });
+              });
         };
 
         /**
