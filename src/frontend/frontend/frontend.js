@@ -504,7 +504,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             theme: settings.settings['text_style'],
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
-            onLoad: self.editorLoad
+            onLoad: self.editorLoad,
+            extraKeys: {
+              "F11": function() {
+	              self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
+              },
+              "Esc": function() {
+                if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
+              }
+            }
           };
           if (settings.settings['edit_mode'] === 'vim') {
             self.editorOptions['vim_mode'] = true;
@@ -515,7 +523,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions['keyMap'] = 'default';
             self.editorOptions['vim_mode'] = false;
           }
-
+          
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
@@ -526,8 +534,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           // Force the font size at any rate.
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
-
-<<<<<<< HEAD
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
@@ -551,14 +557,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
             self.refreshSettings();
           });
-=======
         self.runFile = function() {
           self.project.run(self.question, self.folder, self.file, self.contents, false)
             .then(function(res) {
               console.log(res);
             });
         };
->>>>>>> 401fb50deab589542eb7ec8e4103974047b59b88
       }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
