@@ -54,8 +54,5 @@ target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGe
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
                               ${REQ_LLVM_LIBRARIES})
-add_executable(example-clang-driver driver.cc)
-target_link_libraries(example-clang-driver seashell-clang)
 
 INSTALL(TARGETS seashell-clang LIBRARY DESTINATION lib)
-INSTALL(TARGETS example-clang-driver RUNTIME DESTINATION bin)

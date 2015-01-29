@@ -562,6 +562,25 @@ static int final_link_step (struct seashell_compiler* compiler)
 }
 
 /**
+ * CreateAndPopulateDiagOpts(...)
+ * Creates a populated DiagnosticOpts object.
+ *
+ * see clang/tools/driver/driver.cpp
+ */
+clang::DiagnosticOptions * CreateAndPopulateDiagOpts(const char *const *start, const char *const *end) {
+  auto *DiagOpts = new clang::DiagnosticOptions;
+  std::unique_ptr<llvm::opt::OptTable> Opts(clang::driver::createDriverOptTable());
+  unsigned MissingArgIndex, MissingArgCount;
+  std::unique_ptr<llvm::opt::InputArgList> Args(Opts->ParseArgs(
+        start, end, MissingArgIndex, MissingArgCount));
+  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
+  // Any errors that would be diagnosed here will also be diagnosed later,
+  // when the DiagnosticsEngine actually exists.
+  (void) clang::ParseDiagnosticArgs(*DiagOpts, *Args);
+  return DiagOpts; 
+}
+
+/**
  * compile_module(
  *  seashell_compiler* compiler,
  *  llvm::Module* target,
@@ -591,11 +610,9 @@ static int compile_module (seashell_compiler* compiler,
     }
     if (index >= compiler->module_messages.size())
       return 1;
-
     std::vector<seashell_diag>& compile_messages = compiler->module_messages[index];
+
     #define PUSH_DIAGNOSTIC(x) compile_messages.push_back(seashell_diag(true, src_path, (x)))
-
-
     /** Set up compilation arguments. */
     for(std::vector<std::string>::iterator p = compiler->compiler_flags.begin();
           p != compiler->compiler_flags.end();
@@ -604,9 +621,11 @@ static int compile_module (seashell_compiler* compiler,
       args.push_back(p->c_str());
     }
     args.push_back(src_path);
+    
+    /** Parse Diagnostic Arguments */
+    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
 
     /* Invoke clang to compile file to LLVM IR. */
-    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(new clang::DiagnosticOptions());
     SeashellDiagnosticClient diag_client(&*diag_opts);
 
     clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_ID(new clang::DiagnosticIDs());
@@ -625,10 +644,10 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
+    Clang.setInvocation(CI.getPtr());
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
-    Clang.setInvocation(CI.getPtr());
 
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
