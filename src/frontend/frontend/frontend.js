@@ -493,6 +493,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.project.saveFile(self.question, self.folder, self.file, self.contents);
             }, 2000);
           self.refreshSettings();
+          })
+          self.editor.on("cursorActivity", function(){
+            console.log(self.editor.getCursor().line + ', ' + self.editor.getCursor().ch);
           });
         };
         self.refreshSettings = function () {
@@ -507,7 +510,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             onLoad: self.editorLoad,
             extraKeys: {
               "F11": function() {
-	              self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
+	              console.log(self.editor.getCursor().ch);
+                self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
