@@ -208,7 +208,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function (target) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
-            controller: ['$scope', '$tate', 'error-service', 'marmoset',
+            controller: ['$scope', '$state', 'error-service', 'marmoset',
               function ($scope, $state, errors, marmoset) {
               }]});
         };
@@ -220,19 +220,32 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.settings =  {
           font_size  : 10,
           edit_mode  : "standard",
-          tab_width  : 4,
-          text_style : "neat"
+          tab_width  : 2,
+          text_style : "neat",
+          use_space : true
         };
-        self.notify = [];
+        self.notify = {};
+        var nKey = 0;
 
         function notifyChanges () {
-          _.forEach(self.notify, function (x) {x();});
+          _.forEach(self.notify, function (fn) {fn();});
         }
+
+        /** Adds and removes watchers on the settings service. */
+        self.addWatcher = function(fn, invoke) {
+          self.notify[nKey] = fn;
+          invoke && fn ();
+          return nKey ++;
+        };
+        self.removeWatcher = function(key) {
+          delete self.notify[key];
+        };
 
         self.load = function () {
           return $q.when(ws.socket.getSettings()).then(function (settings) {
             if (settings)
-              self.settings = settings;
+              for (var k in settings)
+                self.settings[k] = settings[k];
             notifyChanges();
           }).catch(function (message) {
             errors.report(message, "Could not load settings from server.");
@@ -260,6 +273,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         };
       }])
+  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+    var self = this;
+    self.contents = "";
+    socket.register_callback("io", function(io) {
+      console.log(io);
+    });
+    socket.register_callback("test", function(test) {
+      console.log(test);
+    });
+  }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
       function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
@@ -344,7 +367,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.state = 'edit-project';
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
-      self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
@@ -450,72 +473,99 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         }
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', 'openProject', 'openQuestion',
-      'openFolder', 'openFile', 'error-service',
-      function($state, $scope, $timeout, openProject, openQuestion, openFolder, openFile, error) {
+      'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service',
+      function($state, $scope, $timeout, openProject, openQuestion, openFolder, openFile, errors, settings, Console) {
         var self = this;
+        // Scope variable declarations follow.
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
         self.file = openFile;
+        self.console = Console;
         self.isBinaryFile = false;
         self.ready = false;
-
         self.ext = self.file.split(".")[1];
-        var mime = "text/plain";
-        switch(self.ext) {
-          case "c":
-          case "h":
-            mime = "text/x-c";
-          case "rkt":
-            mime = "text/x-scheme";
-        }
-
+        self.editor = null;
+        self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleOptions = {
+          lineWrapping: true,
+          readOnly: true
+        };
         self.contents = "";
-        self.project.openFile(self.question, self.folder, self.file)
-          .then(function(conts) {
-            self.contents = conts;
-            self.ready = true;
-          }).catch(function () {
-            // TODO: error handling
-            self.isBinaryFile = true;
-          });
-
-        $scope.$on("$destroy", function() {
-          if(self.timeout)
-            $timeout.cancel(self.timeout);
-          if(self.ready)
-            self.project.saveFile(self.question, self.folder, self.file, self.contents);
-        });
-        
-        self.timeout = null;
-
+        var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
+        // Scope helper function follow.
         self.editorLoad = function(editor) {
-          editor.on("change", function() {
+          self.editor = editor;
+          self.editor.on("change", function() {
             if(self.ready)
               $timeout.cancel(self.timeout);
             self.timeout = $timeout(function() {
               self.project.saveFile(self.question, self.folder, self.file, self.contents);
             }, 2000);
+          self.refreshSettings();
           });
         };
+        self.refreshSettings = function () {
+          self.editorOptions = {
+            lineWrapping: true,
+            lineNumbers: !self.isBinaryFile,
+            readOnly: !self.ready || self.isBinaryFile,
+            mode: mime,
+            theme: settings.settings['text_style'],
+            tabSize: parseInt(settings.settings['tab_width']),
+            indentUnit: parseInt(settings.settings['tab_width']),
+            onLoad: self.editorLoad
+          };
+          if (settings.settings['edit_mode'] === 'vim') {
+            self.editorOptions['vim_mode'] = true;
+          } else if(settings.settings['edit_mode'] === 'emacs') {
+            self.editorOptions['keyMap'] = 'emacs';
+            self.editorOptions['vim_mode'] = false;
+          } else {
+            self.editorOptions['keyMap'] = 'default';
+            self.editorOptions['vim_mode'] = false;
+          }
 
-        self.editorOptions = {
-          lineWrapping: true,
-          lineNumbers: true,
-          mode: mime,
-          theme: "midnight",
-          onLoad: self.editorLoad
-        };
-        self.consoleOptions = {
-          lineWrapping: true
+          // If the CodeMirror has been loaded, add it to the editor.
+          if (self.editor) {
+            for (var key in self.editorOptions) {
+              self.editor.setOption(key, self.editorOptions[key]);
+            }
+            self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+          }
+          // Force the font size at any rate.
+          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
         self.runFile = function() {
           self.project.run(self.question, self.folder, self.file, self.contents, false)
             .then(function(res) {
-              console.log(res);
             });
         };
+
+        // Initialization code goes here.
+        var key = settings.addWatcher(function () {self.refreshSettings();}, true);
+        $scope.$on("$destroy", function() {
+          if (self.timeout)
+            $timeout.cancel(self.timeout);
+          if (self.ready)
+            self.project.saveFile(self.question, self.folder, self.file, self.contents);
+          settings.removeWatcher(key);
+        });
+        self.project.openFile(self.question, self.folder, self.file)
+          .then(function(conts) {
+            self.contents = conts;
+            self.ready = true;
+            self.refreshSettings();
+          }).catch(function (error) {
+            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
+              self.isBinaryFile = true;
+            else {
+              errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
+              $state.go('edit-project.editor');
+            }
+            self.refreshSettings();
+          });
       }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
