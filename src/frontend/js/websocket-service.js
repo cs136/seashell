@@ -129,8 +129,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           }, 4000);
           self.connected = true;
           self.failed = false;
-          self.socket.requests[-3] = io_cb;
-          self.socket.requests[-4] = test_cb;
+          self.socket.requests[-3].callback = io_cb;
+          self.socket.requests[-4].callback = test_cb;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'connected';}),

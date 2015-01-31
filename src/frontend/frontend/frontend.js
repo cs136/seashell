@@ -275,13 +275,37 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
     var self = this;
+    self.PID = null;
+    self.inst = null;
     self.contents = "";
     socket.register_callback("io", function(io) {
-      console.log(io);
+      if(io.type == "stdout")
+        self.write(io.message);
+      else if(io.type == "done") {
+        self.write("Program finished with exit code "+io.status+".\n");
+        self.PID = null;
+      }
     });
-    socket.register_callback("test", function(test) {
-      console.log(test);
+    socket.register_callback("test", function(res) {
+      if(res.result=="passed") {
+        self.write("Test '"+res.test_name+"' passed.\n");
+      }
+      else if(res.result=="failed") {
+        self.write("Test '"+res.test_name+"' failed!\n");
+      }
     });
+
+    self.setRunning = function(PID) {
+      self.PID = PID;
+    };
+    self.clear = function() {
+      self.contents = "";
+    };
+    self.write = function(msg) {
+      self.contents += msg;
+      var scr = self.inst.getScrollInfo();
+      self.inst.scrollTo(scr.left, scr.height);
+    };
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
@@ -380,7 +404,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
-        self.tests = [];
+        self.test_files = [];
         self.marmoset_short_results = null;
         self.marmoset_refresh_interval = undefined;
         self.marmoset_timeout = 1000;
@@ -397,7 +421,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           var result = self.project.filesFor(self.question);
           self.common_files = result.common;
           self.question_files = result.question;
-          self.tests = result.tests;
+          self.test_files = result.tests;
         };
 
         /** Adds file to the project. */
@@ -472,9 +496,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $state.go("edit-project");
         }
       }])
-  .controller('EditFileController', ['$state', '$scope', '$timeout', 'openProject', 'openQuestion',
+  .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service',
-      function($state, $scope, $timeout, openProject, openQuestion, openFolder, openFile, errors, settings, Console) {
+      function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors, settings, Console) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -487,9 +511,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleLoad = function(console) {
+          self.console.inst = console;
+        };
         self.consoleOptions = {
           lineWrapping: true,
-          readOnly: true
+          readOnly: true,
+          mode: "text/plain",
+          onLoad: self.consoleLoad
         };
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
@@ -540,7 +569,53 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.runFile = function() {
           self.project.run(self.question, self.folder, self.file, self.contents, false)
             .then(function(res) {
+              self.killProgram().then(function() {
+                self.console.setRunning(res.pid);
+                self.console.clear();
+                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
+              });
             });
+        };
+
+        self.testFile = function() {
+          self.project.run(self.question, self.folder, self.file, self.contents, true)
+            .then(function(res) {
+              self.killProgram().then(function() {
+                self.console.setRunning(res);
+                self.console.clear();
+                self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+              });
+            });
+        };
+
+        self.killProgram = function() {
+          if(!self.console.PID) {
+            return $q.when();
+          }
+          if(!isNaN(self.console.PID)) {
+            return self.project.kill(self.console.PID);
+          }
+          else {
+            return $q.all(_.map(self.console.PID, function(id) {
+              return self.project.kill(id);
+            }));
+          }
+        };
+
+        self.userInput = "";
+        self.sendInput = function($event) {
+          if($event.keyCode == 13) {
+            if(self.console.PID && !isNaN(self.console.PID)) {
+              self.project.sendInput(self.console.PID, self.userInput);
+              self.userInput = "";
+            }
+          }
+        };
+
+        self.sendEOF = function() {
+          if(self.console.PID && !isNaN(self.console.PID)) {
+            self.project.sendEOF(self.console.PID);
+          }
         };
 
         // Initialization code goes here.

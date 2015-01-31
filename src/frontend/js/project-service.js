@@ -1,4 +1,4 @@
-/**
+/*u
  * Angular bindings for Seashell projects.
  * Copyright (C) 2013-2014 The Seashell Maintainers.
  *
@@ -434,13 +434,23 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         /**
          * SeashelLProject.run(...)
          * Compiles [if necessary] and runs the project.
+         *
+         * test - boolean parameter, run with tests if true.
          */
         SeashellProject.prototype.run = function(question, folder, filename, data, test) {
           var self = this;
           // TODO: handle racket files.
+          var tests = test ? self.getTestsForFile(self.root.find(self._getPath(question, folder, filename))) : false;
           return self._compile(question, folder, filename, data)
               .then(function (compileResult) {
-                return self._run(question, folder, filename, test).then(function (pid) {
+                if(tests) {
+                  return $q.all(_.map(tests, function(tname) {
+                    return self._run(question, folder, filename, tname);
+                  })).catch(function(error) {
+                    return {status: "failed", error: error, messages: messages};
+                  });
+                }
+                return self._run(question, folder, filename).then(function (pid) {
                   return {status: "running", messages: compileResult, pid: pid};
                 }).catch (function (error) {
                   return {status: "failed", error: error, messages: messages};
@@ -524,7 +534,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.getTestsForFile = function(file) {
           var self = this;
-          var testDir = self.getFileFromPath(file.name[0]+"/tests");
+          var testDir = self.root.find(file.name[0]+"/tests");
           var arr = [];
           if(testDir && testDir.is_dir) {
             for(var i=0; i < testDir.children.length; i++) {
@@ -566,6 +576,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.submit = function(question, project) {
           var self = this;
           return $q.when(ws.socket.marmosetSubmit(self.name, project || self.currentMarmosetProject(question), question));
+        };
+
+        SeashellProject.prototype.sendInput = function(pid, message) {
+          var self = this;
+          return $q.when(ws.socket.programInput(pid, message));
+        };
+
+        SeashellProject.prototype.sendEOF = function(pid) {
+          var self = this;
+          return $q.when(ws.socket.sendEOF(pid));
         };
 
       return SeashellProject;})();
