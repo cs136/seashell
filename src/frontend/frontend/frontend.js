@@ -368,6 +368,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.download = function(){
+        openProject.getDownloadToken().then(function (token){
+            var raw = JSON.stringify(token);
+            var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
+                              creds.host,
+                              creds.port,
+                              encodeURIComponent(openProject.name);
+                              encodeURIComponent(raw));
+
+            var hiddenDownloadButton = document.createElement('downloadButton');
+            hiddenDownloadButton.target = '_self';
+            hiddenDownloadButton.href = url;
+            hiddenDownloadButton.download = openProject.name + '.zip';
+            hiddenDownloadButton.click();
+      }
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
