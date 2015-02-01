@@ -53,6 +53,13 @@ function handleProgramKill() {
     });
 }
 
+function showCommitDialog() {
+  SeashellProject.currentProject.save()
+    .done(function() {
+      $("#commit-project-dialog").model("show");
+    });
+}
+
 function handleDownloadProject() {
   SeashellProject.currentProject.getDownloadToken()
     .done(function(token) {
@@ -91,6 +98,7 @@ function setupMenu() {
   $("#toolbar-run").on("click", handleRunProject);
   $("#toolbar-run-tests").on("click", handleRunTests);
   $("#toolbar-kill").on("click", handleProgramKill);
+  $("#toolbar-commit").on("click", showCommitDialog);
   $('#toolbar-delete-file').on("click", function() {
     displayConfirmationMessage('delete file',
                                'are you sure you want to delete the current\
