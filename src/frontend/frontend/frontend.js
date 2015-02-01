@@ -87,6 +87,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Commit Project Modal Service
+  .factory('CommitProjectModal', ['$modal', 'error-service',
+      function ($modal, errors) {
+        return function (project) {
+          return $modal.open({
+            templateUrl: "frontend/templates/commit-project-template.html",
+            controller: ['$scope', 'socket', 'error-service',
+            function ($scope, ws, errors) {
+              $scope.commit_descr = "";
+              $scope.CommitProject = function () {
+                $scope.$close();
+                ws.socket.saveProject(project.name, $scope.commit_descr);
+              };
+            }]
+          }).result;
+        };
+      }])
   // Directive for binding file uploads.
   .directive('filelistBind', ['$parse', function ($parse) {
     return {
@@ -381,6 +398,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           newFileModal(self.project, self.question, function () {
             self.refresh();
           });
+        };
+
+        /** Commits the project. */
+        self.commit_project = function () {
+	  commitProjectModal(self.project);
         };
 
         /** Submits the current question. */
