@@ -278,9 +278,33 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.PID = null;
     self.inst = null;
     self.contents = "";
+    // buffers
+    self.stdout = "";
+    self.stderr = "";
+
     socket.register_callback("io", function(io) {
-      if(io.type == "stdout")
-        self.write(io.message);
+      if(io.type == "stdout") {
+        var ind = io.message.indexOf("\n");
+        if(ind > -1) {
+          var spl = self.io.message.split("\n");
+          self.write(self.stdout);
+          while(spl.length>1) { self.write(spl.shift() + "\n"); }
+          self.stdout = spl[0];
+        }
+        else
+          self.stdout += io.message;
+      }
+      else if(io.type == "stderr") {
+        var ind = io.message.indexOf("\n");
+        if(ind > -1) {
+          var spl = self.io.message.split("\n");
+          self.write(self.stderr);
+          while(spl.length>1) { self.write(spl.shift() + "\n"); }
+          self.stderr = spl[0];
+        }
+        else
+          self.stderr += io.message;
+      }
       else if(io.type == "done") {
         self.write("Program finished with exit code "+io.status+".\n");
         self.PID = null;
@@ -303,8 +327,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     };
     self.write = function(msg) {
       self.contents += msg;
-      var scr = self.inst.getScrollInfo();
-      self.inst.scrollTo(scr.left, scr.height);
     };
   }])
   // Main controller
@@ -511,8 +533,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.editorOptions = {}; // Wait until we grab settings to load this.
-        self.consoleLoad = function(console) {
-          self.console.inst = console;
+        self.consoleLoad = function(console_cm) {
+          self.console.inst = console_cm;
+          self.console.inst.on("update", function() {
+            var scr = self.console.inst.getScrollInfo();
+            self.console.inst.scrollTo(scr.left, scr.height);
+          });
         };
         self.consoleOptions = {
           lineWrapping: true,
