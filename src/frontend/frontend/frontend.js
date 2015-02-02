@@ -142,6 +142,26 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  .factory('RenameFileModal', ['$modal', 'error-service',
+    function($modal, errors) {
+      return function(project, question, folder, file, notify) {
+        notify = notify || function() {};
+        return $modal.open({
+          templateUrl: "frontend/templates/rename-file-template.html",
+          controller: ["$scope", "$state", "error-service",
+            function($scope, $state, errors) {
+              $scope.rename_name = file;
+              $scope.renameFile = function() {
+                project.renameFile(question, folder, file, folder, $scope.rename_name)
+                  .then(function() {
+                    $scope.$close();
+                    notify($scope.rename_name);
+                  });
+              };
+            }]
+          });
+      };
+  }])
   // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
@@ -318,7 +338,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
     var self = this;
-    self.PID = null;
+    self.PIDs = null;
     self.inst = null;
     self.contents = "";
     // buffers
@@ -329,7 +349,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       if(io.type == "stdout") {
         var ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = self.io.message.split("\n");
+          var spl = io.message.split("\n");
           self.write(self.stdout);
           while(spl.length>1) { self.write(spl.shift() + "\n"); }
           self.stdout = spl[0];
@@ -340,7 +360,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       else if(io.type == "stderr") {
         var ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = self.io.message.split("\n");
+          var spl = io.message.split("\n");
           self.write(self.stderr);
           while(spl.length>1) { self.write(spl.shift() + "\n"); }
           self.stderr = spl[0];
@@ -350,10 +370,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
       else if(io.type == "done") {
         self.write("Program finished with exit code "+io.status+".\n");
-        self.PID = null;
+        self.PIDs = null;
       }
     });
     socket.register_callback("test", function(res) {
+      self.PIDs = _.without(self.PIDs, res.pid);
       if(res.result=="passed") {
         self.write("Test '"+res.test_name+"' passed.\n");
       }
@@ -362,8 +383,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     });
 
-    self.setRunning = function(PID) {
-      self.PID = PID;
+    self.setRunning = function(PIDs) {
+      self.PIDs = PIDs;
     };
     self.clear = function() {
       self.contents = "";
@@ -489,6 +510,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.question_files = result.question;
           self.test_files = result.tests;
         };
+        $scope.refresh = self.refresh;
 
         /** Adds file to the project. */
         self.add_file = function () {
@@ -589,8 +611,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         }
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
-      'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service',
-      function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors, settings, Console) {
+      'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
+      'ConfirmationMessageModal',
+      function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
+          settings, Console, renameModal, confirmModal) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -687,40 +711,55 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
-        self.runFile = function() {
-          self.project.run(self.question, self.folder, self.file, self.contents, false)
-            .then(function(res) {
-              self.killProgram().then(function() {
-                self.console.setRunning(res.pid);
-                self.console.clear();
-                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
-              });
+        self.renameFile = function() {
+          renameModal(self.project, self.question, self.folder, self.file, function(newName) {
+            $scope.$parent.refresh();
+            $state.go("edit-project.editor.file", {part:self.folder, file:newName});
+          });
+        };
+
+        self.deleteFile = function() {
+          confirmModal("Delete File", "Are you sure you want to delete '"+self.file+"'?")
+            .then(function() {
+              self.project.deleteFile(self.question, self.folder, self.file)
+                .then(function() {
+                  $scope.$parent.refresh();
+                  $state.go("edit-project.editor");
+                });
             });
         };
 
+        self.runFile = function() {
+          self.killProgram().then(function() {
+            self.project.run(self.question, self.folder, self.file, self.contents, false)
+              .then(function(res) {
+                self.console.setRunning([res.pid]);
+                self.console.clear();
+                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
+              });
+          });
+        };
+
         self.testFile = function() {
-          self.project.run(self.question, self.folder, self.file, self.contents, true)
-            .then(function(res) {
-              self.killProgram().then(function() {
+          self.killProgram().then(function() {
+            self.project.run(self.question, self.folder, self.file, self.contents, true)
+              .then(function(res) {
                 self.console.setRunning(res);
                 self.console.clear();
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               });
-            });
+          });
         };
 
         self.killProgram = function() {
-          if(!self.console.PID) {
+          if(!self.console.PIDs) {
             return $q.when();
           }
-          if(!isNaN(self.console.PID)) {
-            return self.project.kill(self.console.PID);
-          }
-          else {
-            return $q.all(_.map(self.console.PID, function(id) {
-              return self.project.kill(id);
-            }));
-          }
+          return $q.all(_.map(self.console.PIDs, function(id) {
+            return self.project.kill(id);
+          })).then(function() {
+            self.console.PIDs = null;
+          });
         };
 
         self.userInput = "";

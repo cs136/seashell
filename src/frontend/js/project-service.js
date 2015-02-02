@@ -92,9 +92,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return $q.when(ws.socket.renameFile(self.project.name, self.fullname(), name))
             .then(function() {
               var oldname = self.name.join("/");
+              self.project.root._removeFromTree(oldname.split("/"), true);
               self.name = name.split("/");
-              self.project.root._removeFromTree(oldname, true);
-              self.project.root._placeInTree(self, true);
+              self.project.root._placeInTree(self, self.name, true);
             });
         };
 
@@ -197,7 +197,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return match[0]._placeInTree(file, path.slice(1), soft_place, contents, encoding);
             else {
               var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
-              return $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname()))
+              return (dir.fullname == "" ? $q.when() : 
+                  $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
                   return self._placeInTree(file, path, soft_place, contents, encoding);
@@ -390,7 +391,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.deleteFile = function(question, folder, fname) {
           var self = this;
           var path = self._getPath(question, folder, fname);
-          return self.root._removeFromTree(path);
+          return self.root._removeFromTree(path.split("/"));
         };
 
         /**
