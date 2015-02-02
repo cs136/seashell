@@ -268,12 +268,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           lock = lock || "lock";
           self.lock = lock;
 
-          var result = $q.when();
+          var result = null;
           if (lock === "lock") {
-            result = result.then($q.when(ws.socket.lockProject(self.name)));
+            result = $q.when(ws.socket.lockProject(self.name));
           } else if (lock === "force-lock") {
-            result = result.then($q.when(ws.socket.forceLockProject(self.name)));
+            result = $q.when(ws.socket.forceLockProject(self.name));
+          } else {
+            result = $q.when();
           }
+
           result = result.then(function () {
             return $q.when(ws.socket.listProject(self.name))
             .then(function(files) {
