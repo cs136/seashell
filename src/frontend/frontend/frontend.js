@@ -96,9 +96,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             controller: ['$scope', 'socket', 'error-service',
             function ($scope, ws, errors) {
               $scope.commit_descr = "";
-              $scope.CommitProject = function () {
+              $scope.commit_project = function () {
                 $scope.$close();
-                ws.socket.saveProject(project.name, $scope.commit_descr);
+                project.save($scope.commit_descr)
+                       .catch(function (error) {
+                         errors.report(error, sprintf("Could not commit %s to storage!", project.name));
+                       });
               };
             }]
           }).result;
@@ -435,9 +438,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
+      'CommitProjectModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset) {
+        $interval, marmoset, commitProjectModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -472,7 +476,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         /** Commits the project. */
         self.commit_project = function () {
-	  commitProjectModal(self.project);
+          commitProjectModal(self.project);
         };
 
         /** Submits the current question. */

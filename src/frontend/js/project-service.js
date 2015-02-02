@@ -458,6 +458,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               });
         };
 
+        /** 
+         * save(message | optional)
+         * Saves (commits) the project to Git.
+         */
+        SeashellProject.prototype.save = function(message) {
+          var self = this;
+          return $q.when(ws.socket.saveProject(self.name, message));
+        };
+
         /**
          * SeashellProject.kill()
          *

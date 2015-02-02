@@ -6,15 +6,9 @@
 </div>
 <form name="commitProjectForm" novalidate ng-submit="commit_project()">
 <div class="modal-body">
-  Commits are a way to make "snapshots" of your files.  For example,
-  you may wish to commit before you make potentially code-breaking
-  changes to a function.  Once you have these commits in place, a
-  proffesor or TA can go through these commits and help you restore
-  them to their previous state.  Leave a descriptive message about the
-  current state of your project so that it is easy to identify later.
-  <div class="form-group">
+  <div class="form-group" id="commit-project-descr">
     <label for="commit_descr">Commit Description:</label>
-    <textarea id="commit_descr" ng-model="commit_descr" cols="40"></textarea>
+    <textarea ui-codemirror id="commit_descr" ng-model="commit_descr" cols="40"></textarea>
   </div>
 </div>
 <div class="modal-footer">

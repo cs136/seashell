@@ -438,3 +438,7 @@ input::-ms-clear {
 #marmoset-details-table td {
   padding: 3px;
 }
+
+#commit-project-descr .CodeMirror {
+  border: 1px solid #ddd;
+}
