@@ -106,6 +106,7 @@ function setupHotkeys() {
     var action = { 'r' : handleRunProject, '\r' : handleRunProject,
                    'd' : when_focused('#input-line', sendEOF),
                    'u' : handleRunTests,
+                   's' : showCommitDialog,
                    'k' : handleProgramKill
                  }[String.fromCharCode(e.keyCode).toLowerCase()];
     if (action) {

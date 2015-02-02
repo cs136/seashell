@@ -924,6 +924,7 @@ function refreshSettings(succ, fail){
     editor.setOption("tabSize", settings["tab_width"]);
     editor.setOption("indentUnit", settings["tab_width"]);
     editor.setOption("theme", settings["text_style"]);
+    editor.addKeyMap({"Tab": "insertSoftTab"});
     // TODO: implement expandtab
 
     // change the options in the Settings menu to the new settings

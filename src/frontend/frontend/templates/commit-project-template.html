@@ -1,0 +1,24 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title">
+    <span class="glyphicon glyphicon-export"></span>
+    <span id="commit-project-title">Commit Project</span></h4>
+</div>
+<form name="commitProjectForm" novalidate ng-submit="commit_project()">
+<div class="modal-body">
+  Commits are a way to make "snapshots" of your files.  For example,
+  you may wish to commit before you make potentially code-breaking
+  changes to a function.  Once you have these commits in place, a
+  proffesor or TA can go through these commits and help you restore
+  them to their previous state.  Leave a descriptive message about the
+  current state of your project so that it is easy to identify later.
+  <div class="form-group">
+    <label for="commit_descr">Commit Description:</label>
+    <textarea id="commit_descr" ng-model="commit_descr" cols="40"></textarea>
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+  &nbsp;&nbsp;
+  <input type="submit" class="btn btn-primary" value="Commit">
+</div>
