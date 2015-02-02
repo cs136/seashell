@@ -729,14 +729,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         };
 
+        function handleCompileErr(res) {
+          self.console.clear();
+          self.console.write("Compilation failed with errors:\n");
+          self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+        }
+
         self.runFile = function() {
           self.killProgram().then(function() {
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
                 self.console.setRunning([res.pid]);
                 self.console.clear();
+                handleCompileErr(res.messages);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
-              });
+              })
+              .catch(handleCompileErr);
           });
         };
 
@@ -747,7 +755,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 self.console.setRunning(res);
                 self.console.clear();
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
-              });
+              })
+              .catch(handleCompileErr);
           });
         };
 
