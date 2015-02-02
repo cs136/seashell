@@ -450,14 +450,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 if(tests) {
                   return $q.all(_.map(tests, function(tname) {
                     return self._run(question, folder, filename, tname);
-                  })).catch(function(error) {
-                    return {status: "failed", error: error, messages: messages};
+                  }))
+                  .then(function (pids) {
+                    return {status: "testing", pids: pids, messages: compileResult};
+                  })
+                  .catch(function(error) {
+                    return {status: "failed", error: error, messages: compileResult};
                   });
                 }
                 return self._run(question, folder, filename).then(function (pid) {
                   return {status: "running", messages: compileResult, pid: pid};
                 }).catch (function (error) {
-                  return {status: "failed", error: error, messages: messages};
+                  return {status: "failed", error: error, messages: compileResult};
                 });
               });
         };
