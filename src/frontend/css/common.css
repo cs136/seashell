@@ -438,3 +438,7 @@ input::-ms-clear {
 #marmoset-details-table td {
   padding: 3px;
 }
+
+#send-eof {
+  z-index: 2;
+}
