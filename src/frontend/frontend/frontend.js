@@ -91,11 +91,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   .factory('CommitProjectModal', ['$modal', 'error-service',
       function ($modal, errors) {
         return function (project) {
-          return $modal.open({
+          var modal = $modal.open({
             templateUrl: "frontend/templates/commit-project-template.html",
             controller: ['$scope', 'socket', 'error-service',
-            function ($scope, ws, errors) {
-              $scope.commit_descr = "";
+            function ($scope,  ws, errors) {
+              $scope.commit_descr = "Saved "+(new Date()).toUTCString()+".";
+              $scope.editor = null;
+              $scope.codemirror_opts = {
+                lineWrapping: true,
+                mode: "text/plain",
+                onLoad: function (cm) {
+                  $scope.editor = cm;
+                }
+              };
               $scope.commit_project = function () {
                 $scope.$close();
                 project.save($scope.commit_descr)
@@ -104,9 +112,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                        });
               };
             }]
-          }).result;
+          });
+          return modal.result;
         };
       }])
+  // Directive for binding a mutator watcher (HTML5)
+  .directive('whenVisible', ['$parse', function ($parse) {
+    return {
+      link: function (scope, elem, attrs) {
+        var triggered = false;
+        scope.$watch(function () {
+          if (elem.is(':visible') && !triggered) {
+            $parse(attrs.whenVisible)(scope);
+            triggered = true;
+          }
+        });
+      }
+    };
+  }])
   // Directive for binding file uploads.
   .directive('filelistBind', ['$parse', function ($parse) {
     return {

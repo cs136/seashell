@@ -6,9 +6,9 @@
 </div>
 <form name="commitProjectForm" novalidate ng-submit="commit_project()">
 <div class="modal-body">
-  <div class="form-group" id="commit-project-descr">
+  <div class="form-group" id="commit-project-descr" when-visible="editor.refresh()">
     <label for="commit_descr">Commit Description:</label>
-    <textarea ui-codemirror id="commit_descr" ng-model="commit_descr" cols="40"></textarea>
+    <textarea ui-codemirror id="commit_descr" ui-codemirror-opts="codemirror_opts" ng-model="commit_descr"></textarea>
   </div>
 </div>
 <div class="modal-footer">
