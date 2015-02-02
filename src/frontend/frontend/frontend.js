@@ -480,6 +480,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           lineWrapping: true,
           readOnly: true
         };
+        self.colNums = ""; 
         self.timeout = null;
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
@@ -493,11 +494,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.project.saveFile(self.question, self.folder, self.file, self.contents);
             }, 2000);
           self.refreshSettings();
-          })
-          self.editor.on("cursorActivity", function(){
-            console.log(self.editor.getCursor().line + ', ' + self.editor.getCursor().ch);
           });
-        };
+          self.editor.on("cursorActivity", function(){
+            self.timeout = $timeout(function (){
+              console.log(self.editor.getCursor().line + ', ' + self.editor.getCursor().ch);
+              self.colNums = self.editor.getCursor().line + ', ' + self.editor.getCursor().ch;
+             }, 250);
+          });  
+        };    
         self.refreshSettings = function () {
           self.editorOptions = {
             lineWrapping: true,
@@ -510,7 +514,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             onLoad: self.editorLoad,
             extraKeys: {
               "F11": function() {
-	              console.log(self.editor.getCursor().ch);
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
               "Esc": function() {
