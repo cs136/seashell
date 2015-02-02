@@ -729,10 +729,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         };
 
-        function handleCompileErr(res) {
+        function handleCompileErr(msgs, warn_only) {
           self.console.clear();
-          self.console.write("Compilation failed with errors:\n");
-          self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+          if(msgs.length==0) return;
+          if(!warn_only)
+            self.console.write("Compilation failed with errors:\n");
+          else
+            self.console.write("Compilation generated warnings:\n");
+          _.each(msgs, function(res) {
+            self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+          });
         }
 
         self.runFile = function() {
@@ -741,10 +747,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               .then(function(res) {
                 self.console.setRunning([res.pid]);
                 self.console.clear();
-                handleCompileErr(res.messages);
+                handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
-              .catch(handleCompileErr);
+              .catch(function(res) {
+                if(res.error)
+                  errors.report(res.error, "An error occurred when running the project.");
+                handleCompileErr(res.messages);
+              });
           });
         };
 
@@ -752,11 +762,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.killProgram().then(function() {
             self.project.run(self.question, self.folder, self.file, self.contents, true)
               .then(function(res) {
-                self.console.setRunning(res);
+                self.console.setRunning(res.pids);
                 self.console.clear();
+                handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })
-              .catch(handleCompileErr);
+              .catch(function(res) {
+                if(res.error)
+                  errors.report(res.error, "An error occurred when running the project.");
+                handleCompileErr(res.messages);
+              });
           });
         };
 

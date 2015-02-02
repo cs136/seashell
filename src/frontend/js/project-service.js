@@ -452,16 +452,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                     return self._run(question, folder, filename, tname);
                   }))
                   .then(function (pids) {
-                    return {status: "testing", pids: pids, messages: compileResult};
+                    return {status: "testing", pids: pids, messages: compileResult.messages};
                   })
                   .catch(function(error) {
-                    return {status: "failed", error: error, messages: compileResult};
+                    return $q.reject({status: "failed", error: error, messages: compileResult.messages});
                   });
                 }
                 return self._run(question, folder, filename).then(function (pid) {
-                  return {status: "running", messages: compileResult, pid: pid};
+                  return {status: "running", messages: compileResult.messages, pid: pid};
                 }).catch (function (error) {
-                  return {status: "failed", error: error, messages: compileResult};
+                  return $q.reject({status: "failed", error: error, messages: compileResult.message});
                 });
               });
         };
