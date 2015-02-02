@@ -106,7 +106,7 @@
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get git-place `(seashell-git-update ,update ,message)))
+                    (place-channel-put/get git-place `(seashell-git-commit ,update ,message)))
       (when exn?
         (raise (exn:git data (current-continuation-marks))))
       (void))))
