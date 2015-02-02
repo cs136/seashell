@@ -497,13 +497,34 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        /** Register an event that will run when
+         *  the current file has been saved.
+         */
+        $scope.$on('file-saved', function (event, fn) {
+          fn ();
+        }); 
+
+        /** Dispatches a function to run when the
+         *  current file is saved.
+         *
+         *  If there is no such current file,
+         *  run function immediately.
+         */
+        function runWhenSaved(fn) {
+          if ($state.is('edit-project.editor.file')) {
+            $scope.$broadcast('run-when-saved', fn);
+          } else {
+            fn();
+          }
+        }
+
         /** Commits the project. */
-        self.commit_project = function () {
+        self.commit_project = function () {runWhenSaved(function (){
           commitProjectModal(self.project);
-        };
+        });};
 
         /** Submits the current question. */
-        self.submit_question = function () {
+        self.submit_question = function (){runWhenSaved(function(){
           submitMarmosetModal(self.project, self.question, function (success, target) {
             if (!success) {
               self.marmoset_short_results = "failed to submit!";
@@ -553,7 +574,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).then(function () {
             self.marmoset_short_results = "submitting...";
           });
-        };
+        });};
 
         /** Displays Marmoset Results. */
         self.marmoset_results = function () {
@@ -581,6 +602,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ready = false;
         self.ext = self.file.split(".")[1];
         self.editor = null;
+        self.timeout = null;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
@@ -597,14 +619,38 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
+        // Saving event.
+        $scope.$on('run-when-saved', function (evt, fn) {
+          if (self.timeout) {
+            $timeout.cancel(self.timeout);
+            self.timeout = null;
+            self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
+                $scope.$emit('file-saved', fn);
+              })
+              .catch(function (error) {
+                errors.report(error, "Could not save file!");
+              });
+          } else {
+            $scope.$emit('file-saved', fn);
+          }
+        });
+
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
           self.editor.on("change", function() {
-            if(self.ready)
+            if(self.ready && self.timeout) {
               $timeout.cancel(self.timeout);
+              self.timeout = null;
+            }
             self.timeout = $timeout(function() {
-              self.project.saveFile(self.question, self.folder, self.file, self.contents);
+              self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                .catch(function (error) {
+                  errors.report(error, "Could not save file!");
+                })
+                .then(function () {
+                  self.timeout = null;
+                });
             }, 2000);
           self.refreshSettings();
           });
