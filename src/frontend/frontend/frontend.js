@@ -497,7 +497,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
           self.editor.on("cursorActivity", function(){
             self.timeout = $timeout(function (){
-              console.log(self.editor.getCursor().line + ', ' + self.editor.getCursor().ch);
               self.colNums = self.editor.getCursor().line + ', ' + self.editor.getCursor().ch;
              }, 250);
           });  
