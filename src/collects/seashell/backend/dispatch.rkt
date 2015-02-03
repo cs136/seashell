@@ -40,21 +40,15 @@
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
  
-  ;; (send-message connection message/(semaphore + message)) -> void?
+  ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
   ;;
   ;; Arguments:
   ;;  connection - Websocket connection.
   ;;  message - Seashell message, as a JSON expression.
-  ;;            Alternatively, a pair of a semaphore/message
-  ;;            with the semaphore being ready when the message has been sent.
   (define/contract (send-message connection message)
-    (-> ws-connection? (or/c (cons/c semaphore? jsexpr?) jsexpr?) void?)
-    (cond
-      [(and (pair? message) (semaphore? (car message)))
-       (ws-send connection (jsexpr->bytes (cdr message)))
-       (semaphore-post (car message))]
-      [else (ws-send connection (jsexpr->bytes message))]))
+    (-> ws-connection? jsexpr? void?)
+    (ws-send connection (jsexpr->bytes message)))
 
   ;; (project-test-thread project pid test)
   ;; Helper thread for dealing with output from running tests.
@@ -243,7 +237,7 @@
   ;; Returns:
   ;;  JSON result.
   (define/contract (dispatch-authenticated message)
-    (-> jsexpr? (or/c (cons/c semaphore? jsexpr?) jsexpr?))
+    (-> jsexpr? jsexpr?)
     (match message
       ;; Ping, for timeout checking.
       [(hash-table
@@ -276,17 +270,12 @@
         ('file file)
         ('test test))
        (define pid (run-project name file test))
-       (define ready-semaphore (make-semaphore))
-       (thread
-         (thunk
-           (sync ready-semaphore)
-           (if test
-             (project-test-thread name pid test) 
-             (project-runner-thread name pid))))
-       (cons ready-semaphore
-         `#hash((id . ,id)
-                (success . #t)
-                (result . ,pid)))]
+       (if test
+         (project-test-thread name pid test) 
+         (project-runner-thread name pid))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,pid))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)
@@ -568,12 +557,12 @@
   ;; Arguments:
   ;;  message - jsexpr? message/request.
   ;; Returns:
-  ;;  Response, as a jsexpr? or a (cons semaphore? jsexpr?).
+  ;;  Response, as a jsexpr?.
   ;; Notes:
   ;;  This function _SHOULD_ not raise _ANY_ exceptions in
   ;;  the course of normal execution and errors (file does not exist, ...)
   (define/contract (handle-message message)
-    (-> jsexpr? (or/c (cons/c semaphore? jsexpr?) jsexpr?))
+    (-> jsexpr? jsexpr?)
     (cond
       [(or (not (hash? message)) (not (hash-has-key? message 'id)))
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
