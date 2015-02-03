@@ -386,8 +386,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     });
 
-    self.setRunning = function(PIDs) {
+    self.setRunning = function(project, PIDs) {
       self.PIDs = PIDs;
+      _.each(self.PIDs, function (pid) {
+        socket.socket.startIO(project.name, pid);
+      });
     };
     self.clear = function() {
       self.contents = "";
@@ -752,7 +755,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
-                self.console.setRunning([res.pid]);
+                self.console.setRunning(self.project, [res.pid]);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
@@ -772,7 +775,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, true)
               .then(function(res) {
-                self.console.setRunning(res.pids);
+                self.console.setRunning(self.project, res.pids);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })

@@ -407,3 +407,11 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, def
     subdir: subdir ? subdir : false},
     deferred);
 };
+
+SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
+  return this.sendMessage({
+    type : "startIO",
+    project : project,
+    pid : pid},
+    deferred);
+};

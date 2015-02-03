@@ -22,14 +22,16 @@
          racket/serialize)
 
 (provide run-program program-stdin program-stdout program-stderr
-         program-wait-evt program-kill program-status program-destroy-handle)
+         program-wait-evt program-kill program-status program-destroy-handle
+         program-mode)
 
 ;; Global definitions and concurrency control primitives.
 (struct program (in-stdin in-stdout in-stderr
                           out-stdin out-stdout out-stderr
                           raw-stdin raw-stdout raw-stderr
                           handle control exit-status
-                          destroyed-semaphore) #:transparent #:mutable)
+                          destroyed-semaphore
+                          _mode) #:transparent #:mutable)
 (struct exn:program:run exn:fail:user ())
 
 (define program-table (make-hash))
@@ -52,7 +54,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore)
+                         destroyed-semaphore mode)
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
@@ -125,7 +127,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore)
+                         destroyed-semaphore mode)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -275,7 +277,8 @@
             (define result (program in-stdin in-stdout in-stderr
                                     out-stdin out-stdout out-stderr
                                     raw-stdin raw-stdout raw-stderr
-                                    handle #f #f destroyed-semaphore))
+                                    handle #f #f destroyed-semaphore
+                                    (if test 'test 'run)))
             (define control-thread
               (thread
                 (thunk
@@ -314,6 +317,18 @@
 (define/contract (program-stdin pid)
   (-> integer? output-port?)
   (program-out-stdin (hash-ref program-table pid)))
+
+;; (program-mode pid)
+;; Returns if the program is running in regular or test mode.
+;; 
+;; Arguments:
+;;  pid - PID of program.
+;; Returns:
+;;  'test if running in test mode.
+;;  'run if in regular mode.
+(define/contract (program-mode pid)
+  (-> integer? symbol?)
+  (program-_mode (hash-ref program-table pid)))
 
 ;; (program-stdout pid)
 ;; Returns the standard output port for a program.
@@ -392,7 +407,7 @@
                              out-stdin out-stdout out-stderr
                              raw-stdin raw-stdout raw-stderr
                              handle control exit-status
-                             destroyed-semaphore)
+                             destroyed-semaphore mode)
         pgrm)
 
       ;; Note: ports are Racket pipes and therefore GC'd.
