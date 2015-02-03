@@ -375,11 +375,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     });
     socket.register_callback("test", function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
-      if(res.result=="passed") {
+      self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
+      if(res.result==="passed") {
         self.write("Test '"+res.test_name+"' passed.\n");
       }
-      else if(res.result=="failed") {
+      else if(res.result==="failed") {
         self.write("Test '"+res.test_name+"' failed!\n");
+      } else if(res.result==="error") {
+        self.write(sprintf("Test %s errored out (with return code %d)!\n", res.test_name, res.exit_code));
       }
     });
 
@@ -730,9 +733,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
 
         function handleCompileErr(msgs, warn_only) {
-          self.console.clear();
-          if(msgs.length==0) return;
-          if(!warn_only)
+          if(!Array.isArray(msgs)) {
+            errors.report(msgs, "Could not compile!");
+            return;
+          }
+          else if(msgs.length === 0) return;
+          else if(!warn_only)
             self.console.write("Compilation failed with errors:\n");
           else
             self.console.write("Compilation generated warnings:\n");
@@ -743,34 +749,40 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         self.runFile = function() {
           self.killProgram().then(function() {
+            self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
                 self.console.setRunning([res.pid]);
-                self.console.clear();
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
-                if(res.error)
+                if(res.status === "running-failed") {
                   errors.report(res.error, "An error occurred when running the project.");
-                handleCompileErr(res.messages);
+                  handleCompileErr(res.messages, true);
+                } else {
+                  handleCompileErr(res.messages);
+                }
               });
           });
         };
 
         self.testFile = function() {
           self.killProgram().then(function() {
+            self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(res.pids);
-                self.console.clear();
                 handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
-                if(res.error)
+                if(res.status === "testing-failed") {
                   errors.report(res.error, "An error occurred when running the project.");
-                handleCompileErr(res.messages);
+                  handleCompileErr(res.messages, true);
+                } else {
+                  handleCompileErr(res.messages);
+                }
               });
           });
         };
@@ -781,7 +793,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
           return $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);
-          })).then(function() {
+          }))
+          .catch(function (error) {
+            errors.report(error, "Could not stop program!");
+          })
+          .then(function() {
             self.console.PIDs = null;
           });
         };

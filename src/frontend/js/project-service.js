@@ -419,9 +419,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self.saveFile(question, folder, filename, data).then(function() {
             return $q.when(ws.socket.compileProject(self.name, self._getPath(question, folder, filename)));
           }).then(function (messages) {
-            return {status: "passed", messages: messages};
+            return {status: "compile-passed", messages: messages};
           }).catch(function (messages) {
-            return $q.reject({status: "failed", messages: messages});
+            return $q.reject({status: "compile-failed", messages: messages});
           });
         };
 
@@ -455,13 +455,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                     return {status: "testing", pids: pids, messages: compileResult.messages};
                   })
                   .catch(function(error) {
-                    return $q.reject({status: "failed", error: error, messages: compileResult.messages});
+                    return $q.reject({status: "testing-failed", error: error, messages: compileResult.messages});
                   });
                 }
                 return self._run(question, folder, filename).then(function (pid) {
                   return {status: "running", messages: compileResult.messages, pid: pid};
                 }).catch (function (error) {
-                  return $q.reject({status: "failed", error: error, messages: compileResult.message});
+                  return $q.reject({status: "running-failed", error: error, messages: compileResult.message});
                 });
               });
         };
