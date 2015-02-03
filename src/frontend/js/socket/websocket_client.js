@@ -407,3 +407,10 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, def
     subdir: subdir ? subdir : false},
     deferred);
 };
+
+SeashellWebsocket.prototype.getPath = function(project, deferred) {
+  return this.sendMessage({
+    type : "getPath",
+    project: project},
+    deferred);
+};
