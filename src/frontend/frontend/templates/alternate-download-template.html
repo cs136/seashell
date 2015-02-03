@@ -1,0 +1,21 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title">
+    <!-- TODO: choose a different icon other then the warning sign,
+               although currently it is unknown which one to
+               choose. -->
+    <span class="glyphicon glyphicon-warning-sign"></span>
+    <span id="alternate-download-title">Alternate Download URLs</span></h4>
+</div>
+<div class="modal-body">
+  For those of you who want to download/upload your assignment via
+  rsync or git, please use the ssh url below:
+  <code>
+    ssh://{{username}}@{{host}}/{{path}}
+  </code>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+  &nbsp;&nbsp;
+  <button type="button" class="btn" ng-click="$close()">OK</button>
+</div>

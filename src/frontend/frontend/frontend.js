@@ -62,6 +62,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
       }])
+  // Alternative Download Service
+  .factory('AlternativeDownloadModal', ['$modal', 'socket', 'cookieStore', 'error-service'
+      function ($modal, ws, cookies, errors) {
+        return function (project) {
+          return $modal.open({
+            templateUrl: "frontend/templates/alternate-download-template.html",
+            controller: ['$scope', function ($scope) {
+	      var data = ws.socket.getPath(project.name);
+	      $scope.username = cookies.get("seashell-session").user;
+	      $scope.host = cookies.get("seashell-session").host;
+	      $scope.path = data["path"];
+	    }]
+	  }).result;
+	};
+      }])
   // New Project Modal Service
   .factory('NewProjectModal', ['$modal', 'projects', 'error-service',
       function ($modal, projects, errors) {
@@ -361,6 +376,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
       self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
+
+      // Open up the alternative file downloads.
+      self.linkDialog = function () {
+	alternativeDownloadModal(self.project);
+      };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',

@@ -513,6 +513,13 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getPath")
+        ('project project))
+       `#hash((id . ,id)
+              (success . $t)
+              (path . ,(path->string (build-project-path project))))]
       ;; TODO: revertFile.
       ;; Fall through case.
       [_
