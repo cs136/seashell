@@ -282,7 +282,7 @@
         ('type "compileAndRunProject")
         ('project name)
         ('file file)
-        ('test test))
+        ('tests test))
        (define-values (success? result) (compile-and-run-project name file test))
        `#hash((id . ,id)
               (success . ,success?)

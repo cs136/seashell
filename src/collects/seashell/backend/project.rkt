@@ -345,7 +345,7 @@
 (define/contract (compile-and-run-project name file tests)
   (-> project-name? (or/c #f path-string?) (listof path-string?)
       (values boolean?
-              (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
+              hash?))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -391,7 +391,7 @@
                                       "-gdwarf-4" "-O0"
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm") c-files o-files))
-    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name file (gensym))))
+    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
                            #:exists 'replace
@@ -425,14 +425,14 @@
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base file #f))
-      (delete-directory/files target #:must-exist #f)
+      (define pid (run-program target base lang #f))
+      (delete-directory/files target #:must-exist? #f)
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
       (define pids (map
-                     (curry run-program target base file)
+                     (curry run-program target base lang)
                      tests))
-      (delete-directory/files target #:must-exist #f)
+      (delete-directory/files target #:must-exist? #f)
       (values #t `#hash((pid . ,pids) (messages . ,messages) (status . "running")))]
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))

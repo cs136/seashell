@@ -419,8 +419,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.run = function(question, folder, filename, data, test) {
           var self = this;
           // TODO: handle racket files.
-          var tests = test ? self.getTestsForFile(self.root.find(self._getPath(question, folder, filename))) : false;
-          return $q.when(ws.socket.compileAndRunProject(question, folder, filename, tests));
+          var file = self.root.find(self._getPath(question, folder, filename));
+          var tests = test ? self.getTestsForFile(file) : [];
+          return $q.when(ws.socket.compileAndRunProject(self.name, file.fullname(), tests));
         };
 
         /** 
