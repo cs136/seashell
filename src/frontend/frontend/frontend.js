@@ -382,7 +382,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       else if(res.result==="failed") {
         self.write("Test '"+res.test_name+"' failed!\n");
       } else if(res.result==="error") {
-        self.write(sprintf("Test %s errored out (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
       }
     });
 
@@ -634,6 +634,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.editor = null;
         self.timeout = null;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.linterErrors = [];
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
           self.console.inst.on("update", function() {
@@ -668,6 +669,27 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
+          CodeMirror.registerHelper("lint","clike",function() {
+            var found = [];
+            _.forEach(self.linterErrors,function(err) {
+              var error = err[0], file = err[1].split("/");
+              file = file[file.length-1];
+              var line = _.max([err[2] - 1, 0]), column = err[3];
+              var message = err[4];
+              console.log(err);
+              if (_.contains([self.file,
+                              'final-link-result'],
+                             file))
+                found.push({ from: CodeMirror.Pos(line, column),
+                             to: CodeMirror.Pos(line),
+                             message: message,
+                             severity: 'error' });
+            });
+            return found;
+          });
+          self.editor.setOption("gutters", ["CodeMirror-lint-markers"]);
+          self.editor.setOption("lint", true);
+          
           self.editor.on("change", function() {
             if(self.ready && self.timeout) {
               $timeout.cancel(self.timeout);
@@ -745,6 +767,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.write("Compilation failed with errors:\n");
           else
             self.console.write("Compilation generated warnings:\n");
+          self.linterErrors = msgs;
+          CodeMirror.signal(self.editor, "change", self.editor);
           _.each(msgs, function(res) {
             self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
           });
