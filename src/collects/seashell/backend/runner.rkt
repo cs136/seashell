@@ -252,15 +252,15 @@
 
         (define-values (handle raw-stdout raw-stdin raw-stderr)
           (parameterize
-            ([current-directory directory])
+            ([current-directory directory]
+             [current-environment-variables (environment-variables-copy (current-environment-variables))])
             (match lang
-              ;; Behaviour is inconsistent if we just exec directly.
-              ;; This seems to work.  (why: who knows?)
-              ['C (subprocess #f #f #f (read-config 'system-shell) "-c"
-                              (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
-                                      (some-system-path->string (read-config 'llvm-symbolizer))
-                                      "detect_leaks=1"
-                                       binary))]
+              ['C
+                ;; Behaviour is inconsistent if we just exec directly.
+                ;; This seems to work.  (why: who knows?)
+                (putenv "ASAN_OPTIONS" "detect_leaks=1")
+                (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
+                (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
                                    "-t" (some-system-path->string (read-config 'seashell-racket-runtime-library))
                                    "-u" binary)])))

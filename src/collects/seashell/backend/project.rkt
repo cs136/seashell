@@ -426,14 +426,22 @@
   (cond
     [(and result (empty? tests))
       (define pid (run-program target base lang #f))
-      (delete-directory/files target #:must-exist? #f)
+      (thread
+        (thunk
+          (sync (program-wait-evt pid))
+          (delete-directory/files target #:must-exist? #f)))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
       (define pids (map
                      (curry run-program target base lang)
                      tests))
-      (delete-directory/files target #:must-exist? #f)
-      (values #t `#hash((pid . ,pids) (messages . ,messages) (status . "running")))]
+      (thread
+        (thunk
+          (let loop ([evts (map program-wait-evt pids)])
+            (unless (empty? evts)
+              (loop (remove (apply sync evts) evts))))
+          (delete-directory/files target #:must-exist? #f)))
+      (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
