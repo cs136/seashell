@@ -409,31 +409,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           });
         };
 
-        /**
-         * SeashellProject._compile()
-         *
-         * Compiles the project.
-         */
-        SeashellProject.prototype._compile = function(question, folder, filename, data) {
-          var self = this;
-          return self.saveFile(question, folder, filename, data).then(function() {
-            return $q.when(ws.socket.compileProject(self.name, self._getPath(question, folder, filename)));
-          }).then(function (messages) {
-            return {status: "compile-passed", messages: messages};
-          }).catch(function (messages) {
-            return $q.reject({status: "compile-failed", messages: messages});
-          });
-        };
-
-        /**
-         * SeashellProject._run(test)
-         * 
-         * Runs the project. If the test param is set, runs with that test.
-         */
-        SeashellProject.prototype._run = function(question, folder, filename, test) {
-          var self = this;
-          return $q.when(ws.socket.runProject(self.name, self._getPath(question, folder, filename), test ? test : false));
-        };
 
         /**
          * SeashelLProject.run(...)
@@ -445,25 +420,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForFile(self.root.find(self._getPath(question, folder, filename))) : false;
-          return self._compile(question, folder, filename, data)
-              .then(function (compileResult) {
-                if(tests) {
-                  return $q.all(_.map(tests, function(tname) {
-                    return self._run(question, folder, filename, tname);
-                  }))
-                  .then(function (pids) {
-                    return {status: "testing", pids: pids, messages: compileResult.messages};
-                  })
-                  .catch(function(error) {
-                    return $q.reject({status: "testing-failed", error: error, messages: compileResult.messages});
-                  });
-                }
-                return self._run(question, folder, filename).then(function (pid) {
-                  return {status: "running", messages: compileResult.messages, pid: pid};
-                }).catch (function (error) {
-                  return $q.reject({status: "running-failed", error: error, messages: compileResult.message});
-                });
-              });
+          return $q.when(ws.socket.compileAndRunProject(question, folder, filename, tests));
         };
 
         /** 

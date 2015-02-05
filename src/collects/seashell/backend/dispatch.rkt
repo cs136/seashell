@@ -279,14 +279,14 @@
       ;; Project running functions
       [(hash-table
         ('id id)
-        ('type "runProject")
+        ('type "compileAndRunProject")
         ('project name)
         ('file file)
         ('test test))
-       (define pid (run-project name file test))
+       (define-values (success? result) (compile-and-run-project name file test))
        `#hash((id . ,id)
-              (success . #t)
-              (result . ,pid))]
+              (success . ,success?)
+              (result . ,result))]
       [(hash-table
          ('id id)
          ('type "startIO")
@@ -303,17 +303,6 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
-      ;; Project compilation functions.
-      [(hash-table
-        ('id id)
-        ('type "compileProject")
-        ('project name)
-        ('file file))
-       (define-values (result messages)
-         (compile-project name file))
-       `#hash((id . ,id)
-              (success . ,result)
-              (result . ,messages))]
       ;; Project manipulation functions.
       [(hash-table
         ('id id)
