@@ -758,11 +758,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
 
         function handleCompileErr(msgs, warn_only) {
-          if(!Array.isArray(msgs)) {
-            errors.report(msgs, "Could not compile!");
-            return;
-          }
-          else if(msgs.length === 0) return;
+          if(msgs.length === 0) return;
           else if(!warn_only)
             self.console.write("Compilation failed with errors:\n");
           else
@@ -784,11 +780,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
-                if(res.status === "running-failed") {
-                  errors.report(res.error, "An error occurred when running the project.");
-                  handleCompileErr(res.messages, true);
-                } else {
+                if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else {
+                  errors.report(res.error, "An error occurred when running the project.");
                 }
               });
           });
@@ -804,11 +799,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
-                if(res.status === "testing-failed") {
-                  errors.report(res.error, "An error occurred when running the project.");
-                  handleCompileErr(res.messages, true);
-                } else {
+                if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else {
+                  errors.report(res.error, "An error occurred when running the project.");
                 }
               });
           });

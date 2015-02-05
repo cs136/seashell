@@ -37,8 +37,7 @@
          build-project-path
          project-base-path
          runtime-files-path
-         run-project
-         compile-project
+         compile-and-run-project
          marmoset-submit
          export-project)
 
@@ -326,21 +325,27 @@
   (seashell-git-commit/place commit message)
   (void))
 
-;; (compile-project name)
-;; Compiles a project.
+;; (compile-and-run project name file tests)
+;; Compiles and runs a project.
 ;;
 ;; Arguments:
 ;;  name - Name of project.
-;;  file - Full path and name of file we are compiling from, or #f,
+;;  file - Full path and name of file we are compiling from, or #f
 ;;         to denote no file.  (We attempt to do something reasonable in this case).
-;; Returns:
-;;  List of diagnostics (error?, file, line, column, message)
-;;  Error if any diagnostics have error? set.
+;;  test - Name of test, or empty to denote no test.
 ;;
+;; Returns:
+;;  A boolean, denoting if compilation passed/failed.
+;;  A hash-map, with the following bindings:
+;;    status - one of "running", "compile-failed"
+;;    message - Compilation error messages/warnings.
+;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-project name file)
-  (-> project-name? (or/c #f path-string?) (values boolean? (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
+(define/contract (compile-and-run-project name file tests)
+  (-> project-name? (or/c #f path-string?) (listof path-string?)
+      (values boolean?
+              (listof (list/c boolean? string? natural-number/c natural-number/c string?))))
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -351,75 +356,6 @@
     (if (directory-exists? project-common)
       (directory-list project-common #:build? #t)
       '()))
-  
-  (match-define-values (base _ _)
-                       (if file (split-path (check-and-build-path project-base file))
-                                (values (check-and-build-path project-base) #f #f)))
-
-  ;; TODO: Other languages? (C++, maybe?)
-  ;; Get *.c files in project.
-  (define c-files
-    (filter (lambda (file)
-              (equal? (filename-extension file) #"c"))
-            (append
-              (directory-list base #:build? #t)
-              project-common-list)))
-  (define o-files
-    (filter (lambda (file)
-              (equal? (filename-extension file) #"o"))
-            (append
-              (directory-list base #:build? #t)
-              project-common-list)))
-  ;; Run the compiler - save the binary to .seashell/${name}-binary,
-  ;; if everything succeeds.
-  (define-values (result messages)
-    (seashell-compile-files/place `("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
-                                    "-gdwarf-4" "-O0"
-                                    ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
-                                  '("-lm") c-files o-files))
-  ;; TODO Vary binary name by file we're building.
-  (define output-path (check-and-build-path (runtime-files-path) (format "~a-binary" name)))
-  (when result
-    (with-output-to-file output-path
-                         #:exists 'replace
-                         (thunk
-                           (write-bytes result)))
-    (file-or-directory-permissions
-      output-path
-      (bitwise-ior (file-or-directory-permissions output-path 'bits) user-execute-bit)))
-
-  ;; Messages is a list of seashell-diagnostic(s)
-  (values
-    (not (not result))
-    (apply append
-      (hash-map
-        messages
-        (lambda (key diagnostics)
-                (map
-                  (lambda (diagnostic)
-                    (list (seashell-diagnostic-error? diagnostic)
-                          (some-system-path->string (find-relative-path (simple-form-path project-base)
-                                                            (simple-form-path key)))
-                          (seashell-diagnostic-line diagnostic)
-                          (seashell-diagnostic-column diagnostic)
-                          (seashell-diagnostic-message diagnostic)))
-                  diagnostics))))))
-
-;; (run-project name file test)
-;; Runs a project
-;;
-;; Arguments:
-;;  name - Name of project.
-;;  file - Name of file to run.
-;;  test - #f if running without tests, otherwise, name of test to run
-;; Returns:
-;;  pid - Process ID (used as unique identifier for process)
-(define/contract (run-project name file test)
-  (-> project-name? string? (or/c #f string?)
-      (or/c integer? (list/c string? (or/c string? (hash/c symbol? string?)))))
-  (when (not (is-project? name))
-    (raise (exn:project (format "Project ~a does not exist!" name)
-                        (current-continuation-marks))))
 
   ;; Figure out which language to run with
   (define lang
@@ -428,21 +364,78 @@
       ['#"c" 'C]
       ['#"h" 'C] ;; TODO: this is a temporary fix, which we figure out racket vs. C running
       [_ (error "You can only run .c or .rkt files!")]))
-
-  ;; Name of program to run.
-  ;; TODO Vary by file [target] to run.
-  (define program
-    (match lang
-      ['racket (check-and-build-path (build-project-path name) file)]
-      ['C (check-and-build-path (runtime-files-path) (format "~a-binary" name))]))
- 
-  ;; Get the base directory of our file that we're running.
-  (define project-base (build-project-path name))
+  ;; Base path.
   (match-define-values (base _ _)
                        (if file (split-path (check-and-build-path project-base file))
                                 (values (check-and-build-path project-base) #f #f)))
 
-  (run-program program base lang test))
+  (define (compile-c-files)
+    ;; TODO: Other languages? (C++, maybe?)
+    ;; Get *.c files in project.
+    (define c-files
+      (filter (lambda (file)
+                (equal? (filename-extension file) #"c"))
+              (append
+                (directory-list base #:build? #t)
+                project-common-list)))
+    (define o-files
+      (filter (lambda (file)
+                (equal? (filename-extension file) #"o"))
+              (append
+                (directory-list base #:build? #t)
+                project-common-list)))
+    ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
+    ;; if everything succeeds.
+    (define-values (result messages)
+      (seashell-compile-files/place `("-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
+                                      "-gdwarf-4" "-O0"
+                                      ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+                                    '("-lm") c-files o-files))
+    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name file (gensym))))
+    (when result
+      (with-output-to-file output-path
+                           #:exists 'replace
+                           (thunk
+                             (write-bytes result)))
+      (file-or-directory-permissions
+        output-path
+        (bitwise-ior (file-or-directory-permissions output-path 'bits) user-execute-bit)))
+
+    ;; Parse the messages.
+    (define parsed-messages
+      (apply append
+        (hash-map
+          messages
+          (lambda (key diagnostics)
+                  (map
+                    (lambda (diagnostic)
+                      (list (seashell-diagnostic-error? diagnostic)
+                            (some-system-path->string (find-relative-path (simple-form-path project-base)
+                                                              (simple-form-path key)))
+                            (seashell-diagnostic-line diagnostic)
+                            (seashell-diagnostic-column diagnostic)
+                            (seashell-diagnostic-message diagnostic)))
+                    diagnostics)))))
+      (values result parsed-messages output-path))
+
+  (define-values (result messages target)
+    (match lang
+      ['C (compile-c-files)]
+      ['racket `(#t '() ,(check-and-build-path project-base file))]))
+
+  (cond
+    [(and result (empty? tests))
+      (define pid (run-program target base file #f))
+      (delete-directory/files target #:must-exist #f)
+      (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
+    [result
+      (define pids (map
+                     (curry run-program target base file)
+                     tests))
+      (delete-directory/files target #:must-exist #f)
+      (values #t `#hash((pid . ,pids) (messages . ,messages) (status . "running")))]
+    [else
+      (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
