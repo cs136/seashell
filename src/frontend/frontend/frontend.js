@@ -341,6 +341,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.PIDs = null;
     self.inst = null;
     self.contents = "";
+    self.errors = [];
     // buffers
     self.stdout = "";
     self.stderr = "";
@@ -627,7 +628,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.editor = null;
         self.timeout = null;
         self.editorOptions = {}; // Wait until we grab settings to load this.
-        self.linterErrors = [];
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
           self.console.inst.on("update", function() {
@@ -665,10 +665,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
-          if (self.ext === "c") {
+          if (self.ext === "c" || self.ext==="h") {
             CodeMirror.registerHelper("lint","clike",function() {
               var found = [];
-              _.forEach(self.linterErrors,function(err) {
+              _.forEach(self.console.errors,function(err) {
                 var error = err[0], file = err[1].split("/");
                 file = file[file.length-1];
                 var line = _.max([err[2] - 1, 0]), column = err[3];
@@ -702,7 +702,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   self.timeout = null;
                 });
             }, 2000);
-          self.refreshSettings();
+            self.console.errors = [];
+            self.refreshSettings();
           });
         };
         self.refreshSettings = function () {
@@ -761,8 +762,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.write("Compilation failed with errors:\n");
           else
             self.console.write("Compilation generated warnings:\n");
-          self.linterErrors = msgs;
-          CodeMirror.signal(self.editor, "change", self.editor);
+          self.console.errors = msgs;
+          if(self.ext=="h"||self.ext=="c") {
+            self.editor.setOption("lint", false);
+            self.editor.setOption("lint", true);
+          }
           _.each(msgs, function(res) {
             self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
           });
