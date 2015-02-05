@@ -525,13 +525,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
-        /** Register an event that will run when
-         *  the current file has been saved.
-         */
-        $scope.$on('file-saved', function (event, fn) {
-          fn ();
-        }); 
-
         /** Dispatches a function to run when the
          *  current file is saved.
          *
@@ -651,44 +644,49 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
         // Saving event.
-        $scope.$on('run-when-saved', function (evt, fn) {
+        function runWhenSaved(fn) {
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
             self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
-                $scope.$emit('file-saved', fn);
+                fn();
               })
               .catch(function (error) {
                 errors.report(error, "Could not save file!");
               });
           } else {
-            $scope.$emit('file-saved', fn);
+            fn();
           }
+        }
+        $scope.$on('run-when-saved', function (evt, fn) {
+          runWhenSaved(fn);
         });
 
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
-          CodeMirror.registerHelper("lint","clike",function() {
-            var found = [];
-            _.forEach(self.linterErrors,function(err) {
-              var error = err[0], file = err[1].split("/");
-              file = file[file.length-1];
-              var line = _.max([err[2] - 1, 0]), column = err[3];
-              var message = err[4];
-              console.log(err);
-              if (_.contains([self.file,
-                              'final-link-result'],
-                             file))
-                found.push({ from: CodeMirror.Pos(line, column),
-                             to: CodeMirror.Pos(line),
-                             message: message,
-                             severity: 'error' });
+          if (self.ext === "c") {
+            CodeMirror.registerHelper("lint","clike",function() {
+              var found = [];
+              _.forEach(self.linterErrors,function(err) {
+                var error = err[0], file = err[1].split("/");
+                file = file[file.length-1];
+                var line = _.max([err[2] - 1, 0]), column = err[3];
+                var message = err[4];
+                console.log(err);
+                if (_.contains([self.file,
+                                'final-link-result'],
+                               file))
+                  found.push({ from: CodeMirror.Pos(line, column),
+                               to: CodeMirror.Pos(line),
+                               message: message,
+                               severity: 'error' });
+              });
+              return found;
             });
-            return found;
-          });
-          self.editor.setOption("gutters", ["CodeMirror-lint-markers"]);
-          self.editor.setOption("lint", true);
+            self.editor.setOption("gutters", ["CodeMirror-lint-markers"]);
+            self.editor.setOption("lint", true);
+          }
           
           self.editor.on("change", function() {
             if(self.ready && self.timeout) {
@@ -770,7 +768,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         }
 
-        self.runFile = function() {
+        self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
@@ -786,10 +784,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   errors.report(res.error, "An error occurred when running the project.");
                 }
               });
+          }).catch(function (error) {
+            errors.report(error, "Could not kill program!");
           });
-        };
+        });};
 
-        self.testFile = function() {
+        self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, true)
@@ -805,8 +805,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   errors.report(res.error, "An error occurred when running the project.");
                 }
               });
+          }).catch(function (error) {
+            errors.report(error, "Could not kill program!");
           });
-        };
+        });};
 
         self.killProgram = function() {
           if(!self.console.PIDs) {
@@ -842,10 +844,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
-          if (self.timeout)
+          if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-          if (self.ready)
             self.project.saveFile(self.question, self.folder, self.file, self.contents);
+          }
           settings.removeWatcher(key);
         });
         self.project.openFile(self.question, self.folder, self.file)
