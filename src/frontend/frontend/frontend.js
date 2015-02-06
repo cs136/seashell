@@ -723,7 +723,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
           function updateColNums() {
             $timeout(function() {
-              self.colNums = (self.editor.getCursor().line+1) + ", " + self.editor.getCursor().ch;
+              self.colNums = sprintf("ln %d, col %d", self.editor.getCursor().line + 1, self.editor.getCursor().ch + 1);
             }, 0);
           }
           self.editor.on("cursorActivity", updateColNums);
