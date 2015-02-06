@@ -241,6 +241,27 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Directive for New Question Modal Service
+  .factory('NewQuestionModal', ['$modal', 'error-service',
+    function ($modal, errors){
+        return function(project){
+            return $modal.open({
+                templateUrl: "frontend/templates/new-question.template.html",
+                controller:  ['$scope', '$state', 'error-service', '$q',
+                function ($scope, $state, errors, $q){
+                    $scope.new_question_name = "";
+                    $scope.inputError = false;
+                    $scope.newQuestion = function () {
+                        var promise = project.createQuestion(name);
+                        if(promise) promise.done(function () {
+                            $state.go("edit-project.editor.file",
+                                      {part:project.folder, file:name});
+                        });
+                    };
+                }]
+            }).result;
+        };
+    }])
   // Submit to Marmoset Modal
   .factory('SubmitMarmosetModal', ['$modal', 'error-service',
       function ($modal, errors) {
@@ -478,8 +499,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore',
-    function($state, $stateParams, $scope,  errors, openProject, cookies) {
+      'openProject', 'cookieStore', 'NewQuestionModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
@@ -499,6 +520,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             ifrm.setAttribute("style", "display:none");
             document.body.appendChild(ifrm);
         })};
+        self.newQuestion = function () {
+            newQuestionModal(openProject);
+        };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
@@ -506,7 +530,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       'CommitProjectModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal) {
+        $interval, marmoset, commitProjectModal, newQuestionModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
