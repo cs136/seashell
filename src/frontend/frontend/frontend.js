@@ -762,15 +762,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions['vim_mode'] = false;
           }
           
+          // Force the font size at any rate.
+          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
             self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+            editor.refresh();
           }
-          // Force the font size at any rate.
-          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
         self.renameFile = function() {
