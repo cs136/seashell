@@ -60,6 +60,18 @@ angular.module('seashell-websocket', ['jquery-cookie'])
       delete callbacks[key];
     };
 
+    /** Helper function to invoke the I/O callback. */
+    function io_cb(ignored, message) {
+      _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'io';}),
+                   function (x) {return x.cb;}),
+             function (x) {x(message);});
+    }
+    function test_cb(ignored, result) {
+      _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'test';}),
+                   function (x) {return x.cb;}),
+             function (x) {x(result);});
+    }
+
     /** Connects the socket, sets up the disconnection monitor. */ 
     self.connect = function () {
       if (!rawCookie.get("seashell-session")) {
@@ -117,6 +129,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           }, 4000);
           self.connected = true;
           self.failed = false;
+          self.socket.requests[-3].callback = io_cb;
+          self.socket.requests[-4].callback = test_cb;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'connected';}),

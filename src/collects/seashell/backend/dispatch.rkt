@@ -50,15 +50,29 @@
     (-> ws-connection? jsexpr? void?)
     (ws-send connection (jsexpr->bytes message)))
 
-  ;; (project-test-thread project pid test)
+  ;; (start-pid-io project pid)
+  ;; Starts I/O communication with the specified PID
+  ;; This is useful as to block any I/O messages
+  ;; until after the result of runProject has been handled.
+  ;;
+  ;; Arguments:
+  ;;  project - Name of project (debugging)
+  ;;  pid - PID of process
+  ;; Returns:
+  ;;  Thread representing the communication backend.
+  (define (start-pid-io project pid)
+    (if (equal? 'test (program-mode pid))
+      (project-test-thread project pid)
+      (project-runner-thread project pid)))
+
+  ;; (project-test-thread project pid)
   ;; Helper thread for dealing with output from running tests.
   ;; Arguments:
   ;;  project - Name of project
   ;;  pid - PID of process
-  ;;  test - Name of test
   ;; Returns:
   ;;  Thread that is running the I/O.
-  (define (project-test-thread project pid test)
+  (define (project-test-thread project pid)
     (thread (thunk
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
@@ -265,17 +279,21 @@
       ;; Project running functions
       [(hash-table
         ('id id)
-        ('type "runProject")
+        ('type "compileAndRunProject")
         ('project name)
         ('file file)
-        ('test test))
-       (define pid (run-project name file test))
-       (if test
-         (project-test-thread name pid test) 
-         (project-runner-thread name pid))
+        ('tests test))
+       (define-values (success? result) (compile-and-run-project name file test))
        `#hash((id . ,id)
-              (success . #t)
-              (result . ,pid))]
+              (success . ,success?)
+              (result . ,result))]
+      [(hash-table
+         ('id id)
+         ('type "startIO")
+         ('project project)
+         ('pid pid))
+       (start-pid-io project pid)
+       `#hash((id . ,id) (success . #t))] 
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)
@@ -285,17 +303,6 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
-      ;; Project compilation functions.
-      [(hash-table
-        ('id id)
-        ('type "compileProject")
-        ('project name)
-        ('file file))
-       (define-values (result messages)
-         (compile-project name file))
-       `#hash((id . ,id)
-              (success . ,result)
-              (result . ,messages))]
       ;; Project manipulation functions.
       [(hash-table
         ('id id)
