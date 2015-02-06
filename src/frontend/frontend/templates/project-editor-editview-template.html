@@ -51,6 +51,11 @@
                   delete
                 </span>
               </button>
+              <div ng-show="editFileView.editor.hasFocus()"
+                   style="padding-top: 7px; float: right; 
+                           font-size: 14px; font-variant: small-caps;">
+                {{editFileView.colNums}}
+              </div>
             </div>
             <div id="binary-editor-placeholder"
                  ng-show="editFileView.isBinaryFile"
