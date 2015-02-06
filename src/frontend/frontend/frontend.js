@@ -524,6 +524,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.newQuestion = function () {
             newQuestionModal(openProject);
         };
+        self.close = function () {
+            $state.go('list-projects');
+        };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
