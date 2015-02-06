@@ -7,9 +7,9 @@
 <form name="settingsForm" ng-submit="settingsForm.$valid && saveSettings()" novalidate>
 <div class="modal-body">
     <div class="form-group"
-      ng-class="{'has-error': settingsForm.editor_font.$invalid}">
+      ng-class="{'has-error': settingsForm.font_size.$invalid}">
       <label for="editor_font">Font size:</label>
-      <input type="number" required name="editor_font" ng-model="temp.editor_font" id="editor_font" class="form-control" placeholder="(in points)">
+      <input type="number" required name="font_size" ng-model="temp.font_size" id="editor_font" class="form-control" placeholder="(in points)">
       <span class="help-block" ng-show="settingsForm.editor_font.$invalid">Required, Must be a number</span>
     </div>
 

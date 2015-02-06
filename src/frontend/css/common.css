@@ -74,12 +74,8 @@ body {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-.CodeMirror-gutter {
-  background-color: white;
-}
-
 .CodeMirror-gutters {
-  border: none; /*: 1px dashed #eee;*/
+  border: 1px dashed #eee;
 }
 
 .editor-console {
@@ -243,13 +239,6 @@ body {
 }
 
 /** Linter */
-.CodeMirror-linenumbers {
-  width: 2em !important;
-}
-.CodeMirror-lint-markers {
-  width: 15px !important;
-}
-
 .CodeMirror-lint-tooltip {
   z-index: 1055;
 }

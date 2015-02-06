@@ -545,12 +545,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.marmoset_short_results = null;
         self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
-        self.marmoset_timeout = 1000;
+        self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
-          return self.marmoset_refresh_interval &&
+          self.marmoset_refresh_interval &&
             $interval.cancel(self.marmoset_refresh_interval);
+          self.marmoset_refresh_interval = null;
         }
         $scope.$on('$destroy', cancelMarmosetRefresh);
        
@@ -602,21 +603,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               var submitTime = new Date();
               cancelMarmosetRefresh();
               self.marmoset_refresh_interval = $interval(function () {
-                marmoset.results(self.project.name).then(function (result) {
+                marmoset.results(target).then(function (result) {
                   if (result.error) {
                     self.marmoset_short_results = "errored!";
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
-                    cancelMarmosetRefresh();
                     var data = result.result;
                     self.marmoset_long_results = data;
 
                     if (data.length > 0 && data[0].status == "complete") {
+                      cancelMarmosetRefresh();
                       var sub_pk = data[0].submission;
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
-                      var total = 0, passed = 0;
+                      var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
                         total_passed += data[i].outcome === "passed" ? data[i].points : 0;
@@ -626,6 +627,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                         sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
                                 total_passed, total);
                     } else if (data.length > 0) {
+                      self.marmoset_short_results = 
                         sprintf("received %s (waiting on tests)",
                                 $.timeago(data[0].timestamp));
                           
@@ -723,7 +725,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
         $scope.$on('window-resized', onResize);
 
@@ -809,15 +811,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions['vim_mode'] = false;
           }
           
+          // Force the font size at any rate.
+          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
             self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+            self.editor.refresh();
           }
-          // Force the font size at any rate.
-          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
         self.renameFile = function() {
@@ -1013,7 +1016,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                                     errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
                                     return null;
                                    });
-                  });
+                  })
+                 .catch(function () {
+                   $state.go('list-projects');
+                 });
               } else {
                 $state.go('list-projects');
                 errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
