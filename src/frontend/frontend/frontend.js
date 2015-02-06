@@ -288,13 +288,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
       }])
   // Marmoset Results Modal
-  .factory('MarmosetResultModal', ['$modal', 'error-service',
+  .factory('MarmosetResultsModal', ['$modal', 'error-service',
       function ($modal, errors) {
-        return function (target) {
+        return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
-            controller: ['$scope', '$state', 'error-service', 'marmoset',
-              function ($scope, $state, errors, marmoset) {
+            controller: ['$scope', '$state', 'error-service',
+              function ($scope, $state, errors) {
+                $scope.results = results;
               }]});
         };
       }])
@@ -531,10 +532,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'CommitProjectModal',
+      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal, newQuestionModal) {
+        $interval, marmoset, commitProjectModal, newQuestionModal, marmosetResultsModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -542,6 +543,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.question_files = [];
         self.test_files = [];
         self.marmoset_short_results = null;
+        self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
         self.marmoset_timeout = 1000;
 
@@ -587,6 +589,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           commitProjectModal(self.project);
         });};
 
+        self.view_results = function() {
+          marmosetResultsModal(self.marmoset_long_results);
+        };
+
         /** Submits the current question. */
         self.submit_question = function (){runWhenSaved(function(){
           submitMarmosetModal(self.project, self.question, function (success, target) {
@@ -603,6 +609,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   } else {
                     cancelMarmosetRefresh();
                     var data = result.result;
+                    self.marmoset_long_results = data;
 
                     if (data.length > 0 && data[0].status == "complete") {
                       var sub_pk = data[0].submission;
