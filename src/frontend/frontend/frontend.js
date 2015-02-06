@@ -1009,7 +1009,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                                     errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
                                     return null;
                                    });
-                  });
+                  })
+                 .catch(function () {
+                   $state.go('list-projects');
+                 });
               } else {
                 $state.go('list-projects');
                 errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
