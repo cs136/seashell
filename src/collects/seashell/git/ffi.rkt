@@ -39,8 +39,8 @@
 (define-ffi-definer define-git (ffi-lib (read-config 'seashell-git)))
 
 ;; Opaque data structure - make sure allocator/deallocator is set.
-(define _seashell_git_update (_cpointer/null 'seashell_git_update*))
-(define _seashell_git_status (_cpointer/null 'seashell_git_status*))
+(define _seashell_git_update _pointer)
+(define _seashell_git_status _pointer)
 
 ;; Error fetching function
 (define-git seashell_git_error (_fun -> _string))
