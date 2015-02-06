@@ -489,16 +489,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
             var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
-                              creds.host,
-                              creds.port,
-                              encodeURIComponent(openProject.name);
+                              cookies.get("seashell-session").host,
+                              cookies.get("seashell-session").port,
+                              encodeURIComponent(openProject.name),
                               encodeURIComponent(raw));
 
-            var hiddenDownloadButton = document.createElement('downloadButton');
-            hiddenDownloadButton.target = '_self';
-            hiddenDownloadButton.href = url;
-            hiddenDownloadButton.download = openProject.name + '.zip';
-            hiddenDownloadButton.click();
+            var ifrm = document.createElement("IFRAME");
+            ifrm.setAttribute("src", url);
+            ifrm.setAttribute("style", "display:none");
+            document.body.appendChild(ifrm);
         })};
     }])
   // Editor Controller
