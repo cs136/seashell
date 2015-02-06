@@ -650,9 +650,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal',
+      'ConfirmationMessageModal', '$window', '$document',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal) {
+          settings, Console, renameModal, confirmModal, $window, $document) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -672,6 +672,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             var scr = self.console.inst.getScrollInfo();
             self.console.inst.scrollTo(scr.left, scr.height);
           });
+          onResize();
         };
         self.consoleOptions = {
           lineWrapping: true,
@@ -701,6 +702,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
         });
+        // Resize events
+        function onResize() {
+          var min_height = 500, margin_bottom = 60;
+          var min_y_element = $('#editor > .CodeMirror');
+          var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
+                           min_height);
+          var narrow = $($document).width() < 992;
+          $('#editor > .CodeMirror')
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
+          $('#console > .CodeMirror')
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h) - $('.console-input').outerHeight());
+        }
+        $scope.$on('window-resized', onResize);
 
         // Scope helper function follow.
         self.editorLoad = function(editor) {
@@ -747,12 +761,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
           function updateColNums() {
             $timeout(function() {
-              self.colNums = (self.editor.getCursor().line+1) + ", " + self.editor.getCursor().ch;
+              self.colNums = sprintf("ln %d, col %d", self.editor.getCursor().line + 1, self.editor.getCursor().ch + 1);
             }, 0);
           }
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
+          onResize();
         };
         self.refreshSettings = function () {
           self.editorOptions = {
@@ -974,16 +989,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/project/{project}",
         templateUrl: "frontend/templates/project-template.html",
         controller: "ProjectController as projectView",
-        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service', function(projects, $state, $stateParams, errors) {
+        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service',
+                                'ConfirmationMessageModal', function(projects, $state, $stateParams, errors, confirm) {
           return projects.open($stateParams.project).catch(function (error) {
-            errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-            $state.go('list-projects');
-          });
-        }]},
-        onExit: ['openProject', function (project) {
-          project.close();
-        }]
-      })
+            if (error === 'locked') {
+              return confirm(sprintf('Unlock %s', $stateParams.project),
+                             sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
+                .then(function () {
+                  return projects.open($stateParams.project, 'force-lock')
+                                 .catch(function (error) {
+                                    $state.go('list-projects');
+                                    errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                    return null;
+                                   });
+                  });
+              } else {
+                $state.go('list-projects');
+                errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                return null;
+              }
+            });
+          }]},
+          onExit: ['openProject', function (project) {
+            project.close();
+          }]
+        })
       .state("edit-project.editor", {
         url: "/edit/{question}",
         templateUrl: "frontend/templates/project-editor-template.html",
@@ -1004,7 +1034,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }]}
       });
   }])
-  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
+  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', 
+        '$window', '$document', '$rootScope',
+        function(cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
     ws.connect()
         .then(function () {
           return projects.fetch().catch(function (projects) {
@@ -1016,5 +1048,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       return settings.load().catch(function (error) {
         errors.report(error, 'Could not load settings!');
       });
+    });
+    // Set up resize
+    $($window).resize(function () {
+      $rootScope.$emit('window-resized');
     });
   }]);
