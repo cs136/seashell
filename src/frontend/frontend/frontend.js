@@ -578,6 +578,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                         sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
                                 total_passed, total);
                     } else if (data.length > 0) {
+                      self.marmoset_short_results = 
                         sprintf("received %s (waiting on tests)",
                                 $.timeago(data[0].timestamp));
                           
