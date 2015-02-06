@@ -241,6 +241,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Directive for New Question Modal Service
+  .factory('NewQuestionModal', ['$modal', 'error-service',
+    function ($modal, errors){
+        return function(project){
+            return $modal.open({
+                templateUrl: "frontend/templates/new-question.template.html",
+                controller:  ['$scope', '$state', 'error-service', '$q',
+                function ($scope, $state, errors, $q){
+                    $scope.new_question_name = "";
+                    $scope.inputError = false;
+                    $scope.newQuestion = function () {
+                        var promise = project.createQuestion($scope.new_question_name);
+                        if(promise) promise.then(function () {
+                            $state.go("edit-project.editor",
+                                      {question:$scope.new_question_name});
+                            $scope.$close();
+                        });
+                    };
+                }]
+            }).result;
+        };
+    }])
   // Submit to Marmoset Modal
   .factory('SubmitMarmosetModal', ['$modal', 'error-service',
       function ($modal, errors) {
@@ -478,13 +500,33 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore',
-    function($state, $stateParams, $scope,  errors, openProject, cookies) {
+      'openProject', 'cookieStore', 'NewQuestionModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.download = function(){
+        openProject.getDownloadToken().then(function (token){
+            var raw = JSON.stringify(token);
+            var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
+                              cookies.get("seashell-session").host,
+                              cookies.get("seashell-session").port,
+                              encodeURIComponent(openProject.name),
+                              encodeURIComponent(raw));
+
+            var ifrm = document.createElement("IFRAME");
+            ifrm.setAttribute("src", url);
+            ifrm.setAttribute("style", "display:none");
+            document.body.appendChild(ifrm);
+        })};
+        self.newQuestion = function () {
+            newQuestionModal(openProject);
+        };
+        self.close = function () {
+            $state.go('list-projects');
+        };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
@@ -492,7 +534,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       'CommitProjectModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal) {
+        $interval, marmoset, commitProjectModal, newQuestionModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
