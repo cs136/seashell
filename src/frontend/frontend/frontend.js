@@ -252,10 +252,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     $scope.new_question_name = "";
                     $scope.inputError = false;
                     $scope.newQuestion = function () {
-                        var promise = project.createQuestion(name);
-                        if(promise) promise.done(function () {
-                            $state.go("edit-project.editor.file",
-                                      {part:project.folder, file:name});
+                        var promise = project.createQuestion($scope.new_question_name);
+                        if(promise) promise.then(function () {
+                            $state.go("edit-project.editor",
+                                      {question:$scope.new_question_name});
+                            $scope.$close();
                         });
                     };
                 }]
