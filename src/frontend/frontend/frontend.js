@@ -770,7 +770,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.editor.setOption(key, self.editorOptions[key]);
             }
             self.editor.addKeyMap({'Tab': 'insertSoftTab'});
-            editor.refresh();
+            self.editor.refresh();
           }
         };
 
