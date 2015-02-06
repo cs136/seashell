@@ -507,6 +507,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         function cancelMarmosetRefresh() {
           return self.marmoset_refresh_interval &&
             $interval.cancel(self.marmoset_refresh_interval);
+          self.marmoset_refresh_interval = null;
         }
         $scope.$on('$destroy', cancelMarmosetRefresh);
        
