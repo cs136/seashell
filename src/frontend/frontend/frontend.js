@@ -501,7 +501,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.test_files = [];
         self.marmoset_short_results = null;
         self.marmoset_refresh_interval = undefined;
-        self.marmoset_timeout = 1000;
+        self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
