@@ -554,20 +554,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               var submitTime = new Date();
               cancelMarmosetRefresh();
               self.marmoset_refresh_interval = $interval(function () {
-                marmoset.results(self.project.name).then(function (result) {
+                marmoset.results(target).then(function (result) {
                   if (result.error) {
                     self.marmoset_short_results = "errored!";
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
-                    cancelMarmosetRefresh();
                     var data = result.result;
 
                     if (data.length > 0 && data[0].status == "complete") {
+                      cancelMarmosetRefresh();
                       var sub_pk = data[0].submission;
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
-                      var total = 0, passed = 0;
+                      var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
                         total_passed += data[i].outcome === "passed" ? data[i].points : 0;
