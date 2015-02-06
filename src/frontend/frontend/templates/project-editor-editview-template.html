@@ -14,18 +14,18 @@
               <span style="position: relative; bottom: 2px; left: 2px"> code</span>
               <div id="editor-controls"
                    style="position: absolute; right: 13px; top: 0px">
-                <button id="toolbar-run" ng-click="editFileView.runFile()" class="btn btn-link"
+                <button id="toolbar-run" ng-click="editFileView.runFile()" ng-show="editFileView.console.PIDs === null" class="btn btn-link"
                         style="padding-left: 0; padding-right: 0; padding-top: 2px">
                   <span style="font-size: 18px"
                         rel="tooltip"
                         title="control+[R or Enter]">run</span>
                 </button>
-                <button id="toolbar-kill" class="btn btn-link hidden"
+                <button id="toolbar-kill" ng-click="editFileView.killProgram()" ng-show="editFileView.console.PIDs !== null" class="btn btn-link"
                         style="padding-left: 0; padding-right: 0; padding-top: 2px">
                   <span style="font-size: 18px" rel="tooltip"
                         title="control+C">stop</span>
                 </button>
-                <button id="toolbar-run-tests" class="btn btn-link"
+                <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
                         style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px">
                   <span style="font-size: 18px" rel="tooltip"
                         title="control+U">test</span>
@@ -35,6 +35,7 @@
 
             <div id="current-file-controls" class="col-md-12 col-xs-12">
               <button id="toolbar-rename-file"
+                      ng-click="editFileView.renameFile()"
                       class="btn btn-link"
                       style="padding-left: 0; padding-right: 5px; text-decoration: none">
                 <span style="font-size: 14px; font-variant: small-caps;">
@@ -43,12 +44,18 @@
               </button>
 
               <button id="toolbar-delete-file"
+                      ng-click="editFileView.deleteFile()"
                       class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; text-decoration: none">
                 <span style="font-size: 14px; color: red; font-variant: small-caps;">
                   delete
                 </span>
               </button>
+              <div ng-show="editFileView.editor.hasFocus()"
+                   style="padding-top: 7px; float: right; 
+                           font-size: 14px; font-variant: small-caps;">
+                {{editFileView.colNums}}
+              </div>
             </div>
             <div id="binary-editor-placeholder"
                  ng-show="editFileView.isBinaryFile"
@@ -84,12 +91,13 @@
                 <div class="input-group-addon" style="font-size: 10px">
                   <span class="glyphicon glyphicon-chevron-right"></span>
                 </div>
-                <input type="text" class="form-control" id="input-line">
+                <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
+                  type="text" class="form-control" id="input-line">
                 <div class="console-controls"
                      style="position: absolute; top: 5px; right: 0"
                      rel="tooltip"
                      title="control+D">
-                  <button id="send-eof"
+                  <button id="send-eof" ng-click="editFileView.sendEOF()"
                           class="btn btn-link console-control">eof</button>
                 </div>
               </div>

@@ -19,15 +19,21 @@
         </div>
         <div id='question-controls' class="col-md-6 col-xs-4">
           <a href=""
-            ng-click="editView.add_file()"
-            class="btn btn-link"
-            style="border: 0; padding: 0; outline: 0; text-decoration: none">
+             ng-click="editView.commit_project()"
+             class="btn btn-link"
+             style="border: 0; padding: 0; outline: 0; text-decoration: none">
+            <span>commit project…</span>
+          </a>
+          <a href=""
+             ng-click="editView.add_file()"
+             class="btn btn-link"
+             style="border: 0; padding: 0; outline: 0; text-decoration: none">
             <span>add file…</span>
           </a>
           <a href=""
-                ng-click="editView.submit_question()"
-                class="btn btn-link"
-                style="border: 0; padding: 0; outline:0; text-decoration: none">
+             ng-click="editView.submit_question()"
+             class="btn btn-link"
+             style="border: 0; padding: 0; outline:0; text-decoration: none">
             <span>submit question</span>
           </a>
           <span ng-show="editView.marmoset_short_results">
@@ -48,9 +54,9 @@
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="file in editView.common_files">
             <a
-              ui-sref="file({part: 'common', file: '{{file}}'})"
+              ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
               ui-sref-active='file-link-active'
-              ui-sref='file-link'>{{file}}</a> 
+              class='file-link'>{{file}}</a> 
             </span>
           </span>
         </div>
@@ -61,7 +67,7 @@
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="file in editView.test_files">
             <a
-              ui-sref="test(file: '{{file}}')"
+              ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
               class="file-link"
               ui-sref-active="file-link-active">{{file}}</a> 
             </span>

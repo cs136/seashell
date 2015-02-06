@@ -72,7 +72,8 @@ set(LLVM_TARGETS_TO_BUILD "X86")
 set(CLANG_INCLUDE_DOCS OFF)
 add_subdirectory(llvm)
 add_custom_target(_build_clang ALL)
-add_dependencies(_build_clang clang)
+add_dependencies(_build_clang clang llvm-symbolizer)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/llvm-symbolizer DESTINATION bin)
 
 # libgit2 overrides.
 # (Libraries) - the set of libraries needs to stay in sync with libssh2.  These are overrides

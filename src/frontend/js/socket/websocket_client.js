@@ -201,12 +201,12 @@ SeashellWebsocket.prototype.ping = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.runProject = function(project, file, test, deferred) {
+SeashellWebsocket.prototype.compileAndRunProject = function(project, file, test, deferred) {
   return this.sendMessage({
-    type : "runProject",
+    type : "compileAndRunProject",
     project : project,
     file : file,
-    test : test},
+    tests : test},
     deferred);
 };
 
@@ -405,5 +405,13 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, def
     project: project,
     assn: assn,
     subdir: subdir ? subdir : false},
+    deferred);
+};
+
+SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
+  return this.sendMessage({
+    type : "startIO",
+    project : project,
+    pid : pid},
     deferred);
 };

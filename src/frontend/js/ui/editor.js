@@ -54,7 +54,12 @@ function handleDocumentChange(file) {
 
 /** Editor indent function. */
 function editorIndent() {
-  /** TODO: Write this, and the clang-format integration code. */
+  /** TODO: Write clang-format integration code. */
+  var lineCount = editor.lineCount();
+  editor.operation(function() {
+    for (var i = 0; i < lineCount; ++i) editor.indentLine(i);
+  });
+
 }
 
 /** Editor goto function. */
