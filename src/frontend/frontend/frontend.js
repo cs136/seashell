@@ -676,7 +676,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
         $scope.$on('window-resized', onResize);
 
