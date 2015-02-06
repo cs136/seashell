@@ -101,7 +101,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellFile.prototype.read = function() {
           var self = this;
           return $q.when(ws.socket.readFile(self.project.name, self.fullname()));
-        }
+        };
 
         /**
          * write(data)
@@ -338,6 +338,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
           var file = new SeashellFile(self, path);
           return self.root._placeInTree(file, false, false, contents, encoding);
+        };
+
+        SeashellProject.prototype.createQuestion = function(question) {
+          var self = this;
+          if(self.root.find(question)) {
+            return $q.reject("A question with that name already exists.");
+          }
+          var dir = new SeashellFile(self, question, true);
+          return self.root._placeInTree(dir, false, false);
         };
 
         /**
