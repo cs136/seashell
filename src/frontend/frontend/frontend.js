@@ -241,6 +241,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Directive for New Question Modal Service
+  .factory('NewQuestionModal', ['$modal', 'error-service',
+    function ($modal, errors){
+        return function(project){
+            return $modal.open({
+                templateUrl: "frontend/templates/new-question.template.html",
+                controller:  ['$scope', '$state', 'error-service', '$q',
+                function ($scope, $state, errors, $q){
+                    $scope.new_question_name = "";
+                    $scope.inputError = false;
+                    $scope.newQuestion = function () {
+                        var promise = project.createQuestion($scope.new_question_name);
+                        if(promise) promise.then(function () {
+                            $state.go("edit-project.editor",
+                                      {question:$scope.new_question_name});
+                            $scope.$close();
+                        });
+                    };
+                }]
+            }).result;
+        };
+    }])
   // Submit to Marmoset Modal
   .factory('SubmitMarmosetModal', ['$modal', 'error-service',
       function ($modal, errors) {
@@ -266,13 +288,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
       }])
   // Marmoset Results Modal
-  .factory('MarmosetResultModal', ['$modal', 'error-service',
+  .factory('MarmosetResultsModal', ['$modal', 'error-service',
       function ($modal, errors) {
-        return function (target) {
+        return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
-            controller: ['$scope', '$state', 'error-service', 'marmoset',
-              function ($scope, $state, errors, marmoset) {
+            controller: ['$scope', '$state', 'error-service',
+              function ($scope, $state, errors) {
+                $scope.results = results;
               }]});
         };
       }])
@@ -478,21 +501,41 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore',
-    function($state, $stateParams, $scope,  errors, openProject, cookies) {
+      'openProject', 'cookieStore', 'NewQuestionModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
       self.userid = cookies.get('seashell-session').user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.download = function(){
+        openProject.getDownloadToken().then(function (token){
+            var raw = JSON.stringify(token);
+            var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
+                              cookies.get("seashell-session").host,
+                              cookies.get("seashell-session").port,
+                              encodeURIComponent(openProject.name),
+                              encodeURIComponent(raw));
+
+            var ifrm = document.createElement("IFRAME");
+            ifrm.setAttribute("src", url);
+            ifrm.setAttribute("style", "display:none");
+            document.body.appendChild(ifrm);
+        })};
+        self.newQuestion = function () {
+            newQuestionModal(openProject);
+        };
+        self.close = function () {
+            $state.go('list-projects');
+        };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'CommitProjectModal',
+      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal) {
+        $interval, marmoset, commitProjectModal, newQuestionModal, marmosetResultsModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -500,6 +543,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.question_files = [];
         self.test_files = [];
         self.marmoset_short_results = null;
+        self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
         self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
 
@@ -546,6 +590,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           commitProjectModal(self.project);
         });};
 
+        self.view_results = function() {
+          marmosetResultsModal(self.marmoset_long_results);
+        };
+
         /** Submits the current question. */
         self.submit_question = function (){runWhenSaved(function(){
           submitMarmosetModal(self.project, self.question, function (success, target) {
@@ -561,6 +609,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
                     var data = result.result;
+                    self.marmoset_long_results = data;
 
                     if (data.length > 0 && data[0].status == "complete") {
                       cancelMarmosetRefresh();
@@ -676,7 +725,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
         $scope.$on('window-resized', onResize);
 
@@ -762,15 +811,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions['vim_mode'] = false;
           }
           
+          // Force the font size at any rate.
+          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
             self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+            self.editor.refresh();
           }
-          // Force the font size at any rate.
-          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
         };
 
         self.renameFile = function() {
@@ -966,7 +1016,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                                     errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
                                     return null;
                                    });
-                  });
+                  })
+                 .catch(function () {
+                   $state.go('list-projects');
+                 });
               } else {
                 $state.go('list-projects');
                 errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
