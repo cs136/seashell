@@ -421,7 +421,7 @@
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket `(#t '() ,(check-and-build-path project-base file))]))
+      ['racket (values #t '() (check-and-build-path project-base file))]))
 
   (cond
     [(and result (empty? tests))
