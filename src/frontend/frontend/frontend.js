@@ -936,16 +936,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/project/{project}",
         templateUrl: "frontend/templates/project-template.html",
         controller: "ProjectController as projectView",
-        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service', function(projects, $state, $stateParams, errors) {
+        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service',
+                                'ConfirmationMessageModal', function(projects, $state, $stateParams, errors, confirm) {
           return projects.open($stateParams.project).catch(function (error) {
-            errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-            $state.go('list-projects');
-          });
-        }]},
-        onExit: ['openProject', function (project) {
-          project.close();
-        }]
-      })
+            if (error === 'locked') {
+              return confirm(sprintf('Unlock %s', $stateParams.project),
+                             sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
+                .then(function () {
+                  return projects.open($stateParams.project, 'force-lock')
+                                 .catch(function (error) {
+                                    $state.go('list-projects');
+                                    errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                    return null;
+                                   });
+                  });
+              } else {
+                $state.go('list-projects');
+                errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                return null;
+              }
+            });
+          }]},
+          onExit: ['openProject', function (project) {
+            project.close();
+          }]
+        })
       .state("edit-project.editor", {
         url: "/edit/{question}",
         templateUrl: "frontend/templates/project-editor-template.html",
