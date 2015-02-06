@@ -612,9 +612,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal',
+      'ConfirmationMessageModal', '$window', '$document',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal) {
+          settings, Console, renameModal, confirmModal, $window, $document) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -634,6 +634,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             var scr = self.console.inst.getScrollInfo();
             self.console.inst.scrollTo(scr.left, scr.height);
           });
+          onResize();
         };
         self.consoleOptions = {
           lineWrapping: true,
@@ -663,6 +664,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
         });
+        // Resize events
+        function onResize() {
+          var min_height = 500, margin_bottom = 60;
+          var min_y_element = $('#editor > .CodeMirror');
+          var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
+                           min_height);
+          var narrow = $($document).width() < 992;
+          $('#editor > .CodeMirror')
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
+          $('#console > .CodeMirror')
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h) - $('.console-input').outerHeight());
+        }
+        $scope.$on('window-resized', onResize);
 
         // Scope helper function follow.
         self.editorLoad = function(editor) {
@@ -715,6 +729,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
+          onResize();
         };
         self.refreshSettings = function () {
           self.editorOptions = {
@@ -981,7 +996,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }]}
       });
   }])
-  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
+  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', 
+        '$window', '$document', '$rootScope',
+        function(cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
     ws.connect()
         .then(function () {
           return projects.fetch().catch(function (projects) {
@@ -993,5 +1010,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       return settings.load().catch(function (error) {
         errors.report(error, 'Could not load settings!');
       });
+    });
+    // Set up resize
+    $($window).resize(function () {
+      $rootScope.$emit('window-resized');
     });
   }]);
