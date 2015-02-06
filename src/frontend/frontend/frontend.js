@@ -512,7 +512,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
             extraKeys: {
-              "F11": function() {
+              "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
               "Esc": function() {
