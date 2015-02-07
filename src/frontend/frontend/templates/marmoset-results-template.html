@@ -5,18 +5,20 @@
     <span id="commit-project-title">Marmoset Results</span></h4>
 </div>
 <div class="modal-body">
-  <p ng-show="results===null || results.length == 0">No Marmoset results to view.</p>
-  <table ng-show="results.length > 0">
-    <tr>
-      <th>Test Name</th>
-      <th>Outcome</th>
-      <th>Result</th>
-    <tr ng-repeat="result in results">
-      <td>{{result.name}}</td>
-      <td>{{result.outcome}}</td>
-      <td>{{result.short}}</td>
-    </tr>
-  </table>
+  <p id="marmoset-details-body">
+    <span ng-show="results===null || results.length == 0">No Marmoset results to view.</p>
+    <table border="1" id="marmoset-details-table" ng-show="results.length > 0 && results[0].status==='complete'">
+      <tr>
+        <th>Test Name</th>
+        <th>Outcome</th>
+        <th>Result</th>
+      <tr ng-repeat="result in results">
+        <td>{{result.name}}</td>
+        <td>{{result.outcome}}</td>
+        <td>{{result.short}}</td>
+      </tr>
+    </table>
+  <p>
 </div>
 <div class="modal-footer">
   <button type="button" class="btn btn-default" ng-click="$dismiss()">Close</button>
