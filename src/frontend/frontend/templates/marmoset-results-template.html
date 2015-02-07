@@ -11,11 +11,14 @@
     <tr>
       <th>Test Name</th>
       <th>Outcome</th>
-      <th>Result</th>
+      <th>Short Result</th>
+      <th>Long Result</th>
+    </tr>
     <tr ng-repeat="result in results">
       <td>{{result.name}}</td>
       <td>{{result.outcome}}</td>
-      <td>{{result.short}}</td>
+      <td><pre>{{result.short}}</pre></td>
+      <td><pre>{{result.long}}</pre></td>
     </tr>
   </table>
 </div>

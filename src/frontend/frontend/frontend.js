@@ -609,7 +609,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
                     var data = result.result;
-                    self.marmoset_long_results = data;
 
                     if (data.length > 0 && data[0].status == "complete") {
                       cancelMarmosetRefresh();
@@ -617,6 +616,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
+                      self.marmoset_long_results = related;
                       var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
