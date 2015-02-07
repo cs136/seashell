@@ -18,7 +18,7 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap', 'ui.codemirror'])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
   .service('error-service', function () {
     var self = this;
@@ -535,7 +535,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal, newQuestionModal, marmosetResultsModal) {
+        $interval, marmoset, commitProjectModal, newQuestionModal,
+        marmosetResultsModal) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -663,9 +664,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -728,7 +729,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
         $scope.$on('window-resized', onResize);
-
+      
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
@@ -930,6 +931,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         };
 
+        hotkeys.bindTo($scope).add({
+          combo: 'ctrl+r',
+          descirption: 'Runs the currently open file.',
+          callback: self.runFile
+        }).add({
+          combo: 'ctrl+k',
+          description: "Kills the currently running program.",
+          callback: self.killProgram
+        });
+
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
@@ -954,6 +965,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.refreshSettings();
           });
       }])
+  .config(['hotkeysProvider', function(hotkeysProvider) {
+    hotkeysProvider.includeCheatSheet = false;
+  }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
