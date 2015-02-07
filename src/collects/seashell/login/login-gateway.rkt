@@ -177,7 +177,7 @@
   ;; Terminate existing Seashell instance
   (unless (empty? (extract-bindings "reset" bdgs))
     (with-handlers ([exn:fail:filesystem? (lambda (x) #f)])
-      (define creds (call-with-input-file (build-path (read-config 'seashell) "creds")
+      (define creds (call-with-input-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name))
                                           (compose deserialize read)))
       (define creds-host (hash-ref creds 'host))
       (define creds-pid (hash-ref creds 'pid))
@@ -232,7 +232,7 @@
       (define credentials-cookie
         (cookie:secure
           (cookie:add-path
-            (set-cookie (uri-encode "seashell-session") (uri-encode (jsexpr->string creds)))
+            (set-cookie (uri-encode (read-config 'seashell-creds-cook) (uri-encode (jsexpr->string creds))))
             "/~cs136/seashell")
           #t))
 

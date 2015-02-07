@@ -174,7 +174,7 @@
     (logf 'info "Starting up.")
     
     ;; If another instance of the server is running, send credentials for that instance and exit-from-seashell
-    (define credentials-file (build-path (read-config 'seashell) "creds"))
+    (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
     (define credentials-port #f)
     (define shutdown-server void)
     (define shutdown-listener void)

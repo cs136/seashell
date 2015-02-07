@@ -442,7 +442,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           confirm("Log out of Seashell",
             "Do you wish to logout?  Any unsaved data will be lost.")
             .then(function () {
-              cookieStore.remove("seashell-session");
+              cookieStore.remove(SEASHELL_CREDS_COOKIE);
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
         };
@@ -506,14 +506,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
-      self.userid = cookies.get('seashell-session').user;
+      self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
             var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
-                              cookies.get("seashell-session").host,
-                              cookies.get("seashell-session").port,
+                              cookies.get(SEASHELL_CREDS_COOKIE).host,
+                              cookies.get(SEASHELL_CREDS_COOKIE).port,
                               encodeURIComponent(openProject.name),
                               encodeURIComponent(raw));
 
