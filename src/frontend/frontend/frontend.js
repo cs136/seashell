@@ -613,6 +613,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     if (data.length > 0 && data[0].status == "complete") {
                       cancelMarmosetRefresh();
                       var sub_pk = data[0].submission;
+                      var failed = false;
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
@@ -621,10 +622,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
                         total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                        failed = failed || data[i].outcome !== "passed";
                       }
                       
                       self.marmoset_short_results = 
-                        sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
+                        sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
                                 total_passed, total);
                     } else if (data.length > 0) {
                       self.marmoset_short_results = 
