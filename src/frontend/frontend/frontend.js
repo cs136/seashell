@@ -362,6 +362,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
     var self = this;
     self.PIDs = null;
+    // running is true iff we are running with "run", allows input
+    self.running = false;
     self.inst = null;
     self.contents = "";
     self.errors = [];
@@ -410,7 +412,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     });
 
-    self.setRunning = function(project, PIDs) {
+    self.setRunning = function(project, PIDs, testing) {
+      self.running = !testing;
       self.PIDs = PIDs;
       _.each(self.PIDs, function (pid) {
         socket.socket.startIO(project.name, pid);
@@ -863,7 +866,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
-                self.console.setRunning(self.project, [res.pid]);
+                self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
@@ -884,7 +887,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, true)
               .then(function(res) {
-                self.console.setRunning(self.project, res.pids);
+                self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })
@@ -912,13 +915,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           })
           .then(function() {
             self.console.PIDs = null;
+            self.console.running = false;
           });
         };
 
         self.userInput = "";
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
-            if(self.console.PID && !isNaN(self.console.PID)) {
+            if(self.console.running) {
               self.project.sendInput(self.console.PID, self.userInput);
               self.userInput = "";
             }
@@ -926,7 +930,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
 
         self.sendEOF = function() {
-          if(self.console.PID && !isNaN(self.console.PID)) {
+          if(self.console.running) {
             self.project.sendEOF(self.console.PID);
           }
         };
