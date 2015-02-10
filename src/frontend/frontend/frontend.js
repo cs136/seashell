@@ -613,22 +613,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
                     var data = result.result;
-                    self.marmoset_long_results = data;
 
                     if (data.length > 0 && data[0].status == "complete") {
                       cancelMarmosetRefresh();
                       var sub_pk = data[0].submission;
+                      var failed = false;
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
+                      self.marmoset_long_results = related;
                       var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
                         total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                        failed = failed || data[i].outcome !== "passed";
                       }
                       
                       self.marmoset_short_results = 
-                        sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
+                        sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
                                 total_passed, total);
                     } else if (data.length > 0) {
                       self.marmoset_short_results = 

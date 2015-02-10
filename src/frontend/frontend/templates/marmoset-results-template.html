@@ -4,17 +4,21 @@
     <span class="glyphicon glyphicon-export"></span>
     <span id="commit-project-title">Marmoset Results</span></h4>
 </div>
-<div class="modal-body">
-  <p ng-show="results===null || results.length == 0">No Marmoset results to view.</p>
-  <table ng-show="results.length > 0">
+<div class="modal-body marmoset-details-body">
+  <span ng-show="results===null || results.length == 0">No Marmoset results to view.</span>
+  <span ng-show="results.length > 0 && results[0].status !== 'complete'">Waiting on tests to finish.</span>
+  <table border="1" id="marmoset-details-table" ng-show="results.length > 0 && results[0].status==='complete'">
     <tr>
       <th>Test Name</th>
       <th>Outcome</th>
-      <th>Result</th>
+      <th>Short Result</th>
+      <th>Long Result</th>
+    </tr>
     <tr ng-repeat="result in results">
       <td>{{result.name}}</td>
       <td>{{result.outcome}}</td>
       <td>{{result.short}}</td>
+      <td>{{result.long}}</td>
     </tr>
   </table>
 </div>
