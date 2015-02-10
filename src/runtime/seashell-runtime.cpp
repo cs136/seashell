@@ -22,7 +22,7 @@ namespace {
   class IOBufferSetup {
     public:
       IOBufferSetup() {
-        setvbuf(stdout, NULL, _IONBF, 0);
+        setvbuf(stdout, NULL, _IOLBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
       }
   } iosetup;
