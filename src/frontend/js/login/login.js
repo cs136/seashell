@@ -114,7 +114,7 @@ function submit_login() {
                alert("Login error: " + data.error.message + " (code " + data.error.code + ")");
              } else if(data.port !== undefined) {
                /** Set additional fields. */
-               createCookie("seashell-session", JSON.stringify(data));
+               createCookie(SEASHELL_CREDS_COOKIE, JSON.stringify(data));
                console.log("All done login.");
                top.location = "frontend.html";
              } else {
@@ -139,7 +139,7 @@ function submit_login() {
  *  - host - String, representing the host to connect to.
  */
 function read_login_credentials() {
-  var creds = readCookie("seashell-session");
+  var creds = readCookie(SEASHELL_CREDS_COOKIE);
   if (creds) {
     return JSON.parse(creds);
   } else {

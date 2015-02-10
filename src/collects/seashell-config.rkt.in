@@ -90,6 +90,10 @@
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      ;; Name of credentials file.
+      (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
+      ;; Name of credentials cookie
+      (cons 'seashell-creds-cook           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of special subdirectory in each user program which contains tests (.in and .expect files)
       (cons 'tests-subdirectory            "tests")
       ;; Name of special subdirectory in each user program which contains common files.

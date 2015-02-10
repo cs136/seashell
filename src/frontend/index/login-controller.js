@@ -43,7 +43,7 @@ angular.module('login-app', ['jquery-cookie', 'seashell-websocket'])
                     data.error.code);
                   console.log(self.error);
                 } else if (data.port !== undefined) {
-                  cookieStore.add("seashell-session", data, {secure: true});
+                  cookieStore.add(SEASHELL_CREDS_COOKIE, data, {secure: true});
                   console.log("All done login!");
                   ws.connect().then(function () {
                     $window.top.location = "frontend.html";

@@ -59,7 +59,7 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          */
         self.results = function(project) {
           return $http({url: test_url,
-                             params: {user: cookieStore.get("seashell-session").user,
+                             params: {user: cookieStore.get(SEASHELL_CREDS_COOKIE).user,
                                       project: project}})
                  .then(function (result) {
                    return result.data;

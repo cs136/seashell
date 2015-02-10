@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @(include "frontend/includes/styles.html")
     <title>Seashell</title>
+    <script type='text/javascript'>
+      var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
+      var SEASHELL_API_VERSION=@(values SEASHELL_API_VERSION);
+    </script>
   </head>
   <body ng-controller="FrontendController as frontend">
 @(include "frontend/includes/navigation.html")
