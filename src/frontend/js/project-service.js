@@ -474,16 +474,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
-         * SeashellProject.input(pid, input)
-         *
-         * Sends user input to the target PID.
-         */
-        SeashellProject.prototype.input = function(pid, input) {
-          var self = this;
-          return $q.when(ws.socket.programInput(pid, input));
-        };
-
-        /**
          * SeashellProject.getDownloadToken()
          *
          * Gets a project download token.

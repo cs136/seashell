@@ -925,7 +925,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
             if(self.console.running) {
-              self.project.sendInput(self.console.PID, self.userInput);
+              self.project.sendInput(self.console.PIDs[0], self.userInput);
               self.userInput = "";
             }
           }
@@ -933,7 +933,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         self.sendEOF = function() {
           if(self.console.running) {
-            self.project.sendEOF(self.console.PID);
+            self.project.sendEOF(self.console.PIDs[0]);
           }
         };
 
