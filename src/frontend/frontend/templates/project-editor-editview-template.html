@@ -92,12 +92,12 @@
                   <span class="glyphicon glyphicon-chevron-right"></span>
                 </div>
                 <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
-                  type="text" class="form-control" id="input-line">
+                  type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running">
                 <div class="console-controls"
                      style="position: absolute; top: 5px; right: 0"
                      rel="tooltip"
                      title="control+D">
-                  <button id="send-eof" ng-click="editFileView.sendEOF()"
+                  <button id="send-eof" ng-click="editFileView.sendEOF()" ng-disabled="!editFileView.console.running"
                           class="btn btn-link console-control">eof</button>
                 </div>
               </div>
