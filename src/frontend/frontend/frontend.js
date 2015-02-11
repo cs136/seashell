@@ -20,19 +20,21 @@
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
-  .service('error-service', function () {
+  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
     var self = this;
     self.errors = [];
 
     self.report = function (error, shorthand) {
       if (error) {
         self.errors.push({shorthand: shorthand, error: error});
+        $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
     self.suppress = function (index) {
       self.errors.splice(index, 1);
+      $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
     };
-  })
+  }])
   // Confirmation message modal service.
   .factory('ConfirmationMessageModal', ['$modal',
       function ($modal) {
@@ -170,8 +172,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/new-file-template.html",
-            controller: ['$scope', '$state', 'error-service', '$q',
-            function ($scope, $state, errors, $q) {
+            controller: ['$scope', '$state', 'error-service', '$q', '$timeout',
+            function ($scope, $state, errors, $q, $timeout) {
               $scope.new_file_name = "";
               $scope.new_file_folder = question;
               $scope.new_file_upload = [];
@@ -744,9 +746,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                            min_height);
           var narrow = $($document).width() < 992;
           $('#editor > .CodeMirror')
-            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : h + 1) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
         $scope.$on('window-resized', onResize);
       
