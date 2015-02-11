@@ -334,6 +334,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             if (settings)
               for (var k in settings)
                 self.settings[k] = settings[k];
+            // Backwards compatibility.
+            if (typeof self.settings.font_size === 'string') {
+              self.settings.font_size = parseInt(self.settings.font_size);
+            }
             notifyChanges();
           }).catch(function (message) {
             errors.report(message, "Could not load settings from server.");
