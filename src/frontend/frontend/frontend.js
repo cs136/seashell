@@ -714,7 +714,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
-        self.colNums = "";
+        self.col = 0; self.line = 0;
         self.editorFocus = false;
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
@@ -795,7 +795,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
           function updateColNums() {
             $timeout(function() {
-              self.colNums = sprintf("ln %d, col %d", self.editor.getCursor().line + 1, self.editor.getCursor().ch + 1);
+              self.col = self.editor.getCursor().ch + 1;
+              self.line = self.editor.getCursor().line + 1;
             }, 0);
           }
           self.editor.on("cursorActivity", updateColNums);
@@ -813,6 +814,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
+            rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));

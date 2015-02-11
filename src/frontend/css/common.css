@@ -441,3 +441,7 @@ input::-ms-clear {
 #send-eof {
   z-index: 2;
 }
+
+.col-too-long {
+  color: rgb(240, 0, 0);
+}

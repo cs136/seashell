@@ -54,7 +54,8 @@
               <div ng-show="editFileView.editor.hasFocus()"
                    style="padding-top: 7px; float: right; 
                            font-size: 14px; font-variant: small-caps; color: #999">
-                {{editFileView.colNums}}
+                   <span>ln {{editFileView.line}}</span>
+                   <span ng-class="{'col-too-long': editFileView.col > 80}">col {{editFileView.col}}</span>
               </div>
             </div>
             <div id="binary-editor-placeholder"
