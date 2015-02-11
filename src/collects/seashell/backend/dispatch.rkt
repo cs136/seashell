@@ -434,6 +434,16 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "patchFile")
+        ('project project)
+        ('file file)
+        ('contents contents))
+       (patch-file project file (string->bytes/utf-8 contents))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
         ('type "readFile")
         ('project project)
         ('file file))

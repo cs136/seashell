@@ -338,6 +338,15 @@ SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, 
     deferred);
 };
 
+SeashellWebsocket.prototype.patchFile = function(name, file_name, patch_content, deferred) {
+  return this.sendMessage({
+    type : "patchFile",
+    project : name,
+    file : file_name,
+    contents : patch_content},
+    defferred);
+};
+
 SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
   return this.sendMessage({
     type : "deleteFile",

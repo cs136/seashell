@@ -145,6 +145,23 @@
                        #:exists 'must-truncate)
   (void))
 
+;; (patch-file project file contents) -> void?
+;; Patches a file from a list of patch instructions.
+;;
+;; Arguments:
+;;  project - project.
+;;  file - name of file to patch.
+;;  contents - the contents of the patch instructions.
+(define/contract (patch-file project file contents)
+  (-> (and/c project-name? is-project?) path-string? bytes? void?)
+  (define ptch
+    (process* "/usr/bin/patch"
+              "--batch"
+              (check-and-build-path (build-project-path project) file)))
+  (write-bytes contents (list-ref ptch 1))
+  ((list-ref ptch 4) 'wait)
+  (void))
+
 ;; (list-files project)
 ;; Lists all files and directories in a project.
 ;;
