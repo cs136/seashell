@@ -962,12 +962,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         hotkeys.bindTo($scope).add({
           combo: 'ctrl+r',
-          descirption: 'Runs the currently open file.',
-          callback: self.runFile
+          description: 'Runs the currently open file.',
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.runFile();
+          }
         }).add({
           combo: 'ctrl+k',
           description: "Kills the currently running program.",
-          callback: self.killProgram
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.killProgram();
+          }
         });
 
         // Initialization code goes here.
