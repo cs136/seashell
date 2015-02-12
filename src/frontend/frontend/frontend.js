@@ -705,6 +705,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.timeout = null;
+        self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
@@ -787,17 +788,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            self.timeout = $timeout(function() {
-              self.project.saveFile(self.question, self.folder, self.file, self.contents)
-                .catch(function (error) {
-                  errors.report(error, "Could not save file!");
-                })
-                .then(function () {
-                  self.timeout = null;
-                });
-            }, 2000);
-            self.console.errors = [];
-            self.refreshSettings();
+            if (self.loaded) {
+              self.timeout = $timeout(function() {
+                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                  .catch(function (error) {
+                    errors.report(error, "Could not save file!");
+                  })
+                  .then(function () {
+                    self.timeout = null;
+                  });
+              }, 2000);
+              self.console.errors = [];
+            }
+            self.loaded = true;
           });
           function updateColNums() {
             $timeout(function() {
