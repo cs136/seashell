@@ -8,11 +8,10 @@ body {
   height: 100%;
 }
 
-/** Hide tag. */
-.hide {
-  display: none;
+.container-fluid {
+  padding-left: 5em;
+  padding-right: 5em;
 }
-
 .row {
   padding: 2px;
 }
