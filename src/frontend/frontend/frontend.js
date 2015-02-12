@@ -831,13 +831,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
           };
           if (settings.settings['editor_mode'] === 'vim') {
-            self.editorOptions['vim_mode'] = true;
+            self.editorOptions['vimMode'] = true;
           } else if(settings.settings['editor_mode'] === 'emacs') {
             self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           } else {
             self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           }
           
           // Force the font size at any rate.
