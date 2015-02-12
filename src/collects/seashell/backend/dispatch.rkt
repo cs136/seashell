@@ -188,10 +188,10 @@
                          ;; any unexpected character breaks...
                          (if (port-closed? stdout)
                            never-evt
-                           (tag-event "stdout" (read-string-evt 1 stdout)))
+                           (tag-event (list "stdout" stdout) (peek-string-evt 1 0 #f stdout)))
                          (if (port-closed? stderr)
                            never-evt
-                           (tag-event "stderr" (read-string-evt 1 stderr))))
+                           (tag-event (list "stderr" stderr) (peek-string-evt 1 0 #f stderr))))
                    [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
                     ;; Connection died.
                     (program-kill pid)
@@ -225,12 +225,19 @@
                     (logf 'debug "Instance (PID ~a) of ~a quit." project pid)
                     (program-destroy-handle pid)
                     (send-message connection message)]
-                   [`(,tag ,contents)
-                    (if (not (eof-object? contents))
-                      (send-contents-for tag contents)
-                      (if (equal? tag "stdout")
-                        (close-input-port stdout)
-                        (close-input-port stderr)))
+                   [`((,tag ,port) ,test)
+                    (cond
+                      [(not (eof-object? test))
+                        (define contents (list->string 
+                                           (for/list 
+                                             ([ch (in-port read-char port)])
+                                             #:final (not (char-ready? port))
+                                             ch)))
+                        (send-contents-for tag contents)]
+                      [else
+                        (if (equal? tag "stdout")
+                          (close-input-port stdout)
+                          (close-input-port stderr))])
                     (loop)]))))))
 
   ;; (dispatch-handle-program-input message)

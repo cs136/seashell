@@ -20,19 +20,21 @@
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
-  .service('error-service', function () {
+  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
     var self = this;
     self.errors = [];
 
     self.report = function (error, shorthand) {
       if (error) {
         self.errors.push({shorthand: shorthand, error: error});
+        $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
     self.suppress = function (index) {
       self.errors.splice(index, 1);
+      $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
     };
-  })
+  }])
   // Confirmation message modal service.
   .factory('ConfirmationMessageModal', ['$modal',
       function ($modal) {
@@ -170,8 +172,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/new-file-template.html",
-            controller: ['$scope', '$state', 'error-service', '$q',
-            function ($scope, $state, errors, $q) {
+            controller: ['$scope', '$state', 'error-service', '$q', '$timeout',
+            function ($scope, $state, errors, $q, $timeout) {
               $scope.new_file_name = "";
               $scope.new_file_folder = question;
               $scope.new_file_upload = [];
@@ -305,7 +307,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var self = this;
         self.settings =  {
           font_size  : 10,
-          edit_mode  : "standard",
+          editor_mode  : "standard",
           tab_width  : 2,
           text_style : "neat",
           use_space : true
@@ -332,6 +334,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             if (settings)
               for (var k in settings)
                 self.settings[k] = settings[k];
+            // Backwards compatibility.
+            if (typeof self.settings.font_size === 'string') {
+              self.settings.font_size = parseInt(self.settings.font_size);
+            }
             notifyChanges();
           }).catch(function (message) {
             errors.report(message, "Could not load settings from server.");
@@ -367,17 +373,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.inst = null;
     self.contents = "";
     self.errors = [];
-    // buffers
+    // Buffers
     self.stdout = "";
     self.stderr = "";
+    self._contents = "";
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
         var ind = io.message.indexOf("\n");
         if(ind > -1) {
           var spl = io.message.split("\n");
-          self.write(self.stdout);
-          while(spl.length>1) { self.write(spl.shift() + "\n"); }
+          self._write(self.stdout);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stdout = spl[0];
         }
         else
@@ -387,17 +394,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var ind = io.message.indexOf("\n");
         if(ind > -1) {
           var spl = io.message.split("\n");
-          self.write(self.stderr);
-          while(spl.length>1) { self.write(spl.shift() + "\n"); }
+          self._write(self.stderr);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
         }
         else
           self.stderr += io.message;
       }
       else if(io.type == "done") {
+        self._write(self.stdout);
+        self._write(self.stderr);
+        self.stdout = self.stderr = "";
         self.write("Program finished with exit code "+io.status+".\n");
         self.PIDs = null;
+        self.running = false;
       }
+      self.flush();
     });
     socket.register_callback("test", function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
@@ -420,10 +432,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     };
     self.clear = function() {
-      self.contents = "";
+      self.contents = self._contents = "";
+      self.stdin = self.stdout = "";
+    };
+    self._write = function(msg) {
+      self._contents += msg;
     };
     self.write = function(msg) {
-      self.contents += msg;
+      self.flush();
+      self._write(msg);
+      self.flush();
+    };
+    self.flush = function () {
+      self.contents = self._contents + self.stdout + self.stderr;
     };
   }])
   // Main controller
@@ -684,6 +705,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.timeout = null;
+        self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
@@ -699,7 +721,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
-        self.colNums = "";
+        self.col = 0; self.line = 0;
         self.editorFocus = false;
         self.contents = "";
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
@@ -729,7 +751,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                            min_height);
           var narrow = $($document).width() < 992;
           $('#editor > .CodeMirror')
-            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
             .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
         }
@@ -766,21 +788,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            self.timeout = $timeout(function() {
-              self.project.saveFile(self.question, self.folder, self.file, self.contents)
-                .catch(function (error) {
-                  errors.report(error, "Could not save file!");
-                })
-                .then(function () {
-                  self.timeout = null;
-                });
-            }, 2000);
-            self.console.errors = [];
-            self.refreshSettings();
+            if (self.loaded) {
+              self.timeout = $timeout(function() {
+                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                  .catch(function (error) {
+                    errors.report(error, "Could not save file!");
+                  })
+                  .then(function () {
+                    self.timeout = null;
+                  });
+              }, 2000);
+              self.console.errors = [];
+            }
+            self.loaded = true;
           });
           function updateColNums() {
             $timeout(function() {
-              self.colNums = sprintf("ln %d, col %d", self.editor.getCursor().line + 1, self.editor.getCursor().ch + 1);
+              self.col = self.editor.getCursor().ch + 1;
+              self.line = self.editor.getCursor().line + 1;
             }, 0);
           }
           self.editor.on("cursorActivity", updateColNums);
@@ -798,6 +823,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
+            rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
@@ -807,14 +833,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               }
             }
           };
-          if (settings.settings['edit_mode'] === 'vim') {
-            self.editorOptions['vim_mode'] = true;
-          } else if(settings.settings['edit_mode'] === 'emacs') {
+          if (settings.settings['editor_mode'] === 'vim') {
+            self.editorOptions['vimMode'] = true;
+          } else if(settings.settings['editor_mode'] === 'emacs') {
             self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           } else {
             self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           }
           
           // Force the font size at any rate.
@@ -914,8 +940,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }))
           .catch(function (error) {
             errors.report(error, "Could not stop program!");
-          })
-          .then(function() {
             self.console.PIDs = null;
             self.console.running = false;
           });
@@ -925,7 +949,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
             if(self.console.running) {
-              self.project.sendInput(self.console.PIDs[0], self.userInput);
+              self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
               self.userInput = "";
             }
           }
@@ -933,18 +957,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         self.sendEOF = function() {
           if(self.console.running) {
-            self.project.sendEOF(self.console.PIDs[0]);
+            self.project.sendEOF(self.console.PIDs[0]).then(function () {
+              self.console.running = false;
+            });
           }
         };
 
         hotkeys.bindTo($scope).add({
           combo: 'ctrl+r',
-          descirption: 'Runs the currently open file.',
-          callback: self.runFile
+          description: 'Runs the currently open file.',
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.runFile();
+          }
         }).add({
           combo: 'ctrl+k',
           description: "Kills the currently running program.",
-          callback: self.killProgram
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.killProgram();
+          }
         });
 
         // Initialization code goes here.
@@ -1088,6 +1122,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     });
     // Set up resize
     $($window).resize(function () {
-      $rootScope.$emit('window-resized');
+      $rootScope.$broadcast('window-resized');
     });
   }]);
