@@ -153,13 +153,22 @@
 ;;  file - name of file to patch.
 ;;  contents - the contents of the patch instructions.
 (define/contract (patch-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes? void?)
-  (define ptch
-    (process* "/usr/bin/patch"
-              "--batch"
-              (check-and-build-path (build-project-path project) file)))
-  (write-bytes contents (list-ref ptch 1))
-  ((list-ref ptch 4) 'wait)
+  (-> (and/c project-name? is-project?) path-string? list? void?)
+  (define new-file-content
+    (with-input-from-file
+        (check-and-build-path (build-project-path project) file)
+      (lambda ()
+        (flatten
+         (map (lambda (a)
+                (cond
+                 [(string? a) a]
+                 [(< 0 a) (build-list a (lambda (x) (read-line)))]
+                 [else (begin
+                         (build-list (- a) (lambda (x) (read-line)))
+                         empty)])))))))
+  (with-output-to-file
+      (check-and-build-path (build-project-path project) file)
+    (lambda () (for-each displayln new-file-content)))
   (void))
 
 ;; (list-files project)

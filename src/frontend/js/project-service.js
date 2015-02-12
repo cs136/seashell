@@ -115,7 +115,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
-          var diff_data = difflib.unified_diff(self.old_data, data, self.fullname());
+          var diff_data = make_patch(self.old_data, data);
           return $q.when(ws.socket.patchFile(self.project.name, self.fullname(), diff_data))
             .then(function() {
               self.last_saved = Date.now();
