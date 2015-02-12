@@ -514,6 +514,13 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "getRecent")
+        ('project project))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(get-recent-file project)))]
+      [(hash-table
+        ('id id)
         ('type "saveSettings")
         ('settings settings))
        (with-output-to-file (build-path (read-config 'seashell) "settings.txt")

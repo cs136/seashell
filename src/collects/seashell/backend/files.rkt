@@ -128,6 +128,7 @@
 ;;  Contents of the file as a bytestring.
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? bytes?)
+  (update-recent-file project file)
   (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
 
@@ -249,3 +250,34 @@
       (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
         (thunk (read)))]
     [else #f]))
+
+;; (update-recent-file project file)
+;; Updates ~/.seashell/recent.txt to say that `file' was the most
+;; recent file for the project `project'.
+;;
+;; Arguments:
+;;  project - the project to update.
+;;  file - the most recent file.
+(define/contract (update-recent-file project file)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (define recent (build-path (read-config 'seashell) "recent.txt"))
+  (cond
+   [(not (file-exists? recent))
+    (with-output-to-file recent (thunk (write (make-hash))))])
+  (define r (with-input-from-file recent read))
+  (hash-set! r project file)
+  (with-output-to-file recent (thunk (write r)))
+  (void))
+
+;; (get-recent-file project)
+;; Reads the most recent file name for the specified project.
+;;
+;; Arguments:
+;;  project - the project to check the default for.
+(define/contract (get-recent-file project)
+  (-> (and/c project-name? is-project?) path-string?)
+  (define recent (build-path (read-config 'seashell) "recent.txt"))
+  (cond
+   [(not (file-exists? recent))
+    (with-output-to-file recent (thunk (write (make-hash))))])
+  (hash-ref (with-input-from-file recent read) project #f))
