@@ -438,7 +438,7 @@
         ('project project)
         ('file file)
         ('contents contents))
-       (patch-file project file (string->bytes/utf-8 contents))
+       (patch-file project file contents)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
