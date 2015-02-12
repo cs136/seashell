@@ -705,6 +705,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.timeout = null;
+        self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
@@ -787,17 +788,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            self.timeout = $timeout(function() {
-              self.project.saveFile(self.question, self.folder, self.file, self.contents)
-                .catch(function (error) {
-                  errors.report(error, "Could not save file!");
-                })
-                .then(function () {
-                  self.timeout = null;
-                });
-            }, 2000);
-            self.console.errors = [];
-            self.refreshSettings();
+            if (self.loaded) {
+              self.timeout = $timeout(function() {
+                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                  .catch(function (error) {
+                    errors.report(error, "Could not save file!");
+                  })
+                  .then(function () {
+                    self.timeout = null;
+                  });
+              }, 2000);
+              self.console.errors = [];
+            }
+            self.loaded = true;
           });
           function updateColNums() {
             $timeout(function() {
@@ -830,14 +833,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               }
             }
           };
-          if (settings.settings['edit_mode'] === 'vim') {
-            self.editorOptions['vim_mode'] = true;
-          } else if(settings.settings['edit_mode'] === 'emacs') {
+          if (settings.settings['editor_mode'] === 'vim') {
+            self.editorOptions['vimMode'] = true;
+          } else if(settings.settings['editor_mode'] === 'emacs') {
             self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           } else {
             self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           }
           
           // Force the font size at any rate.
@@ -962,12 +965,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         hotkeys.bindTo($scope).add({
           combo: 'ctrl+r',
-          descirption: 'Runs the currently open file.',
-          callback: self.runFile
+          description: 'Runs the currently open file.',
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.runFile();
+          }
         }).add({
           combo: 'ctrl+k',
           description: "Kills the currently running program.",
-          callback: self.killProgram
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.killProgram();
+          }
         });
 
         // Initialization code goes here.
