@@ -115,13 +115,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
-          self.old_data = self.old_data || "\n";
-          var diff_data = make_patch(self.old_data, data);
-          return $q.when(ws.socket.patchFile(self.project.name, self.fullname(), diff_data))
-            .then(function() {
-              self.last_saved = Date.now();
-              self.old_data = data;
-            });
+          if (self.old_data) {
+            var diff_data = make_patch(self.old_data, data);
+            return $q.when(ws.socket.patchFile(self.project.name, self.fullname(), diff_data))
+              .then(function() {
+                self.last_saved = Date.now();
+                self.old_data = data;
+              });
+          } else {
+            return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
+          }
         };
 
         /**
