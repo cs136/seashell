@@ -1,6 +1,6 @@
 /**
  * Seashell's frontend.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -952,6 +952,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if($event.keyCode == 13) {
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.console.write(self.userInput + "\n");
               self.userInput = "";
             }
           }

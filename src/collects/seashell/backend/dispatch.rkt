@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's backend server.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -436,6 +436,16 @@
         ('file file)
         ('contents contents))
        (write-file project file (string->bytes/utf-8 contents))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "patchFile")
+        ('project project)
+        ('file file)
+        ('contents contents))
+       (patch-file project file contents)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

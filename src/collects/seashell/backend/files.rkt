@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's backend server.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -143,6 +143,32 @@
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'must-truncate)
+  (void))
+
+;; (patch-file project file contents) -> void?
+;; Patches a file from a list of patch instructions.
+;;
+;; Arguments:
+;;  project - project.
+;;  file - name of file to patch.
+;;  contents - the contents of the patch instructions.
+(define/contract (patch-file project file contents)
+  (-> (and/c project-name? is-project?) path-string? list? void?)
+  (define new-file-content
+    (with-input-from-file
+        (check-and-build-path (build-project-path project) file)
+      (lambda ()
+        (flatten
+         (map (lambda (a)
+                (cond
+                 [(string? a) a]
+                 [(< 0 a) (build-list a (lambda (x) (read-line)))]
+                 [else (begin
+                         (build-list (- a) (lambda (x) (read-line)))
+                         empty)])))))))
+  (with-output-to-file
+      (check-and-build-path (build-project-path project) file)
+    (lambda () (for-each displayln new-file-content)))
   (void))
 
 ;; (list-files project)
