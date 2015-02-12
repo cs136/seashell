@@ -552,6 +552,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.close = function () {
             $state.go('list-projects');
         };
+      var recent = self.project.recentFile();
+      if (recent) {
+        recent = recent.split('/');
+        $state.go('edit-project.editor.file',
+                  {part: recent[0], file: recent[1]});
+      }
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',

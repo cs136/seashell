@@ -395,6 +395,13 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, def
   deferred);
 };
 
+SeashellWebsocket.prototype.getRecent = function (project) {
+  return this.sendMessage({
+    type : "getRecent",
+    project : project},
+    deferred);
+};
+
 SeashellWebsocket.prototype.saveSettings = function(settings, deferred) {
   return this.sendMessage({
     type : "saveSettings",
