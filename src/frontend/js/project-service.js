@@ -100,7 +100,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellFile.prototype.read = function() {
           var self = this;
-          return $q.when(ws.socket.readFile(self.project.name, self.fullname()));
+          return $q.when(ws.socket.readFile(self.project.name, self.fullname()))
+            .then(function (conts) {
+              self.old_data = conts;
+              return conts;
+            });
         };
 
         /**
@@ -111,10 +115,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
-          return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data))
-            .then(function() {
-              self.last_saved = Date.now();
-            });
+          if (self.old_data) {
+            var diff_data = make_patch(self.old_data, data);
+            return $q.when(ws.socket.patchFile(self.project.name, self.fullname(), diff_data))
+              .then(function() {
+                self.last_saved = Date.now();
+                self.old_data = data;
+              });
+          } else {
+            return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
+          }
         };
 
         /**
