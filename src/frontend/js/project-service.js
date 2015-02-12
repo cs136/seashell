@@ -417,6 +417,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
+         * SeashellProject.recentFile()
+         *
+         * Returns the filename of the most recent file edited in this
+         * project or null of there is none.
+         */
+        SeashellProject.prototype.recentFile = function () {
+          var self = this;
+          var response = ws.socket.getRecent(self.name);
+          return response.result ? response.result : null;
+        };
+
+        /**
          * SeashellProject.remove()
          *
          * Deletes the SeashellProject.
