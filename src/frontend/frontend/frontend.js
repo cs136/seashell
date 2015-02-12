@@ -745,7 +745,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         });
         // Resize events
         function onResize() {
-          var min_height = 500, margin_bottom = 60;
+          var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
                            min_height);
@@ -753,7 +753,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
+          if(self.editor)
+            self.editor.refresh();
         }
         $scope.$on('window-resized', onResize);
       

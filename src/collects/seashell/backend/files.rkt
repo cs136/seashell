@@ -30,6 +30,7 @@
          remove-directory
          read-file
          write-file
+         patch-file
          list-files
          rename-file
          read-settings
@@ -153,22 +154,24 @@
 ;;  file - name of file to patch.
 ;;  contents - the contents of the patch instructions.
 (define/contract (patch-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? list? void?)
+  (-> (and/c project-name? is-project?) path-string? (listof (or/c string? exact-integer?)) void?)
   (define new-file-content
     (with-input-from-file
         (check-and-build-path (build-project-path project) file)
       (lambda ()
         (flatten
-         (map (lambda (a)
+         (map (lambda (inst)
                 (cond
-                 [(string? a) a]
-                 [(< 0 a) (build-list a (lambda (x) (read-line)))]
-                 [else (begin
-                         (build-list (- a) (lambda (x) (read-line)))
-                         empty)])))))))
+                 [(string? inst) inst]
+                 [(< 0 inst) (for/list ([x (in-range inst)])
+                                       (let ([r (read-line)])
+                                         (if (eof-object? r) "" r)))]
+                 [else (for ([x (in-range 0 inst -1)]) (read-line)) empty]))
+              contents)))))
   (with-output-to-file
       (check-and-build-path (build-project-path project) file)
-    (lambda () (for-each displayln new-file-content)))
+    (thunk (for ([l new-file-content]) (printf "~a\n" l)))
+    #:exists 'must-truncate)
   (void))
 
 ;; (list-files project)

@@ -344,7 +344,7 @@ SeashellWebsocket.prototype.patchFile = function(name, file_name, patch_content,
     project : name,
     file : file_name,
     contents : patch_content},
-    defferred);
+    deferred);
 };
 
 SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
