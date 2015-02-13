@@ -552,8 +552,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore', 'NewQuestionModal',
-    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal) {
+      'openProject', 'cookieStore', 'NewQuestionModal', 'DeleteProjectModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal, deleteProjectModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
@@ -574,10 +574,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             document.body.appendChild(ifrm);
         })};
         self.newQuestion = function () {
-            newQuestionModal(openProject);
+          newQuestionModal(openProject);
         };
         self.close = function () {
-            $state.go('list-projects');
+          $state.go('list-projects');
+        };
+        self.delete = function () {
+          deleteProjectModal(openProject.name).then(
+              function () {$state.go('list-projects');});
         };
     }])
   // Editor Controller
