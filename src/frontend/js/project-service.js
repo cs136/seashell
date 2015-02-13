@@ -153,7 +153,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
             if(!split[0])
               return $q.reject("File does not exist.");
-            self.children = split[1];
+            self.children = split[1] || [];
             if(!soft_delete)
               return $q.when(ws.socket.deleteFile(self.project.name, split[0][0].fullname()));
           }
