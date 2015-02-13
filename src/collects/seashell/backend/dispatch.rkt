@@ -230,9 +230,9 @@
                       [(not (eof-object? test))
                         (define contents (list->string 
                                            (for/list 
-                                             ([ch (in-port read-char port)])
-                                             #:final (not (char-ready? port))
-                                             ch)))
+                                             ([i (in-range 4096)])
+                                             #:break (not (char-ready? port))
+                                             (read-char port))))
                         (send-contents-for tag contents)]
                       [else
                         (if (equal? tag "stdout")
