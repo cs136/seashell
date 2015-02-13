@@ -220,7 +220,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           font_size  : 10,
           edit_mode  : "standard",
           tab_width  : 4,
-          text_style : "neat"
+          text_style : "neat",
+          theme_style : "default"
         };
         self.notify = [];
 
