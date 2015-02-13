@@ -446,6 +446,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.flush = function () {
       self.contents = self._contents + self.stdout + self.stderr;
     };
+    self.flushForInput = function () {
+      self._contents += self.stdout + self.stderr;
+      self.stdout = self.stderr = "";
+    };
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
@@ -952,6 +956,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if($event.keyCode == 13) {
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.console.flushForInput();
               self.console.write(self.userInput + "\n");
               self.userInput = "";
             }
