@@ -273,9 +273,9 @@
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe))
-            (define-values (in-stdin out-stdin) (make-pipe))
-            (define-values (in-stderr out-stderr) (make-pipe))
+            (define-values (in-stdout out-stdout) (make-pipe 4096))
+            (define-values (in-stdin out-stdin) (make-pipe 4096))
+            (define-values (in-stderr out-stderr) (make-pipe 4096))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore
