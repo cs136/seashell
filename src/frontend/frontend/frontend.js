@@ -560,17 +560,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal',
+      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
         $interval, marmoset, commitProjectModal, newQuestionModal,
-        marmosetResultsModal) {
+        marmosetResultsModal, Console) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
         self.test_files = [];
+        self.console = Console;
         self.marmoset_short_results = null;
         self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
@@ -582,7 +583,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             $interval.cancel(self.marmoset_refresh_interval);
           self.marmoset_refresh_interval = null;
         }
-        $scope.$on('$destroy', cancelMarmosetRefresh);
+        $scope.$on('$destroy', function() {
+          cancelMarmosetRefresh()
+          self.console.clear();
+        });
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
