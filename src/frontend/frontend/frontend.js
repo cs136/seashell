@@ -1,6 +1,6 @@
 /**
  * Seashell's frontend.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -310,7 +310,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var self = this;
         self.settings =  {
           font_size  : 10,
-          edit_mode  : "standard",
+          editor_mode  : "standard",
           tab_width  : 2,
           text_style : "neat",
           use_space : true
@@ -337,6 +337,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             if (settings)
               for (var k in settings)
                 self.settings[k] = settings[k];
+            // Backwards compatibility.
+            if (typeof self.settings.font_size === 'string') {
+              self.settings.font_size = parseInt(self.settings.font_size);
+            }
             notifyChanges();
           }).catch(function (message) {
             errors.report(message, "Could not load settings from server.");
@@ -704,6 +708,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.ext = self.file.split(".")[1];
         self.editor = null;
         self.timeout = null;
+        self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleLoad = function(console_cm) {
           self.console.inst = console_cm;
@@ -743,7 +748,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         });
         // Resize events
         function onResize() {
-          var min_height = 500, margin_bottom = 60;
+          var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
                            min_height);
@@ -751,7 +756,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
+          if(self.editor)
+            self.editor.refresh();
         }
         $scope.$on('window-resized', onResize);
       
@@ -786,17 +793,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            self.timeout = $timeout(function() {
-              self.project.saveFile(self.question, self.folder, self.file, self.contents)
-                .catch(function (error) {
-                  errors.report(error, "Could not save file!");
-                })
-                .then(function () {
-                  self.timeout = null;
-                });
-            }, 2000);
-            self.console.errors = [];
-            self.refreshSettings();
+            if (self.loaded) {
+              self.timeout = $timeout(function() {
+                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                  .catch(function (error) {
+                    errors.report(error, "Could not save file!");
+                  })
+                  .then(function () {
+                    self.timeout = null;
+                  });
+              }, 2000);
+              self.console.errors = [];
+            }
+            self.loaded = true;
           });
           function updateColNums() {
             $timeout(function() {
@@ -829,14 +838,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               }
             }
           };
-          if (settings.settings['edit_mode'] === 'vim') {
-            self.editorOptions['vim_mode'] = true;
-          } else if(settings.settings['edit_mode'] === 'emacs') {
+          if (settings.settings['editor_mode'] === 'vim') {
+            self.editorOptions['vimMode'] = true;
+          } else if(settings.settings['editor_mode'] === 'emacs') {
             self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           } else {
             self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vim_mode'] = false;
+            self.editorOptions['vimMode'] = false;
           }
           
           // Force the font size at any rate.
@@ -946,6 +955,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if($event.keyCode == 13) {
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.console.write(self.userInput + "\n");
               self.userInput = "";
             }
           }
@@ -961,12 +971,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         hotkeys.bindTo($scope).add({
           combo: 'ctrl+r',
-          descirption: 'Runs the currently open file.',
-          callback: self.runFile
+          description: 'Runs the currently open file.',
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.runFile();
+          }
         }).add({
           combo: 'ctrl+k',
           description: "Kills the currently running program.",
-          callback: self.killProgram
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.killProgram();
+          }
         });
 
         // Initialization code goes here.

@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Seashell's communications backend.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -335,6 +335,15 @@ SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, 
     project : name,
     file : file_name,
     contents : file_content},
+    deferred);
+};
+
+SeashellWebsocket.prototype.patchFile = function(name, file_name, patch_content, deferred) {
+  return this.sendMessage({
+    type : "patchFile",
+    project : name,
+    file : file_name,
+    contents : patch_content},
     deferred);
 };
 
