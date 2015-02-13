@@ -311,7 +311,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var self = this;
         self.settings =  {
           font_size  : 10,
-          theme_style : "default"
+          theme_style : "default",
           editor_mode  : "standard",
           tab_width  : 2,
           text_style : "neat",
