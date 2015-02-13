@@ -299,6 +299,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
+            size: "lg",
             controller: ['$scope', '$state', 'error-service',
               function ($scope, $state, errors) {
                 $scope.results = results;

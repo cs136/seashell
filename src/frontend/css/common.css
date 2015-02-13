@@ -373,6 +373,10 @@ input::-ms-clear {
   padding: 3px;
 }
 
+#marmoset-details-table pre {
+  max-width: 65%;
+}
+
 #commit-project-descr .CodeMirror {
   border: 1px solid #ddd;
 }
