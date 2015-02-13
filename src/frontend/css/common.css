@@ -374,7 +374,7 @@ input::-ms-clear {
 }
 
 #marmoset-details-table pre {
-  max-width: 65%;
+  white-space: pre-wrap;
 }
 
 #commit-project-descr .CodeMirror {
