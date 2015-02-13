@@ -261,11 +261,12 @@
 (define/contract (update-recent-file project file)
   (-> (and/c project-name? is-project?) path-string? void?)
   (define recent (build-path (read-config 'seashell) "recent.txt"))
-  (cond
-   [(not (file-exists? recent))
-    (with-output-to-file recent (thunk (write (make-hash))))])
+  (when (not (file-exists? recent))
+    (with-output-to-file recent (thunk (write (make-hash)))))
   (define r (with-input-from-file recent read))
-  (hash-set! r project file)
+  (define-values (base name _) (split-path file))
+  (hash-set! r project (path->string base))
+  (hash-set! r (string-append project "/" (path->string base)) name)
   (with-output-to-file recent (thunk (write r)))
   (void))
 
