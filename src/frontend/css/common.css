@@ -369,7 +369,7 @@ input::-ms-clear {
   text-align:right;
 }
 
-#marmoset-details-table td {
+#marmoset-details-table td, #marmoset-details-table th {
   padding: 3px;
 }
 
