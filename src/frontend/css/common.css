@@ -383,3 +383,29 @@ input::-ms-clear {
 .col-too-long {
   color: rgb(240, 0, 0);
 }
+
+/* navbar overrides */
+.navbar {
+  min-height: 40px;
+}
+
+.navbar-default {
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+}
+
+.navbar .navbar-collapse {
+  text-align: center;
+}
+
+.navbar-icons > li > a {
+  padding: 10px 6px;
+  font-size: 12px;
+  text-decoration: none;
+}
