@@ -415,12 +415,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
-        self.write("Test '"+res.test_name+"' passed.\n");
+        self.write(sprintf("Test %s passed.\n", res.test_name));
       }
       else if(res.result==="failed") {
-        self.write("Test '"+res.test_name+"' failed!\n");
+        self.write(sprintf("Test %s failed.\n", res.test_name));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
       } else if(res.result==="error") {
         self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="no-expect") {
+        self.write(sprintf("Test %s produced output (stdout):\n", res.test_name));
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="timeout") {
+        self.write(sprintf("Test %s timed out.\n", res.test_name));
+      }
+      else if(res.result==="killed") {
+        self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
     });
 
