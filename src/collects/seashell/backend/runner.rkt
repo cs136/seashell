@@ -147,6 +147,18 @@
       (close-output-port out-stdout))
     (void))
 
+  ;; Deal with receiving signals,
+  ;; in all cases. (so I/O does not block a kill signal)
+  (define (check-signals tail)
+    (if (sync/timeout 0 (thread-receive-evt))
+       (match (thread-receive)
+         ['kill
+          (logf 'info "Program with PID ~a killed." pid)
+          (set-program-exit-status! pgrm 254)
+          (subprocess-kill handle #t)
+          (close)])
+       (tail)))
+
   (let loop ()
     (define receive-evt (thread-receive-evt))
     (match (sync/timeout 30
@@ -184,12 +196,7 @@
        (subprocess-kill handle #t)
        (close)]
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
-       (match (thread-receive)
-         ['kill
-          (logf 'info "Program with PID ~a killed." pid)
-          (set-program-exit-status! pgrm 254)
-          (subprocess-kill handle #t)
-          (close)])]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
        (define input (make-bytes 4096))
        (define read (read-bytes-avail! input in-stdin))
@@ -198,7 +205,7 @@
        (when (eof-object? read)
          (close-input-port in-stdin)
          (close-output-port raw-stdin))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
        (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stdout))
@@ -207,7 +214,7 @@
        (when (eof-object? read)
          (close-input-port raw-stdout)
          (close-output-port out-stdout))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
        (define output (make-bytes 4096))
        (define read (read-bytes-avail! output raw-stderr))
@@ -216,7 +223,7 @@
        (when (eof-object? read)
          (close-input-port raw-stderr)
          (close-output-port out-stderr))
-       (loop)]))
+       (check-signals loop)]))
   (void))
 
 ;; (run-program binary directory lang test)
