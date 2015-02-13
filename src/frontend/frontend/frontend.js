@@ -160,6 +160,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     notify($scope.rename_name);
                   })
                   .catch(function(err) {
+                    $scope.$dismiss();
                     errors.report(err, "An error occurred while renaming the file.");
                   });
               };
