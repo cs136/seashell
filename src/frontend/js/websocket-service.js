@@ -1,6 +1,6 @@
 /**
  * Angular bindings for the Seashell WebSocket client.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,9 +60,21 @@ angular.module('seashell-websocket', ['jquery-cookie'])
       delete callbacks[key];
     };
 
+    /** Helper function to invoke the I/O callback. */
+    function io_cb(ignored, message) {
+      _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'io';}),
+                   function (x) {return x.cb;}),
+             function (x) {x(message);});
+    }
+    function test_cb(ignored, result) {
+      _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'test';}),
+                   function (x) {return x.cb;}),
+             function (x) {x(result);});
+    }
+
     /** Connects the socket, sets up the disconnection monitor. */ 
     self.connect = function () {
-      if (!rawCookie.get("seashell-session")) {
+      if (!rawCookie.get(SEASHELL_CREDS_COOKIE)) {
         self.failed = true;
         $timeout(function () {
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
@@ -72,8 +84,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
         return $q.reject("No credentials found!");
       }
 
-      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get("seashell-session").host, cookie.get("seashell-session").port),
-                                          cookie.get("seashell-session").key,
+      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get(SEASHELL_CREDS_COOKIE).host, cookie.get(SEASHELL_CREDS_COOKIE).port),
+                                          cookie.get(SEASHELL_CREDS_COOKIE).key,
                                           /** Failure - probably want to prompt the user to attempt to reconnect/
                                            *  log in again.
                                            */
@@ -117,6 +129,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           }, 4000);
           self.connected = true;
           self.failed = false;
+          self.socket.requests[-3].callback = io_cb;
+          self.socket.requests[-4].callback = test_cb;
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'connected';}),

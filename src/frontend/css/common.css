@@ -4,27 +4,15 @@ body {
   padding-top: 15px;
 }
 
-#master-container {
-  height: 100%;
+.container-fluid {
+  padding-left: 5em;
+  padding-right: 5em;
 }
-
-/** Hide tag. */
-.hide {
-  display: none;
-}
-
 .row {
   padding: 2px;
 }
 
 /** Height-manipulation */
-.content-fill {
-  min-height: 100%;
-}
-.content {
-  padding-bottom: 50px; /* Account for fixed navbar */
-}
-
 .disconnected {
 }
 
@@ -34,31 +22,7 @@ body {
   opacity: 0.5;
 }
 
-/** No project display. */
-.no-project {
-  padding: 40px 15px;
-  text-align: center;
-  font-size: 16pt;
-}
-.no-file {
-  padding: 40px 15px;
-  text-align: center;
-  font-size: 16pt;
-}
-
 /** Toolbar */
-.toolbar {
-  padding: 2px;
-}
-
-/** Downloads */
-#download-iframe {
-  zoom: 0.60;
-  width: 99.6%;
-  border: none;
-  height: 20%;
-}
-
 #question-controls {
   text-align: right;
   padding-left: 0;
@@ -74,12 +38,8 @@ body {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-.CodeMirror-gutter {
-  background-color: white;
-}
-
 .CodeMirror-gutters {
-  border: none; /*: 1px dashed #eee;*/
+  border: 1px dashed #eee;
 }
 
 .editor-console {
@@ -91,7 +51,7 @@ body {
 }
 
 #editor > .CodeMirror {
-  height: 25em;
+  height: 300px;
   border: 1px solid #ddd;
   border-top: none;
 }
@@ -110,14 +70,21 @@ body {
   border-bottom-color: #eee;
 }
 
+.CodeMirror-fullscreen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  height: auto;
+  z-index: 9;
+}
+
 #console {
 }
 
 #console > .CodeMirror {
-  height: 10em;
+  height: 299px;
   border: 1px solid #ddd;
   border-top: none;
-  border-bottom: 1px solid white;
+  border-bottom: none;
   clear: both;
 }
 
@@ -171,13 +138,13 @@ body {
   text-decoration: none;
 }
 
-.console-input {
+#console-input {
   background-color: #fff;
   clear: both;
   border: 1px solid #ddd;
   border-top-color: #eee;
 }
-.console-input input, .console-input input:focus {
+#console-input input, #console-input input:focus {
   font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
   line-height: 1em;
   padding: 0.4em;
@@ -187,7 +154,7 @@ body {
   box-shadow: none !important;
   border: none;
 }
-.console-input .input-group-addon {
+#console-input .input-group-addon {
   background-color: white;
   padding-right: 0;
   padding-left: 5px;
@@ -236,13 +203,6 @@ body {
 }
 
 /** Linter */
-.CodeMirror-linenumbers {
-  width: 24px !important;
-}
-.CodeMirror-lint-markers {
-  width: 15px !important;
-}
-
 .CodeMirror-lint-tooltip {
   z-index: 1055;
 }
@@ -283,32 +243,6 @@ div.tooltip .tooltip-inner {
 .test-result-line-num {
   color:#000;
   font-weight:bold;
-}
-
-/* navbar overrides */
-.navbar {
-	min-height: 40px;
-}
-
-.navbar-default {
-  border: none;
-  box-shadow: none;
-  background: none;
-}
-
-.navbar .navbar-nav {
-  display: inline-block;
-  float: none;
-}
-
-.navbar .navbar-collapse {
-  text-align: center;
-}
-
-.navbar-icons > li > a {
-  padding: 10px 6px;
-  font-size: 12px;
-  text-decoration: none;
 }
 
 .question-link {
@@ -408,7 +342,7 @@ div.tooltip .tooltip-inner {
 	  border-left: none;
 	}
   #console > .CodeMirror { border-left: none; }
-  .console-input { border-left: none }
+  #console-input { border-left: none }
 
   #question-controls { text-align: left; }
   #questions-row-container { text-align: left; }
@@ -435,6 +369,43 @@ input::-ms-clear {
   text-align:right;
 }
 
-#marmoset-details-table td {
+#marmoset-details-table td, #marmoset-details-table th {
   padding: 3px;
+}
+
+#commit-project-descr .CodeMirror {
+  border: 1px solid #ddd;
+}
+#send-eof {
+  z-index: 2;
+}
+
+.col-too-long {
+  color: rgb(240, 0, 0);
+}
+
+/* navbar overrides */
+.navbar {
+  min-height: 40px;
+}
+
+.navbar-default {
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+}
+
+.navbar .navbar-collapse {
+  text-align: center;
+}
+
+.navbar-icons > li > a {
+  padding: 10px 6px;
+  font-size: 12px;
+  text-decoration: none;
 }

@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's backend server.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -174,7 +174,7 @@
     (logf 'info "Starting up.")
     
     ;; If another instance of the server is running, send credentials for that instance and exit-from-seashell
-    (define credentials-file (build-path (read-config 'seashell) "creds"))
+    (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
     (define credentials-port #f)
     (define shutdown-server void)
     (define shutdown-listener void)

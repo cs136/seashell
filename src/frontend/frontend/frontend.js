@@ -1,6 +1,6 @@
 /**
  * Seashell's frontend.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,21 +18,23 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap'])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
-  .service('error-service', function () {
+  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
     var self = this;
     self.errors = [];
 
     self.report = function (error, shorthand) {
       if (error) {
         self.errors.push({shorthand: shorthand, error: error});
+        $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
     self.suppress = function (index) {
       self.errors.splice(index, 1);
+      $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
     };
-  })
+  }])
   // Confirmation message modal service.
   .factory('ConfirmationMessageModal', ['$modal',
       function ($modal) {
@@ -87,6 +89,49 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Commit Project Modal Service
+  .factory('CommitProjectModal', ['$modal', 'error-service',
+      function ($modal, errors) {
+        return function (project) {
+          var modal = $modal.open({
+            templateUrl: "frontend/templates/commit-project-template.html",
+            controller: ['$scope', 'socket', 'error-service',
+            function ($scope,  ws, errors) {
+              $scope.commit_descr = "Saved "+(new Date()).toUTCString()+".";
+              $scope.editor = null;
+              $scope.codemirror_opts = {
+                lineWrapping: true,
+                mode: "text/plain",
+                onLoad: function (cm) {
+                  $scope.editor = cm;
+                }
+              };
+              $scope.commit_project = function () {
+                $scope.$close();
+                project.save($scope.commit_descr)
+                       .catch(function (error) {
+                         errors.report(error, sprintf("Could not commit %s to storage!", project.name));
+                       });
+              };
+            }]
+          });
+          return modal.result;
+        };
+      }])
+  // Directive for binding a mutator watcher (HTML5)
+  .directive('whenVisible', ['$parse', function ($parse) {
+    return {
+      link: function (scope, elem, attrs) {
+        var triggered = false;
+        scope.$watch(function () {
+          if (elem.is(':visible') && !triggered) {
+            $parse(attrs.whenVisible)(scope);
+            triggered = true;
+          }
+        });
+      }
+    };
+  }])
   // Directive for binding file uploads.
   .directive('filelistBind', ['$parse', function ($parse) {
     return {
@@ -99,6 +144,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  .factory('RenameFileModal', ['$modal', 'error-service',
+    function($modal, errors) {
+      return function(project, question, folder, file, notify) {
+        notify = notify || function() {};
+        return $modal.open({
+          templateUrl: "frontend/templates/rename-file-template.html",
+          controller: ["$scope", "$state", "error-service",
+            function($scope, $state, errors) {
+              $scope.rename_name = file;
+              $scope.renameFile = function() {
+                project.renameFile(question, folder, file, folder, $scope.rename_name)
+                  .then(function() {
+                    $scope.$close();
+                    notify($scope.rename_name);
+                  })
+                  .catch(function(err) {
+                    $scope.$dismiss();
+                    errors.report(err, "An error occurred while renaming the file.");
+                  });
+              };
+            }]
+          });
+      };
+  }])
+  // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
       function ($modal, errors) {
@@ -106,8 +176,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/new-file-template.html",
-            controller: ['$scope', '$state', 'error-service', '$q',
-            function ($scope, $state, errors, $q) {
+            controller: ['$scope', '$state', 'error-service', '$q', '$timeout',
+            function ($scope, $state, errors, $q, $timeout) {
               $scope.new_file_name = "";
               $scope.new_file_folder = question;
               $scope.new_file_upload = [];
@@ -177,6 +247,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
+  // Directive for New Question Modal Service
+  .factory('NewQuestionModal', ['$modal', 'error-service',
+    function ($modal, errors){
+        return function(project){
+            return $modal.open({
+                templateUrl: "frontend/templates/new-question.template.html",
+                controller:  ['$scope', '$state', 'error-service', '$q',
+                function ($scope, $state, errors, $q){
+                    $scope.new_question_name = "";
+                    $scope.inputError = false;
+                    $scope.newQuestion = function () {
+                        var promise = project.createQuestion($scope.new_question_name);
+                        if(promise) promise.then(function () {
+                            $state.go("edit-project.editor",
+                                      {question:$scope.new_question_name});
+                            $scope.$close();
+                        });
+                    };
+                }]
+            }).result;
+        };
+    }])
   // Submit to Marmoset Modal
   .factory('SubmitMarmosetModal', ['$modal', 'error-service',
       function ($modal, errors) {
@@ -202,13 +294,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
       }])
   // Marmoset Results Modal
-  .factory('MarmosetResultModal', ['$modal', 'error-service',
+  .factory('MarmosetResultsModal', ['$modal', 'error-service',
       function ($modal, errors) {
-        return function (target) {
+        return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
-            controller: ['$scope', '$tate', 'error-service', 'marmoset',
-              function ($scope, $state, errors, marmoset) {
+            controller: ['$scope', '$state', 'error-service',
+              function ($scope, $state, errors) {
+                $scope.results = results;
               }]});
         };
       }])
@@ -218,21 +311,38 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var self = this;
         self.settings =  {
           font_size  : 10,
-          edit_mode  : "standard",
-          tab_width  : 4,
-          text_style : "neat",
           theme_style : "default"
+          editor_mode  : "standard",
+          tab_width  : 2,
+          text_style : "neat",
+          use_space : true
         };
-        self.notify = [];
+        self.notify = {};
+        var nKey = 0;
 
         function notifyChanges () {
-          _.forEach(self.notify, function (x) {x();});
+          _.forEach(self.notify, function (fn) {fn();});
         }
+
+        /** Adds and removes watchers on the settings service. */
+        self.addWatcher = function(fn, invoke) {
+          self.notify[nKey] = fn;
+          invoke && fn ();
+          return nKey ++;
+        };
+        self.removeWatcher = function(key) {
+          delete self.notify[key];
+        };
 
         self.load = function () {
           return $q.when(ws.socket.getSettings()).then(function (settings) {
             if (settings)
-              self.settings = settings;
+              for (var k in settings)
+                self.settings[k] = settings[k];
+            // Backwards compatibility.
+            if (typeof self.settings.font_size === 'string') {
+              self.settings.font_size = parseInt(self.settings.font_size);
+            }
             notifyChanges();
           }).catch(function (message) {
             errors.report(message, "Could not load settings from server.");
@@ -260,6 +370,111 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         };
       }])
+  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+    var self = this;
+    self.PIDs = null;
+    // running is true iff we are running with "run", allows input
+    self.running = false;
+    self.inst = null;
+    self.contents = "";
+    self.errors = [];
+    // Buffers
+    self.stdout = "";
+    self.stderr = "";
+    self._contents = "";
+
+    socket.register_callback("io", function(io) {
+      if(io.type == "stdout") {
+        var ind = io.message.indexOf("\n");
+        if(ind > -1) {
+          var spl = io.message.split("\n");
+          self._write(self.stdout);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          self.stdout = spl[0];
+        }
+        else
+          self.stdout += io.message;
+      }
+      else if(io.type == "stderr") {
+        var ind = io.message.indexOf("\n");
+        if(ind > -1) {
+          var spl = io.message.split("\n");
+          self._write(self.stderr);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          self.stderr = spl[0];
+        }
+        else
+          self.stderr += io.message;
+      }
+      else if(io.type == "done") {
+        self._write(self.stdout);
+        self._write(self.stderr);
+        self.stdout = self.stderr = "";
+        self.write("Program finished with exit code "+io.status+".\n");
+        self.PIDs = null;
+        self.running = false;
+      }
+      self.flush();
+    });
+    socket.register_callback("test", function(res) {
+      self.PIDs = _.without(self.PIDs, res.pid);
+      self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
+      if(res.result==="passed") {
+        self.write(sprintf("Test %s passed.\n", res.test_name));
+      }
+      else if(res.result==="failed") {
+        self.write(sprintf("Test %s failed.\n", res.test_name));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="error") {
+        self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="no-expect") {
+        self.write(sprintf("Test %s produced output (stdout):\n", res.test_name));
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="timeout") {
+        self.write(sprintf("Test %s timed out.\n", res.test_name));
+      }
+      else if(res.result==="killed") {
+        self.write(sprintf("Test %s was killed.\n", res.test_name));
+      }
+    });
+
+    self.setRunning = function(project, PIDs, testing) {
+      self.running = !testing;
+      self.PIDs = PIDs;
+      _.each(self.PIDs, function (pid) {
+        socket.socket.startIO(project.name, pid);
+      });
+    };
+    self.clear = function() {
+      self.contents = self._contents = "";
+      self.stdin = self.stdout = "";
+    };
+    self._write = function(msg) {
+      self._contents += msg;
+    };
+    self.write = function(msg) {
+      self.flush();
+      self._write(msg);
+      self.flush();
+    };
+    self.flush = function () {
+      self.contents = self._contents + self.stdout + self.stderr;
+    };
+    self.flushForInput = function () {
+      self._contents += self.stdout + self.stderr;
+      self.stdout = self.stderr = "";
+    };
+  }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
       function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
@@ -279,7 +494,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           confirm("Log out of Seashell",
             "Do you wish to logout?  Any unsaved data will be lost.")
             .then(function () {
-              cookieStore.remove("seashell-session");
+              cookieStore.remove(SEASHELL_CREDS_COOKIE);
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
         };
@@ -338,44 +553,77 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore',
-    function($state, $stateParams, $scope,  errors, openProject, cookies) {
+      'openProject', 'cookieStore', 'NewQuestionModal', 'DeleteProjectModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal, deleteProjectModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
-      self.userid = cookies.get('seashell-session').user;
-      self.is_deletable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
+      self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.download = function(){
+        openProject.getDownloadToken().then(function (token){
+            var raw = JSON.stringify(token);
+            var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
+                              cookies.get(SEASHELL_CREDS_COOKIE).host,
+                              cookies.get(SEASHELL_CREDS_COOKIE).port,
+                              encodeURIComponent(openProject.name),
+                              encodeURIComponent(raw));
+
+            var ifrm = document.createElement("IFRAME");
+            ifrm.setAttribute("src", url);
+            ifrm.setAttribute("style", "display:none");
+            document.body.appendChild(ifrm);
+        })};
+        self.newQuestion = function () {
+          newQuestionModal(openProject);
+        };
+        self.close = function () {
+          $state.go('list-projects');
+        };
+        self.delete = function () {
+          deleteProjectModal(openProject.name).then(
+              function () {$state.go('list-projects');});
+        };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
+      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset) {
+        $interval, marmoset, commitProjectModal, newQuestionModal,
+        marmosetResultsModal, Console) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
-        self.tests = [];
+        self.test_files = [];
+        self.console = Console;
         self.marmoset_short_results = null;
+        self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
-        self.marmoset_timeout = 1000;
+        self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
-          return self.marmoset_refresh_interval &&
+          self.marmoset_refresh_interval &&
             $interval.cancel(self.marmoset_refresh_interval);
+          self.marmoset_refresh_interval = null;
         }
-        $scope.$on('$destroy', cancelMarmosetRefresh);
+        $scope.$on('$destroy', function() {
+          cancelMarmosetRefresh()
+          self.console.clear();
+        });
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
           var result = self.project.filesFor(self.question);
           self.common_files = result.common;
           self.question_files = result.question;
-          self.tests = result.tests;
+          self.test_files = result.tests;
         };
+        $scope.refresh = self.refresh;
 
         /** Adds file to the project. */
         self.add_file = function () {
@@ -384,8 +632,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        /** Dispatches a function to run when the
+         *  current file is saved.
+         *
+         *  If there is no such current file,
+         *  run function immediately.
+         */
+        function runWhenSaved(fn) {
+          if ($state.is('edit-project.editor.file')) {
+            $scope.$broadcast('run-when-saved', fn);
+          } else {
+            fn();
+          }
+        }
+
+        /** Commits the project. */
+        self.commit_project = function () {runWhenSaved(function (){
+          commitProjectModal(self.project);
+        });};
+
+        self.view_results = function() {
+          marmosetResultsModal(self.marmoset_long_results);
+        };
+
         /** Submits the current question. */
-        self.submit_question = function () {
+        self.submit_question = function (){runWhenSaved(function(){
           submitMarmosetModal(self.project, self.question, function (success, target) {
             if (!success) {
               self.marmoset_short_results = "failed to submit!";
@@ -393,29 +664,33 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               var submitTime = new Date();
               cancelMarmosetRefresh();
               self.marmoset_refresh_interval = $interval(function () {
-                marmoset.results(self.project.name).then(function (result) {
+                marmoset.results(target).then(function (result) {
                   if (result.error) {
                     self.marmoset_short_results = "errored!";
                     errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
                   } else {
-                    cancelMarmosetRefresh();
                     var data = result.result;
 
                     if (data.length > 0 && data[0].status == "complete") {
+                      cancelMarmosetRefresh();
                       var sub_pk = data[0].submission;
+                      var failed = false;
                       var related = _.filter(data, function (entry) {
                         return entry.submission === sub_pk;
                       });
-                      var total = 0, passed = 0;
+                      self.marmoset_long_results = related;
+                      var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
                         total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                        failed = failed || data[i].outcome !== "passed";
                       }
                       
                       self.marmoset_short_results = 
-                        sprintf("%s (%d/%d)", total_passed === total ? "passed" : "failed",
+                        sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
                                 total_passed, total);
                     } else if (data.length > 0) {
+                      self.marmoset_short_results = 
                         sprintf("received %s (waiting on tests)",
                                 $.timeago(data[0].timestamp));
                           
@@ -435,7 +710,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).then(function () {
             self.marmoset_short_results = "submitting...";
           });
-        };
+        });};
 
         /** Displays Marmoset Results. */
         self.marmoset_results = function () {
@@ -449,6 +724,330 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $state.go("edit-project");
         }
       }])
+  .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
+      'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys',
+      function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys) {
+        var self = this;
+        // Scope variable declarations follow.
+        self.project = openProject;
+        self.question = openQuestion;
+        self.folder = openFolder;
+        self.file = openFile;
+        self.console = Console;
+        self.isBinaryFile = false;
+        self.ready = false;
+        self.ext = self.file.split(".")[1];
+        self.editor = null;
+        self.timeout = null;
+        self.loaded = false;
+        self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleLoad = function(console_cm) {
+          self.console.inst = console_cm;
+          self.console.inst.on("update", function() {
+            var scr = self.console.inst.getScrollInfo();
+            self.console.inst.scrollTo(scr.left, scr.height);
+          });
+          onResize();
+        };
+        self.consoleOptions = {
+          lineWrapping: true,
+          readOnly: true,
+          mode: "text/plain",
+          onLoad: self.consoleLoad
+        };
+        self.col = 0; self.line = 0;
+        self.editorFocus = false;
+        self.contents = "";
+        var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
+        // Saving event.
+        function runWhenSaved(fn) {
+          if (self.timeout) {
+            $timeout.cancel(self.timeout);
+            self.timeout = null;
+            self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
+                fn();
+              })
+              .catch(function (error) {
+                errors.report(error, "Could not save file!");
+              });
+          } else {
+            fn();
+          }
+        }
+        $scope.$on('run-when-saved', function (evt, fn) {
+          runWhenSaved(fn);
+        });
+        // Resize events
+        function onResize() {
+          var min_height = 500, margin_bottom = 30;
+          var min_y_element = $('#editor > .CodeMirror');
+          var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
+                           min_height);
+          var narrow = $($document).width() < 992;
+          $('#editor > .CodeMirror')
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
+          $('#console > .CodeMirror')
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
+          if(self.editor)
+            self.editor.refresh();
+        }
+        $scope.$on('window-resized', onResize);
+      
+        // Scope helper function follow.
+        self.editorLoad = function(editor) {
+          self.editor = editor;
+          if (self.ext === "c" || self.ext==="h") {
+            CodeMirror.registerHelper("lint","clike",function() {
+              var found = [];
+              _.forEach(self.console.errors,function(err) {
+                var error = err[0], file = err[1].split("/");
+                file = file[file.length-1];
+                var line = _.max([err[2] - 1, 0]), column = err[3];
+                var message = err[4];
+                console.log(err);
+                if (_.contains([self.file,
+                                'final-link-result'],
+                               file))
+                  found.push({ from: CodeMirror.Pos(line, column),
+                               to: CodeMirror.Pos(line),
+                               message: message,
+                               severity: 'error' });
+              });
+              return found;
+            });
+            self.editor.setOption("gutters", ["CodeMirror-lint-markers"]);
+            self.editor.setOption("lint", true);
+          }
+          
+          self.editor.on("change", function() {
+            if(self.ready && self.timeout) {
+              $timeout.cancel(self.timeout);
+              self.timeout = null;
+            }
+            if (self.loaded) {
+              self.timeout = $timeout(function() {
+                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                  .catch(function (error) {
+                    errors.report(error, "Could not save file!");
+                  })
+                  .then(function () {
+                    self.timeout = null;
+                  });
+              }, 2000);
+              self.console.errors = [];
+            }
+            self.loaded = true;
+          });
+          function updateColNums() {
+            $timeout(function() {
+              self.col = self.editor.getCursor().ch + 1;
+              self.line = self.editor.getCursor().line + 1;
+            }, 0);
+          }
+          self.editor.on("cursorActivity", updateColNums);
+          self.editor.on("focus", updateColNums);
+          self.editor.on("blur", updateColNums);
+          onResize();
+        };
+        self.refreshSettings = function () {
+          self.editorOptions = {
+            lineWrapping: true,
+            lineNumbers: !self.isBinaryFile,
+            readOnly: !self.ready || self.isBinaryFile,
+            mode: mime,
+            theme: settings.settings['text_style'],
+            tabSize: parseInt(settings.settings['tab_width']),
+            indentUnit: parseInt(settings.settings['tab_width']),
+            onLoad: self.editorLoad,
+            rulers: [80],
+            extraKeys: {
+              "Ctrl-Enter": function() {
+                self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
+              },
+              "Esc": function() {
+                if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
+              }
+            }
+          };
+          if (settings.settings['editor_mode'] === 'vim') {
+            self.editorOptions['vimMode'] = true;
+          } else if(settings.settings['editor_mode'] === 'emacs') {
+            self.editorOptions['keyMap'] = 'emacs';
+            self.editorOptions['vimMode'] = false;
+          } else {
+            self.editorOptions['keyMap'] = 'default';
+            self.editorOptions['vimMode'] = false;
+          }
+          
+          // Force the font size at any rate.
+          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
+          // If the CodeMirror has been loaded, add it to the editor.
+          if (self.editor) {
+            for (var key in self.editorOptions) {
+              self.editor.setOption(key, self.editorOptions[key]);
+            }
+            self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+            self.editor.refresh();
+          }
+        };
+
+        self.renameFile = function() {
+          renameModal(self.project, self.question, self.folder, self.file, function(newName) {
+            $scope.$parent.refresh();
+            $state.go("edit-project.editor.file", {part:self.folder, file:newName});
+          });
+        };
+
+        self.deleteFile = function() {
+          confirmModal("Delete File", "Are you sure you want to delete '"+self.file+"'?")
+            .then(function() {
+              self.project.deleteFile(self.question, self.folder, self.file)
+                .then(function() {
+                  $scope.$parent.refresh();
+                  $state.go("edit-project.editor");
+                });
+            });
+        };
+
+        function handleCompileErr(msgs, warn_only) {
+          if(msgs.length === 0) return;
+          else if(!warn_only)
+            self.console.write("Compilation failed with errors:\n");
+          else
+            self.console.write("Compilation generated warnings:\n");
+          self.console.errors = msgs;
+          if(self.ext=="h"||self.ext=="c") {
+            self.editor.setOption("lint", false);
+            self.editor.setOption("lint", true);
+          }
+          _.each(msgs, function(res) {
+            self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+          });
+        }
+
+        self.runFile = function() {runWhenSaved(function () {
+          self.killProgram().then(function() {
+            self.console.clear();
+            self.project.run(self.question, self.folder, self.file, self.contents, false)
+              .then(function(res) {
+                self.console.setRunning(self.project, [res.pid], false);
+                handleCompileErr(res.messages, true);
+                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
+              })
+              .catch(function(res) {
+                if(res.status === "compile-failed") {
+                  handleCompileErr(res.messages);
+                } else {
+                  errors.report(res, "An error occurred when running the project.");
+                }
+              });
+          }).catch(function (error) {
+            errors.report(error, "Could not kill program!");
+          });
+        });};
+
+        self.testFile = function() {runWhenSaved(function () {
+          self.killProgram().then(function() {
+            self.console.clear();
+            self.project.run(self.question, self.folder, self.file, self.contents, true)
+              .then(function(res) {
+                self.console.setRunning(self.project, res.pids, true);
+                handleCompileErr(res.messages, true);
+                self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+              })
+              .catch(function(res) {
+                if(res.status === "compile-failed") {
+                  handleCompileErr(res.messages);
+                } else {
+                  errors.report(res, "An error occurred when running the project.");
+                }
+              });
+          }).catch(function (error) {
+            errors.report(error, "Could not kill program!");
+          });
+        });};
+
+        self.killProgram = function() {
+          if(!self.console.PIDs) {
+            return $q.when();
+          }
+          return $q.all(_.map(self.console.PIDs, function(id) {
+            return self.project.kill(id);
+          }))
+          .catch(function (error) {
+            errors.report(error, "Could not stop program!");
+            self.console.PIDs = null;
+            self.console.running = false;
+          });
+        };
+
+        self.userInput = "";
+        self.sendInput = function($event) {
+          if($event.keyCode == 13) {
+            if(self.console.running) {
+              self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.console.flushForInput();
+              self.console.write(self.userInput + "\n");
+              self.userInput = "";
+            }
+          }
+        };
+
+        self.sendEOF = function() {
+          if(self.console.running) {
+            self.project.sendEOF(self.console.PIDs[0]).then(function () {
+              self.console.running = false;
+            });
+          }
+        };
+
+        hotkeys.bindTo($scope).add({
+          combo: 'ctrl+r',
+          description: 'Runs the currently open file.',
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.runFile();
+          }
+        }).add({
+          combo: 'ctrl+k',
+          description: "Kills the currently running program.",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.killProgram();
+          }
+        });
+
+        // Initialization code goes here.
+        var key = settings.addWatcher(function () {self.refreshSettings();}, true);
+        $scope.$on("$destroy", function() {
+          if (self.timeout && self.ready) {
+            $timeout.cancel(self.timeout);
+            self.project.saveFile(self.question, self.folder, self.file, self.contents);
+          }
+          settings.removeWatcher(key);
+        });
+        self.project.openFile(self.question, self.folder, self.file)
+          .then(function(conts) {
+            self.contents = conts;
+            self.ready = true;
+            self.refreshSettings();
+          }).catch(function (error) {
+            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
+              self.isBinaryFile = true;
+            else {
+              errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
+              $state.go('edit-project.editor');
+            }
+            self.refreshSettings();
+          });
+      }])
+  .config(['hotkeysProvider', function(hotkeysProvider) {
+    hotkeysProvider.includeCheatSheet = false;
+  }])
   // Configuration for routes
   .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/');
@@ -498,16 +1097,34 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         url: "/project/{project}",
         templateUrl: "frontend/templates/project-template.html",
         controller: "ProjectController as projectView",
-        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service', function(projects, $state, $stateParams, errors) {
+        resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service',
+                                'ConfirmationMessageModal', function(projects, $state, $stateParams, errors, confirm) {
           return projects.open($stateParams.project).catch(function (error) {
-            errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-            $state.go('list-projects');
-          });
-        }]},
-        onExit: ['openProject', function (project) {
-          project.close();
-        }]
-      })
+            if (error === 'locked') {
+              return confirm(sprintf('Unlock %s', $stateParams.project),
+                             sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
+                .then(function () {
+                  return projects.open($stateParams.project, 'force-lock')
+                                 .catch(function (error) {
+                                    $state.go('list-projects');
+                                    errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                    return null;
+                                   });
+                  })
+                 .catch(function () {
+                   $state.go('list-projects');
+                 });
+              } else {
+                $state.go('list-projects');
+                errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                return null;
+              }
+            });
+          }]},
+          onExit: ['openProject', function (project) {
+            project.close();
+          }]
+        })
       .state("edit-project.editor", {
         url: "/edit/{question}",
         templateUrl: "frontend/templates/project-editor-template.html",
@@ -515,9 +1132,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         resolve: {openQuestion: ['$stateParams', function($stateParams) {
           return $stateParams.question;
         }]}
+      })
+      .state("edit-project.editor.file", {
+        url: "/file/{part}/{file}",
+        templateUrl: "frontend/templates/project-editor-editview-template.html",
+        controller: "EditFileController as editFileView",
+        resolve: {openFile: ['$stateParams', function($stateParams) {
+            return $stateParams.file;
+          }],
+          openFolder: ['$stateParams', function($stateParams) {
+            return $stateParams.part;
+          }]}
       });
   }])
-  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', function(cookies, ws, settings, errors, projects) {
+  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', 
+        '$window', '$document', '$rootScope',
+        function(cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
     ws.connect()
         .then(function () {
           return projects.fetch().catch(function (projects) {
@@ -529,5 +1159,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       return settings.load().catch(function (error) {
         errors.report(error, 'Could not load settings!');
       });
+    });
+    // Set up resize
+    $($window).resize(function () {
+      $rootScope.$broadcast('window-resized');
     });
   }]);

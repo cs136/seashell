@@ -1,6 +1,6 @@
 /**
  * Seashell's login tools.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ angular.module('login-app', ['jquery-cookie', 'seashell-websocket'])
                     data.error.code);
                   console.log(self.error);
                 } else if (data.port !== undefined) {
-                  cookieStore.add("seashell-session", data, {secure: true});
+                  cookieStore.add(SEASHELL_CREDS_COOKIE, data, {secure: true});
                   console.log("All done login!");
                   ws.connect().then(function () {
                     $window.top.location = "frontend.html";

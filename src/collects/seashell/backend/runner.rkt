@@ -22,14 +22,16 @@
          racket/serialize)
 
 (provide run-program program-stdin program-stdout program-stderr
-         program-wait-evt program-kill program-status program-destroy-handle)
+         program-wait-evt program-kill program-status program-destroy-handle
+         program-mode)
 
 ;; Global definitions and concurrency control primitives.
 (struct program (in-stdin in-stdout in-stderr
                           out-stdin out-stdout out-stderr
                           raw-stdin raw-stdout raw-stderr
                           handle control exit-status
-                          destroyed-semaphore) #:transparent #:mutable)
+                          destroyed-semaphore
+                          _mode) #:transparent #:mutable)
 (struct exn:program:run exn:fail:user ())
 
 (define program-table (make-hash))
@@ -52,7 +54,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore)
+                         destroyed-semaphore mode)
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
@@ -125,7 +127,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore)
+                         destroyed-semaphore mode)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -144,6 +146,18 @@
     (unless (port-closed? out-stdout)
       (close-output-port out-stdout))
     (void))
+
+  ;; Deal with receiving signals,
+  ;; in all cases. (so I/O does not block a kill signal)
+  (define (check-signals tail)
+    (if (sync/timeout 0 (thread-receive-evt))
+       (match (thread-receive)
+         ['kill
+          (logf 'info "Program with PID ~a killed." pid)
+          (set-program-exit-status! pgrm 254)
+          (subprocess-kill handle #t)
+          (close)])
+       (tail)))
 
   (let loop ()
     (define receive-evt (thread-receive-evt))
@@ -182,39 +196,34 @@
        (subprocess-kill handle #t)
        (close)]
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
-       (match (thread-receive)
-         ['kill
-          (logf 'info "Program with PID ~a killed." pid)
-          (set-program-exit-status! pgrm 254)
-          (subprocess-kill handle #t)
-          (close)])]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-       (define input (make-bytes 4096))
+       (define input (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! input in-stdin))
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
        (when (eof-object? read)
          (close-input-port in-stdin)
          (close-output-port raw-stdin))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stdout))
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
        (when (eof-object? read)
          (close-input-port raw-stdout)
          (close-output-port out-stdout))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
        (when (eof-object? read)
          (close-input-port raw-stderr)
          (close-output-port out-stderr))
-       (loop)]))
+       (check-signals loop)]))
   (void))
 
 ;; (run-program binary directory lang test)
@@ -250,23 +259,23 @@
 
         (define-values (handle raw-stdout raw-stdin raw-stderr)
           (parameterize
-            ([current-directory directory])
+            ([current-directory directory]
+             [current-environment-variables (environment-variables-copy (current-environment-variables))])
             (match lang
-              ;; Behaviour is inconsistent if we just exec directly.
-              ;; This seems to work.  (why: who knows?)
-              ['C (subprocess #f #f #f (read-config 'system-shell) "-c"
-                              (format "ASAN_SYMBOLIZER_PATH='~a' ASAN_OPTIONS='~a' exec '~a'"
-                                      (some-system-path->string (read-config 'llvm-symbolizer))
-                                      "detect_leaks=1"
-                                       binary))]
+              ['C
+                ;; Behaviour is inconsistent if we just exec directly.
+                ;; This seems to work.  (why: who knows?)
+                (putenv "ASAN_OPTIONS" "detect_leaks=1")
+                (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
+                (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
                                    "-t" (some-system-path->string (read-config 'seashell-racket-runtime-library))
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe))
-            (define-values (in-stdin out-stdin) (make-pipe))
-            (define-values (in-stderr out-stderr) (make-pipe))
+            (define-values (in-stdout out-stdout) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stdin out-stdin) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stderr out-stderr) (make-pipe (read-config 'io-buffer-size)))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore
@@ -275,7 +284,8 @@
             (define result (program in-stdin in-stdout in-stderr
                                     out-stdin out-stdout out-stderr
                                     raw-stdin raw-stdout raw-stderr
-                                    handle #f #f destroyed-semaphore))
+                                    handle #f #f destroyed-semaphore
+                                    (if test 'test 'run)))
             (define control-thread
               (thread
                 (thunk
@@ -314,6 +324,18 @@
 (define/contract (program-stdin pid)
   (-> integer? output-port?)
   (program-out-stdin (hash-ref program-table pid)))
+
+;; (program-mode pid)
+;; Returns if the program is running in regular or test mode.
+;; 
+;; Arguments:
+;;  pid - PID of program.
+;; Returns:
+;;  'test if running in test mode.
+;;  'run if in regular mode.
+(define/contract (program-mode pid)
+  (-> integer? symbol?)
+  (program-_mode (hash-ref program-table pid)))
 
 ;; (program-stdout pid)
 ;; Returns the standard output port for a program.
@@ -392,7 +414,7 @@
                              out-stdin out-stdout out-stderr
                              raw-stdin raw-stdout raw-stderr
                              handle control exit-status
-                             destroyed-semaphore)
+                             destroyed-semaphore mode)
         pgrm)
 
       ;; Note: ports are Racket pipes and therefore GC'd.

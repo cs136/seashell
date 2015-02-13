@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell - a C Development Environment.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -90,6 +90,10 @@
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      ;; Name of credentials file.
+      (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
+      ;; Name of credentials cookie
+      (cons 'seashell-creds-cook           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of special subdirectory in each user program which contains tests (.in and .expect files)
       (cons 'tests-subdirectory            "tests")
       ;; Name of special subdirectory in each user program which contains common files.
@@ -114,6 +118,8 @@
       ;; Timeout in milliseconds after which a per-user backend connection,
       ;; having received no new messages, will quit.
       (cons 'backend-client-connection-timeout 900000)
+      ;; I/O buffer sizes
+      (cons 'io-buffer-size 128) ;; Something small enough or else JavaScript will choke up.
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
       ;; Whether or not the system is running tests,

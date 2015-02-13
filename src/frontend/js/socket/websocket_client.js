@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Seashell's communications backend.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -201,12 +201,12 @@ SeashellWebsocket.prototype.ping = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.runProject = function(project, file, test, deferred) {
+SeashellWebsocket.prototype.compileAndRunProject = function(project, file, test, deferred) {
   return this.sendMessage({
-    type : "runProject",
+    type : "compileAndRunProject",
     project : project,
     file : file,
-    test : test},
+    tests : test},
     deferred);
 };
 
@@ -405,5 +405,13 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, def
     project: project,
     assn: assn,
     subdir: subdir ? subdir : false},
+    deferred);
+};
+
+SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
+  return this.sendMessage({
+    type : "startIO",
+    project : project,
+    pid : pid},
     deferred);
 };

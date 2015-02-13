@@ -1,6 +1,6 @@
 /*
  * Seashell's front-end.
- * Copyright (C) 2013-2014 The Seashell Maintainers.
+ * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          */
         self.results = function(project) {
           return $http({url: test_url,
-                             params: {user: cookieStore.get("seashell-session").user,
+                             params: {user: cookieStore.get(SEASHELL_CREDS_COOKIE).user,
                                       project: project}})
                  .then(function (result) {
                    return result.data;
