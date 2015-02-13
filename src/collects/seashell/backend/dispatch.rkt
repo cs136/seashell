@@ -230,7 +230,7 @@
                       [(not (eof-object? test))
                         (define contents (list->string 
                                            (for/list 
-                                             ([i (in-range 4096)])
+                                             ([i (in-range (read-config 'io-buffer-size))])
                                              #:break (not (char-ready? port))
                                              (read-char port))))
                         (send-contents-for tag contents)]

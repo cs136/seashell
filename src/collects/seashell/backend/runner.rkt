@@ -198,7 +198,7 @@
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
        (check-signals loop)]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-       (define input (make-bytes 4096))
+       (define input (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! input in-stdin))
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
@@ -207,7 +207,7 @@
          (close-output-port raw-stdin))
        (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stdout))
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
@@ -216,7 +216,7 @@
          (close-output-port out-stdout))
        (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
@@ -273,9 +273,9 @@
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe 4096))
-            (define-values (in-stdin out-stdin) (make-pipe 4096))
-            (define-values (in-stderr out-stderr) (make-pipe 4096))
+            (define-values (in-stdout out-stdout) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stdin out-stdin) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stderr out-stderr) (make-pipe (read-config 'io-buffer-size)))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore
