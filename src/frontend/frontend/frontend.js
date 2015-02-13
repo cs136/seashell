@@ -927,7 +927,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
                 } else {
-                  errors.report(res.error, "An error occurred when running the project.");
+                  errors.report(res, "An error occurred when running the project.");
                 }
               });
           }).catch(function (error) {
@@ -948,7 +948,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
                 } else {
-                  errors.report(res.error, "An error occurred when running the project.");
+                  errors.report(res, "An error occurred when running the project.");
                 }
               });
           }).catch(function (error) {
