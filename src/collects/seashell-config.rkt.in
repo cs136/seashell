@@ -118,6 +118,8 @@
       ;; Timeout in milliseconds after which a per-user backend connection,
       ;; having received no new messages, will quit.
       (cons 'backend-client-connection-timeout 900000)
+      ;; I/O buffer sizes
+      (cons 'io-buffer-size 128) ;; Something small enough or else JavaScript will choke up.
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
       ;; Whether or not the system is running tests,
