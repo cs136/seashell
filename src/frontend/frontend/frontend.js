@@ -837,6 +837,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   });
               }, 2000);
               self.console.errors = [];
+            } else {
+              self.editor.clearHistory();
             }
             self.loaded = true;
           });
