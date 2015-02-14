@@ -742,11 +742,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleEditor = null;
         self.consoleLoad = function(console_cm) {
-          self.console.inst = console_cm;
-          self.console.inst.on("update", function() {
-            var scr = self.console.inst.getScrollInfo();
-            self.console.inst.scrollTo(scr.left, scr.height);
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
           });
           onResize();
         };
