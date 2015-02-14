@@ -373,6 +373,10 @@ input::-ms-clear {
   padding: 3px;
 }
 
+#marmoset-details-table pre {
+  white-space: pre-wrap;
+}
+
 #commit-project-descr .CodeMirror {
   border: 1px solid #ddd;
 }

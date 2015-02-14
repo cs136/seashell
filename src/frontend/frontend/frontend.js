@@ -299,6 +299,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
+            size: "lg",
             controller: ['$scope', '$state', 'error-service',
               function ($scope, $state, errors) {
                 $scope.results = results;
@@ -486,7 +487,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Help function
         self.help = function () {
-          $modal.open({templateUrl: "frontend/templates/help-template.html"});
+          $modal.open({
+            templateUrl: "frontend/templates/help-template.html",
+            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+              function ($scope, confirm, $window, cookies) {
+                $scope.reset = function () {
+                  confirm("Reset Seashell",
+                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
+                    .then(function () {
+                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
+                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
+                                             "/cs136/seashell/index.cgi?reset='reset'";
+                    });
+                }
+              }]})
         };
         // Logout
         self.logout = function () {
