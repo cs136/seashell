@@ -32,6 +32,7 @@
          write-file
          list-files
          rename-file
+         get-recent-file
          read-settings
          write-settings)
 
