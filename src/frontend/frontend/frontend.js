@@ -555,9 +555,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.project.resentFile()
         .then(function (recent) {
           if (recent) {
-            recent = recent.split('/');
-            $state.go('edit-project.editor.file',
-                      {part: recent[0], file: recent[1]});
+            $state.go('edit-project.editor',
+                      {question: recent});
           }
           return recent;
         });
@@ -692,6 +691,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Try to load the question, and go back to the project if we can't. */ 
         try { 
           self.refresh();
+          self.project.recentFile(self.question)
+            .then(function (recent) {
+              if (recent) {
+                $state.go("edit-project.editor.file",
+                          {part: self.question, file: recent});
+              }
+            });
         } catch (e) {
           errors.report({}, sprintf("Could not open question %s!", self.question));
           $state.go("edit-project");

@@ -422,9 +422,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Returns the filename of the most recent file edited in this
          * project or null of there is none.
          */
-        SeashellProject.prototype.recentFile = function () {
+        SeashellProject.prototype.recentFile = function (question) {
           var self = this;
-          return $q.when(ws.socket.getRecent(self.name))
+          var dir = question ? self.name + "/" + question : self.name;
+          return $q.when(ws.socket.getRecent(dir))
             .then(function (response) {
               return response.result ? response.result : null;
             });
