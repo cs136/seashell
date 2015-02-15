@@ -147,6 +147,18 @@
       (close-output-port out-stdout))
     (void))
 
+  ;; Deal with receiving signals,
+  ;; in all cases. (so I/O does not block a kill signal)
+  (define (check-signals tail)
+    (if (sync/timeout 0 (thread-receive-evt))
+       (match (thread-receive)
+         ['kill
+          (logf 'info "Program with PID ~a killed." pid)
+          (set-program-exit-status! pgrm 254)
+          (subprocess-kill handle #t)
+          (close)])
+       (tail)))
+
   (let loop ()
     (define receive-evt (thread-receive-evt))
     (match (sync/timeout 30
@@ -184,39 +196,34 @@
        (subprocess-kill handle #t)
        (close)]
       [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
-       (match (thread-receive)
-         ['kill
-          (logf 'info "Program with PID ~a killed." pid)
-          (set-program-exit-status! pgrm 254)
-          (subprocess-kill handle #t)
-          (close)])]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-       (define input (make-bytes 4096))
+       (define input (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! input in-stdin))
        (when (integer? read)
          (write-bytes input raw-stdin 0 read))
        (when (eof-object? read)
          (close-input-port in-stdin)
          (close-output-port raw-stdin))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stdout))
        (when (integer? read)
          (write-bytes output out-stdout 0 read))
        (when (eof-object? read)
          (close-input-port raw-stdout)
          (close-output-port out-stdout))
-       (loop)]
+       (check-signals loop)]
       [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       (define output (make-bytes 4096))
+       (define output (make-bytes (read-config 'io-buffer-size)))
        (define read (read-bytes-avail! output raw-stderr))
        (when (integer? read)
          (write-bytes output out-stderr 0 read))
        (when (eof-object? read)
          (close-input-port raw-stderr)
          (close-output-port out-stderr))
-       (loop)]))
+       (check-signals loop)]))
   (void))
 
 ;; (run-program binary directory lang test)
@@ -266,9 +273,9 @@
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe))
-            (define-values (in-stdin out-stdin) (make-pipe))
-            (define-values (in-stderr out-stderr) (make-pipe))
+            (define-values (in-stdout out-stdout) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stdin out-stdin) (make-pipe (read-config 'io-buffer-size)))
+            (define-values (in-stderr out-stderr) (make-pipe (read-config 'io-buffer-size)))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore

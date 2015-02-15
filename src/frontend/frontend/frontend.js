@@ -158,6 +158,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   .then(function() {
                     $scope.$close();
                     notify($scope.rename_name);
+                  })
+                  .catch(function(err) {
+                    $scope.$dismiss();
+                    errors.report(err, "An error occurred while renaming the file.");
                   });
               };
             }]
@@ -295,6 +299,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
+            size: "lg",
             controller: ['$scope', '$state', 'error-service',
               function ($scope, $state, errors) {
                 $scope.results = results;
@@ -415,12 +420,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
-        self.write("Test '"+res.test_name+"' passed.\n");
+        self.write(sprintf("Test %s passed.\n", res.test_name));
       }
       else if(res.result==="failed") {
-        self.write("Test '"+res.test_name+"' failed!\n");
+        self.write(sprintf("Test %s failed.\n", res.test_name));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
       } else if(res.result==="error") {
         self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="no-expect") {
+        self.write(sprintf("Test %s produced output (stdout):\n", res.test_name));
+        self.write(res.stdout);
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
+        self.write('\n');
+      } else if(res.result==="timeout") {
+        self.write(sprintf("Test %s timed out.\n", res.test_name));
+      }
+      else if(res.result==="killed") {
+        self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
     });
 
@@ -446,6 +470,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.flush = function () {
       self.contents = self._contents + self.stdout + self.stderr;
     };
+    self.flushForInput = function () {
+      self._contents += self.stdout + self.stderr;
+      self.stdout = self.stderr = "";
+    };
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
@@ -459,7 +487,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Help function
         self.help = function () {
-          $modal.open({templateUrl: "frontend/templates/help-template.html"});
+          $modal.open({
+            templateUrl: "frontend/templates/help-template.html",
+            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+              function ($scope, confirm, $window, cookies) {
+                $scope.reset = function () {
+                  confirm("Reset Seashell",
+                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
+                    .then(function () {
+                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
+                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
+                                             "/cs136/seashell/index.cgi?reset='reset'";
+                    });
+                }
+              }]})
         };
         // Logout
         self.logout = function () {
@@ -525,8 +566,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore', 'NewQuestionModal',
-    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal) {
+      'openProject', 'cookieStore', 'NewQuestionModal', 'DeleteProjectModal',
+    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal, deleteProjectModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
@@ -547,26 +588,31 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             document.body.appendChild(ifrm);
         })};
         self.newQuestion = function () {
-            newQuestionModal(openProject);
+          newQuestionModal(openProject);
         };
         self.close = function () {
-            $state.go('list-projects');
+          $state.go('list-projects');
+        };
+        self.delete = function () {
+          deleteProjectModal(openProject.name).then(
+              function () {$state.go('list-projects');});
         };
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal',
+      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
         $interval, marmoset, commitProjectModal, newQuestionModal,
-        marmosetResultsModal) {
+        marmosetResultsModal, Console) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
         self.test_files = [];
+        self.console = Console;
         self.marmoset_short_results = null;
         self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
@@ -578,7 +624,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             $interval.cancel(self.marmoset_refresh_interval);
           self.marmoset_refresh_interval = null;
         }
-        $scope.$on('$destroy', cancelMarmosetRefresh);
+        $scope.$on('$destroy', function() {
+          cancelMarmosetRefresh()
+          self.console.clear();
+        });
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
@@ -707,11 +756,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleEditor = null;
         self.consoleLoad = function(console_cm) {
-          self.console.inst = console_cm;
-          self.console.inst.on("update", function() {
-            var scr = self.console.inst.getScrollInfo();
-            self.console.inst.scrollTo(scr.left, scr.height);
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
           });
           onResize();
         };
@@ -745,7 +795,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         });
         // Resize events
         function onResize() {
-          var min_height = 500, margin_bottom = 60;
+          var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
                            min_height);
@@ -753,7 +803,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('.console-input').outerHeight());
+            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
+          if(self.editor)
+            self.editor.refresh();
         }
         $scope.$on('window-resized', onResize);
       
@@ -799,6 +851,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   });
               }, 2000);
               self.console.errors = [];
+            } else {
+              self.editor.clearHistory();
             }
             self.loaded = true;
           });
@@ -902,7 +956,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
                 } else {
-                  errors.report(res.error, "An error occurred when running the project.");
+                  errors.report(res, "An error occurred when running the project.");
                 }
               });
           }).catch(function (error) {
@@ -923,7 +977,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
                 } else {
-                  errors.report(res.error, "An error occurred when running the project.");
+                  errors.report(res, "An error occurred when running the project.");
                 }
               });
           }).catch(function (error) {
@@ -950,6 +1004,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if($event.keyCode == 13) {
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.console.flushForInput();
               self.console.write(self.userInput + "\n");
               self.userInput = "";
             }

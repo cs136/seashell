@@ -4,27 +4,15 @@ body {
   padding-top: 15px;
 }
 
-#master-container {
-  height: 100%;
+.container-fluid {
+  padding-left: 5em;
+  padding-right: 5em;
 }
-
-/** Hide tag. */
-.hide {
-  display: none;
-}
-
 .row {
   padding: 2px;
 }
 
 /** Height-manipulation */
-.content-fill {
-  min-height: 100%;
-}
-.content {
-  padding-bottom: 50px; /* Account for fixed navbar */
-}
-
 .disconnected {
 }
 
@@ -34,31 +22,7 @@ body {
   opacity: 0.5;
 }
 
-/** No project display. */
-.no-project {
-  padding: 40px 15px;
-  text-align: center;
-  font-size: 16pt;
-}
-.no-file {
-  padding: 40px 15px;
-  text-align: center;
-  font-size: 16pt;
-}
-
 /** Toolbar */
-.toolbar {
-  padding: 2px;
-}
-
-/** Downloads */
-#download-iframe {
-  zoom: 0.60;
-  width: 99.6%;
-  border: none;
-  height: 20%;
-}
-
 #question-controls {
   text-align: right;
   padding-left: 0;
@@ -174,13 +138,13 @@ body {
   text-decoration: none;
 }
 
-.console-input {
+#console-input {
   background-color: #fff;
   clear: both;
   border: 1px solid #ddd;
   border-top-color: #eee;
 }
-.console-input input, .console-input input:focus {
+#console-input input, #console-input input:focus {
   font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
   line-height: 1em;
   padding: 0.4em;
@@ -190,7 +154,7 @@ body {
   box-shadow: none !important;
   border: none;
 }
-.console-input .input-group-addon {
+#console-input .input-group-addon {
   background-color: white;
   padding-right: 0;
   padding-left: 5px;
@@ -279,32 +243,6 @@ div.tooltip .tooltip-inner {
 .test-result-line-num {
   color:#000;
   font-weight:bold;
-}
-
-/* navbar overrides */
-.navbar {
-	min-height: 40px;
-}
-
-.navbar-default {
-  border: none;
-  box-shadow: none;
-  background: none;
-}
-
-.navbar .navbar-nav {
-  display: inline-block;
-  float: none;
-}
-
-.navbar .navbar-collapse {
-  text-align: center;
-}
-
-.navbar-icons > li > a {
-  padding: 10px 6px;
-  font-size: 12px;
-  text-decoration: none;
 }
 
 .question-link {
@@ -404,7 +342,7 @@ div.tooltip .tooltip-inner {
 	  border-left: none;
 	}
   #console > .CodeMirror { border-left: none; }
-  .console-input { border-left: none }
+  #console-input { border-left: none }
 
   #question-controls { text-align: left; }
   #questions-row-container { text-align: left; }
@@ -431,8 +369,12 @@ input::-ms-clear {
   text-align:right;
 }
 
-#marmoset-details-table td {
+#marmoset-details-table td, #marmoset-details-table th {
   padding: 3px;
+}
+
+#marmoset-details-table pre {
+  white-space: pre-wrap;
 }
 
 #commit-project-descr .CodeMirror {
@@ -444,4 +386,30 @@ input::-ms-clear {
 
 .col-too-long {
   color: rgb(240, 0, 0);
+}
+
+/* navbar overrides */
+.navbar {
+  min-height: 40px;
+}
+
+.navbar-default {
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+}
+
+.navbar .navbar-collapse {
+  text-align: center;
+}
+
+.navbar-icons > li > a {
+  padding: 10px 6px;
+  font-size: 12px;
+  text-decoration: none;
 }

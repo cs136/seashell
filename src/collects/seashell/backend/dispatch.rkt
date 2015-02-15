@@ -230,9 +230,10 @@
                       [(not (eof-object? test))
                         (define contents (list->string 
                                            (for/list 
-                                             ([ch (in-port read-char port)])
-                                             #:final (not (char-ready? port))
-                                             ch)))
+                                             ([i (in-range (read-config 'io-buffer-size))])
+                                             #:break (not (char-ready? port))
+                                             #:break (eof-object? (peek-char port))
+                                             (read-char port))))
                         (send-contents-for tag contents)]
                       [else
                         (if (equal? tag "stdout")
@@ -436,16 +437,6 @@
         ('file file)
         ('contents contents))
        (write-file project file (string->bytes/utf-8 contents))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "patchFile")
-        ('project project)
-        ('file file)
-        ('contents contents))
-       (patch-file project file contents)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
