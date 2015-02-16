@@ -46,7 +46,7 @@ struct seashell_git_status {
  * Performs necessary LLVM setup.
  */
 static void seashell_git_setup() {
-  git_threads_init();
+  git_libgit2_init();
 }
 
 /**
@@ -54,7 +54,7 @@ static void seashell_git_setup() {
  * Performs necessary LLVM cleanup.
  */
 static void seashell_git_cleanup() {
-  git_threads_shutdown();
+  git_libgit2_shutdown();
 }
 
 /** Helper class for making sure LLVM
