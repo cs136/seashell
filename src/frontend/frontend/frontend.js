@@ -999,6 +999,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        self.indentAll = function() {
+          var lineCount = self.editor.lineCount();
+          for (var i = 0; i < lineCount; i++)
+            self.editor.indentLine(i);
+        };
+
         self.userInput = "";
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
@@ -1034,6 +1040,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           callback: function (evt) {
             evt.preventDefault();
             self.killProgram();
+          }
+        }).add({
+          combo: 'ctrl+i',
+          description: "Indents all code.",
+          allowIn: ['TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.indentAll();
           }
         });
 
