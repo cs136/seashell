@@ -1,0 +1,35 @@
+<!-- Here begins the body. -->
+<div class="container-fluid">
+  <noscript>
+    This page requires JavaScript to operate properly, or at all.
+  </noscript>
+
+  <div ng-show="frontend.timeout" ng-cloak
+    class="alert alert-danger text-center" role="alert">
+    <b>d'oh!</b> lost contact with the server. (seashell will keep trying to
+    reconnect, though.)
+  </div>
+
+  <div ng-show="frontend.failed"
+    class="alert alert-danger text-center" role="alert">
+    <b>d'oh!</b> Something bad happened!  Try reconnecting <a ng-click="frontend.reconnect()" href="">again</a>, or
+    logging in <a href="https://www.student.cs.uwaterloo.ca/seashell">again</a>.
+  </div>
+
+  <div ng-show="frontend.disconnected && !frontend.failed"
+    class="alert alert-danger text-center" role="alert">
+    <b>d'oh</b> lost contact with the server.  (you can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>.)
+  </div>
+  
+  <alert ng-repeat="error in frontend.errors.errors"
+    type="danger" close="frontend.errors.suppress($index)" role="alert">
+    <b>An error has occurred: </b>{{error.shorthand}}  If this error persists,
+    please email <a href="mailto:seashell@@cs.uwaterloo.ca">seashell@@cs.uwaterloo.ca</a>
+    the error message and the following information for debugging purposes:
+    <pre ng-cloak>
+{{error.error}}
+    </pre>
+  </alert>
+
+  <div ui-view></div>
+</div>

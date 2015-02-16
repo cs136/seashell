@@ -6,15 +6,17 @@ for the following list of current and past developers and contributors:
   Current Developers    Email                     Role                  Tenure
   Kaleb Paul Alway      <kpalway@uwaterloo.ca>    Developer             Winter 2014 - current.
   Bryan Coutts          <b2coutts@uwaterloo.ca>   Developer             Winter 2014 - current.
-  Edward Lee            <e45lee@uwaterloo.ca>     Lead Developer        Spring 2013 - current.  (on leave)
+  Edward Lee            <e45lee@uwaterloo.ca>     Lead Developer        Spring 2013 - current.
+  Tappy He              <x32he@uwaterloo.ca>      Developer             Winter 2015 - current.
 
   Developers, in supporting role:
-  Marc Burns            <m4burns@uwaterloo.ca>    Backend Developer     Fall 2012 - current.  Active, Joint Lead from Fall 2012 to Winter 2013. 
 
   Past Developers:
+  Kirill Zorin          <k.zorin@me.com>          Developer             Spring 2014.
   Jacob Pollack         <jpollack@uwaterloo.ca>   Developer             Winter 2014.
   Marianna Rapoport     <mrapoport@uwaterloo.ca>  Frontend Developer    Spring 2013.
   Jennifer Yeelam Wong  <jy2wong@uwaterloo.ca>    Joint Lead Developer  Fall 2012 - Winter 2013.  Contributed in Spring 2013, Fall 2013.
+  Marc Burns            <m4burns@uwaterloo.ca>    Joint Lead Developer  Fall 2012 - Spring 2014.
 
 Consult the version control history and blame for accurate copyright details
 on each file.
@@ -41,7 +43,7 @@ licensing information will be located in that library's subdirectory / submodule
   Racket*               racket-lang.org                   GNU Lesser General Public License, version 3 (or later?)
   libssh2               www.libssh2.org                   3-clause BSD
 
-* Modified collections found in src/collects/seashell/overrides/openssl.
+* Modified collections found in src/collects/seashell/overrides/.
 
 Seashell links against the following libraries, which are not included by Seashell, but provided
 by your distribution:

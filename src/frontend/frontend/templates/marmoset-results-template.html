@@ -1,0 +1,27 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title">
+    <span class="glyphicon glyphicon-export"></span>
+    <span id="commit-project-title">Marmoset Results</span></h4>
+</div>
+<div class="modal-body marmoset-details-body">
+  <span ng-show="results===null || results.length == 0">No Marmoset results to view.</span>
+  <span ng-show="results.length > 0 && results[0].status !== 'complete'">Waiting on tests to finish.</span>
+  <table border="0" id="marmoset-details-table" ng-show="results.length > 0 && results[0].status==='complete'">
+    <tr>
+      <th>Test Name</th>
+      <th>Outcome</th>
+      <th>Short Result</th>
+      <th>Long Result</th>
+    </tr>
+    <tr ng-repeat="result in results">
+      <td>{{result.name}}</td>
+      <td>{{result.outcome}}</td>
+      <td>{{result.short}}</td>
+      <td><pre>{{result.long}}</pre></td>
+    </tr>
+  </table>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Close</button>
+</div>

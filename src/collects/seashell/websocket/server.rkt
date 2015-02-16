@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's websocket library.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@
      op
      (list* (make-header #"Upgrade" #"WebSocket")
             (make-header #"Connection" #"Upgrade")
-            (make-header #"Server" #"Seashell/WebSocket/1.0")
+            (make-header #"Server" #"Seashell/WebSocket")
             (make-header #"Sec-Websocket-Accept" (handshake-solution-server key))
             conn-headers))
 

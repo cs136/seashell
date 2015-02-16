@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's libgit2 bindings.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@
     git-place-lock
     (thunk
       (match-define (list exn? data)
-                    (place-channel-put/get git-place `(seashell-git-update ,update ,message)))
+                    (place-channel-put/get git-place `(seashell-git-commit ,update ,message)))
       (when exn?
         (raise (exn:git data (current-continuation-marks))))
       (void))))

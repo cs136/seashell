@@ -1,0 +1,23 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title" id="marmoset-submit-label">
+    <span class="glyphicon glyphicon-export"></span>
+    Submit to Marmoset</h4>
+</div>
+<form name="submitMarmosetForm" novalidate ng-submit="submitMarmosetForm.$valid && submit()" class="form-horizontal">
+<div class="modal-body form-horizontal">
+  <div class="form-group" ng-class="{'has-error': submitMarmosetForm.selected_project.$invalid}">
+    <label class="col-sm-2 control-label" for="selected_project">Project:</label>
+    <div class="col-sm-10">
+      <select name="selected_project" ng-model="selected_project" id="selected_project" style="outline: none" class="form-control" required>
+        <option ng-repeat="project in marmoset_projects">{{project}}</option>
+      </select>
+      <span class="help-block" ng-show="submitMarmosetForm.selected_project.$invalid">Required</span>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+  <input class="btn btn-primary" type="submit" value="Submit"></input>
+</div>
+</form>
