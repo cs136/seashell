@@ -68,7 +68,6 @@ set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF)
-set(LLVM_TARGETS_TO_BUILD "X86")
 set(CLANG_INCLUDE_DOCS OFF)
 add_subdirectory(llvm)
 add_custom_target(_build_clang ALL)
