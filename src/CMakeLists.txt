@@ -39,7 +39,7 @@ set(SEASHELL_API_VERSION "2")
 # Variable needed for backend and collects.
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(SEASHELL_DEBUG 1)
-else(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+else(${CMAKE_BUILD_TYPE} STREQUAL "Release")
   set(SEASHELL_DEBUG 0)
 endif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 

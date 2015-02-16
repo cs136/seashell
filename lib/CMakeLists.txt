@@ -64,7 +64,7 @@ ExternalProject_Add(
 
 # External projects (CMake based)
 # Global overrides 
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF)
