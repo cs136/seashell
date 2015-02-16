@@ -882,6 +882,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               }
@@ -1040,14 +1041,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           callback: function (evt) {
             evt.preventDefault();
             self.killProgram();
-          }
-        }).add({
-          combo: 'ctrl+i',
-          description: "Indents all code.",
-          allowIn: ['TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.indentAll();
           }
         });
 
