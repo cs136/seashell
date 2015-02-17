@@ -64,12 +64,10 @@ ExternalProject_Add(
 
 # External projects (CMake based)
 # Global overrides 
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
-set(LLVM_BUILD_TOOLS OFF)
-set(LLVM_TARGETS_TO_BUILD "X86")
-set(CLANG_INCLUDE_DOCS OFF)
+set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
 add_subdirectory(llvm)
 add_custom_target(_build_clang ALL)
 add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen)
