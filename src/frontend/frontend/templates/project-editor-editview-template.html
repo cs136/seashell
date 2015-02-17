@@ -90,7 +90,8 @@
                 <span class="glyphicon glyphicon-chevron-right"></span>
               </div>
               <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
-                type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running">
+                type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running"
+                focus-on="program-running">
               <div class="console-controls"
                    style="position: absolute; top: 5px; right: 0"
                    rel="tooltip"
