@@ -877,6 +877,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
+            matchBrackets: true,
             rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
