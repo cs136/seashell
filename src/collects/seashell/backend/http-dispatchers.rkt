@@ -39,14 +39,14 @@
 
 ;; Default headers.
 (define default-headers
-  `(,(make-header #"Server" #"Seashell/1.0")
+  `(,(make-header #"Server" (string->bytes/utf-8 (format "Seashell/~a" SEASHELL_VERSION)))
     ,(make-header #"Access-Control-Allow-Origin" #"*")))
 
 ;; Default footer.
 (define (make-default-footer request)
   `((hr)
-    (address ,(format "Seashell/1.0 running on Racket ~a on ~a"
-                      (version) (request-host-ip request)))))
+    (address ,(format "Seashell/~a running on Racket ~a on ~a"
+                      SEASHELL_VERSION (version) (request-host-ip request)))))
  
 
 ;; (make-headers name value ...)
