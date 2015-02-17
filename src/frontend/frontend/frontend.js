@@ -144,6 +144,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  .directive('focusOn', ['$timeout', function($timeout) {
+     return function(scope, elem, attr) {
+        scope.$on(attr.focusOn, function(e) {
+            $timeout(function () {elem[0].focus()});
+        });
+     };
+  }])
   .factory('RenameFileModal', ['$modal', 'error-service',
     function($modal, errors) {
       return function(project, question, folder, file, notify) {
@@ -949,6 +956,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
+                $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
