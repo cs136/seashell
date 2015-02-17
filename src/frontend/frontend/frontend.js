@@ -882,6 +882,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               }
@@ -997,6 +998,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.PIDs = null;
             self.console.running = false;
           });
+        };
+
+        self.indentAll = function() {
+          var lineCount = self.editor.lineCount();
+          for (var i = 0; i < lineCount; i++)
+            self.editor.indentLine(i);
         };
 
         self.userInput = "";
