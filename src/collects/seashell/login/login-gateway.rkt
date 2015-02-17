@@ -232,7 +232,7 @@
       (define credentials-cookie
         (cookie:secure
           (cookie:add-path
-            (set-cookie (uri-encode (read-config 'seashell-creds-cook) (uri-encode (jsexpr->string creds))))
+            (set-cookie (uri-encode (read-config 'seashell-creds-cook)) (uri-encode (jsexpr->string creds)))
             "/~cs136/seashell")
           #t))
 
