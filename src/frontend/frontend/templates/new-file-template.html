@@ -1,0 +1,42 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title" id="new-file-label">New file...</h4>
+</div>
+<form name="newFileForm" novalidate ng-submit="newFile()">
+<div class="modal-body" style="font-size: 16px; padding-bottom: 0">
+  <div ng-class="{'has-error': inputError}" class="form-group">
+    <div class="row">
+      <div class="col-xs-4 text-right" style="padding-right: 10px">
+        <select ng-model="new_file_folder" style="outline: none" class="form-control">
+          <option>common</option>
+          <option>{{question}}</option>
+          <option>tests</option>
+        </select>
+      </div>
+      <div class="col-xs-8" style="padding-left: 0">
+        <input type="text"
+               ng-model="new_file_name"
+               name="new_file_name"
+               class="form-control"
+               placeholder="(file name)"
+               style="outline: none; width: 200px; padding-left: 5px">
+        <span class="help-block" ng-show="inputError">{{inputError}}</span>
+      </div>
+    </div>
+    <div class="row" id="upload-file-row">
+      <div class="col-xs-8 col-xs-offset-4 form-group" style="padding-left: 0">
+          <label for="file-to-upload">
+            <span class="text-muted">or</span>
+            upload files:
+          </label>
+          <input type="file" name="file-to-upload" multiple id="file-to-upload"
+                 class="form-control"
+                 filelist-bind="new_file_upload">
+      </div>
+    </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+  <input type="submit" class="btn btn-primary" value="OK"></input>
+</div>
+</form>

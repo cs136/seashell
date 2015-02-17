@@ -1,38 +1,46 @@
 <!DOCTYPE html>
-<html>
-	<head>
+<html ng-app="login-app">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Seashell</title>
+    <script type='text/javascript'>
+      var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
+      var SEASHELL_API_VERSION=@(values SEASHELL_API_VERSION);
+    </script>
 
-    <link rel="stylesheet" type="text/css" href="css/style.css" />
-    <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
-
-		<link rel="apple-touch-icon" href="touchicon.png">
-		<link rel="icon" href="path/to/favicon.png">
-
-		<meta name="msapplication-TileColor" content="#D83434">
-		<meta name="msapplication-TileImage" content="tileicon.png">
+    @(include "index/includes/styles.html")
 	</head>
-	<body id="body" onLoad="init_login()">
-    <img src="img/seashell-logo.png"/>
-		<div id="login-wrap">
-			<div id="login">
-				<h1>Log in with your UWaterloo CS-TEACHING username and password</h1>
-        <div id="input-wrap">
-          <form id="loginform" target="#" onSubmit="submit_login(); return false;">
-            <h2><i>username:</i></h2>
-            <input type="text" id="login-username" name="login-username" disabled />
-            <h2><i>password:</i></h2>
-            <input type="password" id="login-password" name="login-password" disabled />
-            <button id="login-submit" name="login-submig" type="submit" disabled>Submit</button>
-          </form>
-				</div>
-			</div>
+  <body>
+    <header>
+      <div class="container" style="text-align: center">
+        <link href="//fonts.googleapis.com/css?family=Unkempt:700" rel="stylesheet" type="text/css">
+        <div id="seashell-logo" class="col-md-6 col-xs-6 text-left" style="padding: 0">
+          <span style="font-family: 'Unkempt', cursive; font-size: 25px; color: #888">seashell</span>
+          <span style="font-size: 14px; color: black; font-variant: small-caps; color: #888; position: absolute">beta</span>
+        </div>
+      </div>
+    </header>
+    <div class="container" ng-controller="LoginController as login">
+      <form class="form-signin" role="form" ng-submit="login.login()">
+        <h2 class="form-signing-heading">Please sign in with your student.cs credentials</h2>
+
+        <input type="text" class="form-control" placeholder="Username" ng-model="login.user" id="user"
+          ng-disabled="login.busy" />
+        <input type="password" class="form-control" placeholder="Password" ng-model="login.password" id="password"
+          ng-disabled="login.busy" />
+        <button class="btn btn-lg btn-primary btn-block" name="login-submit" type="submit"
+          ng-disabled="login.busy">Sign in</button>
+
+        <div class="alert alert-info" ng-show="login.busy" ng-cloak>
+          Logging in...
+        </div>
+        <div class="alert alert-danger" ng-show="login.error" ng-cloak>
+          {{login.error}}
+        </div>
+      </form>
     </div>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.js"></script>
-    <script type="text/javascript" src="https://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
-    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/sjcl/1.0.0/sjcl.min.js"></script>
-    <script type="text/javascript" src="js/socket/crypto.js"></script>
-    <script type="text/javascript" src="js/socket/websocket_client.js"></script>
-    <script type="text/javascript" src="js/login/login.js"></script>
+    @(include "index/includes/scripts.html")
 	</body>
 </html>

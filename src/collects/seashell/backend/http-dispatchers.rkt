@@ -1,6 +1,6 @@
 #lang racket
 ;; Seashell's backend server.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -184,6 +184,6 @@
     (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
     (match-define (binding:file _ _ _ content) (bindings-assq #"file-to-upload" bindings))
     (match-define (list project filename) (check-upload-token (bytes->jsexpr raw-token)))
-    (write-file project filename content)
+    (new-file project filename content 'raw)
     (standard-empty-response request)))
 (define upload-file-dispatcher (lift:make upload-file-page))

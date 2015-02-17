@@ -1,7 +1,7 @@
 #lang racket
 
 ;; Seashell's libgit2 bindings.
-;; Copyright (C) 2013-2014 The Seashell Maintainers.
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -39,8 +39,8 @@
 (define-ffi-definer define-git (ffi-lib (read-config 'seashell-git)))
 
 ;; Opaque data structure - make sure allocator/deallocator is set.
-(define _seashell_git_update (_cpointer/null 'seashell_git_update*))
-(define _seashell_git_status (_cpointer/null 'seashell_git_status*))
+(define _seashell_git_update _pointer)
+(define _seashell_git_status _pointer)
 
 ;; Error fetching function
 (define-git seashell_git_error (_fun -> _string))

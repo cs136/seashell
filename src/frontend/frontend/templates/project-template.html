@@ -1,0 +1,70 @@
+<!-- Project View Template.  This contains the
+  project/question selector. -->
+<!-- Project Dropdown -->
+<div class="row">
+  <div class="col-xs-12 col-md-12"
+       style="margin-top: 15px">
+    <div class="col-md-6 col-xs-6"
+         style="padding: 0">
+      <h2 class="text-left" style="margin-bottom: 0; margin-top: 0">
+        <span style="position: relative; bottom: 0; font-size: 20px">
+          <span style="font-weight: 400">
+            <span class="userid">{{projectView.userid}}</span> /
+          </span>
+          <div dropdown class="dropdown" style="display: inline">
+            <a role="button"
+               class="dropdown-toggle"
+               style="text-decoration: none; color: black"
+               dropdown-toggle>
+               <span>{{projectView.project.name}}</span><span class="caret"></span>
+            </a>
+            <ul id="projects-dropdown" class="dropdown-menu" role="menu">
+              <li role="presentation">
+                <a href="" tabindex="-1" role="menuitem" ng-click="projectView.download()">
+                  download assignment...
+                </a>
+              </li>
+              <li role="presentation">
+                <a href="" tabindex="-1" role="menuitem" ng-click="projectView.newQuestion()">
+                  new question...
+                </a>
+              </li>
+              <li class="divider" role="presentation"></li>
+              <!-- TODO: add items here. -->
+              <li role="presentation" ng-show="projectView.is_deleteable">
+                <a href="" tabindex="-1" role="menuitem" ng-click="projectView.delete()">
+                  delete assignment...
+                </a>
+              </li>
+              <li role="presentation">
+                <a href="" tabindex="-1" role="menuitem" ng-click="projectView.close()">
+                  close assignment...
+                </a>
+              </li>
+            </ul>
+          </div>
+        </span>
+      </h2>
+    </div>
+    <div
+       id="questions-row-container"
+       class="col-md-6 col-xs-6 questions-row-container"
+       style="font-size: 18px; margin-top: 5px; padding: 0">
+       <span class="questions-row" style="word-spacing: 15px">
+         <span ng-repeat="question in projectView.project.questions()">
+         <a
+            ui-sref="edit-project.editor({question: '{{question}}'})"
+            class="question-link"
+            ui-sref-active="question-link-active">{{question}}</a> 
+         </span>
+       </span>
+    </div>
+  </div>
+</div>
+<!-- Seperator -->
+<div class="row">
+  <div class="col-md-12 col-xs-12" style="padding: 0">
+    <hr style="margin-top: 9px; margin-bottom: 8px"/>
+  </div>
+</div>
+<div ui-view></div>
