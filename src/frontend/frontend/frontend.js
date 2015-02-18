@@ -1051,7 +1051,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             evt.preventDefault();
             self.killProgram();
           }
-        });
+        }).add({
+          combo: 'ctrl+d',
+          description: "Sends EOF",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.sendEOF();
+          }
+        }).add({
+          combo: 'ctrl+u',
+          description: "Starts Tests",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.testFile();
+          }
+        }); 
+         
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
