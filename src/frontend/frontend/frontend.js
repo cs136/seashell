@@ -622,6 +622,32 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.common_files = result.common;
           self.question_files = result.question;
           self.test_files = result.tests;
+
+          var target;
+          marmoset.results(target).then(function(result) {
+            var data = result.result;
+            if(result.error) {
+              errors.report(result.result, sprintf("Failed to fetch previous Marmoset results for %s.", target));
+              self.marmoset_short_results = null;
+            }
+            else if(data.length > 0 && data[0].status=="complete") {
+              var sub_pk = data[0].submission;
+              var failed = false;
+              var related = _.filter(data, function (entry) {
+                return entry.submission === sub_pk;
+              });    
+              self.marmoset_long_results = data;
+              var total = 0, total_passed = 0;
+              for(var i = 0; i < related.length; i++) {
+                total += related[i].points;
+                total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                failed = failed || data[i].outcome !== "passed";
+              }
+              self.marmoset_short_results = 
+                sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
+                        total_passed, total);
+            }
+          });  
         };
         $scope.refresh = self.refresh;
 
