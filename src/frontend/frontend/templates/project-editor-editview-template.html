@@ -1,8 +1,9 @@
   <!-- File Editor Template -->
   <div class="row">
     <div class="col-md-12 col-xs-12"
-         style="padding: 0"
-         role="main">
+         style="padding: 0;"
+         role="main"
+         id="main-edit-console">
       <div class="editor-console">
         <div id="editor"
              class="col-md-6 col-xs-12"
@@ -70,10 +71,13 @@
           <textarea ui-codemirror ui-codemirror-opts="editFileView.editorOptions"
             ng-model="editFileView.contents" style="margin-top:70px;"></textarea>
         </div>
-        <div id="console" class="col-md-6 col-xs-12" style="padding: 0; position: relative">
+        <div id="console" class="col-md-6 col-xs-12" style="padding: 0; position: relative"
+              data-drag="true" 
+              jqyoui-draggable="{onStop:'editFileView.stopDragCallback()'}" 
+               data-jqyoui-options="{revert:true,revertDuration:0}">
           <div id="console-title"
                class="col-md-12 col-xs-12 editor-console-title">
-            <span class="glyphicon glyphicon-list-alt"></span>
+                           <span class="glyphicon glyphicon-list-alt"></span> 
             <span style="position: relative; bottom: 2px; left: 2px">
               console
             </span>
@@ -102,4 +106,4 @@
           </div>
       </div><!-- end main panel tabs -->
     </div>
-  </div>
+  </div> 
