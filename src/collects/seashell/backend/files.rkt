@@ -239,19 +239,31 @@
   (when (not (file-exists? recent))
     (with-output-to-file recent (thunk (write (make-hash)))))
   (define r (with-input-from-file recent read))
-  (define-values (base name _) (split-path file))
-  (hash-set! r project (path->string base))
-  (hash-set! r (string-append project "/" (path->string base)) name)
+
+  (check-and-build-path project file)   ;Make sure this is a real
+                                        ;project file.
+  (define (update-tree f)
+    (define-values (base name _) (split-path f))
+    (define dir (if (path? base)
+                    (string-append project "/" (path->string base))
+                    project))
+    (hash-set! r dir name)
+    (cond
+     [(path? base) (update-tree base)]
+     [else (hash-set! r project name)]))
+
+  (update-tree file)
+
   (with-output-to-file recent (thunk (write r)))
   (void))
 
-;; (get-recent-file project)
+;; (get-recent-file directory)
 ;; Reads the most recent file name for the specified project.
 ;;
 ;; Arguments:
-;;  project - the project to check the default for.
-(define/contract (get-recent-file project)
-  (-> (and/c project-name? is-project?) path-string?)
+;;  directory - the directory to check the default for.
+(define/contract (get-recent-file directory)
+  (-> path-string? path-string?)
   (define recent (build-path (read-config 'seashell) "recent.txt"))
   (cond
    [(not (file-exists? recent))
