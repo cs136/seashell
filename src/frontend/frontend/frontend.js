@@ -474,8 +474,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self._contents += self.stdout + self.stderr;
       self.stdout = self.stderr = "";
     };
-  }])
-  
+  }]) 
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
       function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
@@ -502,7 +501,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     });
                 }
               }]})
-        };  
+        }; 
         // Logout
         self.logout = function () {
           confirm("Log out of Seashell",
@@ -818,15 +817,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           var narrow = $($document).width() < 992;
           if(document.getElementById('console').style.width === '100%'){
             $('#editor > .CodeMirror').height(h -  $('#current-file-controls').outerHeight());
-            $('#console > .CodeMirror').height(1 + h - $('#console-input').outerHeight()); 
+            $('#console > .CodeMirror').height(1 + h - $('#console-input').outerHeight());
+ 
             document.getElementById('console').style.borderTop = '1px solid #ddd';
             document.getElementById('console').style.borderLeft = 'none';
+
             document.getElementById('editor').style.width = '50%';
             document.getElementById('console').style.width = '50%';
           }
           else {
-           $('#editor > .CodeMirror').height(h * 0.7  -  $('#current-file-controls').outerHeight());
-            $('#console > .CodeMirror').height(h * 0.3 - $('#console-title').outerHeight() - $('#console-input').outerHeight()); 
+            $('#editor > .CodeMirror').height(h * 0.7  -  $('#current-file-controls').outerHeight());
+            $('#console > .CodeMirror').height(h * 0.3 - $('#console-title').outerHeight() - $('#console-input').outerHeight());
+ 
             document.getElementById('console').style.borderTop = 'none';
             document.getElementById('console').style.borderLeft = '1px solid #ddd';
 
