@@ -1,8 +1,7 @@
 language: c++
 compiler: clang
 env:
-  - RACKET_DIR=$HOME/racket
-  - RACKET_VERSION=6.1.1
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
 before_install:
   git clone https://github.com/greghendershott/travis-racket.git
   cat travis-racket/install-racket.sh | bash
