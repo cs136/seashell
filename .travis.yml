@@ -1,10 +1,15 @@
 language: c++
 compiler: clang
+env:
+  - RACKET_DIR=$HOME/racket
+  - RACKET_VERSION=6.1.1
 before_install:
-  sudo apt-get update
+  git clone https://github.com/greghendershott/travis-racket.git
+  cat travis-racket/install-racket.sh | bash
 install:
-  sudo apt-get install racket
 script:
-  - cmake
-  - make
-  - sudo make install
+  - mkdir build
+  - cd build
+  - cmake -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket ..
+  - make -j 
+  - sudo make -j install
