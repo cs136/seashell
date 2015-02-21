@@ -144,6 +144,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  .directive('focusOn', ['$timeout', function($timeout) {
+     return function(scope, elem, attr) {
+        scope.$on(attr.focusOn, function(e) {
+            $timeout(function () {elem[0].focus()});
+        });
+     };
+  }])
   .factory('RenameFileModal', ['$modal', 'error-service',
     function($modal, errors) {
       return function(project, question, folder, file, notify) {
@@ -877,11 +884,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
+            matchBrackets: true,
             rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               }
@@ -948,6 +957,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
+                $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
@@ -999,6 +1009,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        self.indentAll = function() {
+          var lineCount = self.editor.lineCount();
+          for (var i = 0; i < lineCount; i++)
+            self.editor.indentLine(i);
+        };
+
         self.userInput = "";
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
@@ -1035,7 +1051,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             evt.preventDefault();
             self.killProgram();
           }
-        });
+        }).add({
+          combo: 'ctrl+d',
+          description: "Sends EOF",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.sendEOF();
+          }
+        }).add({
+          combo: 'ctrl+u',
+          description: "Starts Tests",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.testFile();
+          }
+        }); 
+         
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
