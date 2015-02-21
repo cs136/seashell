@@ -1111,7 +1111,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts;
-            self.ready = self.loaded = true;
+            self.ready = true;
+            if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
