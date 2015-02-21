@@ -13,6 +13,6 @@ install:
 script:
   - mkdir build
   - cd build
-  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/reacket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
   - make -j 
   - make -j install
