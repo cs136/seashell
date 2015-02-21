@@ -18,7 +18,7 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys', 'ngDragDrop'])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
   .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
     var self = this;
@@ -815,36 +815,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editor.refresh();
         }
         $scope.$on('window-resized', onResize);
-        //Drag and Drop functions
-        self.stopDragCallback = function(){
-          var min_height = 500, margin_bottom = 30;
-          var min_y_element = $('#editor > .CodeMirror');
-          var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
-                           min_height);
-          var narrow = $($document).width() < 992;
-          if(document.getElementById('console').style.width === '100%'){
-            $('#editor > .CodeMirror').height(h -  $('#current-file-controls').outerHeight());
-            $('#console > .CodeMirror').height(1 + h - $('#console-input').outerHeight());
- 
-            document.getElementById('console').style.borderTop = '1px solid #ddd';
-            document.getElementById('console').style.borderLeft = 'none';
-
-            document.getElementById('editor').style.width = '50%';
-            document.getElementById('console').style.width = '50%';
-          }
-          else {
-            $('#editor > .CodeMirror').height(h * 0.7  -  $('#current-file-controls').outerHeight());
-            $('#console > .CodeMirror').height(h * 0.3 - $('#console-title').outerHeight() - $('#console-input').outerHeight());
- 
-            document.getElementById('console').style.borderTop = 'none';
-            document.getElementById('console').style.borderLeft = '1px solid #ddd';
-
-            document.getElementById('editor').style.width = '100%';
-            document.getElementById('console').style.width = '100%';
-          }
-          if(self.editor)
-            self.editor.refresh();
-        }
+      
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
