@@ -13,6 +13,6 @@ install:
 script:
   - mkdir build
   - cd build
-  - $HOME/cmake/cmake -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket ..
+  - $HOME/cmake/bin/cmake -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
   - make -j 
-  - sudo make -j install
+  - make -j install
