@@ -86,10 +86,20 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
-#include <llvm/Transforms/Utils/Cloning.h>
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR ==4
+#include <llvm/Linker.h>
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
+#else
+#error "Unsupported version of clang."
+#endif
+
 /** Data structure for compiler diagnostic messages.
  * Opaque to Racket - C accessor functions described below.
  */
@@ -640,10 +650,18 @@ static int final_link_step (struct seashell_compiler* compiler)
   llvm::raw_string_ostream raw(result);
   llvm::formatted_raw_ostream output(raw);
 
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
   if (const DataLayout *TD = Target.getDataLayout())
     mod->setDataLayout(TD);
   PM.add(new DataLayoutPass(mod));
-
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
+  if (const DataLayout *TD = Target.getDataLayout())
+    PM.add(new DataLayout(*TD));
+  else
+    PM.add(new DataLayout(mod));
+#else
+#error "Unsupported version of clang."
+#endif
 
   if (Target.addPassesToEmitFile(PM, output, llvm::TargetMachine::CGFT_ObjectFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
@@ -744,7 +762,11 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
     Clang.setInvocation(CI.get());
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
+    Clang.setInvocation(CI.getPtr());
+#endif
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
