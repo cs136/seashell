@@ -370,7 +370,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
         };
       }])
-    .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
     var self = this;
     self.PIDs = null;
     // running is true iff we are running with "run", allows input
@@ -474,7 +474,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self._contents += self.stdout + self.stderr;
       self.stdout = self.stderr = "";
     };
-  }]) 
+  }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
       function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
@@ -501,7 +501,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     });
                 }
               }]})
-        }; 
+        };
         // Logout
         self.logout = function () {
           confirm("Log out of Seashell",
