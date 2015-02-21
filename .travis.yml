@@ -1,0 +1,10 @@
+language: c++
+compiler: clang
+before_install:
+  sudo apt-get update
+install:
+  sudo apt-get install racket
+script:
+  cmake
+  make
+  sudo make install
