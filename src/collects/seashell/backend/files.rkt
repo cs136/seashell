@@ -268,4 +268,4 @@
   (cond
    [(not (file-exists? recent))
     (with-output-to-file recent (thunk (write (make-hash))))])
-  (hash-ref (with-input-from-file recent read) project #f))
+  (hash-ref (with-input-from-file recent read) directory #f))
