@@ -552,7 +552,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.close = function () {
             $state.go('list-projects');
         };
-      self.project.resentFile()
+      self.project.recentFile()
         .then(function (recent) {
           if (recent) {
             $state.go('edit-project.editor',
