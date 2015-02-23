@@ -18,9 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "compiler.h"
-
-#include <vector>
 #include <string>
+#include <vector>
 #include <memory>
 #include <sstream>
 #include <iostream>
@@ -35,6 +34,123 @@
 #include <stdio.h>
 
 #include <seashell-config.h>
+
+#include <clang/Basic/Version.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/DiagnosticOptions.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/Basic/LLVM.h>
+#include <clang/Basic/SourceManager.h>
+#include <clang/CodeGen/CodeGenAction.h>
+#include <clang/Driver/Compilation.h>
+#include <clang/Driver/Driver.h>
+#include <clang/Driver/Options.h>
+#include <clang/Driver/Tool.h>
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/Frontend/FrontendDiagnostic.h>
+#include <clang/Frontend/TextDiagnostic.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/FrontendTool/Utils.h>
+#include <clang/Lex/Lexer.h>
+#include <llvm/ADT/IntrusiveRefCntPtr.h>
+#include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/Triple.h>
+#include <llvm/CodeGen/CommandFlags.h>
+#include <llvm/CodeGen/LinkAllAsmWriterComponents.h>
+#include <llvm/CodeGen/LinkAllCodegenComponents.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/MC/SubtargetFeature.h>
+#include <llvm/Option/ArgList.h>
+#include <llvm/Pass.h>
+#include <llvm/PassManager.h>
+#include <llvm/Support/Debug.h>
+#include <llvm/Support/ErrorHandling.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/Host.h>
+#include <llvm/Support/ManagedStatic.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/PluginLoader.h>
+#include <llvm/Support/PrettyStackTrace.h>
+#include <llvm/Support/Signals.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/ToolOutputFile.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/raw_os_ostream.h>
+#include <llvm/Target/TargetLibraryInfo.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#include <llvm/Linker/Linker.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DIBuilder.h>
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR ==4
+#include <llvm/Linker.h>
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
+#else
+#error "Unsupported version of clang."
+#endif
+
+/** Data structure for compiler diagnostic messages.
+ * Opaque to Racket - C accessor functions described below.
+ */
+struct seashell_diag {
+  public:
+    seashell_diag(bool e, std::string f, std::string m, int l = 0, int c = 0)
+      : error(e), file(f), mesg(m), line(l), col(c), loc_known(true) { }
+  public:
+    /** Diagnostic location information: */
+
+    /** Is error? */
+    bool error;
+
+    /** File, message */
+    std::string file, mesg;
+
+    /** Line and column. */
+    int line, col;
+
+    /** Location known? */
+    bool loc_known;
+};
+
+/** Seashell's compiler data structure.
+ * Opaque to Racket - make sure to pass a cleanup function
+ * to the FFI so garbage collection works properly.
+ */
+struct seashell_compiler {
+  /** Control flags to the compiler.*/
+  std::vector<std::string> compiler_flags;
+  std::vector<std::string> source_paths;
+
+  /** Module compilation messages. */
+  std::vector<std::vector<seashell_diag>> module_messages;
+
+  /** Linking messages. */
+  std::string linker_messages;
+
+  /** Outputs. */
+  llvm::LLVMContext context;
+  llvm::Module module;
+  std::vector<char> output_object;
+
+  seashell_compiler();
+};
+
+seashell_compiler::seashell_compiler() :
+  context(),
+  module("seashell-compiler-output", context) {
+}
+
 
 
 /**
@@ -513,7 +629,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   TargetOptions Options;
 
   /** Grab a copy of the target. */
-  OwningPtr<TargetMachine>
+  std::unique_ptr<TargetMachine>
     target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                           "generic", "", Options));
   if (!target.get()) {
@@ -522,28 +638,30 @@ static int final_link_step (struct seashell_compiler* compiler)
   }
   TargetMachine &Target = *target.get();
 
-  /** Set up code generation flags. */
-  if (TheTriple.isMacOSX() &&
-      TheTriple.isMacOSXVersionLT(10, 6))
-    Target.setMCUseLoc(false);
-
   /** Set up the code generator. */
   PassManager PM;
 
   TargetLibraryInfo *TLI = new TargetLibraryInfo(TheTriple);
   PM.add(TLI);
-
   Target.addAnalysisPasses(PM);
-
-  if (const DataLayout *TD = Target.getDataLayout())
-    PM.add(new DataLayout(*TD));
-  else
-    PM.add(new DataLayout(mod));
 
   /** Drive the code generator. */
   std::string result;
   llvm::raw_string_ostream raw(result);
   llvm::formatted_raw_ostream output(raw);
+
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+  if (const DataLayout *TD = Target.getDataLayout())
+    mod->setDataLayout(TD);
+  PM.add(new DataLayoutPass(mod));
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
+  if (const DataLayout *TD = Target.getDataLayout())
+    PM.add(new DataLayout(*TD));
+  else
+    PM.add(new DataLayout(mod));
+#else
+#error "Unsupported version of clang."
+#endif
 
   if (Target.addPassesToEmitFile(PM, output, llvm::TargetMachine::CGFT_ObjectFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
@@ -644,7 +762,11 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+    Clang.setInvocation(CI.get());
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
+#endif
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
@@ -673,7 +795,7 @@ static int compile_module (seashell_compiler* compiler,
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
-    OwningPtr<Module> mod(Act.takeModule());
+    std::unique_ptr<Module> mod(Act.takeModule());
     if (!mod) {
       return 1;
     }

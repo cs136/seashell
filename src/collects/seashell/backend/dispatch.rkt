@@ -232,6 +232,7 @@
                                            (for/list 
                                              ([i (in-range (read-config 'io-buffer-size))])
                                              #:break (not (char-ready? port))
+                                             #:break (eof-object? (peek-char port))
                                              (read-char port))))
                         (send-contents-for tag contents)]
                       [else

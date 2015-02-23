@@ -144,6 +144,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }
     };
   }])
+  .directive('focusOn', ['$timeout', function($timeout) {
+     return function(scope, elem, attr) {
+        scope.$on(attr.focusOn, function(e) {
+            $timeout(function () {elem[0].focus()});
+        });
+     };
+  }])
   .factory('RenameFileModal', ['$modal', 'error-service',
     function($modal, errors) {
       return function(project, question, folder, file, notify) {
@@ -487,7 +494,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Help function
         self.help = function () {
-          $modal.open({templateUrl: "frontend/templates/help-template.html"});
+          $modal.open({
+            templateUrl: "frontend/templates/help-template.html",
+            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+              function ($scope, confirm, $window, cookies) {
+                $scope.reset = function () {
+                  confirm("Reset Seashell",
+                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
+                    .then(function () {
+                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
+                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
+                                             "/cs136/seashell/index.cgi?reset='reset'";
+                    });
+                }
+              }]})
         };
         // Logout
         self.logout = function () {
@@ -769,11 +789,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleEditor = null;
         self.consoleLoad = function(console_cm) {
-          self.console.inst = console_cm;
-          self.console.inst.on("update", function() {
-            var scr = self.console.inst.getScrollInfo();
-            self.console.inst.scrollTo(scr.left, scr.height);
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
           });
           onResize();
         };
@@ -863,6 +884,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   });
               }, 2000);
               self.console.errors = [];
+            } else {
+              self.editor.clearHistory();
             }
             self.loaded = true;
           });
@@ -887,11 +910,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             tabSize: parseInt(settings.settings['tab_width']),
             indentUnit: parseInt(settings.settings['tab_width']),
             onLoad: self.editorLoad,
+            matchBrackets: true,
             rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               }
@@ -958,6 +983,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
+                $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
@@ -1009,6 +1035,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        self.indentAll = function() {
+          var lineCount = self.editor.lineCount();
+          for (var i = 0; i < lineCount; i++)
+            self.editor.indentLine(i);
+        };
+
         self.userInput = "";
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
@@ -1045,7 +1077,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             evt.preventDefault();
             self.killProgram();
           }
-        });
+        }).add({
+          combo: 'ctrl+d',
+          description: "Sends EOF",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.sendEOF();
+          }
+        }).add({
+          combo: 'ctrl+u',
+          description: "Starts Tests",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.testFile();
+          }
+        }); 
+         
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
@@ -1060,6 +1109,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           .then(function(conts) {
             self.contents = conts;
             self.ready = true;
+            if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)

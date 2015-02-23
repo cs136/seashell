@@ -1,7 +1,5 @@
-"use strict";
-
 /**
- * Seashell.
+ * Seashell's LLVM and Clang interface.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,18 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "compiler.h"
 
-/**
- * Sets the global tooltip properties and attaches a 
- * tooltip to the appropriate divs.
+/** This is an example usage of Seashell's clang interface,
+ *  mainly for debugging memory leaks (and whatnot).
  */
-function setupTooltips() {
-  var tooltip = $.fn.tooltip.Constructor.DEFAULTS;
-
-  tooltip.placement = 'bottom'; /** sets positioning of the tooltips at the bottom of the div */
-  tooltip.delay = { show: 175, hide: 0 } /** sets the delay before the tooltip is displayed/hidden */
-
-  $('[rel="tooltip"]').each(function() {
-    $(this).tooltip();
-  });
+int main( int argc, char* argv[] ) {
+  if (argc > 2) {
+    struct seashell_compiler* compiler = seashell_compiler_make();
+    seashell_compiler_add_file(compiler, argv[1]);
+    seashell_compiler_run(compiler);
+    seashell_compiler_free(compiler);
+  }
 }
