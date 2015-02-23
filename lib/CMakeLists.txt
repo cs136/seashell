@@ -68,6 +68,12 @@ set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
+# There is the undocumented feature that if "host" is specified as a
+# target, then it will automatically generate code for the host
+# (whatever the host may be).  This is faster than not specifying it
+# because in that case it will just build all possible targets.
+set(LLVM_TARGETS_TO_BUILD "host" CACHE STRING
+  "Semicolon-separated list of targets to build, or \"all\"." FORCE)
 add_subdirectory(llvm)
 add_custom_target(_build_clang ALL)
 add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen)
