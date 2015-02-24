@@ -4,6 +4,7 @@ sudo: false
 env:
   - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
 before_install:
+  - mkdir $HOME/bin
   - git clone https://github.com/greghendershott/travis-racket.git
   - cat travis-racket/install-racket.sh | bash
   - wget http://www.cmake.org/files/v3.1/cmake-3.1.3-Linux-x86_64.sh
@@ -14,6 +15,6 @@ install:
 script:
   - mkdir build
   - cd build
-  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DJS_LINTER=$HOME/node_modules/bin/jshint ..
   - make
   - make install
