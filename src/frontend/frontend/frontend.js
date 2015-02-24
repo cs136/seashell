@@ -17,6 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
@@ -147,7 +149,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   .directive('focusOn', ['$timeout', function($timeout) {
      return function(scope, elem, attr) {
         scope.$on(attr.focusOn, function(e) {
-            $timeout(function () {elem[0].focus()});
+            $timeout(function () {elem[0].focus();});
         });
      };
   }])
@@ -337,7 +339,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Adds and removes watchers on the settings service. */
         self.addWatcher = function(fn, invoke) {
           self.notify[nKey] = fn;
-          invoke && fn ();
+          var result = invoke && fn ();
           return nKey ++;
         };
         self.removeWatcher = function(key) {
@@ -392,12 +394,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.stdout = "";
     self.stderr = "";
     self._contents = "";
+    var ind = "";
+    var spl ="";
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
-        var ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = io.message.split("\n");
+          spl = io.message.split("\n");
           self._write(self.stdout);
           while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stdout = spl[0];
@@ -406,9 +410,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.stdout += io.message;
       }
       else if(io.type == "stderr") {
-        var ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = io.message.split("\n");
+          spl = io.message.split("\n");
           self._write(self.stderr);
           while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
@@ -509,8 +513,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                                              cookies.get(SEASHELL_CREDS_COOKIE).user +
                                              "/cs136/seashell/index.cgi?reset='reset'";
                     });
-                }
-              }]})
+                };
+              }]});
         };
         // Logout
         self.logout = function () {
@@ -596,7 +600,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             ifrm.setAttribute("src", url);
             ifrm.setAttribute("style", "display:none");
             document.body.appendChild(ifrm);
-        })};
+        });};
         self.newQuestion = function () {
           newQuestionModal(openProject);
         };
@@ -638,12 +642,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
-          self.marmoset_refresh_interval &&
+          var result = self.marmoset_refresh_interval &&
             $interval.cancel(self.marmoset_refresh_interval);
           self.marmoset_refresh_interval = null;
         }
         $scope.$on('$destroy', function() {
-          cancelMarmosetRefresh()
+          cancelMarmosetRefresh();
           self.console.clear();
         });
        
@@ -927,9 +931,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             lineNumbers: !self.isBinaryFile,
             readOnly: !self.ready || self.isBinaryFile,
             mode: mime,
-            theme: settings.settings['text_style'],
-            tabSize: parseInt(settings.settings['tab_width']),
-            indentUnit: parseInt(settings.settings['tab_width']),
+            theme: settings.settings.text_style,
+            tabSize: parseInt(settings.settings.tab_width),
+            indentUnit: parseInt(settings.settings.tab_width),
             onLoad: self.editorLoad,
             matchBrackets: true,
             rulers: [80],
@@ -943,14 +947,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               }
             }
           };
-          if (settings.settings['editor_mode'] === 'vim') {
-            self.editorOptions['vimMode'] = true;
-          } else if(settings.settings['editor_mode'] === 'emacs') {
-            self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vimMode'] = false;
+          if (settings.settings.editor_mode === 'vim') {
+            self.editorOptions.vimMode = true;
+          } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
+            self.editorOptions.vimMode = false;
           } else {
-            self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vimMode'] = false;
+            self.editorOptions.keyMap = 'default';
+            self.editorOptions.vimMode = false;
           }
           
           // Force the font size at any rate.
