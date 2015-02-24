@@ -386,10 +386,11 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, def
   deferred);
 };
 
-SeashellWebsocket.prototype.getRecent = function (project) {
+SeashellWebsocket.prototype.getRecent = function (project, subdirectory) {
   return this.sendMessage({
     type : "getRecent",
-    project : project},
+    project : project,
+    subdirectory : subdirectory},
     deferred);
 };
 

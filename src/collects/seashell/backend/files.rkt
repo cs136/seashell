@@ -257,13 +257,17 @@
   (with-output-to-file recent (thunk (write r)))
   (void))
 
-;; (get-recent-file directory)
+;; (get-recent-file project subdirectory)
 ;; Reads the most recent file name for the specified project.
 ;;
 ;; Arguments:
-;;  directory - the directory to check the default for.
-(define/contract (get-recent-file directory)
+;;  project - the project to look in
+;;  subdirectory - the subdirectory to check the default for.
+(define/contract (get-recent-file project subdirectory)
   (-> path-string? path-string?)
+  (define directory (match subdirectory
+                      ["" project]
+                      [sub (string-append project "/" sub)]))
   (define recent (build-path (read-config 'seashell) "recent.txt"))
   (cond
    [(not (file-exists? recent))
