@@ -1,6 +1,7 @@
 language: c++
 compiler: clang
 sudo: false
+cache: ccache
 env:
   - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
 before_install:
@@ -11,7 +12,6 @@ before_install:
   - mkdir $HOME/cmake
   - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake
   - npm install -g jshint
-install:
 script:
   - mkdir build
   - cd build
