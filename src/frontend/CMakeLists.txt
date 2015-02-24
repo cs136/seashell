@@ -38,8 +38,9 @@ html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
 # Lint the source JavaScript
 find_program(JS_LINTER jshint)
 if (JS_LINTER)
-  add_custom_target(_lint ALL COMMAND jshint --exclude "'js/lib/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif ()
+  message("JavaScript linter found: ${JS_LINTER}")
+  add_custom_target(_lint ALL COMMAND ${JS_LINTER} --exclude "'js/lib/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif (JS_LINTER)
 
 # Files to install.
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
