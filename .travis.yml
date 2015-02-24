@@ -15,6 +15,6 @@ install:
 script:
   - mkdir build
   - cd build
-  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DJS_LINTER=$HOME/node_modules/bin/jshint ..
+  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
   - make
   - make install
