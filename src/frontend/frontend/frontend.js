@@ -957,8 +957,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions.vimMode = false;
           }
           
-          if (self.editorOptions['vimMode']) {
-            delete self.editorOptions.extraKeys['Esc'];
+          if (self.editorOptions.vimMode) {
+            delete self.editorOptions.extraKeys.Esc;
           }
           
           // Force the font size at any rate.
