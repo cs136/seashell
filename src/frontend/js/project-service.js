@@ -534,12 +534,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(question)) {
             var guess = self.name.replace(/^a/i, "A") + question.replace(/^q/i, "P");
             var extended = guess+"Extended";
-            if(marmoset.projects().indexOf(extended) >= 0)
-              return extended;
-            if(marmoset.projects().indexOf(guess) >= 0)
-              return guess;
+            return marmoset.projects().then(function(projects) {
+              if(projects.indexOf(extended) >= 0)
+                return $q.when(extended);
+              if(projects.indexOf(guess) >= 0)
+                return $q.when(guess);
+            });
           }
-          return false;
+          return $q.when(false);
         };
 
         /**

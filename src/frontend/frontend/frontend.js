@@ -285,18 +285,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             templateUrl: "frontend/templates/marmoset-submit-template.html",
             controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
             function ($scope, $state, errors, $q, marmoset) {
-              $scope.marmoset_projects = marmoset.projects();
-              $scope.selected_project = project.currentMarmosetProject(question) || undefined;
-              $scope.submit = function() {
-                $scope.$close();
-                project.submit(question, $scope.selected_project)
+              $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
+                .then(function(res) {
+                  $scope.marmoset_projects = res[0];
+                  $scope.selected_project = res[1];
+                  $scope.submit = function() {
+                    $scope.$close();
+                    project.submit(question, $scope.selected_project)
                        .catch(function (error) {
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
                          notify(false, $scope.selected_project);
                        }).then(function () {
                          notify(true, $scope.selected_project);
                        });
-              };
+                  };
+                });
             }]}).result;
         };
       }])
@@ -643,31 +646,34 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.question_files = result.question;
           self.test_files = result.tests;
 
-          var target;
-          marmoset.results(target).then(function(result) {
-            var data = result.result;
-            if(result.error) {
-              errors.report(result.result, sprintf("Failed to fetch previous Marmoset results for %s.", target));
-              self.marmoset_short_results = null;
-            }
-            else if(data.length > 0 && data[0].status=="complete") {
-              var sub_pk = data[0].submission;
-              var failed = false;
-              var related = _.filter(data, function (entry) {
-                return entry.submission === sub_pk;
-              });    
-              self.marmoset_long_results = data;
-              var total = 0, total_passed = 0;
-              for(var i = 0; i < related.length; i++) {
-                total += related[i].points;
-                total_passed += data[i].outcome === "passed" ? data[i].points : 0;
-                failed = failed || data[i].outcome !== "passed";
+          self.project.currentMarmosetProject(self.question).then(function(target) {
+          if(target) {
+            marmoset.results(target).then(function(result) {
+              var data = result.result;
+              if(result.error) {
+                errors.report(result.result, sprintf("Failed to fetch previous Marmoset results for %s.", target));
+                self.marmoset_short_results = null;
               }
-              self.marmoset_short_results = 
-                sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
+              else if(data.length > 0 && data[0].status=="complete") {
+                var sub_pk = data[0].submission;
+                var failed = false;
+                var related = _.filter(data, function (entry) {
+                  return entry.submission === sub_pk;
+                });    
+                self.marmoset_long_results = related;
+                var total = 0, total_passed = 0;
+                for(var i = 0; i < related.length; i++) {
+                  total += related[i].points;
+                  total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                  failed = failed || data[i].outcome !== "passed";
+                }
+                self.marmoset_short_results = 
+                  sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
                         total_passed, total);
-            }
-          });  
+              }
+            });
+          }
+          });
         };
         $scope.refresh = self.refresh;
 

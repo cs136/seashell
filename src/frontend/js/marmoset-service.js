@@ -24,15 +24,17 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
         var self = this;
         var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
         var test_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt"; 
+        var projects_loaded = false;
         var project_list = [];
 
         /**
          * Refreshs project list.
          */
         self.refresh = function() {
-          $http({url: list_url})
+          return $http({url: list_url})
             .then(function (results) {
               project_list = results.data;
+              projects_loaded = true;
             });
         };
         /** Load projects (initially) */
@@ -42,10 +44,19 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          * List projects.
          *
          * @returns
-         *  a list of project names:
+         *  a promise resolved with list of project names ie. A1P2
          */
         self.projects = function () {
-          return _.map(project_list, function (x) {return x.project;});
+          if(projects_loaded) {
+            var def = $q.defer();
+            def.resolve(_.map(project_list, function (x) {return x.project;}));
+            return def.promise;
+          }
+          else {
+            return self.refresh().then(function() {
+              return $q.when(_.map(project_list, function(x) {return x.project;}));
+            });
+          }
         };
 
         /**
