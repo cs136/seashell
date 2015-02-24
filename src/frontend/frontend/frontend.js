@@ -906,6 +906,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editorOptions['vimMode'] = false;
           }
           
+          if (self.editorOptions['vimMode']) {
+            delete self.editorOptions.extraKeys['Esc'];
+          }
+          
           // Force the font size at any rate.
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
