@@ -604,6 +604,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           deleteProjectModal(openProject.name).then(
               function () {$state.go('list-projects');});
         };
+      self.project.recentFile()
+        .then(function (recent) {
+          if (recent) {
+            $state.go('edit-project.editor',
+                      {question: recent});
+          }
+          return recent;
+        });
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
@@ -739,6 +747,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Try to load the question, and go back to the project if we can't. */ 
         try { 
           self.refresh();
+          self.project.recentFile(self.question)
+            .then(function (recent) {
+              if (recent) {
+                $state.go("edit-project.editor.file",
+                          {part: self.question, file: recent});
+              }
+            });
         } catch (e) {
           errors.report({}, sprintf("Could not open question %s!", self.question));
           $state.go("edit-project");
