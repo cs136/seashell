@@ -424,8 +424,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.recentFile = function (question) {
           var self = this;
-          var dir = question ? self.name + "/" + question : self.name;
-          return $q.when(ws.socket.getRecent(dir))
+          var dir = question ? question : "";
+          return $q.when(ws.socket.getRecent(self.name, dir))
             .then(function (response) {
               return response.result ? response.result : null;
             });
