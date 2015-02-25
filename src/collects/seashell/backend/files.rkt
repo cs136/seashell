@@ -264,7 +264,7 @@
 ;;  project - the project to look in
 ;;  subdirectory - the subdirectory to check the default for.
 (define/contract (get-recent-file project subdirectory)
-  (-> path-string? path-string?)
+  (-> path-string? path-string? path-string?)
   (define directory (match subdirectory
                       ["" project]
                       [sub (string-append project "/" sub)]))
