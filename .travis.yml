@@ -19,7 +19,7 @@ before_install:
   - ./configure --prefix=$HOME/ccache
   - make install
   - ln -s ccache $HOME/ccache/bin/$CC
-  - ln -s ccache $HOME/ccache/$CXX
+  - ln -s ccache $HOME/ccache/bin/$CXX
   - popd
 script:
   - mkdir build
