@@ -82,6 +82,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/llvm-symbolizer DESTINATIO
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
 set(LIBSSH2_LIBRARY "")
 set(LIBSSH2_FOUND true)
+set(__pkg_config_checked_LIBSSH2 1000) # Force SSH2 found.
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 set(THREADSAFE ON)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
