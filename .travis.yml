@@ -14,12 +14,12 @@ before_install:
   - mkdir $HOME/cmake
   - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake
   - npm install -g jshint
-  - curl http://samba.org/ftp/ccache/ccache-${CCACHE_VERSION}.tar.gz | tar xf -
-  - pushd ccache-${CCACHE_VERSION}
+  - curl http://samba.org/ftp/ccache/ccache-$CCACHE_VERSION.tar.gz | tar xf -
+  - pushd ccache-$CCACHE_VERSION
   - ./configure --prefix=$HOME/ccache
   - make install
-  - ln -s ccache $HOME/ccache/bin/${CXX}
-  - ln -s ccache $HOME/ccache/${CC}
+  - ln -s ccache $HOME/ccache/bin/$CC
+  - ln -s ccache $HOME/ccache/$CXX
   - popd
 script:
   - mkdir build
