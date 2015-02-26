@@ -441,7 +441,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return $q.when(ws.socket.getMostRecentlyUsed(self.name, (question && self._getPath(question)) || false))
             .then(function (recent) {
               if (recent) {
-                if (question && self.hasFile(question, recent.part, recent.name)) {
+                if (question && self.hasFile(question, recent.part, recent.file)) {
                   return recent;
                 } else if (!question && self.hasQuestion(recent)) {
                   return recent;
