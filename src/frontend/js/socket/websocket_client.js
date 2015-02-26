@@ -389,11 +389,21 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, def
   deferred);
 };
 
-SeashellWebsocket.prototype.getRecent = function (project, subdirectory) {
+SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, directory, deferred) {
   return this.sendMessage({
-    type : "getRecent",
+    type : "getMostRecentlyUsed",
     project : project,
-    subdirectory : subdirectory},
+    directory : directory},
+    deferred);
+};
+
+SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, directory, predicate, data, deferred) {
+  return this.sendMessage({
+    type : "updateMostRecentlyUsed",
+    project : project,
+    directory : directory,
+    predicate : predicate,
+    data : data},
     deferred);
 };
 
