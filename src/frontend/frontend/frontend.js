@@ -611,11 +611,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           deleteProjectModal(openProject.name).then(
               function () {$state.go('list-projects');});
         };
-      self.project.recentFile()
+
+      self.project.mostRecentlyUsed()
         .then(function (recent) {
-          if (recent) {
+          if (recent && $state.is('edit-project')) {
             $state.go('edit-project.editor',
-                      {question: recent});
+                      {question: recent},
+                      {location: "replace"});
           }
           return recent;
         });
@@ -783,11 +785,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Try to load the question, and go back to the project if we can't. */ 
         try { 
           self.refresh();
-          self.project.recentFile(self.question)
+          self.project.updateMostRecentlyUsed(self.question);
+          self.project.mostRecentlyUsed(self.question)
             .then(function (recent) {
-              if (recent) {
+              if (recent && $state.is('edit-project.editor')) {
                 $state.go("edit-project.editor.file",
-                          {part: self.question, file: recent});
+                          {part: recent.part, file: recent.file},
+                          {location: "replace"});
               }
             });
         } catch (e) {
@@ -1140,6 +1144,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
+            self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
               self.isBinaryFile = true;
@@ -1204,28 +1209,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "ProjectController as projectView",
         resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service',
                                 'ConfirmationMessageModal', function(projects, $state, $stateParams, errors, confirm) {
-          return projects.open($stateParams.project).catch(function (error) {
-            if (error === 'locked') {
-              return confirm(sprintf('Unlock %s', $stateParams.project),
-                             sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
-                .then(function () {
-                  return projects.open($stateParams.project, 'force-lock')
-                                 .catch(function (error) {
-                                    $state.go('list-projects');
-                                    errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-                                    return null;
-                                   });
-                  })
-                 .catch(function () {
-                   $state.go('list-projects');
-                 });
-              } else {
-                $state.go('list-projects');
-                errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-                return null;
-              }
-            });
-          }]},
+                                   return projects.open($stateParams.project).catch(function (error) {
+                                     if (error === 'locked') {
+                                       return confirm(sprintf('Unlock %s', $stateParams.project),
+                                                      sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
+                                         .then(function () {
+                                           return projects.open($stateParams.project, 'force-lock')
+                                                          .catch(function (error) {
+                                                             $state.go('list-projects');
+                                                             errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                                             return null;
+                                                            });
+                                           })
+                                          .catch(function () {
+                                            $state.go('list-projects');
+                                          });
+                                       } else {
+                                         $state.go('list-projects');
+                                         errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                         return null;
+                                       }
+                                     });
+                                   }]},
           onExit: ['openProject', function (project) {
             project.close();
           }]

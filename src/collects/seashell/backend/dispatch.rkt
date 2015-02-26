@@ -505,12 +505,23 @@
               (result . #t))]
       [(hash-table
         ('id id)
-        ('type "getRecent")
+        ('type "getMostRecentlyUsed")
         ('project project)
-        ('subdirectory subdirectory))
+        ('directory directory))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(get-recent-file project subdirectory)))]
+              (result . ,(get-most-recently-used project directory)))]
+      [(hash-table
+        ('id id)
+        ('type "updateMostRecentlyUsed")
+        ('project project)
+        ('directory directory)
+        ('predicate predicate)
+        ('data data))
+       (update-most-recently-used project directory predicate data)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
       [(hash-table
         ('id id)
         ('type "saveSettings")

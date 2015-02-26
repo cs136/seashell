@@ -32,7 +32,6 @@
          write-file
          list-files
          rename-file
-         get-recent-file
          read-settings
          write-settings)
 
@@ -129,7 +128,6 @@
 ;;  Contents of the file as a bytestring.
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? bytes?)
-  (update-recent-file project file)
   (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
 
@@ -226,50 +224,4 @@
         (thunk (read)))]
     [else #f]))
 
-;; (update-recent-file project file)
-;; Updates ~/.seashell/recent.txt to say that `file' was the most
-;; recent file for the project `project'.
-;;
-;; Arguments:
-;;  project - the project to update.
-;;  file - the most recent file.
-(define/contract (update-recent-file project file)
-  (-> (and/c project-name? is-project?) path-string? void?)
-  (define recent (build-path (read-config 'seashell) "recent.txt"))
-  (when (not (file-exists? recent))
-    (with-output-to-file recent (thunk (write (make-hash)))))
-  (define r (with-input-from-file recent read))
 
-  (check-and-build-path project file)   ;Make sure this is a real
-                                        ;project file.
-  (define (update-tree f)
-    (define-values (base name _) (split-path f))
-    (define dir (if (path? base)
-                    (string-append project "/" (path->string base))
-                    project))
-    (hash-set! r dir name)
-    (cond
-     [(path? base) (update-tree base)]
-     [else (hash-set! r project name)]))
-
-  (update-tree file)
-
-  (with-output-to-file recent (thunk (write r)))
-  (void))
-
-;; (get-recent-file project subdirectory)
-;; Reads the most recent file name for the specified project.
-;;
-;; Arguments:
-;;  project - the project to look in
-;;  subdirectory - the subdirectory to check the default for.
-(define/contract (get-recent-file project subdirectory)
-  (-> path-string? path-string? path-string?)
-  (define directory (match subdirectory
-                      ["" project]
-                      [sub (string-append project "/" sub)]))
-  (define recent (build-path (read-config 'seashell) "recent.txt"))
-  (cond
-   [(not (file-exists? recent))
-    (with-output-to-file recent (thunk (write (make-hash))))])
-  (hash-ref (with-input-from-file recent read) directory #f))

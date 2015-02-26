@@ -33,8 +33,9 @@ execute_process(
   OUTPUT_VARIABLE GIT_COMMIT_HASH
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-set(SEASHELL_VERSION "2.0")
-set(SEASHELL_API_VERSION "2")
+
+set(SEASHELL_VERSION "2.1.0")
+set(SEASHELL_API_VERSION "3")
 
 # Variable needed for backend and collects.
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
