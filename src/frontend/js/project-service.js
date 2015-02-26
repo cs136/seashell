@@ -368,8 +368,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         /**
          * SeashellProject.hasFile(question, folder, filename)
          *
-         * Reads the file located at the given path, relative to the
-         *  project root.
+         * Returns if the file exists.
          */
         SeashellProject.prototype.hasFile = function(question, folder, filename) {
           var self = this;
