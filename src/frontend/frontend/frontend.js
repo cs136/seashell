@@ -1094,6 +1094,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if(self.console.running) {
             self.project.sendEOF(self.console.PIDs[0]).then(function () {
               self.console.running = false;
+              self.userInput = "";
             });
           }
         };
