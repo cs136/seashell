@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Seashell's communications backend.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
@@ -36,6 +35,7 @@
  *   can be resolved.
  */
 function SeashellWebsocket(uri, key, failure, closes) {
+  "use strict";
   var self = this;
 
   self.coder = new SeashellCoder(key);
@@ -114,11 +114,13 @@ function SeashellWebsocket(uri, key, failure, closes) {
 /** Closes the connection.
  */
 SeashellWebsocket.prototype.close = function(self) {
+  "use strict";
   this.websocket.close();
 };
 
 /** Does the client  authentication.  Internal use only. */
 SeashellWebsocket.prototype._authenticate = function(server_challenge, self) {
+  "use strict";
   /** Generate a nonce. */
   var client_nonce = sjcl.random.randomWords(32);
   for (var i = 0; i < client_nonce.length; i++) {
@@ -151,6 +153,7 @@ SeashellWebsocket.prototype._authenticate = function(server_challenge, self) {
  * @returns {Promise} - jQuery promise.
  */
 SeashellWebsocket.prototype._sendMessage = function(message, deferred) {
+  "use strict";
   var self = this;
   // Reserve a slot for the message.
   var request_id = self.lastRequest++;
@@ -352,7 +355,7 @@ SeashellWebsocket.prototype.deleteDirectory = function(name, dir_name, deferred)
     project : name,
     dir : dir_name },
     deferred);
-}
+};
 
 SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
   return this.sendMessage({
@@ -360,7 +363,7 @@ SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
     pid : pid,
     contents : contents,
     deferred : deferred});
-}
+};
 
 SeashellWebsocket.prototype.getExportToken = function(project, deferred) {
   return this.sendMessage({
@@ -384,6 +387,24 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, def
     oldName: oldName,
     newName: newName},
   deferred);
+};
+
+SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, directory, deferred) {
+  return this.sendMessage({
+    type : "getMostRecentlyUsed",
+    project : project,
+    directory : directory},
+    deferred);
+};
+
+SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, directory, predicate, data, deferred) {
+  return this.sendMessage({
+    type : "updateMostRecentlyUsed",
+    project : project,
+    directory : directory,
+    predicate : predicate,
+    data : data},
+    deferred);
 };
 
 SeashellWebsocket.prototype.saveSettings = function(settings, deferred) {

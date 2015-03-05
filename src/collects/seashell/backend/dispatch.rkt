@@ -232,6 +232,7 @@
                                            (for/list 
                                              ([i (in-range (read-config 'io-buffer-size))])
                                              #:break (not (char-ready? port))
+                                             #:break (eof-object? (peek-char port))
                                              (read-char port))))
                         (send-contents-for tag contents)]
                       [else
@@ -499,6 +500,25 @@
         ('oldName old-file)
         ('newName new-file))
        (rename-file project old-file new-file)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getMostRecentlyUsed")
+        ('project project)
+        ('directory directory))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(get-most-recently-used project directory)))]
+      [(hash-table
+        ('id id)
+        ('type "updateMostRecentlyUsed")
+        ('project project)
+        ('directory directory)
+        ('predicate predicate)
+        ('data data))
+       (update-most-recently-used project directory predicate data)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

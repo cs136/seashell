@@ -45,7 +45,8 @@ SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 # Grab the core LLVM components.
-llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core bitreader asmparser irreader)
+# llvm_map_components_to_libnames(REQ_LLVM_LIBRARIES native nativecodegen)
+llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES native nativecodegen) ## FIXME remove when we upgrade to clang 3.5
 
 # Link.
 add_library(seashell-clang SHARED compiler.cc)
@@ -54,4 +55,7 @@ target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGe
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
                               ${REQ_LLVM_LIBRARIES})
+add_executable(seashell-test-clang driver.cc)
+target_link_libraries(seashell-test-clang seashell-clang)
 INSTALL(TARGETS seashell-clang LIBRARY DESTINATION lib)
+INSTALL(TARGETS seashell-test-clang RUNTIME DESTINATION bin)

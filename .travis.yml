@@ -1,0 +1,29 @@
+language: c++
+compiler: clang
+sudo: false
+cache:
+  directories:
+    - $HOME/.ccache
+env:
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
+before_install:
+  - mkdir $HOME/bin
+  - git clone https://github.com/greghendershott/travis-racket.git
+  - cat travis-racket/install-racket.sh | bash
+  - wget http://www.cmake.org/files/v3.1/cmake-3.1.3-Linux-x86_64.sh
+  - mkdir $HOME/cmake
+  - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake
+  - npm install -g jshint
+  - curl -L http://samba.org/ftp/ccache/ccache-3.2.1.tar.gz | tar xzf -
+  - pushd ccache-3.2.1
+  - ./configure --prefix=$HOME/ccache
+  - make install
+  - ln -s ccache $HOME/ccache/bin/$CC
+  - ln -s ccache $HOME/ccache/bin/$CXX
+  - popd
+script:
+  - mkdir build
+  - cd build
+  - $HOME/cmake/bin/cmake -DCMAKE_C_COMPILER=$HOME/ccache/bin/${CC} -DCMAKE_CXX_COMPILER=$HOME/ccache/bin/${CXX} -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+  - make
+  - make install

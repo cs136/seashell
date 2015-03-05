@@ -28,12 +28,19 @@ function(html_compile filename)
   set(output ${base_abs}.html)
   add_custom_target(
     ${base} ALL
-    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION ${SEASHELL_VERSION})' -o ${output} ${filename})
+    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -o ${output} ${filename})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
 
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
+
+# Lint the source JavaScript
+find_program(JS_LINTER jshint)
+if (JS_LINTER)
+  message("JavaScript linter found: ${JS_LINTER}")
+  add_custom_target(_lint ALL COMMAND ${JS_LINTER} --exclude "'js/lib/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif (JS_LINTER)
 
 # Files to install.
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html

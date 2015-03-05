@@ -197,7 +197,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return match[0]._placeInTree(file, path.slice(1), soft_place, contents, encoding);
             else {
               var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
-              return (dir.fullname == "" ? $q.when() : 
+              return (dir.fullname === "" ? $q.when() : 
                   $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
@@ -364,6 +364,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             return $q.reject("Cannot open a directory in editor.");
           return file.read();
         };
+        
+        /**
+         * SeashellProject.hasFile(question, folder, filename)
+         *
+         * Returns if the file exists.
+         */
+        SeashellProject.prototype.hasFile = function(question, folder, filename) {
+          var self = this;
+          var file = self.root.find(self._getPath(question, folder, filename));
+          return file && !file.is_dir;
+        };
 
         /**
          * Seashellproject.saveFile(question, folder, filename)
@@ -395,6 +406,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
 
         /**
+         * SeashellProject.hasQuestion(question)
+         *
+         * Returns if a question exists.
+         */
+        SeashellProject.prototype.hasQuestion = function (question) {
+          var self = this;
+          var res = self.root.find(self._getPath(question));
+          return res && res.is_dir;
+        };
+
+        /**
          * SeashellProject.deleteFile(file)
          *
          * Deletes the given SeashellFile and removes it from the project's
@@ -405,6 +427,54 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var path = self._getPath(question, folder, fname);
           return self.root._removeFromTree(path.split("/"));
         };
+
+        /**
+         * SeashellProject.mostRecentlyUsed(question)
+         *
+         * @param {String} question - question or null for the project.
+         *
+         * Returns the most recently used question/file given
+         * a question/project.
+         */
+        SeashellProject.prototype.mostRecentlyUsed = function (question) {
+          var self = this;
+          return $q.when(ws.socket.getMostRecentlyUsed(self.name, (question && self._getPath(question)) || false))
+            .then(function (recent) {
+              if (recent) {
+                if (question && self.hasFile(question, recent.part, recent.file)) {
+                  return recent;
+                } else if (!question && self.hasQuestion(recent)) {
+                  return recent;
+                } else {
+                  return null;
+                }
+              }
+              return null;
+            });
+        };
+
+        /**
+         * SeashellProject.updateMostRecentlyUsed(question, part, file)
+         *
+         * @param {String} question/part/file - Most recently used file.
+         *
+         * Updates the most recently used file.
+         */
+        SeashellProject.prototype.updateMostRecentlyUsed = function (question, part, file) {
+          var self = this;
+          var qpath = "";
+          if (question && part && file) {
+            var path = self._getPath(question, part, file);
+            qpath = self._getPath(question);
+
+            return $q.all([ws.socket.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question),
+                           ws.socket.updateMostRecentlyUsed(self.name, qpath, ["fexists", path], {part: part, file: file})]);
+          } else if (question) {
+            qpath = self._getPath(question);
+            return ws.socket.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question);
+          }
+        };
+
 
         /**
          * SeashellProject.remove()
@@ -534,12 +604,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(question)) {
             var guess = self.name.replace(/^a/i, "A") + question.replace(/^q/i, "P");
             var extended = guess+"Extended";
-            if(marmoset.projects().indexOf(extended) >= 0)
-              return extended;
-            if(marmoset.projects().indexOf(guess) >= 0)
-              return guess;
+            return marmoset.projects().then(function(projects) {
+              if(projects.indexOf(extended) >= 0)
+                return $q.when(extended);
+              if(projects.indexOf(guess) >= 0)
+                return $q.when(guess);
+            });
           }
-          return false;
+          return $q.when(false);
         };
 
         /**

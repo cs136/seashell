@@ -17,6 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
@@ -143,6 +145,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         });
       }
     };
+  }])
+  .directive('focusOn', ['$timeout', function($timeout) {
+     return function(scope, elem, attr) {
+        scope.$on(attr.focusOn, function(e) {
+            $timeout(function () {elem[0].focus();});
+        });
+     };
   }])
   .factory('RenameFileModal', ['$modal', 'error-service',
     function($modal, errors) {
@@ -278,18 +287,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             templateUrl: "frontend/templates/marmoset-submit-template.html",
             controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
             function ($scope, $state, errors, $q, marmoset) {
-              $scope.marmoset_projects = marmoset.projects();
-              $scope.selected_project = project.currentMarmosetProject(question) || undefined;
-              $scope.submit = function() {
-                $scope.$close();
-                project.submit(question, $scope.selected_project)
+              $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
+                .then(function(res) {
+                  $scope.marmoset_projects = res[0];
+                  $scope.selected_project = res[1];
+                  $scope.submit = function() {
+                    $scope.$close();
+                    project.submit(question, $scope.selected_project)
                        .catch(function (error) {
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
                          notify(false, $scope.selected_project);
                        }).then(function () {
                          notify(true, $scope.selected_project);
                        });
-              };
+                  };
+                });
             }]}).result;
         };
       }])
@@ -299,6 +311,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         return function (results) {
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-results-template.html",
+            size: "lg",
             controller: ['$scope', '$state', 'error-service',
               function ($scope, $state, errors) {
                 $scope.results = results;
@@ -327,7 +340,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Adds and removes watchers on the settings service. */
         self.addWatcher = function(fn, invoke) {
           self.notify[nKey] = fn;
-          invoke && fn ();
+          var result = invoke && fn ();
           return nKey ++;
         };
         self.removeWatcher = function(key) {
@@ -382,12 +395,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self.stdout = "";
     self.stderr = "";
     self._contents = "";
+    var ind = "";
+    var spl ="";
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
-        var ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = io.message.split("\n");
+          spl = io.message.split("\n");
           self._write(self.stdout);
           while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stdout = spl[0];
@@ -396,9 +411,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.stdout += io.message;
       }
       else if(io.type == "stderr") {
-        var ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\n");
         if(ind > -1) {
-          var spl = io.message.split("\n");
+          spl = io.message.split("\n");
           self._write(self.stderr);
           while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
@@ -487,7 +502,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Help function
         self.help = function () {
-          $modal.open({templateUrl: "frontend/templates/help-template.html"});
+          $modal.open({
+            templateUrl: "frontend/templates/help-template.html",
+            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+              function ($scope, confirm, $window, cookies) {
+                $scope.reset = function () {
+                  confirm("Reset Seashell",
+                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
+                    .then(function () {
+                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
+                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
+                                             "/cs136/seashell/index.cgi?reset='reset'";
+                    });
+                };
+              }]});
         };
         // Logout
         self.logout = function () {
@@ -573,7 +601,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             ifrm.setAttribute("src", url);
             ifrm.setAttribute("style", "display:none");
             document.body.appendChild(ifrm);
-        })};
+        });};
         self.newQuestion = function () {
           newQuestionModal(openProject);
         };
@@ -584,6 +612,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           deleteProjectModal(openProject.name).then(
               function () {$state.go('list-projects');});
         };
+
+      self.project.mostRecentlyUsed()
+        .then(function (recent) {
+          if (recent && $state.is('edit-project')) {
+            $state.go('edit-project.editor',
+                      {question: recent},
+                      {location: "replace"});
+          }
+          return recent;
+        });
     }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
@@ -607,12 +645,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
-          self.marmoset_refresh_interval &&
+          var result = self.marmoset_refresh_interval &&
             $interval.cancel(self.marmoset_refresh_interval);
           self.marmoset_refresh_interval = null;
         }
         $scope.$on('$destroy', function() {
-          cancelMarmosetRefresh()
+          cancelMarmosetRefresh();
           self.console.clear();
         });
        
@@ -622,6 +660,35 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.common_files = result.common;
           self.question_files = result.question;
           self.test_files = result.tests;
+
+          self.project.currentMarmosetProject(self.question).then(function(target) {
+          if(target) {
+            marmoset.results(target).then(function(result) {
+              var data = result.result;
+              if(result.error) {
+                errors.report(result.result, sprintf("Failed to fetch previous Marmoset results for %s.", target));
+                self.marmoset_short_results = null;
+              }
+              else if(data.length > 0 && data[0].status=="complete") {
+                var sub_pk = data[0].submission;
+                var failed = false;
+                var related = _.filter(data, function (entry) {
+                  return entry.submission === sub_pk;
+                });    
+                self.marmoset_long_results = related;
+                var total = 0, total_passed = 0;
+                for(var i = 0; i < related.length; i++) {
+                  total += related[i].points;
+                  total_passed += data[i].outcome === "passed" ? data[i].points : 0;
+                  failed = failed || data[i].outcome !== "passed";
+                }
+                self.marmoset_short_results = 
+                  sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
+                        total_passed, total);
+              }
+            });
+          }
+          });
         };
         $scope.refresh = self.refresh;
 
@@ -719,6 +786,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /** Try to load the question, and go back to the project if we can't. */ 
         try { 
           self.refresh();
+          self.project.updateMostRecentlyUsed(self.question);
+          self.project.mostRecentlyUsed(self.question)
+            .then(function (recent) {
+              if (recent && $state.is('edit-project.editor')) {
+                $state.go("edit-project.editor.file",
+                          {part: recent.part, file: recent.file},
+                          {location: "replace"});
+              }
+            });
         } catch (e) {
           errors.report({}, sprintf("Could not open question %s!", self.question));
           $state.go("edit-project");
@@ -743,11 +819,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleEditor = null;
         self.consoleLoad = function(console_cm) {
-          self.console.inst = console_cm;
-          self.console.inst.on("update", function() {
-            var scr = self.console.inst.getScrollInfo();
-            self.console.inst.scrollTo(scr.left, scr.height);
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
           });
           onResize();
         };
@@ -837,6 +914,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   });
               }, 2000);
               self.console.errors = [];
+            } else {
+              self.editor.clearHistory();
             }
             self.loaded = true;
           });
@@ -857,28 +936,34 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             lineNumbers: !self.isBinaryFile,
             readOnly: !self.ready || self.isBinaryFile,
             mode: mime,
-            theme: settings.settings['text_style'],
-            tabSize: parseInt(settings.settings['tab_width']),
-            indentUnit: parseInt(settings.settings['tab_width']),
+            theme: settings.settings.text_style,
+            tabSize: parseInt(settings.settings.tab_width),
+            indentUnit: parseInt(settings.settings.tab_width),
             onLoad: self.editorLoad,
+            matchBrackets: true,
             rulers: [80],
             extraKeys: {
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               }
             }
           };
-          if (settings.settings['editor_mode'] === 'vim') {
-            self.editorOptions['vimMode'] = true;
-          } else if(settings.settings['editor_mode'] === 'emacs') {
-            self.editorOptions['keyMap'] = 'emacs';
-            self.editorOptions['vimMode'] = false;
+          if (settings.settings.editor_mode === 'vim') {
+            self.editorOptions.vimMode = true;
+          } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
+            self.editorOptions.vimMode = false;
           } else {
-            self.editorOptions['keyMap'] = 'default';
-            self.editorOptions['vimMode'] = false;
+            self.editorOptions.keyMap = 'default';
+            self.editorOptions.vimMode = false;
+          }
+          
+          if (self.editorOptions.vimMode) {
+            delete self.editorOptions.extraKeys.Esc;
           }
           
           // Force the font size at any rate.
@@ -932,6 +1017,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.console.clear();
             self.project.run(self.question, self.folder, self.file, self.contents, false)
               .then(function(res) {
+                $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
@@ -983,6 +1069,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           });
         };
 
+        self.indentAll = function() {
+          var lineCount = self.editor.lineCount();
+          for (var i = 0; i < lineCount; i++)
+            self.editor.indentLine(i);
+        };
+
         self.userInput = "";
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
@@ -995,10 +1087,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         };
 
+        self.clearConsole = function () {
+          self.console.clear();
+        };
+
         self.sendEOF = function() {
           if(self.console.running) {
             self.project.sendEOF(self.console.PIDs[0]).then(function () {
               self.console.running = false;
+              self.userInput = "";
             });
           }
         };
@@ -1019,7 +1116,24 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             evt.preventDefault();
             self.killProgram();
           }
-        });
+        }).add({
+          combo: 'ctrl+d',
+          description: "Sends EOF",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.sendEOF();
+          }
+        }).add({
+          combo: 'ctrl+u',
+          description: "Starts Tests",
+          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+          callback: function (evt) {
+            evt.preventDefault();
+            self.testFile();
+          }
+        }); 
+         
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
@@ -1034,7 +1148,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           .then(function(conts) {
             self.contents = conts;
             self.ready = true;
+            if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
+            self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
               self.isBinaryFile = true;
@@ -1099,28 +1215,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "ProjectController as projectView",
         resolve: {openProject: ['projects', '$state', '$stateParams', 'error-service',
                                 'ConfirmationMessageModal', function(projects, $state, $stateParams, errors, confirm) {
-          return projects.open($stateParams.project).catch(function (error) {
-            if (error === 'locked') {
-              return confirm(sprintf('Unlock %s', $stateParams.project),
-                             sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
-                .then(function () {
-                  return projects.open($stateParams.project, 'force-lock')
-                                 .catch(function (error) {
-                                    $state.go('list-projects');
-                                    errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-                                    return null;
-                                   });
-                  })
-                 .catch(function () {
-                   $state.go('list-projects');
-                 });
-              } else {
-                $state.go('list-projects');
-                errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
-                return null;
-              }
-            });
-          }]},
+                                   return projects.open($stateParams.project).catch(function (error) {
+                                     if (error === 'locked') {
+                                       return confirm(sprintf('Unlock %s', $stateParams.project),
+                                                      sprintf('Project %s is open in another browser.  Proceed?', $stateParams.project))
+                                         .then(function () {
+                                           return projects.open($stateParams.project, 'force-lock')
+                                                          .catch(function (error) {
+                                                             $state.go('list-projects');
+                                                             errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                                             return null;
+                                                            });
+                                           })
+                                          .catch(function () {
+                                            $state.go('list-projects');
+                                          });
+                                       } else {
+                                         $state.go('list-projects');
+                                         errors.report(error, sprintf("Could not open project %s!", $stateParams.project));
+                                         return null;
+                                       }
+                                     });
+                                   }]},
           onExit: ['openProject', function (project) {
             project.close();
           }]

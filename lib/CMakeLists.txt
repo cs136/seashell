@@ -49,7 +49,7 @@ ExternalProject_Add(
   URL ${CMAKE_CURRENT_SOURCE_DIR}/libtomcrypt
   CONFIGURE_COMMAND ""
   BUILD_IN_SOURCE 1
-  BUILD_COMMAND sh -c "CFLAGS='-fPIC' make"
+  BUILD_COMMAND sh -c "CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} CFLAGS='-fPIC' make"
   INSTALL_COMMAND "")
 
 # libssh2 - libssh2 SSH library
@@ -58,18 +58,16 @@ ExternalProject_Add(
   URL ${CMAKE_CURRENT_SOURCE_DIR}/libssh2
   PATCH_COMMAND <SOURCE_DIR>/buildconf
   CONFIGURE_COMMAND <SOURCE_DIR>/configure --with-openssl --enable-static --disable-shared
-                    CFLAGS=-fPIC
+                    CFLAGS=-fPIC CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
   BUILD_COMMAND make -j
   INSTALL_COMMAND "")
 
 # External projects (CMake based)
 # Global overrides 
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
-set(LLVM_BUILD_TOOLS OFF)
-set(LLVM_TARGETS_TO_BUILD "X86")
-set(CLANG_INCLUDE_DOCS OFF)
+set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
 add_subdirectory(llvm)
 add_custom_target(_build_clang ALL)
 add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen)
@@ -84,6 +82,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/llvm-symbolizer DESTINATIO
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
 set(LIBSSH2_LIBRARY "")
 set(LIBSSH2_FOUND true)
+set(__pkg_config_checked_LIBSSH2 1000) # Force SSH2 found.
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 set(THREADSAFE ON)
 add_subdirectory(libgit2 EXCLUDE_FROM_ALL)

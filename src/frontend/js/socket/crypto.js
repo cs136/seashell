@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Seashell's cryptographic communications backend.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
@@ -31,6 +30,7 @@ sjcl.random.startCollectors();
  * code written in crypto.rkt [Racket FFI] and crypto.c [C Implementation].
  */
 function SeashellCoder(key) {
+  "use strict";
   this.cipher = new sjcl.cipher.aes(key);
 }
 
@@ -71,6 +71,7 @@ SeashellCoder.Bytes = {
  *        entropy generated from window.crypto.getRandomValues()
  */
 SeashellCoder.addEntropy = function(entropy) {
+  "use strict";
   if (!entropy) {
     entropy = new Uint32Array(32);
 
@@ -89,6 +90,7 @@ SeashellCoder.addEntropy = function(entropy) {
  *  be 12 bytes, and tag must be 16 bytes.
  */
 SeashellCoder.prototype.encrypt = function(frame, plain) {
+  "use strict";
   var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
   var ivArr = SeashellCoder.Bytes.toBits(iv);
   var frameArr = SeashellCoder.Bytes.toBits(frame);
@@ -113,6 +115,7 @@ SeashellCoder.prototype.encrypt = function(frame, plain) {
  * @returns {Array} Decrypted data, or will throw an exception.  Consult SJCL
  * documentation. */
 SeashellCoder.prototype.decrypt = function(coded, iv, tag, plain) {
+  "use strict";
   var ivArr = SeashellCoder.Bytes.toBits(iv);
   var plainArr = SeashellCoder.Bytes.toBits(plain);
   var authArr = sjcl.bitArray.concat(ivArr, plainArr);
