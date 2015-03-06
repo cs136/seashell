@@ -982,10 +982,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
-              "Ctrl-Y": function(){
-                self.activateResize(); 
-                console.log("CTRL-Y FUN");
-              },
               "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
