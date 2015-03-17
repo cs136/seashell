@@ -23,12 +23,14 @@
   
   <alert ng-repeat="error in frontend.errors.errors"
     type="danger" close="frontend.errors.suppress($index)" role="alert">
-    <b>An error has occurred: </b>{{error.shorthand}}  If this error persists,
+    <b>An error has occurred: </b>{{error.shorthand}}  If this error <b>persists</b>,
     please email <a href="mailto:seashell@@cs.uwaterloo.ca">seashell@@cs.uwaterloo.ca</a>
     the error message and the following information for debugging purposes:
     <pre ng-cloak>
-{{error.error}}
-    </pre>
+version:     @(values SEASHELL_VERSION) (@(values SEASHELL_BRANCH) at @(values SEASHELL_COMMIT))
+api_version: @(values SEASHELL_API_VERSION)
+host:        {{frontend.host}}
+error:       {{error.error}}</pre>
   </alert>
 
   <div ui-view></div>

@@ -498,6 +498,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
+        self.host = cookieStore.get(SEASHELL_CREDS_COOKIE).host;
 
         // Help function
         self.help = function () {
