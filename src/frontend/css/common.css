@@ -342,8 +342,13 @@ div.tooltip .tooltip-inner {
   text-align:right;
 }
 
+#resize-button {
+  display: none;
+}
+
 @media (min-width: 992px) {
-	#console:not(.console-narrow) #console-title {
+	#resize-button { display: inline; }
+  #console:not(.console-narrow) #console-title {
     border: 1px solid #ddd;
 	  border-left: none;
 	}
@@ -351,7 +356,6 @@ div.tooltip .tooltip-inner {
   #console:not(.console-narrow) #console-input { border-left: none }
   #console.console-narrow { width: 100%; }
   #editor.console-narrow { width: 100%; }
-
   #question-controls { text-align: left; }
   #questions-row-container { text-align: left; }
 }
