@@ -674,8 +674,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 var total = 0, total_passed = 0;
                 for(var i = 0; i < related.length; i++) {
                   total += related[i].points;
-                  total_passed += data[i].outcome === "passed" ? data[i].points : 0;
-                  failed = failed || data[i].outcome !== "passed";
+                  total_passed += related[i].outcome === "passed" ? related[i].points : 0;
+                  failed = failed || related[i].outcome !== "passed";
                 }
                 self.marmoset_short_results = 
                   sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
@@ -744,8 +744,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                       var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
-                        total_passed += data[i].outcome === "passed" ? data[i].points : 0;
-                        failed = failed || data[i].outcome !== "passed";
+                        total_passed += related[i].outcome === "passed" ? related[i].points : 0;
+                        failed = failed || related[i].outcome !== "passed";
                       }
                       
                       self.marmoset_short_results = 
