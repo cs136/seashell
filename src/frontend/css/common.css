@@ -80,35 +80,12 @@ body {
 #console {
 }
 
-#console > .CodeMirror {
-  height: 299px;
-  border: 1px solid #ddd;
-  border-top: none;
-  border-bottom: none;
-  clear: both;
-}
-
-#console > .CodeMirror .CodeMirror-lines {
-  padding-bottom: 0;
-  padding-top: 0;
-}
-
-#console > .CodeMirror .CodeMirror-lines pre {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  padding-left: 20px;
-}
-
 .editor-console-title {
   border: 1px solid #ddd;
   background: #f4f4f4;
   font-size: 18px;
   padding: 5px 0 3px 18px;
   font-weight: 200;
-}
-
-#console-title {
-  border-top: none;
 }
 
 .console-controls {
@@ -336,14 +313,49 @@ div.tooltip .tooltip-inner {
   margin-bottom: 5px;
 }
 
+
+#console-title {
+  border-top: none;
+}
+
+#console > .CodeMirror {
+  height: 299px;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-bottom: none;
+  clear: both;
+}
+
+#console > .CodeMirror .CodeMirror-lines {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+#console > .CodeMirror .CodeMirror-lines pre {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 20px;
+}
+
+#question-controls {
+  float:right;
+  text-align:right;
+}
+
+#resize-button {
+  display: none;
+}
+
 @media (min-width: 992px) {
-	#console-title {
+	#resize-button { display: inline; }
+  #console:not(.console-narrow) #console-title {
     border: 1px solid #ddd;
 	  border-left: none;
 	}
-  #console > .CodeMirror { border-left: none; }
-  #console-input { border-left: none }
-
+  #console:not(.console-narrow) .CodeMirror { border-left: none; }
+  #console:not(.console-narrow) #console-input { border-left: none }
+  #console.console-narrow { width: 100%; }
+  #editor.console-narrow { width: 100%; }
   #question-controls { text-align: left; }
   #questions-row-container { text-align: left; }
 }
@@ -362,11 +374,6 @@ input::-ms-clear {
 
 #file-menu .row:after {
   clear:left;
-}
-
-#question-controls {
-  float:right;
-  text-align:right;
 }
 
 #marmoset-details-table td, #marmoset-details-table th {

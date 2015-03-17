@@ -836,6 +836,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.col = 0; self.line = 0;
         self.editorFocus = false;
         self.contents = "";
+        self.forceNarrow = false;
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
         // Saving event.
         function runWhenSaved(fn) {
@@ -855,14 +856,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
         });
-        // Resize events
+        self.activateResize = function(){
+          self.forceNarrow = !self.forceNarrow;
+          onResize();
+        };
+        //Resize on window size change
         function onResize() {
+          var narrow = self.forceNarrow || $($document).width() < 992;
           var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
                            min_height);
-          var narrow = $($document).width() < 992;
-          $('#editor > .CodeMirror')
+                   $('#editor > .CodeMirror')
             .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
           $('#console > .CodeMirror')
             .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
