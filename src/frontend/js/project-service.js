@@ -500,6 +500,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           // TODO: handle racket files.
           var file = self.root.find(self._getPath(question, folder, filename));
           var tests = test ? self.getTestsForFile(file) : [];
+
+          if (test && tests.length === 0)
+            return $q.reject("No tests for question!");
+
           return $q.when(ws.socket.compileAndRunProject(self.name, file.fullname(), tests));
         };
 
