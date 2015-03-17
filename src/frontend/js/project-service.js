@@ -675,8 +675,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                         return projects.indexOf(skel) == -1;
                       });
                   var failed_projects = [];
-                  var start = $q.defer();
-                  start.resolve();
+                  var start = $q.when();
                   return _.foldl(new_projects,
                       function(in_continuation, template) {
                         function clone(failed) {
@@ -698,7 +697,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                            function () {return clone(false);},
                            function () {return clone(true);}); 
                       },
-                      start.promise)
+                      start)
                     .then(function() {return (new_projects);})
                     .catch(function() {return $q.reject(failed_projects);});
                 });
