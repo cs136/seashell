@@ -498,6 +498,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
+        self.host = cookieStore.get(SEASHELL_CREDS_COOKIE).host;
 
         // Help function
         self.help = function () {
@@ -564,13 +565,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     };
 
-    /** Fetch onClick handler. */
-    self.fetch = function () {
-      return projects.fetch().catch(function (projects) {
-        errors.report(projects, 'Could not fetch projects.');
-      }).then(function () {
-        self.projectList.refresh();
-      });
+    /** Refresh onClick handler. */
+    self.refresh = function () {
+      self.projectList.refresh();
     };
 
     // Tests if project is deleteable
@@ -678,8 +675,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                 var total = 0, total_passed = 0;
                 for(var i = 0; i < related.length; i++) {
                   total += related[i].points;
-                  total_passed += data[i].outcome === "passed" ? data[i].points : 0;
-                  failed = failed || data[i].outcome !== "passed";
+                  total_passed += related[i].outcome === "passed" ? related[i].points : 0;
+                  failed = failed || related[i].outcome !== "passed";
                 }
                 self.marmoset_short_results = 
                   sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
@@ -748,8 +745,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                       var total = 0, total_passed = 0;
                       for (var i = 0; i < related.length; i++) {
                         total += related[i].points;
-                        total_passed += data[i].outcome === "passed" ? data[i].points : 0;
-                        failed = failed || data[i].outcome !== "passed";
+                        total_passed += related[i].outcome === "passed" ? related[i].points : 0;
+                        failed = failed || related[i].outcome !== "passed";
                       }
                       
                       self.marmoset_short_results = 
@@ -1180,21 +1177,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             return new function () {
               var self = this;
               self.list = [];
-              self.question_list = [];
+              self.question_list = {};
               /** Run this every time the state associated with this controller is loaded.
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
-                return projects.list().then(function (projects_list) {
-                  self.list = projects_list;
+                return projects.fetch().catch(function (projects) {
+                  errors.report(projects, 'Could not fetch projects.');
+                }).then(function () {
+                  return projects.list().then(function (projects_list) {
+                    var new_question_list = {};
 
-                  return $q.when(_.map(projects_list, function (project) {
-                    return projects.open(project, 'none').then(function (project_object) {
-                      var questions = project_object.questions();
-                      self.question_list[project] = questions;
+                    return $q.when(_.map(projects_list, function (project) {
+                      return projects.open(project, 'none').then(function (project_object) {
+                        var questions = project_object.questions();
+                        new_question_list[project] = questions;
+                      });
+                    })).then(function () {
+                      self.list = projects_list;
+                      self.question_list = new_question_list;
                     });
-                  }));
-                }).catch(function (error) {
-                  errors.report(error, "Could not generate list of projects.");
+                  }).catch(function (error) {
+                    errors.report(error, "Could not generate list of projects.");
+                  });
                 });
               };
               /** Store the key into our callback [this is important, as a new object
@@ -1270,9 +1274,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         function(cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
     ws.connect()
         .then(function () {
-          return projects.fetch().catch(function (projects) {
-            errors.report(projects, 'Could not fetch projects.');
-          });
         });
     // Reload settings on (re)connect.
     ws.register_callback('connected', function () {
