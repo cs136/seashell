@@ -1,5 +1,5 @@
 # Seashell
-# Copyright (C) 2012-2013 The Seashell Maintainers
+# Copyright (C) 2012-2015 The Seashell Maintainers
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,20 +74,6 @@ add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/clang-tblgen DESTINATION bin)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/llvm-symbolizer DESTINATION bin)
 
-# libgit2 overrides.
-# (Libraries) - the set of libraries needs to stay in sync with libssh2.  These are overrides
-# for libgit2.
-# (Note: As we compile libgit2 as a static library, we don't actually need to pass along the library
-# directories).
-set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
-set(LIBSSH2_LIBRARY "")
-set(LIBSSH2_FOUND true)
-set(__pkg_config_checked_LIBSSH2 1000) # Force SSH2 found.
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
-set(THREADSAFE ON)
-add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
-add_dependencies(git2 libssh2)
-
 # Set include paths.
 set(LIBSSH2_LIBRARIES
     ssh2 
@@ -118,16 +104,6 @@ set(CLANG_SOURCE_INCLUDE_DIRS
     PARENT_SCOPE)
 set(CLANG_BINARY_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/llvm/tools/clang/include
-    PARENT_SCOPE)
-set(LIBGIT2_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/libgit2/include
-    PARENT_SCOPE)
-set(LIBGIT2_LINK_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/libgit2
-    ${LIBSSH2_LINK_DIRS}
-    PARENT_SCOPE)
-set(LIBGIT2_LIBRARIES
-    git2 ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBSSH2_LIBRARIES}
     PARENT_SCOPE)
 set(LTC_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers

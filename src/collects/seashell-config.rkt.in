@@ -101,7 +101,7 @@
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
       ;; Location of the default project template
-      (cons 'default-project-template       "https://github.com/cs136/seashell-default")
+      (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; Location of SSL key.
       (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
       ;; Location of SSL certificate.
