@@ -816,6 +816,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
+        /* runnerFile is the file to be run when RUN or TEST is clicked. false
+         * if the current file is not runnable (and Seashell can't infer which
+         * file to run). */
+         // TODO: is runnerFolder needed?
+        self.runnerFile = false;
         self.consoleLoad = function(console_cm) {
           self.consoleEditor = console_cm;
           self.consoleEditor.on("change", function() {
@@ -1016,7 +1021,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, self.folder, self.file, self.contents, false)
+            // TODO: b2coutts: need runnerFolder variable, or does 'question' always suffice?
+            // TODO: can we just get rid of the self.contents argument? it doesn't seem to be used anyway
+            self.project.run(self.question, "question", self.runnerFile, self.contents, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -1161,6 +1168,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
             self.refreshSettings();
           });
+
+        // true iff the given file has the given extension
+        function has_ext(ext, fname){
+          return fname.split(".").pop() === ext;
+        }
+
+        var qfiles = $scope.$parent.question_files;
+
+        // update the file that gets run when RUN/TEST is clicked
+        self.runnerFile = _.find(qfiles, _.partial(has_ext, "c"));
+        if(!self.runnerFile && _.filter(qfiles, _.partial(has_ext, "rkt")).length === 1){
+          self.runnerFile = _.find(qfiles, _.partial(has_ext, "rkt"));
+        }else if(has_ext("rkt", openFile)){
+          self.runnerFile = openFile;
+        }
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
