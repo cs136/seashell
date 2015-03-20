@@ -649,6 +649,37 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           cancelMarmosetRefresh();
           self.console.clear();
         });
+
+        /*
+         * handleMarmosetResults(result, target)
+         *  result - from marmoset.results() call
+         *  target - the Marmoset project we are getting results fora
+        */
+        self.handleMarmosetResults = function(result, target) {
+          var data = result.result;
+          if(result.error) {
+            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target));
+            self.marmoset_short_results = null;
+          }
+          else if(data.length > 0 && data[0].status=="complete") {
+            cancelMarmosetRefresh();
+            var sub_pk = data[0].submission;
+            var failed = false;
+            var related = _.filter(data, function (entry) {
+              return entry.submission === sub_pk;
+            });    
+            self.marmoset_long_results = related;
+            var total = 0, total_passed = 0;
+            for(var i = 0; i < related.length; i++) {
+              total += related[i].points;
+              total_passed += related[i].outcome === "passed" ? related[i].points : 0;
+              failed = failed || related[i].outcome !== "passed";
+            }
+            self.marmoset_short_results = 
+              sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
+                    total_passed, total);
+          }
+        };
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
@@ -658,32 +689,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.test_files = result.tests;
 
           self.project.currentMarmosetProject(self.question).then(function(target) {
-          if(target) {
-            marmoset.results(target).then(function(result) {
-              var data = result.result;
-              if(result.error) {
-                errors.report(result.result, sprintf("Failed to fetch previous Marmoset results for %s.", target));
-                self.marmoset_short_results = null;
-              }
-              else if(data.length > 0 && data[0].status=="complete") {
-                var sub_pk = data[0].submission;
-                var failed = false;
-                var related = _.filter(data, function (entry) {
-                  return entry.submission === sub_pk;
-                });    
-                self.marmoset_long_results = related;
-                var total = 0, total_passed = 0;
-                for(var i = 0; i < related.length; i++) {
-                  total += related[i].points;
-                  total_passed += related[i].outcome === "passed" ? related[i].points : 0;
-                  failed = failed || related[i].outcome !== "passed";
-                }
-                self.marmoset_short_results = 
-                  sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
-                        total_passed, total);
-              }
-            });
-          }
+            if(target) {
+              marmoset.results(target).then(function(result) {
+                self.handleMarmosetResults(result, target);
+              });
+            }
           });
         };
         $scope.refresh = self.refresh;
@@ -728,40 +738,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               cancelMarmosetRefresh();
               self.marmoset_refresh_interval = $interval(function () {
                 marmoset.results(target).then(function (result) {
-                  if (result.error) {
-                    self.marmoset_short_results = "errored!";
-                    errors.report(result.result, sprintf("Unknown Marmoset Error submitting for %s", target));
-                  } else {
-                    var data = result.result;
-
-                    if (data.length > 0 && data[0].status == "complete") {
-                      cancelMarmosetRefresh();
-                      var sub_pk = data[0].submission;
-                      var failed = false;
-                      var related = _.filter(data, function (entry) {
-                        return entry.submission === sub_pk;
-                      });
-                      self.marmoset_long_results = related;
-                      var total = 0, total_passed = 0;
-                      for (var i = 0; i < related.length; i++) {
-                        total += related[i].points;
-                        total_passed += related[i].outcome === "passed" ? related[i].points : 0;
-                        failed = failed || related[i].outcome !== "passed";
-                      }
-                      
-                      self.marmoset_short_results = 
-                        sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
-                                total_passed, total);
-                    } else if (data.length > 0) {
-                      self.marmoset_short_results = 
-                        sprintf("received %s (waiting on tests)",
-                                $.timeago(data[0].timestamp));
-                          
-                    } else {
-                      self.marmoset_short_results = 
-                        sprintf("submitted %s (waiting on receipt)",
-                                $.timeago(submitTime));
-                    }
+                  self.handleMarmosetResults(result, target);
+                  if(data.length > 0 && data[0].status != "complete") {
+                    self.marmoset_short_results = 
+                      sprintf("received %s (waiting on tests)",
+                              $.timeago(data[0].timestamp));
+                  } else if(data.length == 0) {
+                    self.marmoset_short_results = 
+                      sprintf("submitted %s (waiting on receipt)",
+                              $.timeago(submitTime));
                   }
                 }).catch(function (error) {
                   errors.report(error, sprintf("Could not fetch results for %s!", target));
