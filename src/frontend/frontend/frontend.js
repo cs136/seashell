@@ -819,7 +819,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         /* runnerFile is the file to be run when RUN or TEST is clicked. false
          * if the current file is not runnable (and Seashell can't infer which
          * file to run). */
-         // TODO: is runnerFolder needed?
         self.runnerFile = false;
         self.consoleLoad = function(console_cm) {
           self.consoleEditor = console_cm;
@@ -1021,8 +1020,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            // TODO: b2coutts: need runnerFolder variable, or does 'question' always suffice?
-            // TODO: can we just get rid of the self.contents argument? it doesn't seem to be used anyway
             self.project.run(self.question, "question", self.runnerFile, self.contents, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
@@ -1045,7 +1042,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, self.folder, self.file, self.contents, true)
+            self.project.run(self.question, "question", self.runnerFile, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -1174,15 +1171,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           return fname.split(".").pop() === ext;
         }
 
-        var qfiles = $scope.$parent.question_files;
+        /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
+        var qfiles = $scope.$parent.editView.question_files;
+        var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
 
-        // update the file that gets run when RUN/TEST is clicked
-        self.runnerFile = _.find(qfiles, _.partial(has_ext, "c"));
-        if(!self.runnerFile && _.filter(qfiles, _.partial(has_ext, "rkt")).length === 1){
-          self.runnerFile = _.find(qfiles, _.partial(has_ext, "rkt"));
-        }else if(has_ext("rkt", openFile)){
-          self.runnerFile = openFile;
-        }
+        // the below variables represent the precedence of rules for which file gets run
+        var openFileIsRkt = has_ext("rkt", openFile) ? openFile : false;
+        var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
+        var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
+        self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;

@@ -14,18 +14,17 @@
             <span style="position: relative; bottom: 2px; left: 2px"> code</span>
             <div id="editor-controls"
                  style="position: absolute; right: 13px; top: 0px">
-                 <!-- TODO: does inline JS only work in ng- tags? -->
               <button id="toolbar-run" ng-click="editFileView.runFile()" ng-show="editFileView.console.PIDs === null" class="btn btn-link"
-                      disabled="!(editFileView.runnerFile)"
+                      ng-disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="control+R">
                 <span style="font-size: 18px">run</span>
               </button>
               <button id="toolbar-kill" ng-click="editFileView.killProgram()" ng-show="editFileView.console.PIDs !== null" class="btn btn-link"
-                      disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="control+K">
                 <span style="font-size: 18px">stop</span>
               </button>
               <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
+                      ng-disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px" tooltip-placement="right" tooltip="control+U"
                       ng-show="editFileView.console.PIDs === null">
                 <span style="font-size: 18px">test</span>
