@@ -743,7 +743,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     self.marmoset_short_results = 
                       sprintf("received %s (waiting on tests)",
                               $.timeago(data[0].timestamp));
-                  } else if(data.length == 0) {
+                  } else if(data.length === 0) {
                     self.marmoset_short_results = 
                       sprintf("submitted %s (waiting on receipt)",
                               $.timeago(submitTime));
