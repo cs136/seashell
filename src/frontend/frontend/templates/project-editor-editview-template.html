@@ -15,6 +15,7 @@
             <div id="editor-controls"
                  style="position: absolute; right: 13px; top: 0px">
               <button id="toolbar-run" ng-click="editFileView.runFile()" ng-show="editFileView.console.PIDs === null" class="btn btn-link"
+                      ng-disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="control+R">
                 <span style="font-size: 18px">run</span>
               </button>
@@ -23,6 +24,7 @@
                 <span style="font-size: 18px">stop</span>
               </button>
               <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
+                      ng-disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px" tooltip-placement="right" tooltip="control+U"
                       ng-show="editFileView.console.PIDs === null">
                 <span style="font-size: 18px">test</span>

@@ -816,6 +816,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
+        /* runnerFile is the file to be run when RUN or TEST is clicked. false
+         * if the current file is not runnable (and Seashell can't infer which
+         * file to run). */
+        self.runnerFile = false;
         self.consoleLoad = function(console_cm) {
           self.consoleEditor = console_cm;
           self.consoleEditor.on("change", function() {
@@ -1016,7 +1020,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, self.folder, self.file, self.contents, false)
+            self.project.run(self.question, "question", self.runnerFile, self.contents, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -1038,7 +1042,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, self.folder, self.file, self.contents, true)
+            self.project.run(self.question, "question", self.runnerFile, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -1161,6 +1165,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
             self.refreshSettings();
           });
+
+        // true iff the given file has the given extension
+        function has_ext(ext, fname){
+          return fname.split(".").pop() === ext;
+        }
+
+        /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
+        var qfiles = $scope.$parent.editView.question_files;
+        var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
+
+        // the below variables represent the precedence of rules for which file gets run
+        var openFileIsRkt = has_ext("rkt", openFile) ? openFile : false;
+        var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
+        var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
+        self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
