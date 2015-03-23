@@ -1157,7 +1157,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         }
 
         /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
-        var qfiles = $scope.$parent.editView.question_files;
+        var qfiles = self.project.filesFor(self.question).question;
         var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
 
         // the below variables represent the precedence of rules for which file gets run
