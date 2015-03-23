@@ -34,8 +34,8 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-set(SEASHELL_VERSION "2.1.0")
-set(SEASHELL_API_VERSION "3")
+set(SEASHELL_VERSION "2.2.0")
+set(SEASHELL_API_VERSION "4")
 
 # Variable needed for backend and collects.
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")

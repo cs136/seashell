@@ -28,7 +28,6 @@
          lock-project
          force-lock-project
          unlock-project
-         save-project
          exn:project?
          exn:project
          check-path
@@ -43,15 +42,15 @@
          update-most-recently-used
          export-project)
 
-(require seashell/git
-         seashell/log
+(require seashell/log
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
          seashell/websocket
          net/url
          json
-         file/zip)
+         file/zip
+         file/unzip)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -158,7 +157,6 @@
 ;;
 ;; Raises:
 ;;  exn:project if the project already exists.
-;;  libgit2 FFI exceptions may also be raised.
 (define/contract (new-project name)
   (-> project-name? void?)
   (with-handlers
@@ -167,7 +165,7 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone/place (read-config 'default-project-template) (build-project-path name)))
+    (new-project-from name (read-config 'default-project-template)))
   (void))
 
 ;; (new-project-from name source)
@@ -184,7 +182,6 @@
 ;;
 ;; Raises:
 ;;  exn:project if the project already exists.
-;;  libgit2 FFI exceptions may also be raised.
 (define/contract (new-project-from name source)
   (-> project-name? (or/c project-name? url-string?) void?)
   (with-handlers
@@ -193,7 +190,20 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (seashell-git-clone/place source (build-project-path name)))
+    (cond
+      [(url-string? source)
+        (make-directory (build-project-path name))
+        (with-handlers
+          ([exn:fail?
+             (lambda (exn)
+               (delete-directory/files (build-project-path name) #:must-exist? #f)
+               (raise exn))])
+          (parameterize ([current-directory (build-project-path name)])
+            (unzip (get-pure-port (string->url source) #:redirections 10)
+                   (make-filesystem-entry-reader #:strip-count 1))))]
+      [(project-name? source)
+       (copy-directory/files (build-project-path source)
+                             (build-project-path name))]))
   (void))
 
 ;; (delete-project name)
@@ -273,60 +283,6 @@
         [(hash-has-key? locked-projects name)
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
-
-;; (save-project name)
-;; Commits the current state of a project to Git.
-;;
-;; Arguments:
-;;  name - Name of project.
-;;  message - Message to tag the commit with.
-;;
-;; Raises:
-;;  exn:project if project does not exist.
-;;  libgit2 errors if git errors happen.
-(define/contract (save-project name message)
-  (-> project-name? string? void?)
-  (when (not (is-project? name))
-    (raise (exn:project (format "Project ~a does not exist!" name)
-                        (current-continuation-marks))))
-  (define repo (build-project-path name))
-  ;; Here's what we do -
-  ;;  1. Grab the status of the repository.
-  ;;  2. Add 'adds' to each of the files that
-  ;;     have been modified and created in the working tree.
-  ;;  3. Add 'deletes' to each of the files that
-  ;;     have been deleted from the working tree.
-  ;;  4. Run the commit.
-  (define status (seashell-git-get-status/place repo))
-  (define entries (seashell-git-status-entrycount status))
-
-  (define files-add
-    (map (curry seashell-git-status-path status)
-         (filter
-           (lambda (index)
-             (define flags (seashell-git-status-flags status index))
-             (or (seashell-git-flag-new? flags) (seashell-git-flag-modified? flags)))
-           (build-list entries values))))
-
-  (define files-delete
-    (map (curry seashell-git-status-path status)
-         (filter
-           (lambda (index)
-             (define flags (seashell-git-status-flags status index))
-             (seashell-git-flag-deleted? flags))
-           (build-list entries values))))
-
-  (logf 'info "Adding files to project ~a: ~a" name files-add)
-  (logf 'info "Deleting files from project ~a: ~a" name files-delete)
-
-  (define commit (seashell-git-make-commit repo))
-  (for-each (curry seashell-git-commit-add-file commit)
-            files-add)
-  (for-each (curry seashell-git-commit-delete-file commit)
-            files-delete)
-
-  (seashell-git-commit/place commit message)
-  (void))
 
 ;; (compile-and-run project name file tests)
 ;; Compiles and runs a project.
@@ -455,13 +411,11 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
-;;  #:export-git? - Export the .git directory too?
 ;; Returns:
 ;;  zip - ZIP file as a bytestring.
-(define/contract (export-project name #:export-git? [export-git? #f])
-  (->* (project-name?)
-       (#:export-git? boolean?)
-       bytes?)
+(define/contract (export-project name)
+  (-> project-name?
+      bytes?)
   (when (not (is-project? name))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -470,11 +424,7 @@
     (define output-port (open-output-bytes))
     (parameterize
       ([current-output-port output-port])
-      (zip->output 
-        (filter (lambda (path)
-                  (or export-git?
-                      (eq? path (find-relative-path ".git" path))))
-                (pathlist-closure (directory-list)))))
+      (zip->output (pathlist-closure (directory-list))))
     (get-output-bytes output-port)))
 
 ;; (marmoset-submit course assn project file) -> void

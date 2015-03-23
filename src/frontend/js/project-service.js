@@ -28,7 +28,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
-      var skel_template = "file:///u/cs136/public_html/assignment_skeletons/%s";
+      // TODO: update with real template path.
+      var skel_template = "https://www.student.cs.uwaterloo.ca/~cs136/assignment_skeletons/%s-seashell.zip";
      
       var SeashellProject = (function () { 
         /**
