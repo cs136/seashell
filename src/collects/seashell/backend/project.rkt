@@ -48,6 +48,7 @@
          seashell/backend/runner
          seashell/websocket
          net/url
+         net/head
          json
          file/zip
          file/unzip)
@@ -199,8 +200,26 @@
                (delete-directory/files (build-project-path name) #:must-exist? #f)
                (raise exn))])
           (parameterize ([current-directory (build-project-path name)])
-            (unzip (get-pure-port (string->url source) #:redirections 10)
-                   (make-filesystem-entry-reader #:strip-count 1))))]
+            (define surl (string->url source))
+            (cond
+              [(equal? (url-scheme surl) "file")
+               (call/input-url surl get-pure-port
+                               (lambda (port)
+                                 (unzip port (make-filesystem-entry-reader #:strip-count 1))))]
+              [else
+               (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
+               (dynamic-wind
+                 (thunk #f)
+                 (thunk
+                   (match-define (list _ status text headers) (regexp-match #rx"^HTTP/1\\.1 ([0-9][0-9][0-9]) ([^\n\r]*)(.*)" hdrs))
+                   (when (not (equal? status "200"))
+                     (raise (exn:project (format "Error when fetching template ~a for project ~a: ~a ~a." source name status text)
+                                         (current-continuation-marks))))
+                   (when (not (equal? (extract-field "Content-Type" headers) "application/zip"))
+                     (raise (exn:project (format "Error when fetching template ~a for project ~a: template was not a ZIP file." source name)
+                                         (current-continuation-marks))))
+                   (unzip port (make-filesystem-entry-reader #:strip-count 1)))
+                 (thunk (close-input-port port)))])))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))
@@ -420,11 +439,11 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
   (parameterize
-    ([current-directory (build-project-path name)])
+    ([current-directory (project-base-path)])
     (define output-port (open-output-bytes))
     (parameterize
       ([current-output-port output-port])
-      (zip->output (pathlist-closure (directory-list))))
+      (zip->output (pathlist-closure (list name))))
     (get-output-bytes output-port)))
 
 ;; (marmoset-submit course assn project file) -> void
