@@ -586,6 +586,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
       self.project.prevCol = 0; self.project.prevLine = 0;
       self.project.setNewCol = 0; self.project.setNewLine = 0;
+      self.project.forceNarrow = false;
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
@@ -844,7 +845,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         });
         self.editorFocus = false;
         self.contents = "";
-        self.forceNarrow = false;
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
         // Saving event.
         function runWhenSaved(fn) {
@@ -865,12 +865,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           runWhenSaved(fn);
         });
         self.activateResize = function(){
-          self.forceNarrow = !self.forceNarrow;
+          self.project.forceNarrow = !(self.project.forceNarrow);
           onResize();
         };
         //Resize on window size change
         function onResize() {
-          var narrow = self.forceNarrow || $($document).width() < 992;
+          var narrow = (self.project.forceNarrow || $($document).width() < 992);
           var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
