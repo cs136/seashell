@@ -7,7 +7,7 @@
         <div id="editor"
              class="col-md-6 col-xs-12"
              style="position: relative; padding: 0"
-             ng-class="{'console-narrow': editFileView.forceNarrow}">
+             ng-class="{'console-narrow': editFileView.project.forceNarrow}">
           <div id="editor-title"
                class="col-md-12 col-xs-12 editor-console-title">
             <span class="glyphicon glyphicon-file"></span>
@@ -71,7 +71,7 @@
             ng-model="editFileView.contents" style="margin-top:70px;"></textarea>
         </div>
         <div id="console" class="col-md-6 col-xs-12" style="padding: 0; position: relative"
-          ng-class="{'console-narrow': editFileView.forceNarrow}">
+          ng-class="{'console-narrow': editFileView.project.forceNarrow}">
           <div id="console-title"
                class="col-md-12 col-xs-12 editor-console-title">
             <span class="glyphicon glyphicon-list-alt"></span>

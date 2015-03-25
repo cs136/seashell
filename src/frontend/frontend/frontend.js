@@ -584,6 +584,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.project = openProject;
       self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.project.prevCol = 0; self.project.prevLine = 0;
+      self.project.setNewCol = 0; self.project.setNewLine = 0;
+      self.project.forceNarrow = false;
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
@@ -819,10 +822,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
-        self.col = 0; self.line = 0;
+        self.col = self.project.prevCol;
+        self.line = self.project.prevLine;
+        //Adds a previous column update method on destroy,
+        //allows for viewing the same line when switching files
+        $scope.$on('$destroy', function(){
+          self.project.setNewCol = self.project.prevCol;
+          self.project.setNewLine = self.project.prevLine;
+          self.project.prevCol = self.col;
+          self.project.prevLine = self.line;
+        });
         self.editorFocus = false;
         self.contents = "";
-        self.forceNarrow = false;
         var mime = {"c" : "text/x-c", "h" : "text/x-c", "rkt" : "text/x-scheme"}[self.ext] || "text/plain";
         // Saving event.
         function runWhenSaved(fn) {
@@ -843,12 +854,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           runWhenSaved(fn);
         });
         self.activateResize = function(){
-          self.forceNarrow = !self.forceNarrow;
+          self.project.forceNarrow = !(self.project.forceNarrow);
           onResize();
         };
         //Resize on window size change
         function onResize() {
-          var narrow = self.forceNarrow || $($document).width() < 992;
+          var narrow = (self.project.forceNarrow || $($document).width() < 992);
           var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
@@ -861,7 +872,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editor.refresh();
         }
         $scope.$on('window-resized', onResize);
-      
         // Scope helper function follow.
         self.editorLoad = function(editor) {
           self.editor = editor;
@@ -906,6 +916,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.console.errors = [];
             } else {
               self.editor.clearHistory();
+              self.editor.setCursor(self.project.setNewLine - 1, self.project.setNewCol - 1);
+              var viewH = self.editor.getScrollInfo().clientHeight;
+              var curH = self.editor.cursorCoords().top;
+              self.editor.scrollTo(0, curH  - viewH);
             }
             self.loaded = true;
           });
@@ -922,6 +936,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         };
         self.refreshSettings = function () {
           self.editorOptions = {
+            autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
             readOnly: !self.ready || self.isBinaryFile,
@@ -967,7 +982,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.editor.refresh();
           }
         };
-
         self.renameFile = function() {
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
             $scope.$parent.refresh();
@@ -1122,8 +1136,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             evt.preventDefault();
             self.testFile();
           }
-        }); 
-         
+        });
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
