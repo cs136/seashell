@@ -327,7 +327,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           editor_mode  : "standard",
           tab_width  : 2,
           text_style : "neat",
-          use_space : true
+          use_space : true,
+          force_narrow : false
         };
         self.notify = {};
         var nKey = 0;
@@ -586,7 +587,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
       self.project.prevCol = 0; self.project.prevLine = 0;
       self.project.setNewCol = 0; self.project.setNewLine = 0;
-      self.project.forceNarrow = false;
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
@@ -804,6 +804,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
+        self.settings = settings;
         /* runnerFile is the file to be run when RUN or TEST is clicked. false
          * if the current file is not runnable (and Seashell can't infer which
          * file to run). */
@@ -854,12 +855,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           runWhenSaved(fn);
         });
         self.activateResize = function(){
-          self.project.forceNarrow = !(self.project.forceNarrow);
+          settings.settings.force_narrow = !(settings.settings.force_narrow);
+          settings.save();
           onResize();
         };
         //Resize on window size change
         function onResize() {
-          var narrow = (self.project.forceNarrow || $($document).width() < 992);
+          var narrow = (settings.settings.force_narrow || $($document).width() < 992);
           var min_height = 500, margin_bottom = 30;
           var min_y_element = $('#editor > .CodeMirror');
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
@@ -1178,6 +1180,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
         var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
         self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
+
+        // Force a resize event
+        if (settings.force_narrow)
+          onResize();
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
