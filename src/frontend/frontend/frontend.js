@@ -1180,10 +1180,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
         var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
         self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
-
-        // Force a resize event
-        if (settings.force_narrow)
-          onResize();
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
