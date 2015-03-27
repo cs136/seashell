@@ -1017,7 +1017,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               "Ctrl-I": self.indentAll,
               "Esc": function() {
                 if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
-              }
+              },
+              // capture save shortcuts and ignore in the editor
+              "Ctrl-S": function() { },
+              "Cmd-S": function() { }
             }
           };
           if (settings.settings.editor_mode === 'vim') {
