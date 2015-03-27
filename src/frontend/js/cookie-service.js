@@ -31,6 +31,7 @@ angular.module('jquery-cookie', [])
     };
     self.remove = cookie.remove;
     self.get = function(name) {
-      return JSON.parse(cookie.get(name));
+      var c = cookie.get(name);
+      return c ? JSON.parse(c) : {};
     };
   }]);

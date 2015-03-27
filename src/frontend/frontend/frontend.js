@@ -49,6 +49,59 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }]}).result;
         };
       }])
+  .factory('LoginModal', ['$modal',
+      function($modal) {
+        return function() { return $modal.open({
+          templateUrl: "frontend/templates/login-template.html",
+          controller: ['$scope', '$window', 'cookieStore', 'socket',
+            function($scope, $window, cookieStore, ws) {
+              $scope.username = "";
+              $scope.password = "";
+              $scope.busy = false;
+              $scope.error = false;
+            
+              $scope.login = function() {
+                $scope.busy = true;
+                $scope.error = false;
+                var target = sprintf("https://%s%s/cgi-bin/login.cgi",
+                  $window.location.host,
+                  $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
+                $.ajax({url: target,
+                        type: "POST",
+                        data: {"u": $scope.username, "p": $scope.password},
+                        dataType: "json"})
+                  .done(function(data) {
+                    $scope.$apply(function() {
+                      $scope.busy = false;
+                      if(data.error !== undefined) {
+                        $scope.error = sprintf("An error was encountered while logging in: %s (code %d)",
+                          data.error.message, data.error.code);
+                        console.log(self.error);
+                      } else if(data.port !== undefined) {
+                        cookieStore.add(SEASHELL_CREDS_COOKIE, data, {secure:true});
+                        console.log("All done login!");
+                        ws.connect().then(function() {
+                          $scope.$dismiss();
+                        })
+                        .catch(function() {
+                          $scope.error = "Could not connect to the websocket!";
+                        });
+                      } else {
+                        $scope.error = "An internal error occurred: " + textStatus;
+                        console.log(error);
+                      }
+                    });
+                  }).fail(function(error) {
+                    $scope.$apply(function() {
+                      $scope.busy = false;
+                      $scope.error = error;
+                      console.log(error);
+                    });
+                  });
+              };
+            }
+          ]}).result; };
+      }])
   // Delete Project Modal Service
   .factory('DeleteProjectModal', ['$modal', 'projects', 'error-service',
       function ($modal, projects, errors) {
@@ -490,15 +543,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     };
   }])
   // Main controller
-  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service', '$modal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
-      function ($scope, ws, $q, errors, $modal, confirm, cookieStore, $window, settings) {
+  .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
+    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
+      function ($scope, ws, $q, errors, $modal, LoginModal, confirm, cookieStore, $window, settings) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
-        self.host = cookieStore.get(SEASHELL_CREDS_COOKIE).host;
+        var cookie = cookieStore.get(SEASHELL_CREDS_COOKIE);
+        if(cookie) {
+          self.host = cookie.host;
+        }
 
         // Help function
         self.help = function () {
@@ -533,6 +590,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         // Reconnect
         self.reconnect = function () {
           ws.connect();
+        };
+        // Open login dialog window after disconnection
+        self.login = function() {
+          new LoginModal().then(function() {
+            self.refresh();
+          });
         };
 
         // This won't leak memory, as FrontendController stays in scope all the time.
