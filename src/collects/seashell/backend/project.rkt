@@ -215,7 +215,7 @@
                    (when (not (equal? status "200"))
                      (raise (exn:project (format "Error when fetching template ~a for project ~a: ~a ~a." source name status text)
                                          (current-continuation-marks))))
-                   (when (not (equal? (extract-field "Content-Type" headers) "application/zip"))
+                   (when (not (equal? (string-trim (extract-field "Content-Type" headers)) "application/zip"))
                      (raise (exn:project (format "Error when fetching template ~a for project ~a: template was not a ZIP file." source name)
                                          (current-continuation-marks))))
                    (unzip port (make-filesystem-entry-reader #:strip-count 1)))
