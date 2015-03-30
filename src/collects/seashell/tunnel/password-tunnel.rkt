@@ -35,6 +35,9 @@
 ;; Arguments:
 ;;  user - User name.
 ;;  password - Password.
+;;  Target - Target to launch.
+;;  args - Arguments.
+;;  host - Host to launch on.
 ;;
 ;; Returns:
 ;;  A tunnel? structure, which contains the subprocess?,
@@ -46,11 +49,11 @@
 ;;
 ;; Exceptions:
 ;;  exn:tunnel on tunnel error.
-(define/contract (tunnel-launch user password)
-  (-> string? string? tunnel?)
+(define/contract (tunnel-launch user password #:target [target #f] #:args [args #f] #:host [_host #f])
+  (->* (string? string?) (#:target (or/c #f string?) #:args (or/c #f string?) #:host (or/c #f string?)) tunnel?)
 
   ;; Randomly select a host
-  (define host (first (shuffle (read-config 'host))))
+  (define host (if _host host (first (shuffle (read-config 'host)))))
 
   ;; Launch the process
   (define-values (process in out error)
@@ -58,7 +61,9 @@
                 (read-config 'tunnel-binary)
                 user
                 host
-                (read-config 'seashell-backend-remote)))
+                (format "~a ~a"
+                        (if target target (read-config 'seashell-backend-remote))
+                        (if args args "")))) 
   ;; And the logger thread
   (define status-thread
     (thread
