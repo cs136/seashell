@@ -57,6 +57,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             function($scope, $window, cookieStore, ws) {
               $scope.username = "";
               $scope.password = "";
+              $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
             
@@ -68,7 +69,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
                 $.ajax({url: target,
                         type: "POST",
-                        data: {"u": $scope.username, "p": $scope.password},
+                        data: {"u": $scope.username, "p": $scope.password, "reset": $scope.reset},
                         dataType: "json"})
                   .done(function(data) {
                     $scope.$apply(function() {
@@ -565,13 +566,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
               function ($scope, confirm, $window, cookies) {
                 $scope.reset = function () {
-                  confirm("Reset Seashell",
-                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
-                    .then(function () {
-                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
-                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
-                                             "/cs136/seashell/index.cgi?reset='reset'";
-                    });
+                  self.login();
                 };
               }]});
         };
