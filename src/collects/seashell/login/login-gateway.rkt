@@ -117,7 +117,7 @@
       ;; Terminate existing Seashell instance
       (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
         (define creds-tun (password:tunnel-launch uname passwd #:args "-d"))
-        (define creds (deserialize (read (tunnel-in tun))))
+        (define creds (deserialize (read (tunnel-in creds-tun))))
         (when (eof-object? creds)
           (report-error 4 "Could not reset existing Seashell instance."))
         ;; Get the host and PID
