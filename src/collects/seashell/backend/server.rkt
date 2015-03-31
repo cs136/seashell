@@ -40,7 +40,7 @@
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
          (prefix-in filter: web-server/dispatchers/dispatch-filter))
 
-(provide backend-main)
+(provide backend-main dump-creds)
 
 ;; creds-valid? creds credentials-file -> boolean?
 ;; Checks whether or not the given creds point to a running seashell instance
@@ -70,6 +70,31 @@
       (logf 'info "Purging old credentials file...")
       (delete-file credentials-file)
       #f]))
+
+;; dump-creds -> creds
+;; Dumps the current credentials; raises one of:
+;;  exn:fail:filesystem -- file does not exist.
+;;  exn:creds      -- credentials does not exist.
+(struct exn:creds exn:fail:user ())
+(define (dump-creds)
+  (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
+  (call-with-output-file
+    credentials-file
+    (lambda (lock-file)
+      (with-input-from-file
+        credentials-file
+        (thunk
+          (with-handlers
+            ([exn:fail:read? (lambda (exn)
+                               (raise (exn:creds "Could not read credentials file!" (current-continuation-marks))))])
+           (define result (read))
+           (if (or (eof-object? result)
+                   (not (try-and-lock-file lock-file))
+                   (not (creds-valid? (deserialize result) credentials-file)))
+               (raise (exn:creds "Could not read credentials file!" (current-continuation-marks)))
+               result)))))
+    #:exists 'update))
+
 
 ;; Channel used to keep process alive.
 (define keepalive-chan (make-async-channel))
@@ -201,38 +226,12 @@
                              ;; Case 1: File does not exist.
                              [(not (file-exists? credentials-file))
                               (void)]
-                             ;; Case 2: File does exist, and the permissions are set badly.
-                             ;; We assume that this is caused by an old installation of Seashell
-                             ;; and purge credentials accordingly.
-                             ;; XXX do we just add +w permissions instead and retry the operation?
-                             [(not (with-handlers ([exn:fail:filesystem? (lambda(_) #t)])
-                                     (member 'write (file-or-directory-permissions credentials-file #f))))
-                              (logf 'info "Purging old credentials file...")
-                              (with-handlers ([exn:fail:filesystem? (lambda(_) (void))])
-                                (delete-file credentials-file))
-                              (when (file-exists? credentials-file)
-                                (logf 'warning "Could not delete old credentials file!"))
-                              (abort-current-continuation repeat)]
-                             ;; Case 3: Something else...
+                             ;; Case 2: Something else...
                              [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))
-                                   (abort-current-continuation repeat)]))])
-                    (call-with-output-file
-                      credentials-file
-                      (lambda (lock-file)
-                        (with-input-from-file
-                            credentials-file
-                          (thunk
-                            (with-handlers
-                              ([exn:fail:read? (lambda (exn)
-                                                 (abort-current-continuation repeat))])
-                             (define result (read))
-                             (if (or (eof-object? result)
-                                     (not (try-and-lock-file lock-file))
-                                     (not (creds-valid? (deserialize result) credentials-file)))
-                                 (begin
-                                   (abort-current-continuation repeat))
-                                 (write result))))))
-                          #:exists 'update)
+                                   (abort-current-continuation repeat)]))]
+                       [exn:creds?
+                         (lambda (exn) (abort-current-continuation repeat))])
+                    (write (dump-creds))
                     (logf 'info "Found existing Seashell instance; using existing credentials.")
                     (exit-from-seashell 0))
                   (logf 'info "Attempting to create new credentials file...")

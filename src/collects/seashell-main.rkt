@@ -28,10 +28,15 @@
     #:once-each
     [("-l" "--login") "Run the login tool." (mode 'login)]
     [("-s" "--server") "Run the server." (mode 'server)]
+    [("-d" "--dump") "Dumps existing credentials." (mode 'creds)]
     [("-v" "--version") "Prints version information. [default]" (mode 'version)])
   (match (mode)
          ['version (printf "Seashell v~a multi-tool binary (API version ~a) - built from ~a (~a).~n"
                            SEASHELL_VERSION SEASHELL_API_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)]
          ['login (gateway-main)]
-         ['server (backend-main)])
+         ['server (backend-main)]
+         ['creds 
+          (with-handlers
+            ([exn:fail? (lambda (exn) (write #f))])
+            (write (dump-creds)))])
   (void))
