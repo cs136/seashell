@@ -565,7 +565,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             templateUrl: "frontend/templates/help-template.html",
             controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
               function ($scope, confirm, $window, cookies) {
-                $scope.reset = function () {
+                $scope.login = function () {
                   self.login();
                 };
               }]});
