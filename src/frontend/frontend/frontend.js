@@ -567,6 +567,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               function ($scope, confirm, $window, cookies) {
                 $scope.login = function () {
                   self.login();
+                  $scope.$dismiss();
                 };
               }]});
         };
