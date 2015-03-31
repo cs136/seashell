@@ -115,7 +115,7 @@
           (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
     (with-limits (read-config 'backend-login-timeout) #f
       ;; Terminate existing Seashell instance
-      (unless (empty? (extract-bindings "reset" bdgs))
+      (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
         (define creds-tun (password:tunnel-launch uname passwd #:args "-d"))
         (define creds (deserialize (read (tunnel-in tun))))
         (when (eof-object? creds)
@@ -184,7 +184,7 @@
                            (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
     ;; Terminate existing Seashell instance
-    (unless (empty? (extract-bindings "reset" bdgs))
+    (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
       (with-handlers ([exn:fail:filesystem? (lambda (x) #f)])
         (define creds (call-with-input-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name))
                                             (compose deserialize read)))
