@@ -57,6 +57,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             function($scope, $window, cookieStore, ws) {
               $scope.username = "";
               $scope.password = "";
+              $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
             
@@ -68,7 +69,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
                 $.ajax({url: target,
                         type: "POST",
-                        data: {"u": $scope.username, "p": $scope.password},
+                        data: {"u": $scope.username, "p": $scope.password, "reset": $scope.reset},
                         dataType: "json"})
                   .done(function(data) {
                     $scope.$apply(function() {
@@ -564,14 +565,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             templateUrl: "frontend/templates/help-template.html",
             controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
               function ($scope, confirm, $window, cookies) {
-                $scope.reset = function () {
-                  confirm("Reset Seashell",
-                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
-                    .then(function () {
-                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
-                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
-                                             "/cs136/seashell/index.cgi?reset='reset'";
-                    });
+                $scope.login = function () {
+                  self.login();
+                  $scope.$dismiss();
                 };
               }]});
         };
@@ -1022,9 +1018,57 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               },
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
-              "Cmd-S": function() { }
+              "Cmd-S": function() { },
             }
           };
+          var main_hotkeys = [{
+            combo: 'ctrl+d',
+            description: 'Sends EOF',
+            callback: function(evt) {
+              evt.preventDefault();
+              self.sendEOF();
+            }
+          }, {
+            combo: 'ctrl+k',
+            description: "Kills the currently running program.",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.killProgram();
+            }
+          }];
+          var vim_disabled_hotkeys = [{
+            combo: 'ctrl+r',
+            description: "Runs the program",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.runFile();
+            }
+          }, {
+            combo: 'ctrl+u',
+            description: "Starts Tests",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.testFile();
+            }
+          }];
+
+          if(settings.settings.editor_mode !== 'vim') {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.bindTo($scope.$parent).add(hk);
+            });
+          }
+          else {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.del(hk.combo);
+            });
+          }
+          _.each(main_hotkeys, function(hk) {
+            hotkeys.bindTo($scope.$parent).add(hk);
+          });
+
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
@@ -1171,40 +1215,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             });
           }
         };
-
-        hotkeys.bindTo($scope).add({
-          combo: 'ctrl+r',
-          description: 'Runs the currently open file.',
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.runFile();
-          }
-        }).add({
-          combo: 'ctrl+k',
-          description: "Kills the currently running program.",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.killProgram();
-          }
-        }).add({
-          combo: 'ctrl+d',
-          description: "Sends EOF",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.sendEOF();
-          }
-        }).add({
-          combo: 'ctrl+u',
-          description: "Starts Tests",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.testFile();
-          }
-        });
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
