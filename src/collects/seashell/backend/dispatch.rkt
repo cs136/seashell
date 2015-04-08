@@ -23,7 +23,6 @@
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner
-         seashell/git
          racket/async-channel
          racket/serialize
          json)
@@ -371,15 +370,6 @@
         ('type "unlockProject")
         ('project project))
        (unlock-project project)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type  "saveProject")
-        ('project project)
-        ('message message))
-       (save-project project message)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

@@ -31,6 +31,7 @@
          xml)
 
 (provide gateway-main)
+(define shutdown-custodian (make-custodian))
 
 ;; response/json jsexpr -> void
 ;; Sends CGI output as a JSON expression.
@@ -45,6 +46,7 @@
 ;; Runs response/json to send the error message, and then quits.
 (define (report-error/json code desc)
   (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
+  (custodian-shutdown-all shutdown-custodian)
   (exit 1))
 
 ;; report-error/html message traceback -> void
@@ -64,6 +66,7 @@
                       '(""))
                   (hr)
                   (address ,(format "Seashell-Login/~a running on Racket ~a" SEASHELL_VERSION (version)))))))
+  (custodian-shutdown-all shutdown-custodian)
   (exit 1))
 
 ;; report-error
@@ -98,34 +101,37 @@
         (report-error 3 "Bad password provided."))
       (first l)))
 
-  ;; Binding for tunnel process outside scope of with-limits.
-  (define tun-proc #f)
-  (define tun #f)
-
   ;; Timeout the login process.
   (with-handlers
     ([exn:fail:resource? (lambda(e)
-                           (when tun-proc
-                             (subprocess-kill tun-proc #t))
-                           (when tun
-                             (tunnel-close tun))
-                           (report-error 7 "Login timed out."))])
+                           (report-error 7 "Login timed out."))]
+     [exn:tunnel?
+       (match-lambda
+         [(exn:tunnel message marks 7)
+          (report-error 5 "Invalid credentials.")]
+         [(exn:tunnel message marks 6)
+          (report-error 6 "Invalid host key. See server log.")]
+         [(exn:tunnel message marks code)
+          (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
     (with-limits (read-config 'backend-login-timeout) #f
+      ;; Terminate existing Seashell instance
+      (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
+        (define creds-tun (password:tunnel-launch uname passwd #:args "-d"))
+        (define creds (deserialize (read (tunnel-in creds-tun))))
+        (when (eof-object? creds)
+          (report-error 4 "Could not reset existing Seashell instance."))
+        ;; Get the host and PID
+        (define creds-host (hash-ref creds 'host))
+        (define creds-pid (hash-ref creds 'pid))
+        ;; Kill the process
+        (define kill-tun (password:tunnel-launch uname passwd #:target "kill" #:args (format "~a" creds-pid) #:host creds-host))
+        (subprocess-wait (tunnel-process kill-tun))
+        (when (not (= 0 (subprocess-status (tunnel-process kill-tun))))
+          (report-error 4 (format "Could not kill existing Seashell instance (internal error, code=~a)."
+                                  (subprocess-status (tunnel-process kill-tun))))))
+
       ;; Spawn backend process on backend host.
-      (set! tun
-        (with-handlers
-          ([exn:tunnel?
-             (match-lambda
-               [(exn:tunnel message marks 7)
-                (report-error 5 "Invalid credentials.")]
-               [(exn:tunnel message marks 6)
-                (report-error 6 "Invalid host key. See server log.")]
-               [(exn:tunnel message marks code)
-                (report-error 4 (format "Session could not be started (internal error, code=~a)." code))])])
-          (password:tunnel-launch uname passwd)))
-
-      (set! tun-proc (tunnel-process tun))
-
+      (define tun (password:tunnel-launch uname passwd))
       (logf 'debug "Tunnel hostname is ~a" (tunnel-hostname tun))
 
       ;; Send hostname to backend process
@@ -148,13 +154,11 @@
       (when (not (= 0 (subprocess-status (tunnel-process tun))))
         (report-error 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
-
-      ;; Close the tunnel
-      (tunnel-close tun)
-
+      
       ;; Send key, address, and port to client.
       ;; This duplicates some code in seashell/crypto.
       (response/json (deserialize be-creds)))))
+
 
 ;; uw-login/redirect
 ;; UW-based login system + redirect.
@@ -174,29 +178,20 @@
   (unless (= 0 (seashell_uw_check_remote_user))
     (report-error 1 "Invalid credentials!"))
 
-  ;; Terminate existing Seashell instance
-  (unless (empty? (extract-bindings "reset" bdgs))
-    (with-handlers ([exn:fail:filesystem? (lambda (x) #f)])
-      (define creds (call-with-input-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name))
-                                          (compose deserialize read)))
-      (define creds-host (hash-ref creds 'host))
-      (define creds-pid (hash-ref creds 'pid))
-      (system* (read-config 'ssh-binary)
-               creds-host
-               "-x"
-               "-o" "PreferredAuthentications hostbased"
-               "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
-               (format "kill ~a" creds-pid))))
-
   ;; Timeout the login process.
   (with-handlers
     ([exn:fail:resource? (lambda(e)
-                           (when tun-proc
-                             (subprocess-kill tun-proc #t))
-                           (when tun
-                             (tunnel-close tun))
                            (report-error 7 "Login timed out."))])
     (with-limits (read-config 'backend-login-timeout) #f
+    ;; Terminate existing Seashell instance
+    (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
+      (with-handlers ([exn:fail:filesystem? (lambda (x) #f)])
+        (define creds (call-with-input-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name))
+                                            (compose deserialize read)))
+        (define creds-host (hash-ref creds 'host))
+        (define creds-pid (hash-ref creds 'pid))
+        (uw:tunnel-launch #:target "kill" #:args (format "~a" creds-pid))))
+
       ;; Spawn backend process on backend host.
       (set! tun (uw:tunnel-launch))
       (set! tun-proc (tunnel-process tun))
@@ -223,9 +218,6 @@
       (when (not (= 0 (subprocess-status (tunnel-process tun))))
         (report-error 4 (format "Session could not be started (internal error, code=~a)."
                                 (subprocess-status (tunnel-process tun)))))
-
-      ;; Close the tunnel
-      (tunnel-close tun)
 
       ;; Credential handling + cookie.
       (define creds (deserialize be-creds))
@@ -255,13 +247,17 @@
     ;; Install configuration.
     (config-refresh!)
 
-    ;; Check which mode we're running as.
-    (if (equal? (get-cgi-method) "POST")
-      (password-based-login/ajax)
-      (uw-login/redirect)))
+    (parameterize ([current-custodian shutdown-custodian]
+                   [current-subprocess-custodian-mode 'interrupt])
+      ;; Check which mode we're running as.
+      (if (equal? (get-cgi-method) "POST")
+        (password-based-login/ajax)
+        (uw-login/redirect)))
 
     ;; Log the successful login attempt.
     (when (read-config 'login-tracking-helper)
-      (system* (read-config 'login-tracking-helper)))
+      (system* (read-config 'login-tracking-helper))))
+
+  (custodian-shutdown-all shutdown-custodian)
   (exit 0))
 

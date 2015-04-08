@@ -28,7 +28,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
-      var skel_template = "file:///u/cs136/public_html/assignment_skeletons/%s";
+      // TODO: update with real template path.
+      var skel_template = "https://www.student.cs.uwaterloo.ca/~cs136/assignment_skeletons/%s-seashell.zip";
      
       var SeashellProject = (function () { 
         /**
@@ -500,6 +501,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           // TODO: handle racket files.
           var file = self.root.find(self._getPath(question, folder, filename));
           var tests = test ? self.getTestsForFile(file) : [];
+
+          if (test && tests.length === 0)
+            return $q.reject("No tests for question!");
+
           return $q.when(ws.socket.compileAndRunProject(self.name, file.fullname(), tests));
         };
 
@@ -671,8 +676,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                         return projects.indexOf(skel) == -1;
                       });
                   var failed_projects = [];
-                  var start = $q.defer();
-                  start.resolve();
+                  var start = $q.when();
                   return _.foldl(new_projects,
                       function(in_continuation, template) {
                         function clone(failed) {
@@ -694,7 +698,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                            function () {return clone(false);},
                            function () {return clone(true);}); 
                       },
-                      start.promise)
+                      start)
                     .then(function() {return (new_projects);})
                     .catch(function() {return $q.reject(failed_projects);});
                 });

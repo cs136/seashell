@@ -10,5 +10,7 @@ This section provides documentation relevant to users of Seashell.
 
 @include-section["faq.scrbl"]
 
+@include-section["seashell-errors.scrbl"]
+
 @include-section["error-codes.scrbl"]
 

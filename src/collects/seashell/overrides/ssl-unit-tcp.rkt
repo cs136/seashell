@@ -1,4 +1,4 @@
-#lang racket/base
+#lang racket
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -34,7 +34,8 @@
          client-cert-file client-key-file client-root-cert-files
          [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
          [ecdhe-curve 'secp521r1]
-         [dhe-param-path ssl-dh4096-param-path])
+         [dhe-param-path ssl-dh4096-param-path]
+         [timeout 5])
  ;; Load contexts first.
  (define ctx (ssl-make-client-context))
  (define sctx (ssl-make-server-context))
@@ -80,20 +81,56 @@
        (close-output-port p)))
 
    (define (tcp-accept listener)
-     (define-values (ip op) (tcp:tcp-accept listener))
-     (ports->ssl-ports ip op
-                       #:mode 'accept
-                       #:context sctx
-                       #:close-original? #t
-                       #:error/ssl error/network))
+     (define cust (make-custodian))
+     (parameterize ([current-custodian cust])
+       (define-values (ip op) (tcp:tcp-accept listener))
+       (define accepting-thread (current-thread))
+       (parameterize-break #t
+         (with-handlers ([exn:break? (lambda (exn)
+                                       (custodian-shutdown-all cust)
+                                       (error/network "ssl-accept/enable-break" "Timed out while negotiating SSL connection."))]
+                         [exn:fail:network? 
+                           (lambda (exn)
+                                   (custodian-shutdown-all cust)
+                                   (raise exn))])
+           (define watchdog (thread
+                              (lambda ()
+                                (sleep timeout)
+                                (break-thread accepting-thread))))
+           (define-values (rip rop)
+             (ports->ssl-ports ip op
+                               #:mode 'accept
+                               #:context sctx
+                               #:close-original? #t
+                               #:error/ssl error/network))
+           (kill-thread watchdog)
+           (values rip rop)))))
 
    (define (tcp-accept/enable-break listener)
-     (define-values (ip op) (tcp:tcp-accept/enable-break listener))
-     (ports->ssl-ports ip op
-                       #:mode 'accept
-                       #:context sctx
-                       #:close-original? #t
-                       #:error/ssl error/network))
+     (define cust (make-custodian))
+     (parameterize ([current-custodian cust])
+       (define-values (ip op) (tcp:tcp-accept/enable-break listener))
+       (define accepting-thread (current-thread))
+       (parameterize-break #t
+         (with-handlers ([exn:break? (lambda (exn)
+                                       (custodian-shutdown-all cust)
+                                       (error/network "ssl-accept/enable-break" "Timed out while negotiating SSL connection."))]
+                         [exn:fail:network? 
+                           (lambda (exn)
+                                   (custodian-shutdown-all cust)
+                                   (raise exn))])
+           (define watchdog (thread
+                              (lambda ()
+                                (sleep timeout)
+                                (break-thread accepting-thread))))
+           (define-values (rip rop)
+             (ports->ssl-ports ip op
+                               #:mode 'accept
+                               #:context sctx
+                               #:close-original? #t
+                               #:error/ssl error/network))
+           (kill-thread watchdog)
+           (values rip rop)))))
 
    ;; accept-ready? doesn't really work for SSL:
    (define (tcp-accept-ready? p)

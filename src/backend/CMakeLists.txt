@@ -30,7 +30,6 @@ SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # Components
 add_subdirectory(compiler)
-add_subdirectory(git)
 add_subdirectory(tunnel)
 add_subdirectory(user)
 add_subdirectory(crypto)
