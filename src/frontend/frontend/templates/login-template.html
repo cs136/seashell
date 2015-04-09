@@ -1,0 +1,29 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+  <h4 class="modal-title" id="new-project-label">
+    <span class="glyphicon glyphicon-log-in"></span>
+    Log in Again</h4>
+</div>
+<form class="form-signin" role="form" ng-submit="login()">
+<div class="modal-body form-horizontal">
+  <p>Log in again with your
+    student.cs credentials below:</p>
+  <div style="width:50%">
+    <input type="text" class="form-control" placeholder="Username" ng-model="username"
+      ng-disabled="busy" />
+    <input type="password" class="form-control" placeholder="Password"
+      ng-model="password" ng-disabled="busy" /><br />
+    <label><input type="checkbox" ng-model="reset" /> Check to reset your Seashell instance</label>
+  </div>
+  <div class="alert alert-info" ng-show="busy" ng-cloak>
+    Logging in...
+  </div>
+  <div class="alert alert-danger" ng-show="error" ng-cloak>
+    {{error}}
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" ng-click="$dismiss()">Close</button>
+  <input type="submit" class="btn btn-primary" value="Login">
+</div>
+</form>
