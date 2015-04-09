@@ -72,7 +72,7 @@
 (define-crypto EVP_EncryptFinal_ex (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) -> (r : _int)
                                         -> (begin (check r 'EVP_EncryptFinal_ex) olen)))
 (define-crypto EVP_DecryptFinal_ex (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) -> (r : _int)
-                                        -> (begin (check r 'EVP_DecryptFinal_ex (curryr > 0)) olen)))
+                                        -> (begin (check r 'EVP_DecryptFinal_ex) olen)))
 (define-crypto EVP_CIPHER_CTX_free (_fun _EVP_CIPHER_CTX -> _void) #:wrap (deallocator))
 (define-crypto EVP_CIPHER_CTX_new (_fun -> _EVP_CIPHER_CTX) #:wrap (allocator EVP_CIPHER_CTX_free))
 (define-crypto EVP_CIPHER_CTX_ctrl (_fun _EVP_CIPHER_CTX _int _int _pointer -> (r : _int)
