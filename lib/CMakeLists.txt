@@ -43,15 +43,6 @@ find_package(ZLIB)
 find_package(OpenSSL)
 
 # External projects (not CMake based)
-# libtomcrypt - note that we need to call with -fPIC
-ExternalProject_Add(
-  libtomcrypt
-  URL ${CMAKE_CURRENT_SOURCE_DIR}/libtomcrypt
-  CONFIGURE_COMMAND ""
-  BUILD_IN_SOURCE 1
-  BUILD_COMMAND sh -c "CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} CFLAGS='-fPIC' make"
-  INSTALL_COMMAND "")
-
 # libssh2 - libssh2 SSH library
 ExternalProject_Add(
   libssh2
@@ -104,15 +95,6 @@ set(CLANG_SOURCE_INCLUDE_DIRS
     PARENT_SCOPE)
 set(CLANG_BINARY_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}/llvm/tools/clang/include
-    PARENT_SCOPE)
-set(LTC_INCLUDE_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/src/headers
-    PARENT_SCOPE)
-set(LTC_LINK_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/libtomcrypt-prefix/src/libtomcrypt/
-    PARENT_SCOPE)
-set(LTC_LIBRARIES
-    tomcrypt
     PARENT_SCOPE)
 
 # Set LLVM CXX Flags

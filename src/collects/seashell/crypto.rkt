@@ -17,12 +17,15 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require ffi/unsafe
-         ffi/unsafe/define)
-(require racket/runtime-path)
+         ffi/unsafe/define 
+         ffi/unsafe/alloc
+         racket/runtime-path
+         openssl/libcrypto
+         openssl/libssl
+         openssl
+         json)
 (require seashell/seashell-config)
 (require (prefix-in contract: racket/contract))
-(require json)
-
 
 (provide seashell-encrypt seashell-decrypt
   seashell-crypt-make-key seashell-crypt-key->client
@@ -30,65 +33,89 @@
   seashell-crypt-make-token
   exn:crypto?)
 
-(define-logger crypto)
+;; Types/Variables
 (struct exn:crypto exn:fail:user ())
+(define _EVP_CIPHER_CTX (_cpointer '_EVP_CIPHER_CTX))
+(define _EVP_CIPHER (_cpointer '_EVP_CIPHER))
+(define-ffi-definer define-crypto libcrypto
+                    #:default-make-fail make-not-available)
+(define-ffi-definer define-ssl libssl
+                    #:default-make-fail make-not-available)
 
-;; Load the crypto library
-(define-ffi-definer define-crypto 
-                    (ffi-lib (read-config 'seashell-crypto)))
+;; Constants
+(define EVP_CTRL_GCM_GET_TAG 16) 
+(define EVP_CTRL_GCM_SET_TAG 17) 
 
-;; Setup and Error functions
-(define-crypto seashell_crypt_setup (_fun -> _int))
-(define-crypto seashell_crypt_error (_fun -> _string))
-
-;; Error handling function.
-(define (check result function)
-  (unless (zero? result)
-    (raise (exn:crypto (format "~a: ~a" function (seashell_crypt_error))
+;; Error Handling Functions
+(define-crypto ERR_get_error (_fun -> _long))
+(define-crypto ERR_peek_error (_fun -> _long))
+(define-crypto ERR_error_string_n (_fun _long _bytes _long -> _void))
+(define (get-error-message id)
+  (let* ([buffer (make-bytes 512)])
+    (ERR_error_string_n id buffer (bytes-length buffer))
+    (regexp-match #rx#"^[^\0]*" buffer)))
+(define (check result function [predicate? (curry = 1)])
+  (unless (predicate? result)
+    (raise (exn:crypto (format "~a: ~a" function (get-error-message (ERR_get_error)))
                        (current-continuation-marks)))))
 
-;; Encryption and Decryption routines.
-(define-crypto seashell_encrypt
-               (_fun _bytes ;; key[16]
-                     _bytes ;; iv[12]
-                     _bytes ;; *plain
-                     _uint32 ;; plain_len
-                     _bytes ;; auth
-                     _uint32 ;; auth_len
-                     _bytes ;; coded
-                     _bytes ;; tag[16]
-                     -> (r : _int)
-                     -> (check r 'seashell_encrypt)))
-(define-crypto seashell_decrypt
-               (_fun _bytes ;; key[16]
-                     _bytes ;; iv[12]
-                     _bytes ;; *plain
-                     _uint32 ;; plain_len
-                     _bytes ;; auth
-                     _uint32 ;; auth_len
-                     _bytes ;; coded
-                     _bytes ;; tag[16]
-                     -> (r : _int)
-                     -> (check r 'seashell_decrypt)))
+;; Functions
+(define-crypto EVP_EncryptInit_ex (_fun _EVP_CIPHER_CTX _EVP_CIPHER _pointer _bytes _bytes -> (r : _int)
+                                        -> (check r 'EVP_EncryptInit_ex)))
+(define-crypto EVP_DecryptInit_ex (_fun _EVP_CIPHER_CTX _EVP_CIPHER _pointer _bytes _bytes -> (r : _int)
+                                        -> (check r 'EVP_DecryptInit_ex)))
+(define-crypto EVP_aes_128_gcm (_fun -> _EVP_CIPHER))
+(define-crypto EVP_EncryptUpdate (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) _bytes _int -> (r : _int)
+                                       -> (begin (check r 'EVP_EncryptUpdate) olen)))
+(define-crypto EVP_DecryptUpdate (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) _bytes _int -> (r : _int)
+                                       -> (begin (check r 'EVP_DecryptUpdate) olen)))
+(define-crypto EVP_EncryptFinal_ex (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) -> (r : _int)
+                                        -> (begin (check r 'EVP_EncryptFinal_ex) olen)))
+(define-crypto EVP_DecryptFinal_ex (_fun _EVP_CIPHER_CTX _bytes (olen : (_ptr o _uint)) -> (r : _int)
+                                        -> (begin (check r 'EVP_DecryptFinal_ex) olen)))
+(define-crypto EVP_CIPHER_CTX_free (_fun _EVP_CIPHER_CTX -> _void) #:wrap (deallocator))
+(define-crypto EVP_CIPHER_CTX_new (_fun -> _EVP_CIPHER_CTX) #:wrap (allocator EVP_CIPHER_CTX_free))
+(define-crypto EVP_CIPHER_CTX_ctrl (_fun _EVP_CIPHER_CTX _int _int _pointer -> (r : _int)
+                                         -> (check r 'EVP_CIPHER_CTX_ctrl)))
+(define-crypto RAND_bytes (_fun _bytes _int -> (r : _int) -> (check r 'RAND_bytes)))
 
-;; IV and Key Generation functions.
-(define (enough-bytes r n function)
-  (unless (>= r n)
-          (raise (exn:crypto (format "~a: Not enough random bytes!" function)
-                             (current-continuation-marks)))))
+;; encrypt_aes128_gcm (key:16) (iv:12) text (aad/optional) -> (values encrypted (tag:16))
+;;
+;; Encrypts and Authenticates.
+(define/contract (encrypt_aes128_gcm key iv text [aad #f])
+  (contract:->* (bytes? bytes? bytes?) ((or/c bytes? #f)) (values bytes? bytes?))
+  (define CTX (EVP_CIPHER_CTX_new))
+  (EVP_EncryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
+  (when aad
+    (EVP_EncryptUpdate CTX #f aad (bytes-length aad)))
+  
+  (define buffer (make-bytes (+ 128 (bytes-length text))))
+  (define tag (make-bytes 16))
 
-(define-crypto seashell_make_iv
-               (_fun _bytes ;; iv[12]
-                     -> (r : _int)
-                     -> (enough-bytes r 12 'seashell_make_iv)))
-(define-crypto seashell_make_key
-               (_fun _bytes ;; key[16]
-                     -> (r : _int)
-                     -> (enough-bytes r 12 'seashell_make_iv)))
-(define-crypto seashell_make_token
-               (_fun _bytes ;; token[32]
-                     -> (r : _int)
-                     -> (enough-bytes r 32 'seashell_make_iv)))
+  (define first-len (EVP_EncryptUpdate CTX buffer text (bytes-length text)))
+  (define second-len (EVP_EncryptFinal_ex CTX (cast (ptr-add buffer first-len) _pointer _bytes)))
+
+  (EVP_CIPHER_CTX_ctrl CTX EVP_CTRL_GCM_GET_TAG 16 tag)
+
+  (values (subbytes buffer 0 (+ first-len second-len)) tag))
+;; decrypt_aes128_gcm (key:16) (iv:12) (tag:16) encrypted (aad/optional) -> text
+;;
+;; Decrypts and verifies.
+(define/contract (decrypt_aes128_gcm key iv tag text [aad #f])
+  (contract:->* (bytes? bytes? bytes? bytes?) ((or/c bytes? #f)) bytes?)
+  (define CTX (EVP_CIPHER_CTX_new))
+  (EVP_DecryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
+  (EVP_CIPHER_CTX_ctrl CTX EVP_CTRL_GCM_SET_TAG 16 tag)
+
+  (when aad
+    (EVP_DecryptUpdate CTX #f aad (bytes-length aad)))
+  
+  (define buffer (make-bytes (+ 128 (bytes-length text))))
+
+  (define first-len (EVP_DecryptUpdate CTX buffer text (bytes-length text)))
+  (define second-len (EVP_DecryptFinal_ex CTX (cast (ptr-add buffer first-len) _pointer _bytes)))
+
+  (subbytes buffer 0 (+ first-len second-len)))
 
 ;; (seashell-crypt-make-key)
 ;;
@@ -96,7 +123,7 @@
 (define/contract (seashell-crypt-make-key)
   (contract:-> bytes?)
   (define key (make-bytes 16))
-  (seashell_make_key key)
+  (RAND_bytes key 16)
   key)
 
 ;; (seashell-crypt-make-iv)
@@ -105,7 +132,7 @@
 (define/contract (seashell-crypt-make-iv)
   (contract:-> bytes?)
   (define iv (make-bytes 12))
-  (seashell_make_iv iv)
+  (RAND_bytes iv 12)
   iv)
 
 ;; (seashell-crypt-make-token)
@@ -114,7 +141,7 @@
 (define/contract (seashell-crypt-make-token)
   (contract:-> bytes?)
   (define token (make-bytes 32))
-  (seashell_make_token token)
+  (RAND_bytes token 32)
   token)
 
 ;; (seashell-encrypt key frame plain) -> (values iv coded tag)
@@ -130,15 +157,9 @@
 ;;  (values iv coded tag) - IV and GCM tag respectively.
 (define/contract (seashell-encrypt key frame plain)
   (contract:-> bytes? bytes? bytes? (values bytes? bytes? bytes?))
-  (define tag (make-bytes 16))
-  (define coded (make-bytes (bytes-length frame)))
   (define iv (seashell-crypt-make-iv))
   (define auth (bytes-append iv plain))
-  (seashell_encrypt
-    key iv
-    frame (bytes-length frame)
-    auth (bytes-length auth)
-    coded tag)
+  (define-values (coded tag) (encrypt_aes128_gcm key iv frame auth))
   (values iv coded tag))
 
 ;; (seashell-decrypt key iv tag coded plain) -> frame
@@ -154,14 +175,8 @@
 ;;  Decrypted frame.
 (define/contract (seashell-decrypt key iv tag coded plain)
   (contract:-> bytes? bytes? bytes? bytes? bytes? bytes?)
-  (define frame (make-bytes (bytes-length coded)))
   (define auth (bytes-append iv plain))
-  (seashell_decrypt
-    key iv
-    frame (bytes-length frame)
-    auth (bytes-length auth)
-    coded tag)
-  frame)
+  (decrypt_aes128_gcm key iv tag coded auth))
 
 ;; (seashell-crypt-key->client key) -> jsexpr?
 ;; Given an encryption key, represents it in a way that 
@@ -210,9 +225,4 @@
 (define/contract (seashell-crypt-key-server-read port)
   (contract:-> port? bytes?)
   (read-bytes 16 port))
-
-(when (equal? (seashell_crypt_setup) 1)
-      (raise (exn:crypto (format "Couldn't load library: ~a" 
-                                 (seashell_crypt_error))
-                         (current-continuation-marks))))
 
