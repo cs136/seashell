@@ -479,7 +479,8 @@
   (-> ws-connection? thread?)
 
   ;; Internal state for dealing with fragmented frames.
-  (define fragmented-buffer #f)
+  (define fragmented-read-end #f)
+  (define fragmented-write-end #f)
   (define fragmented-opcode #f)
   (define fragmented-rsv #f)
   (define fragmented? #f)
@@ -518,25 +519,34 @@
              (set! fragmented? #t)
              (set! fragmented-rsv (ws-frame-rsv frame))
              (set! fragmented-opcode (ws-frame-opcode frame))
-             (set! fragmented-buffer (ws-frame-data frame))
+             (let-values
+               ([(r w) (make-pipe)])
+               (set! fragmented-read-end r)
+               (set! fragmented-write-end w))
+             (write-bytes (ws-frame-data frame) fragmented-write-end)
              (loop)]
            ;; Case 3 - continuation frame.
            [(and fragmented?
                  (not (ws-frame-final? frame))
                  (equal? 0 (ws-frame-opcode frame)))
-             (set! fragmented-buffer
-                   (bytes-append fragmented-buffer (ws-frame-data frame)))
+             (write-bytes (ws-frame-data frame) fragmented-write-end)
              (loop)]
            ;; Case 4 - final frame.
            [(and fragmented?
                  (ws-frame-final? frame)
                  (equal? 0 (ws-frame-opcode frame)))
-             (set! fragmented-buffer
-                   (bytes-append fragmented-buffer (ws-frame-data frame)))
+             ;; Flush and close the port
+             (write-bytes (ws-frame-data frame) fragmented-write-end)
+             (close-output-port fragmented-write-end)
              ;; Reset fragmented?
              (set! fragmented? #f)
              ;; Write the entire frame to the port
-             (async-channel-put channel (ws-frame #t fragmented-rsv fragmented-opcode fragmented-buffer))
+             (async-channel-put channel (ws-frame #t fragmented-rsv fragmented-opcode (port->bytes fragmented-read-end)))
+             (close-input-port fragmented-read-end)
+             (set! fragmented-write-end #f)
+             (set! fragmented-read-end #f)
+             (set! fragmented-opcode #f)
+             (set! fragmented-rsv #f)
              (loop)]
            [else
             (raise (exn:websocket (format "Unknown frame ~a!" frame)
