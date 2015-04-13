@@ -858,9 +858,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document, hotkeys) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -868,6 +868,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.folder = openFolder;
         self.file = openFile;
         self.console = Console;
+        self.scrollInfo = scrollInfo;
         self.isBinaryFile = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
@@ -895,15 +896,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
-        self.col = self.project.prevCol;
-        self.line = self.project.prevLine;
-        //Adds a previous column update method on destroy,
-        //allows for viewing the same line when switching files
         $scope.$on('$destroy', function(){
-          self.project.setNewCol = self.project.prevCol;
-          self.project.setNewLine = self.project.prevLine;
-          self.project.prevCol = self.col;
-          self.project.prevLine = self.line;
+          var scr = self.editor.getScrollInfo();
+          if(undefined===self.scrollInfo[self.folder])
+            self.scrollInfo[self.folder] = {};
+          self.scrollInfo[self.folder][self.file] =
+            {top:scr.top, left:scr.left};
         });
         self.editorFocus = false;
         self.contents = "";
@@ -1244,6 +1242,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
+            $timeout(function() {
+              if(self.scrollInfo[self.folder]!==undefined &&
+                self.scrollInfo[self.folder][self.file]!==undefined) {
+                var scr = self.scrollInfo[self.folder][self.file];
+                self.editor.scrollTo(scr.left, scr.top);
+              }
+            }, 0);
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
@@ -1364,7 +1369,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "EditorController as editView",
         resolve: {openQuestion: ['$stateParams', function($stateParams) {
           return $stateParams.question;
-        }]}
+        }],
+          scrollInfo: function() { return {}; }
+        }
       })
       .state("edit-project.editor.file", {
         url: "/file/{part}/{file}",
