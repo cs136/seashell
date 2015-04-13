@@ -45,6 +45,7 @@
 ;; report-error/json code desc -> void
 ;; Runs response/json to send the error message, and then quits.
 (define (report-error/json code desc)
+  (printf "Status: 500 Internal Server Error\r\n")
   (response/json `#hash((error . #hash((code . ,code) (message . ,desc)))))
   (custodian-shutdown-all shutdown-custodian)
   (exit 1))
@@ -52,6 +53,7 @@
 ;; report-error/html message traceback -> void
 ;; Reports the error as an HTML message.
 (define (report-error/html code message [traceback ""])
+  (printf "Status: 500 Internal Server Error\r\n")
   (printf "Content-Type: text/html\r\n\r\n")
   (display (xexpr->string
              `(html

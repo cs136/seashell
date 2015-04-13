@@ -32,7 +32,7 @@
 ;; Can we override these flags?
 (define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
                                'seashell-known-hosts 'seashell-runtime-library 'seashell-runtime-racket-library
-                               'seashell-install)))
+                               'seashell-install 'server-memory-limit 'request-memory-limit)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
@@ -120,6 +120,8 @@
       (cons 'backend-client-connection-timeout 900000)
       ;; I/O buffer sizes
       (cons 'io-buffer-size 128) ;; Something small enough or else JavaScript will choke up.
+      ;; Memory Limits
+      (cons 'server-memory-limit 1024) ;; 1G
       ;; Timeout in seconds after which an in-progress gateway login will be killed.
       (cons 'backend-login-timeout         30)
       ;; Whether or not the system is running tests,

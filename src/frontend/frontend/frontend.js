@@ -22,13 +22,24 @@
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
-  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
+  .service('error-service', ['$rootScope', '$timeout', '$sce',
+    function ($rootScope, $timeout, $sce) {
     var self = this;
     self.errors = [];
 
-    self.report = function (error, shorthand) {
+    self.types = {
+      "seashell" : "If this error persists, please email <a href='mailto:seashell@cs.uwaterloo.ca'>seashell@cs.uwaterloo.ca</a> the error message, and the following information for debugging purposes:",
+      "marmoset" : "Make sure you can still access Marmoset's web interface, and try again in a few minutes.",
+      "webserver" : "Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes."
+    };
+
+    self.getMessage = function(type) {
+      return $sce.trustAsHtml(type ? self.types[type] : self.types.seashell);
+    };
+
+    self.report = function (error, shorthand, type) {
       if (error) {
-        self.errors.push({shorthand: shorthand, error: error});
+        self.errors.push({shorthand: shorthand, error: error, type: type});
         $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
@@ -349,7 +360,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
                        .catch(function (error) {
-                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
+                         var type = error.error.indexOf("marmoset_submit")===-1 ? "seashell" : "marmoset";
+                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
                          notify(false, $scope.selected_project);
                        }).then(function () {
                          notify(true, $scope.selected_project);
@@ -546,7 +558,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
-    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
+    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
+    'settings-service',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm, cookieStore, $window, settings) {
         "use strict";
         var self = this;
@@ -720,7 +733,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.handleMarmosetResults = function(result, target) {
           var data = result.result;
           if(result.error) {
-            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target));
+            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target), "marmoset");
             self.marmoset_short_results = null;
           }
           else if(data.length > 0 && data[0].status=="complete") {
@@ -811,7 +824,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                               $.timeago(submitTime));
                   }
                 }).catch(function (error) {
-                  errors.report(error, sprintf("Could not fetch results for %s!", target));
+                  errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
                   self.marmoset_short_results = "could not fetch results...";
                   cancelMarmosetRefresh();
                 });
@@ -1282,7 +1295,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
                 return projects.fetch().catch(function (projects) {
-                  errors.report(projects, 'Could not fetch projects.');
+                  var type = projects.error.indexOf("503")===-1 ? "seashell" : "webserver";
+                  errors.report(projects, 'Could not fetch projects.', type);
                 }).then(function () {
                   return projects.list().then(function (projects_list) {
                     var new_question_list = {};
