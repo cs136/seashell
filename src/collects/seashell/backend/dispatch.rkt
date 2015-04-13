@@ -638,8 +638,6 @@
         (lambda ()
           (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
           (define result (handle-message message))
-          (unless (equal? (hash-ref message 'type #f) "ping")
-            (logf 'debug "Result of handling message ~s: ~s" message result))
           (send-message connection result)))
        (main-loop)]))
   
