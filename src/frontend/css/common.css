@@ -418,3 +418,67 @@ input::-ms-clear {
   font-size: 12px;
   text-decoration: none;
 }
+
+/* Project List */
+
+#projectOptions {
+  text-align: center;
+}
+
+#projectOptions a{
+  padding: 0 25px;
+  font-size: 1.25em;
+  font-weight: bold;
+}
+
+#projectList div{
+  display: inline-block;
+  vertical-align: middle;
+  float: left; 
+  padding: 0 auto;
+  margin: 0 auto;
+}
+
+#projectList {
+  padding: 0 auto;
+  width: 100%;
+  vertical-align: middle;
+}
+
+.outerList {
+  width: 50%;
+}
+
+.innerList {
+  width: 50%; 
+}
+
+@media (max-width: 700px){
+  .outerList {
+    width: 100%;
+  }
+}
+@media (max-width: 450px){
+  .innerList {
+    width: 100%;
+  }
+}
+#projectList h3 {
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 25px;
+}
+
+#projectList ul {
+  list-style-type: none;
+  display: block;
+  list-style-position: inside;
+  padding: 0;
+  text-align: center;
+}
+
+#projectList li {
+  text-align: center;
+  padding: 15px 0 15px 0;
+  border-bottom: 1px solid #ddd;
+}
