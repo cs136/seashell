@@ -10,9 +10,6 @@
 [submodule "lib/libgit2"]
 	path = lib/libgit2
 	url = https://github.com/libgit2/libgit2.git
-[submodule "lib/libtomcrypt"]
-	path = lib/libtomcrypt
-	url = https://github.com/libtom/libtomcrypt.git
 [submodule "lib/libssh2"]
 	path = lib/libssh2
 	url = https://github.com/libssh2/libssh2.git
