@@ -436,3 +436,10 @@ SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
     pid : pid},
     deferred);
 };
+
+SeashellWebsocket.prototype.archiveProjects = function(deferred) {
+  return this.sendMessage({
+    type : "archiveProjects",
+    location : false},
+    deferred);
+};
