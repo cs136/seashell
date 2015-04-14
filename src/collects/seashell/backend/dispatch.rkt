@@ -537,7 +537,14 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
-      ;; TODO: revertFile.
+      [(hash-table
+        ('id id)
+        ('type "archiveProjects")
+        ('location location))
+        (archive-projects location)
+        `#hash((id . ,id)
+               (success . #t)
+               (result . #t))]
       ;; Fall through case.
       [_
        `#hash((id . ,(hash-ref message 'id))
