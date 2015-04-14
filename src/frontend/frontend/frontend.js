@@ -22,13 +22,24 @@
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Error service.
-  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
+  .service('error-service', ['$rootScope', '$timeout', '$sce',
+    function ($rootScope, $timeout, $sce) {
     var self = this;
     self.errors = [];
 
-    self.report = function (error, shorthand) {
+    self.types = {
+      "seashell" : "If this error persists, please email <a href='mailto:seashell@cs.uwaterloo.ca'>seashell@cs.uwaterloo.ca</a> the error message, and the following information for debugging purposes:",
+      "marmoset" : "Make sure you can still access Marmoset's web interface, and try again in a few minutes.",
+      "webserver" : "Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes."
+    };
+
+    self.getMessage = function(type) {
+      return $sce.trustAsHtml(type ? self.types[type] : self.types.seashell);
+    };
+
+    self.report = function (error, shorthand, type) {
       if (error) {
-        self.errors.push({shorthand: shorthand, error: error});
+        self.errors.push({shorthand: shorthand, error: error, type: type});
         $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
@@ -57,18 +68,19 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             function($scope, $window, cookieStore, ws) {
               $scope.username = "";
               $scope.password = "";
+              $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
             
               $scope.login = function() {
                 $scope.busy = true;
                 $scope.error = false;
-                var target = sprintf("https://%s%s/cgi-bin/login.cgi",
+                var target = sprintf("https://%s%s/cgi-bin/login2.cgi",
                   $window.location.host,
                   $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
                 $.ajax({url: target,
                         type: "POST",
-                        data: {"u": $scope.username, "p": $scope.password},
+                        data: {"u": $scope.username, "p": $scope.password, "reset": $scope.reset},
                         dataType: "json"})
                   .done(function(data) {
                     $scope.$apply(function() {
@@ -348,7 +360,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
                        .catch(function (error) {
-                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
+                         var type = error.error.indexOf("marmoset_submit")===-1 ? "seashell" : "marmoset";
+                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
                          notify(false, $scope.selected_project);
                        }).then(function () {
                          notify(true, $scope.selected_project);
@@ -545,7 +558,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
-    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
+    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
+    'settings-service',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm, cookieStore, $window, settings) {
         "use strict";
         var self = this;
@@ -564,14 +578,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             templateUrl: "frontend/templates/help-template.html",
             controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
               function ($scope, confirm, $window, cookies) {
-                $scope.reset = function () {
-                  confirm("Reset Seashell",
-                    "Do you wish to reset your Seashell instance? Any unsaved data will be lost.")
-                    .then(function () {
-                      $window.top.location = "https://www.student.cs.uwaterloo.ca/~" +
-                                             cookies.get(SEASHELL_CREDS_COOKIE).user +
-                                             "/cs136/seashell/index.cgi?reset='reset'";
-                    });
+                $scope.login = function () {
+                  self.login();
+                  $scope.$dismiss();
                 };
               }]});
         };
@@ -724,7 +733,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.handleMarmosetResults = function(result, target) {
           var data = result.result;
           if(result.error) {
-            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target));
+            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target), "marmoset");
             self.marmoset_short_results = null;
           }
           else if(data.length > 0 && data[0].status=="complete") {
@@ -815,7 +824,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                               $.timeago(submitTime));
                   }
                 }).catch(function (error) {
-                  errors.report(error, sprintf("Could not fetch results for %s!", target));
+                  errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
                   self.marmoset_short_results = "could not fetch results...";
                   cancelMarmosetRefresh();
                 });
@@ -1022,9 +1031,57 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               },
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
-              "Cmd-S": function() { }
+              "Cmd-S": function() { },
             }
           };
+          var main_hotkeys = [{
+            combo: 'ctrl+d',
+            description: 'Sends EOF',
+            callback: function(evt) {
+              evt.preventDefault();
+              self.sendEOF();
+            }
+          }, {
+            combo: 'ctrl+k',
+            description: "Kills the currently running program.",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.killProgram();
+            }
+          }];
+          var vim_disabled_hotkeys = [{
+            combo: 'ctrl+r',
+            description: "Runs the program",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.runFile();
+            }
+          }, {
+            combo: 'ctrl+u',
+            description: "Starts Tests",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.testFile();
+            }
+          }];
+
+          if(settings.settings.editor_mode !== 'vim') {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.bindTo($scope.$parent).add(hk);
+            });
+          }
+          else {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.del(hk.combo);
+            });
+          }
+          _.each(main_hotkeys, function(hk) {
+            hotkeys.bindTo($scope.$parent).add(hk);
+          });
+
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
@@ -1172,40 +1229,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         };
 
-        hotkeys.bindTo($scope).add({
-          combo: 'ctrl+r',
-          description: 'Runs the currently open file.',
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.runFile();
-          }
-        }).add({
-          combo: 'ctrl+k',
-          description: "Kills the currently running program.",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.killProgram();
-          }
-        }).add({
-          combo: 'ctrl+d',
-          description: "Sends EOF",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.sendEOF();
-          }
-        }).add({
-          combo: 'ctrl+u',
-          description: "Starts Tests",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.testFile();
-          }
-        });
-
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
@@ -1267,7 +1290,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
                 return projects.fetch().catch(function (projects) {
-                  errors.report(projects, 'Could not fetch projects.');
+                  var type = projects.error.indexOf("503")===-1 ? "seashell" : "webserver";
+                  errors.report(projects, 'Could not fetch projects.', type);
                 }).then(function () {
                   return projects.list().then(function (projects_list) {
                     var new_question_list = {};

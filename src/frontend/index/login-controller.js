@@ -28,7 +28,7 @@ angular.module('login-app', ['jquery-cookie', 'seashell-websocket'])
         self.login = function(user) {
           self.busy = true;
           self.error = false;
-          var target = sprintf("https://%s%s/cgi-bin/login.cgi",
+          var target = sprintf("https://%s%s/cgi-bin/login2.cgi",
               $window.location.host,
               $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
           $.ajax({url: target,

@@ -60,7 +60,7 @@
                              [(eq? encoding 'url)
                               (match-define 
                                 (list _ mime charset b64? data)
-                                (regexp-match #rx"data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)" contents))
+                                (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)$" contents))
                               (if b64?
                                 (base64-decode data)
                                 (string->bytes/utf-8 (uri-decode (bytes->string/utf-8 data))))]

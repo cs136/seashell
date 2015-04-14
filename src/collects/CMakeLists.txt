@@ -28,8 +28,12 @@ add_custom_target(seashell-src-copy
 # Install the configuration.
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt")
+# Old copy of login.cgi (for backwards compatibility with UWaterloo CAS)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
   "${CMAKE_CURRENT_BINARY_DIR}/login.cgi")
+# New version of login.cgi (to enable resets on any environment)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/login2.cgi")
 # Build the binaries.
 add_custom_command(OUTPUT seashell-main
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-main"
@@ -41,5 +45,6 @@ add_custom_target(seashell-binary ALL DEPENDS seashell-main)
 # Install step.
 # First add helper scripts.
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/login.cgi" DESTINATION cgi-bin)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/login2.cgi" DESTINATION cgi-bin)
 # Then copy over real programs.
 install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-main\")")

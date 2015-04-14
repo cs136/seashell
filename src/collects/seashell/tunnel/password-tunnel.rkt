@@ -53,7 +53,7 @@
   (->* (string? string?) (#:target (or/c #f string?) #:args (or/c #f string?) #:host (or/c #f string?)) tunnel?)
 
   ;; Randomly select a host
-  (define host (if _host host (first (shuffle (read-config 'host)))))
+  (define host (if _host _host (first (shuffle (read-config 'host)))))
 
   ;; Launch the process
   (define-values (process in out error)
