@@ -43,18 +43,20 @@
 ;; Arguments:
 ;;  project - project to create file in.
 ;;  file - name of new file.
+;;  normalize - boolean, whether or not to convert newlines to Unix
 ;;
 ;; Raises:
 ;;  exn:project:file if file exists.
-(define/contract (new-file project file contents encoding)
+(define/contract (new-file project file contents encoding normalize?)
   (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) void?)
+  (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (with-output-to-file (check-and-build-path (build-project-path project) file)
+    (with-output-to-file path
                          (thunk 
                            (write-bytes (cond
                              [(eq? encoding 'url)
@@ -66,7 +68,9 @@
                                 (string->bytes/utf-8 (uri-decode (bytes->string/utf-8 data))))]
                              [else
                                contents])))
-                         #:exists 'error))
+                         #:exists 'error)
+    (when normalize?
+      (display-lines-to-file (file->lines path) path #:exists 'replace)))
   (void))
 
 (define/contract (new-directory project dir)
