@@ -435,13 +435,10 @@ input::-ms-clear {
   display: inline-block;
   vertical-align: middle;
   float: left; 
-  padding: 0 auto;
-  margin: 0 auto;
+  padding: 0;
 }
 
 #projectList {
-  padding: 0 auto;
-  width: 100%;
   vertical-align: middle;
 }
 
@@ -451,6 +448,9 @@ input::-ms-clear {
 
 .innerList {
   width: 50%; 
+}
+.outerList {
+  margin: 0 auto;
 }
 
 @media (max-width: 700px){
