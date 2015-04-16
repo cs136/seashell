@@ -257,6 +257,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.new_file_upload = [];
               $scope.question = question;
               $scope.inputError = false;
+              $scope.normalize = false;
               $scope.newFile = function () {
                 // 4 cases: file name specified AND file to upload
                 //          no file name AND file to upload
@@ -271,7 +272,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
                     reader.onload = function () {
-                      project.createFile($scope.new_file_folder, question, filename, reader.result, "url")
+                      project.createFile($scope.new_file_folder, question,
+                        filename, reader.result, "url", $scope.normalize)
                              .then(function () {
                                notify(true, true, project, question, $scope.new_file_folder, filename);
                              })
