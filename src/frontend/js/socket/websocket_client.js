@@ -307,20 +307,23 @@ SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.newFile = function(name, file_name, contents, encoding, deferred) {
+SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
+  encoding, normalize, deferred) {
   if (contents) 
     return this.sendMessage({
       type : "newFile",
       project : name,
       file : file_name,
       contents : contents,
-      encoding : encoding || "raw"},
+      encoding : encoding || "raw",
+      normalize : normalize},
       deferred);
   else
     return this.sendMessage({
       type : "newFile",
       project : name,
-      file : file_name},
+      file : file_name,
+      normalize : false},
       deferred);
 };
 
