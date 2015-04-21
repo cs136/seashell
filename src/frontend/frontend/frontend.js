@@ -21,14 +21,56 @@
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
+  .filter('projectFilter', function() {
+    return function(input, type){
+      var pattAssn = new RegExp('^A[0-9]+$');
+      var pattTut = new RegExp('^Tut[0-9]+$');
+      var pattLec = new RegExp('^Lec[0-9]+$');
+      var out = [];
+      for(var i = 0; i < input.length; i++){
+        if(type === 'A'){
+          if(pattAssn.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'TUT'){
+          if(pattTut.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'LEC'){
+          if(pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else {
+          if(!pattAssn.test(input[i]) && !pattTut.test(input[i]) && !pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+      }
+      return out;
+    };
+  })
   // Error service.
-  .service('error-service', ['$rootScope', '$timeout', function ($rootScope, $timeout) {
+  .service('error-service', ['$rootScope', '$timeout', '$sce',
+    function ($rootScope, $timeout, $sce) {
     var self = this;
     self.errors = [];
 
-    self.report = function (error, shorthand) {
+    self.types = {
+      "seashell" : "If this error persists, please email <a href='mailto:seashell@cs.uwaterloo.ca'>seashell@cs.uwaterloo.ca</a> the error message, and the following information for debugging purposes:",
+      "marmoset" : "Make sure you can still access Marmoset's web interface, and try again in a few minutes.",
+      "webserver" : "Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes."
+    };
+
+    self.getMessage = function(type) {
+      return $sce.trustAsHtml(type ? self.types[type] : self.types.seashell);
+    };
+
+    self.report = function (error, shorthand, type) {
       if (error) {
-        self.errors.push({shorthand: shorthand, error: error});
+        self.errors.push({shorthand: shorthand, error: error, type: type});
         $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
@@ -64,7 +106,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.login = function() {
                 $scope.busy = true;
                 $scope.error = false;
-                var target = sprintf("https://%s%s/cgi-bin/login.cgi",
+                var target = sprintf("https://%s%s/cgi-bin/login2.cgi",
                   $window.location.host,
                   $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
                 $.ajax({url: target,
@@ -246,6 +288,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.new_file_upload = [];
               $scope.question = question;
               $scope.inputError = false;
+              $scope.normalize = false;
               $scope.newFile = function () {
                 // 4 cases: file name specified AND file to upload
                 //          no file name AND file to upload
@@ -260,7 +303,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
                     reader.onload = function () {
-                      project.createFile($scope.new_file_folder, question, filename, reader.result, "url")
+                      project.createFile($scope.new_file_folder, question,
+                        filename, reader.result, "url", $scope.normalize)
                              .then(function () {
                                notify(true, true, project, question, $scope.new_file_folder, filename);
                              })
@@ -349,7 +393,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
                        .catch(function (error) {
-                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project));
+                         var type = error.error.indexOf("marmoset_submit")===-1 ? "seashell" : "marmoset";
+                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
                          notify(false, $scope.selected_project);
                        }).then(function () {
                          notify(true, $scope.selected_project);
@@ -547,8 +592,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   }])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
-    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window', 'settings-service',
-      function ($scope, ws, $q, errors, $modal, LoginModal, confirm, cookieStore, $window, settings) {
+    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
+    'settings-service', '$location',
+      function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
+        cookieStore, $window, settings, $location) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -564,13 +611,33 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.help = function () {
           $modal.open({
             templateUrl: "frontend/templates/help-template.html",
-            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+            controller: ['$scope', 'ConfirmationMessageModal', '$window',
+              'cookieStore',
               function ($scope, confirm, $window, cookies) {
                 $scope.login = function () {
                   self.login();
                   $scope.$dismiss();
                 };
+                $scope.archive = function() {
+                  self.archive();
+                  $scope.$dismiss();
+                };
               }]});
+        };
+        // confirmation modal for archiving all projects
+        self.archive = function() {
+          confirm("Archive Projects",
+            "Are you sure you want to archive all of your projects? If you do this, you will no longer be able to retrieve them through Seashell, but they will be accessible from your student.cs Linux account.")
+            .then(function() {
+              $q.when(ws.socket.archiveProjects())
+                .then(function() {
+                  // look at all these callbacks
+                  $location.path("/");
+                  $window.location.reload();
+                 }).catch(function(err) {
+                   self.errors.report(err, "Failed to archive projects.");
+                 });
+            });
         };
         // Logout
         self.logout = function () {
@@ -721,7 +788,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.handleMarmosetResults = function(result, target) {
           var data = result.result;
           if(result.error) {
-            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target));
+            errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target), "marmoset");
             self.marmoset_short_results = null;
           }
           else if(data.length > 0 && data[0].status=="complete") {
@@ -812,7 +879,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                               $.timeago(submitTime));
                   }
                 }).catch(function (error) {
-                  errors.report(error, sprintf("Could not fetch results for %s!", target));
+                  errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
                   self.marmoset_short_results = "could not fetch results...";
                   cancelMarmosetRefresh();
                 });
@@ -846,9 +913,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document, hotkeys) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo) {
         var self = this;
         // Scope variable declarations follow.
         self.project = openProject;
@@ -856,6 +923,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.folder = openFolder;
         self.file = openFile;
         self.console = Console;
+        self.scrollInfo = scrollInfo;
         self.isBinaryFile = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
@@ -883,15 +951,12 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
-        self.col = self.project.prevCol;
-        self.line = self.project.prevLine;
-        //Adds a previous column update method on destroy,
-        //allows for viewing the same line when switching files
         $scope.$on('$destroy', function(){
-          self.project.setNewCol = self.project.prevCol;
-          self.project.setNewLine = self.project.prevLine;
-          self.project.prevCol = self.col;
-          self.project.prevLine = self.line;
+          var scr = self.editor.getScrollInfo();
+          if(undefined===self.scrollInfo[self.folder])
+            self.scrollInfo[self.folder] = {};
+          self.scrollInfo[self.folder][self.file] =
+            {top:scr.top, left:scr.left};
         });
         self.editorFocus = false;
         self.contents = "";
@@ -1019,9 +1084,57 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               },
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
-              "Cmd-S": function() { }
+              "Cmd-S": function() { },
             }
           };
+          var main_hotkeys = [{
+            combo: 'ctrl+d',
+            description: 'Sends EOF',
+            callback: function(evt) {
+              evt.preventDefault();
+              self.sendEOF();
+            }
+          }, {
+            combo: 'ctrl+k',
+            description: "Kills the currently running program.",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.killProgram();
+            }
+          }];
+          var vim_disabled_hotkeys = [{
+            combo: 'ctrl+r',
+            description: "Runs the program",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.runFile();
+            }
+          }, {
+            combo: 'ctrl+u',
+            description: "Starts Tests",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: function (evt) {
+              evt.preventDefault();
+              self.testFile();
+            }
+          }];
+
+          if(settings.settings.editor_mode !== 'vim') {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.bindTo($scope.$parent).add(hk);
+            });
+          }
+          else {
+            _.each(vim_disabled_hotkeys, function(hk) {
+              hotkeys.del(hk.combo);
+            });
+          }
+          _.each(main_hotkeys, function(hk) {
+            hotkeys.bindTo($scope.$parent).add(hk);
+          });
+
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
@@ -1169,40 +1282,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         };
 
-        hotkeys.bindTo($scope).add({
-          combo: 'ctrl+r',
-          description: 'Runs the currently open file.',
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.runFile();
-          }
-        }).add({
-          combo: 'ctrl+k',
-          description: "Kills the currently running program.",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.killProgram();
-          }
-        }).add({
-          combo: 'ctrl+d',
-          description: "Sends EOF",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.sendEOF();
-          }
-        }).add({
-          combo: 'ctrl+u',
-          description: "Starts Tests",
-          allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
-          callback: function (evt) {
-            evt.preventDefault();
-            self.testFile();
-          }
-        });
-
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
@@ -1218,6 +1297,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
+            $timeout(function() {
+              if(self.scrollInfo[self.folder]!==undefined &&
+                self.scrollInfo[self.folder][self.file]!==undefined) {
+                var scr = self.scrollInfo[self.folder][self.file];
+                self.editor.scrollTo(scr.left, scr.top);
+              }
+            }, 0);
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
@@ -1264,7 +1350,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
                 return projects.fetch().catch(function (projects) {
-                  errors.report(projects, 'Could not fetch projects.');
+                  var type = projects.error.indexOf("503")===-1 ? "seashell" : "webserver";
+                  errors.report(projects, 'Could not fetch projects.', type);
                 }).then(function () {
                   return projects.list().then(function (projects_list) {
                     var new_question_list = {};
@@ -1337,7 +1424,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         controller: "EditorController as editView",
         resolve: {openQuestion: ['$stateParams', function($stateParams) {
           return $stateParams.question;
-        }]}
+        }],
+          scrollInfo: function() { return {}; }
+        }
       })
       .state("edit-project.editor.file", {
         url: "/file/{part}/{file}",

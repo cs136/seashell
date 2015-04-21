@@ -62,8 +62,8 @@
                 "-o" (format "GlobalKnownHostsFile ~a" (read-config 'seashell-known-hosts))
                 host
                 (format "~a ~a"
-                        (if target target (read-config 'seashell-backend-remote)))
-                        (if args args "")))
+                        (if target target (read-config 'seashell-backend-remote))
+                        (if args args ""))))
 
   ;; And the logger thread
   (define status-thread
