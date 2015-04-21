@@ -602,6 +602,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
+        self.stylesheet = "css/common.css";
+
         var cookie = cookieStore.get(SEASHELL_CREDS_COOKIE);
         if(cookie) {
           self.host = cookie.host;
@@ -670,6 +672,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
         ws.register_callback('failed', function () {self.failed = true;}, true);
+        settings.addWatcher(function () {
+          // TODO: check settings.settings.<name-of-theme-field> here
+          //if(settings.settings.theme_style === "default")
+            //  {self.stylesheet = "css/common_default.css";}
+          //if(settings.settings.theme_style === "dark")
+            //  {self.stylesheet = "css/common.css";}
+          // and update self.stylesheet accordingly
+        }, true);
       }])
   // Controller for Project Lists
   .controller('ProjectListController', ['projectList', 'projects',

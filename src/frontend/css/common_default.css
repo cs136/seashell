@@ -1,40 +1,17 @@
-/* Fixed height tags. */
+/** Fixed height tags. */
 body {
   position: relative; /* For scrollyspy */
   padding-top: 15px;
-/* Dark Theme change */
-  background-color: #333;
 }
 
 .container-fluid {
   padding-left: 5em;
   padding-right: 5em;
- /* Dark theme change */
-  background-color: #333;
 }
 .row {
   padding: 2px;
 }
 
-/** hr bar Dark theme change **/
-hr{
-  border-top: 1px solid #ff9999;
-}
-h2.text-left{
-  color: #ff9999;
-}
-/** color of link on the landing pagei Dark theme change **/
-a{
-  color: #FFFC99;
-  opacity: 0.7;
-}
-a:focus, a:hover{
-  color: #FFFC99;
-  opacity: 1;
-}
-a.dropdown-toggle{
-  color: #ff9999 !important;
-}
 /** Height-manipulation */
 .disconnected {
 }
@@ -62,7 +39,7 @@ a.dropdown-toggle{
 }
 
 .CodeMirror-gutters {
-  border: 1px dashed #ff9999;
+  border: 1px dashed #eee;
 }
 
 .editor-console {
@@ -75,7 +52,7 @@ a.dropdown-toggle{
 
 #editor > .CodeMirror {
   height: 300px;
-  border: 1px solid #666;
+  border: 1px solid #ddd;
   border-top: none;
 }
 
@@ -88,9 +65,9 @@ a.dropdown-toggle{
 }
 
 #current-file-controls {
-  border: 1px solid #666;
+  border: 1px solid #ddd;
   border-top: none;
-  border-bottom-color: #ffaaaa;
+  border-bottom-color: #eee;
 }
 
 .CodeMirror-fullscreen {
@@ -104,23 +81,13 @@ a.dropdown-toggle{
 }
 
 .editor-console-title {
-  border: 1px solid #666;
-  background: #4f4f4f;
+  border: 1px solid #ddd;
+  background: #f4f4f4;
   font-size: 18px;
   padding: 5px 0 3px 18px;
   font-weight: 200;
-  color: #ddd;
 }
 
-/** Code and console buttons,  Dark theme change **/
-.btn-link
-{
-  color: #fff8aa;
-}
-.btn-link:focus, .btn-link:hover
-{
-  color: #ffaaaa;
-}
 .console-controls {
   margin-top: 1px;
   margin-right: 7px;
@@ -258,9 +225,7 @@ div.tooltip .tooltip-inner {
 .question-link {
   opacity: 0.5;
 }
-a.question-link.ng-binding {
-  color: #fff8c9;
-}
+
 .question-link:hover, .question-link-active:hover {
   text-decoration: none;
   opacity: 1;
@@ -274,16 +239,11 @@ a.question-link.ng-binding {
 
 .file-text {
   font-family: monospace;
-  /* Dark theme change */
-  color: #ddd;
 }
-
 .file-link {
   opacity: 0.5;
 }
-a.file-link.ng-binding {
-  color: #fff8c9;
-}
+
 .file-link:hover, .file-link-active:hover {
   text-decoration: none;
   opacity: 1;
@@ -360,7 +320,7 @@ a.file-link.ng-binding {
 
 #console > .CodeMirror {
   height: 299px;
-  border: 1px solid #666;
+  border: 1px solid #ddd;
   border-top: none;
   border-bottom: none;
   clear: both;
@@ -389,8 +349,7 @@ a.file-link.ng-binding {
 @media (min-width: 992px) {
 	#resize-button { display: inline; }
   #console:not(.console-narrow) #console-title {
-    /* Dark theme change */
-    border: 1px solid #666;
+    border: 1px solid #ddd;
 	  border-left: none;
 	}
   #console:not(.console-narrow) .CodeMirror { border-left: none; }
@@ -458,68 +417,4 @@ input::-ms-clear {
   padding: 10px 6px;
   font-size: 12px;
   text-decoration: none;
-}
-
-/* Project List */
-
-#projectOptions {
-  text-align: center;
-}
-
-#projectOptions a{
-  padding: 0 25px;
-  font-size: 1.25em;
-  font-weight: bold;
-}
-
-#projectList div{
-  display: inline-block;
-  vertical-align: middle;
-  float: left; 
-  padding: 0;
-}
-
-#projectList {
-  vertical-align: middle;
-}
-
-.outerList {
-  width: 50%;
-}
-
-.innerList {
-  width: 50%; 
-}
-.outerList {
-  margin: 0 auto;
-}
-
-@media (max-width: 700px){
-  .outerList {
-    width: 100%;
-  }
-}
-@media (max-width: 450px){
-  .innerList {
-    width: 100%;
-  }
-}
-#projectList h3 {
-  text-align: center;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 25px;
-}
-
-#projectList ul {
-  list-style-type: none;
-  display: block;
-  list-style-position: inside;
-  padding: 0;
-  text-align: center;
-}
-
-#projectList li {
-  text-align: center;
-  padding: 15px 0 15px 0;
-  border-bottom: 1px solid #ddd;
 }
