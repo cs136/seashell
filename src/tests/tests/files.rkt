@@ -10,7 +10,7 @@
     #:after (thunk (delete-project "test"))
     (test-case "Create a file"
       (new-file "test" "good.c")
-      (check file-exists? (check-and-build-path (build-project-path "test") "good.c")))
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") "good.c")))
 
     (test-case "Read a file"
       (check-equal? (read-file "test" "good.c") #"")
@@ -19,7 +19,7 @@
 
     (test-case "Rename a file"
       (rename-file "test" "good.c" "bad.c")
-      (check file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "good.c"))))
     
     (test-case "List files"
