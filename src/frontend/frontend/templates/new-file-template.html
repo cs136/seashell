@@ -32,6 +32,10 @@
           <input type="file" name="file-to-upload" multiple id="file-to-upload"
                  class="form-control"
                  filelist-bind="new_file_upload">
+          <label style="font-size:14px">
+            <input type="checkbox" name="normalize-newlines" ng-model="normalize" />
+            Normalize newlines on upload
+          </label>
       </div>
     </div>
 </div>

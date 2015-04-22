@@ -21,6 +21,37 @@
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
+  .filter('projectFilter', function() {
+    return function(input, type){
+      var pattAssn = new RegExp('^A[0-9]+$');
+      var pattTut = new RegExp('^Tut[0-9]+$');
+      var pattLec = new RegExp('^Lec[0-9]+$');
+      var out = [];
+      for(var i = 0; i < input.length; i++){
+        if(type === 'A'){
+          if(pattAssn.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'TUT'){
+          if(pattTut.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'LEC'){
+          if(pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else {
+          if(!pattAssn.test(input[i]) && !pattTut.test(input[i]) && !pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+      }
+      return out;
+    };
+  })
   // Error service.
   .service('error-service', ['$rootScope', '$timeout', '$sce',
     function ($rootScope, $timeout, $sce) {
@@ -257,6 +288,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.new_file_upload = [];
               $scope.question = question;
               $scope.inputError = false;
+              $scope.normalize = false;
               $scope.newFile = function () {
                 // 4 cases: file name specified AND file to upload
                 //          no file name AND file to upload
@@ -271,7 +303,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
                     reader.onload = function () {
-                      project.createFile($scope.new_file_folder, question, filename, reader.result, "url")
+                      project.createFile($scope.new_file_folder, question,
+                        filename, reader.result, "url", $scope.normalize)
                              .then(function () {
                                notify(true, true, project, question, $scope.new_file_folder, filename);
                              })
@@ -559,8 +592,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
-    'settings-service',
-      function ($scope, ws, $q, errors, $modal, LoginModal, confirm, cookieStore, $window, settings) {
+    'settings-service', '$location',
+      function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
+        cookieStore, $window, settings, $location) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -576,13 +610,33 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.help = function () {
           $modal.open({
             templateUrl: "frontend/templates/help-template.html",
-            controller: ['$scope', 'ConfirmationMessageModal', '$window', 'cookieStore',
+            controller: ['$scope', 'ConfirmationMessageModal', '$window',
+              'cookieStore',
               function ($scope, confirm, $window, cookies) {
                 $scope.login = function () {
                   self.login();
                   $scope.$dismiss();
                 };
+                $scope.archive = function() {
+                  self.archive();
+                  $scope.$dismiss();
+                };
               }]});
+        };
+        // confirmation modal for archiving all projects
+        self.archive = function() {
+          confirm("Archive Projects",
+            "Are you sure you want to archive all of your projects? If you do this, you will no longer be able to retrieve them through Seashell, but they will be accessible from your student.cs Linux account.")
+            .then(function() {
+              $q.when(ws.socket.archiveProjects())
+                .then(function() {
+                  // look at all these callbacks
+                  $location.path("/");
+                  $window.location.reload();
+                 }).catch(function(err) {
+                   self.errors.report(err, "Failed to archive projects.");
+                 });
+            });
         };
         // Logout
         self.logout = function () {

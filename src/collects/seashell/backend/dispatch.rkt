@@ -386,10 +386,12 @@
          ('type "newFile")
          ('project project)
          ('file file)
+         ('normalize normalize)
          (_ _) ...)
        (new-file project file
                  (string->bytes/utf-8 (hash-ref message 'contents ""))
-                 (string->symbol (hash-ref message 'encoding "raw")))
+                 (string->symbol (hash-ref message 'encoding "raw"))
+                 normalize)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -537,7 +539,14 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
-      ;; TODO: revertFile.
+      [(hash-table
+        ('id id)
+        ('type "archiveProjects")
+        ('location location))
+        (archive-projects location)
+        `#hash((id . ,id)
+               (success . #t)
+               (result . #t))]
       ;; Fall through case.
       [_
        `#hash((id . ,(hash-ref message 'id))
