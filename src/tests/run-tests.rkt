@@ -2,7 +2,7 @@
 
 (require rackunit
          rackunit/text-ui
-         errortrace/errortrace-lib
+         errortrace
          "tests/test-environment.rkt"
          "tests/files.rkt")
 
