@@ -6,6 +6,11 @@
          "tests/test-environment.rkt"
          "tests/files.rkt")
 
-(run-tests (make-test-suite "all-tests"
-  (list
-    file-suite)))
+;; Run tests
+(define result
+  (run-tests 
+    (make-test-suite "all-tests"
+      (list
+        file-suite))))
+
+(exit result)
