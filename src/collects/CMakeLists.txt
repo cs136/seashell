@@ -19,10 +19,15 @@ project(seashell-collects)
 cmake_minimum_required(VERSION 2.6)
 
 # Grab our dependencies.
-file(GLOB_RECURSE seashell_collects "${CMAKE_CURRENT_SOURCE_DIR}" *.rkt)
+file(GLOB_RECURSE seashell_collects *.rkt)
 add_custom_target(seashell-src-copy
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/seashell" "${CMAKE_CURRENT_BINARY_DIR}/seashell"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt" "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
   SOURCES ${seashell_collects})
+file(GLOB_RECURSE seashell_racket_tests "${CMAKE_SOURCE_DIR}/src/tests/*.rkt")
+add_custom_target(seashell-racket-tests-copy
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/tests" "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src"
+  SOURCES ${seashell_racket_tests})
                
 
 # Install the configuration.
@@ -37,11 +42,19 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
 # Build the binaries.
 add_custom_command(OUTPUT seashell-main
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-main"
-                           ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt"
+                          ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
                            DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt
                                    ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                    seashell-src-copy)
-add_custom_target(seashell-binary ALL DEPENDS seashell-main)
+message(${seashell_racket_tests})
+add_custom_command(OUTPUT seashell-racket-test
+                   COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test"
+                           ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src/run-tests.rkt"
+                           DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_SOURCE_DIR}/src/tests/run-tests.rkt 
+                                   ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt ${seashell_racket_tests}
+                                   seashell-src-copy seashell-racket-tests-copy)
+add_custom_target(seashell-binary ALL DEPENDS seashell-main seashell-racket-test)
+add_test(seashell-racket-test "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test")
 # Install step.
 # First add helper scripts.
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/login.cgi" DESTINATION cgi-bin)
