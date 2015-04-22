@@ -21,6 +21,37 @@
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
+  .filter('projectFilter', function() {
+    return function(input, type){
+      var pattAssn = new RegExp('^A[0-9]+$');
+      var pattTut = new RegExp('^Tut[0-9]+$');
+      var pattLec = new RegExp('^Lec[0-9]+$');
+      var out = [];
+      for(var i = 0; i < input.length; i++){
+        if(type === 'A'){
+          if(pattAssn.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'TUT'){
+          if(pattTut.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else if(type === 'LEC'){
+          if(pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+        else {
+          if(!pattAssn.test(input[i]) && !pattTut.test(input[i]) && !pattLec.test(input[i])){
+            out.push(input[i]);
+          }
+        }
+      }
+      return out;
+    };
+  })
   // Error service.
   .service('error-service', ['$rootScope', '$timeout', '$sce',
     function ($rootScope, $timeout, $sce) {
