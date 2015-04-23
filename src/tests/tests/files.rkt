@@ -9,7 +9,7 @@
     #:before (thunk (new-project "test"))
     #:after (thunk (delete-project "test"))
     (test-case "Create a file"
-      (new-file "test" "good.c")
+      (new-file "test" "good.c" #"" 'raw #f)
       (check-pred file-exists? (check-and-build-path (build-project-path "test") "good.c")))
 
     (test-case "Read a file"
@@ -23,8 +23,12 @@
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "good.c"))))
     
     (test-case "List files"
-      (new-file "test" "good.c")
-      (check-match (list-files "test") `(("tests" #t ,_) ("good.c" #f ,_) ("bad.c" #f ,_))))
+      (new-file "test" "good.c" #"" 'raw #f)
+      (check-match (list-files "test") (list-no-order
+        (list "default" #t _)
+        (list "default/main.c" #f _)
+        (list "good.c" #f _)
+        (list "bad.c" #f _))))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
