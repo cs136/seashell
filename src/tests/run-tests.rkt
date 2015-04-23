@@ -4,13 +4,15 @@
          rackunit/text-ui
          errortrace
          "tests/test-environment.rkt"
-         "tests/files.rkt")
+         "tests/files.rkt"
+         "tests/project.rkt")
 
 ;; Run tests
 (define result
   (run-tests 
     (make-test-suite "all-tests"
       (list
-        file-suite))))
+        file-suite
+        project-suite))))
 
 (exit result)

@@ -4,34 +4,24 @@
          seashell/backend/project
          seashell/backend/runner)
 
-(define test-dir (string->path "./.seashell-test"))
-
-(define/provide-test-suite project-test
+(define/provide-test-suite project-suite
   (test-suite "Project Tests"
     (test-case "Create a Project"
       (new-project "foo")
-      (check is-project? "foo"))
+      (check-pred is-project? "foo"))
 
     (test-case "Delete a non-Project"
       (check-exn exn:fail? (thunk (delete-project "bar"))))
 
     (test-case "Run a Project"
-      (with-output-to-file (check-and-build-path (build-project-path "bar") "test.c")
-        (thunk (display "#include <stdlib.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define run-pid (run-project "bar" "test.c" #f))
-      (sync (program-wait-evt run-pid)))
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
+        (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
+      (define-values (_ hsh) (compile-and-run-project "foo" "test.c" '()))
+      (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Export a Project"
-      (export-project "bar"))
+      (export-project "foo"))
 
-    (test-case 
-
-;; Test 6
-;; try listing the projects when there are none
-(delete-project "bar")
-
-(if (equal? (list-projects) '())
-  (set! passed-tests (add1 passed-tests))
-  (display "list-projects is not working.\n" (current-error-port)))
-
-(printf "~a\n~a\n" total-tests passed-tests)
+    (test-case "Delete a Project"
+      (delete-project "foo")
+      (check-equal? (list-projects) '()))))
