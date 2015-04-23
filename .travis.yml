@@ -26,4 +26,5 @@ script:
   - cd build
   - $HOME/cmake/bin/cmake -DCMAKE_C_COMPILER=$HOME/ccache/bin/${CC} -DCMAKE_CXX_COMPILER=$HOME/ccache/bin/${CXX} -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install ..
   - make
+  - make test
   - make install
