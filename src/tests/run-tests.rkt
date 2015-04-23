@@ -5,7 +5,8 @@
          errortrace
          "tests/test-environment.rkt"
          "tests/files.rkt"
-         "tests/project.rkt")
+         "tests/project.rkt"
+         "tests/crypto.rkt")
 
 ;; Run tests
 (define result
@@ -13,6 +14,7 @@
     (make-test-suite "all-tests"
       (list
         file-suite
-        project-suite))))
+        project-suite
+        crypto-suite))))
 
 (exit result)
