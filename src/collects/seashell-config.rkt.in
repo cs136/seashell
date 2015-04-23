@@ -16,13 +16,16 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION)
+(provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
+         SEASHELL_BUILD_PATH)
 
 ;; Versioning information.
 (define SEASHELL_VERSION "@SEASHELL_VERSION@")
 (define SEASHELL_BRANCH "@GIT_BRANCH@")
 (define SEASHELL_COMMIT "@GIT_COMMIT_HASH@")
 (define SEASHELL_API_VERSION @SEASHELL_API_VERSION@)
+(define SEASHELL_BUILD_PATH "@CMAKE_BINARY_DIR@")
+
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
 ;; found
@@ -62,14 +65,10 @@
     (make-hash 
      (list
       ;; These flags cannot be overridden by any configuration file.
-      ;; Location of Seashell crypto library.
-      (cons 'seashell-crypto               (build-path seashell-install-path "lib" "libseashell-crypto"))
       ;; Location of Seashell (native) support library.
       (cons 'seashell-support              (build-path seashell-install-path "lib" "libseashell-support"))
       ;; Location of Seashell clang library.
       (cons 'seashell-clang                (build-path seashell-install-path "lib" "libseashell-clang"))
-      ;; Location of Seashell git library.
-      (cons 'seashell-git                  (build-path seashell-install-path "lib" "libseashell-git"))
       ;; Location of Seashell collects.
       (cons 'seashell-collects             (build-path seashell-install-path "share" "collects"))
       ;; Location of SSH known hosts file.
@@ -79,6 +78,8 @@
       (cons 'seashell-racket-runtime-library (build-path seashell-install-path "lib" "seashell-runtime.rkt"))
       ;; Location of install path.
       (cons 'seashell-install              (build-path seashell-install-path))
+      ;; Unupdateable version of debug (to control where support libraries are loaded from) 
+      (cons '_debug                         (= seashell-numeric-debug 1))
 
       ;; These flags can be overridden by the configuration file.
       ;; Optional login tracking helper.  (Runs whenever a user logs in.)
@@ -146,10 +147,16 @@
 ;; The hash table holding the configuration
 (define config-hash (make-config))
 
+;; Attempt to override default config values with values read from config file
+(define release-config-file (build-path seashell-install-path "etc" "seashell_config.rkt"))
+(define debug-config-file (build-path SEASHELL_BUILD_PATH "etc" "seashell_config.rkt"))
+
 ;; Overrides the current configuration with entries from $INSTALL/etc/seashell_config.rkt
 (define (load-config)
-  ;; Attempt to override default config values with values read from config file
-  (define config-file (build-path seashell-install-path "etc" "seashell_config.rkt"))
+  (define config-file
+    (if (and (read-config '_debug) (file-exists? debug-config-file))
+      debug-config-file
+      release-config-file))
   (with-handlers 
       ([exn:fail:filesystem? void]) 
     (call-with-input-file* config-file

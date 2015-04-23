@@ -269,7 +269,14 @@
                 (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
                 (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
-                                   "-t" (some-system-path->string (read-config 'seashell-racket-runtime-library))
+                                   "-t" 
+                                   (cond
+                                     [(read-config '_debug)
+                                      (define debug-path (build-path SEASHELL_BUILD_PATH "src/runtime/seashell-runtime.rkt"))
+                                      (if (file-exists? debug-path)
+                                        (some-system-path->string debug-path)
+                                        (some-system-path->string (read-config 'seashell-racket-runtime-library)))]
+                                     [else (some-system-path->string (read-config 'seashell-racket-runtime-library))])
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.

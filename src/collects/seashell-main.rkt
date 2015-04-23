@@ -32,7 +32,8 @@
     [("-v" "--version") "Prints version information. [default]" (mode 'version)])
   (match (mode)
          ['version (printf "Seashell v~a multi-tool binary (API version ~a) - built from ~a (~a).~n"
-                           SEASHELL_VERSION SEASHELL_API_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)]
+                           SEASHELL_VERSION SEASHELL_API_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)
+                   (printf "Built from: ~a.~n" SEASHELL_BUILD_PATH)]
          ['login (gateway-main)]
          ['server (backend-main)]
          ['creds 

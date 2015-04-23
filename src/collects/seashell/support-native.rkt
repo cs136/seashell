@@ -30,7 +30,10 @@
          try-and-lock-file)
 
 (define-ffi-definer define-support 
-                    (ffi-lib (read-config 'seashell-support)))
+                    (if (read-config '_debug)
+                        (or (ffi-lib (build-path SEASHELL_BUILD_PATH "src/backend/user/libseashell-support") #:fail (lambda () #f))
+                            (ffi-lib (read-config 'seashell-support)))
+                        (ffi-lib (read-config 'seashell-support))))
 (define-ffi-definer define-self 
                     (ffi-lib #f))
 
