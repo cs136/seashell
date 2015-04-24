@@ -74,6 +74,16 @@ int main() {
       return 1;
     }
 
+    // Prefer build directory if debug build.
+#if SEASHELL_DEBUG
+    if(access(SEASHELL_DEBUG_MAIN, F_OK) != -1) {
+      char * argv2[] = {SEASHELL_DEBUG_MAIN, "-s", NULL};
+      execv(SEASHELL_DEBUG_MAIN, argv2);
+      perror("Could not execv() the Seashell backend:");
+      return 1;
+    }
+#endif
+    // Main case if not in debug mode (fall through if)
     char * argv[] = {SEASHELL_MAIN, "-s", NULL};
     execv(SEASHELL_MAIN, argv);
 

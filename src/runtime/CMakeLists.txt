@@ -18,5 +18,8 @@
 cmake_minimum_required(VERSION 2.6)
 
 add_library(seashell-rt seashell-runtime.cpp)
+add_custom_target(seashell-runtime-racket-copy ALL
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/seashell-runtime.rkt" "${CMAKE_CURRENT_BINARY_DIR}")
+
 install(TARGETS seashell-rt ARCHIVE DESTINATION lib)
-install(FILES seashell-runtime.rkt DESTINATION lib)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/seashell-runtime.rkt" DESTINATION lib)

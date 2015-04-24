@@ -16,7 +16,8 @@
     (test-case "Run a Project"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (_ hsh) (compile-and-run-project "foo" "test.c" '()))
+      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
+      (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Get a Compilation Error"
