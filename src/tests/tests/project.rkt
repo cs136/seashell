@@ -17,7 +17,6 @@
       (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
       (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
-      (pretty-print hsh)
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
