@@ -20,7 +20,6 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-                          console.log(index);
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   .filter('projectFilter', function() {
     return function(input, type){
