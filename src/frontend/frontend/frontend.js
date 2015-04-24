@@ -20,6 +20,7 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
+                          console.log(index);
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   .filter('projectFilter', function() {
     return function(input, type){
@@ -29,23 +30,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       var out = [];
       for(var i = 0; i < input.length; i++){
         if(type === 'A'){
-          if(pattAssn.test(input[i])){
-            out.push(input[i]);
+          if(pattAssn.test(input[i][0])){
+            out.push(input[i][0]);
           }
         }
         else if(type === 'TUT'){
-          if(pattTut.test(input[i])){
-            out.push(input[i]);
+          if(pattTut.test(input[i][0])){
+            out.push(input[i][0]);
           }
         }
         else if(type === 'LEC'){
-          if(pattLec.test(input[i])){
-            out.push(input[i]);
+          if(pattLec.test(input[i][0])){
+            out.push(input[i][0]);
           }
         }
         else {
-          if(!pattAssn.test(input[i]) && !pattTut.test(input[i]) && !pattLec.test(input[i])){
-            out.push(input[i]);
+          if(!pattAssn.test(input[i][0]) && !pattTut.test(input[i][0]) && !pattLec.test(input[i][0])){
+            out.push(input[i][0]);
           }
         }
       }
@@ -1344,7 +1345,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             return new function () {
               var self = this;
               self.list = [];
-              self.question_list = {};
               /** Run this every time the state associated with this controller is loaded.
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
@@ -1353,17 +1353,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   errors.report(projects, 'Could not fetch projects.', type);
                 }).then(function () {
                   return projects.list().then(function (projects_list) {
-                    var new_question_list = {};
-
-                    return $q.when(_.map(projects_list, function (project) {
-                      return projects.open(project, 'none').then(function (project_object) {
-                        var questions = project_object.questions();
-                        new_question_list[project] = questions;
-                      });
-                    })).then(function () {
-                      self.list = projects_list;
-                      self.question_list = new_question_list;
-                    });
+                    function compareTime(a, b) {
+                      if(a[1] === b[1]){
+                        return 0;
+                      }
+                      else {
+                        return (a[1] > b[1]) ? -1 : 1;
+                      }
+                    }
+                    projects_list.sort(compareTime);
+                    self.list = projects_list;
                   }).catch(function (error) {
                     errors.report(error, "Could not generate list of projects.");
                   });
