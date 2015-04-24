@@ -16,6 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(require (only-in ffi/unsafe ffi-lib))
 (provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
          SEASHELL_BUILD_PATH SEASHELL_DEBUG)
 
@@ -70,14 +71,14 @@
       (cons 'seashell-support              (let
                                             ([install-path (build-path seashell-install-path "lib" "libseashell-support")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/backend/user/libseashell-support")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and SEASHELL_DEBUG (ffi-lib build-path #:fail (thunk #f)))
                                               build-path
                                               install-path)))
       ;; Location of Seashell clang library.
       (cons 'seashell-clang                (let
                                             ([install-path (build-path seashell-install-path "lib" "libseashell-clang")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/backend/compiler/libseashell-clang")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and SEASHELL_DEBUG (ffi-lib build-path #:fail (thunk #f)))
                                               build-path
                                               install-path)))
       ;; Location of SSH known hosts file.
@@ -104,6 +105,53 @@
       ;; Location of install path.
       (cons 'seashell-install              (build-path seashell-install-path))
 
+      ;; These flags can be overridden by the configuration file,
+      ;; but the default parameters change depending on if this is a debug build or not.
+      ;; We prefer build paths over install paths in a debug build.
+      ;; (again, so we can run out of tree without installing Seashell)
+      ;; Location of SSL key.
+      (cons 'ssl-key                       (let
+                                            ([install-path (build-path seashell-install-path "etc" "keys" "server-key.pem")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "etc" "keys" "server-key.pem")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of SSL certificate.
+      (cons 'ssl-cert                     (let
+                                            ([install-path (build-path seashell-install-path "etc" "keys" "server.pem")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "etc" "keys" "server.pem")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of SSH tunnel binary.
+      (cons 'tunnel-binary                 (let
+                                            ([install-path (build-path seashell-install-path "bin" "seashell-tunnel")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/tunnel/seashell-tunnel")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of remote backend
+      (cons 'seashell-backend-remote       (let
+                                            ([install-path (build-path seashell-install-path "bin" "seashell-backend-remote")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-backend-remote")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of LLVM symbolizer.
+      (cons 'llvm-symbolizer               (let
+                                            ([install-path (build-path seashell-install-path "bin" "llvm-symbolizer")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/seashell-backend-remote")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Default binary to invoke when linking.
+      (cons 'system-linker                 (let
+                                            ([install-path (build-path seashell-install-path "bin" "clang++")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/clang++")])
+                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+
       ;; These flags can be overridden by the configuration file.
       ;; Optional login tracking helper.  (Runs whenever a user logs in.)
       (cons 'login-tracking-helper         #f)
@@ -126,14 +174,6 @@
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
-      ;; Location of SSL key.
-      (cons 'ssl-key                       (build-path seashell-install-path "etc" "keys" "server-key.pem"))
-      ;; Location of SSL certificate.
-      (cons 'ssl-cert                      (build-path seashell-install-path "etc" "keys" "server.pem"))
-      ;; Location of SSH tunnel binary.
-      (cons 'tunnel-binary                 (build-path seashell-install-path "bin" "seashell-tunnel"))
-      ;; Location of remote backend
-      (cons 'seashell-backend-remote       (build-path seashell-install-path "bin" "seashell-user-backend"))
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
       (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having
@@ -151,10 +191,6 @@
       ;; Whether or not the system is running tests,
       ;; useful for disabling things like log file during tests
       (cons 'test-mode                     #f)
-      ;; Location of LLVM symbolizer.
-      (cons 'llvm-symbolizer               (build-path seashell-install-path "bin" "llvm-symbolizer"))
-      ;; Default binary to invoke when linking.
-      (cons 'system-linker                 (build-path seashell-install-path "bin" "clang++"))
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
       ;; Racket interpreter
