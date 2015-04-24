@@ -132,15 +132,15 @@
                                               install-path)))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (let
-                                            ([install-path (build-path seashell-install-path "bin" "seashell-backend-remote")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-backend-remote")])
+                                            ([install-path (build-path seashell-install-path "bin" "seashell-user-backend")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-user-backend")])
                                             (if (and SEASHELL_DEBUG (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of LLVM symbolizer.
       (cons 'llvm-symbolizer               (let
                                             ([install-path (build-path seashell-install-path "bin" "llvm-symbolizer")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/seashell-backend-remote")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/llvm-symbolizer")])
                                             (if (and SEASHELL_DEBUG (file-exists? build-path))
                                               build-path
                                               install-path)))

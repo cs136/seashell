@@ -493,9 +493,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     // Buffers
     self.stdout = "";
     self.stderr = "";
+    self.asan_parse = false;
     self._contents = "";
     var ind = "";
     var spl ="";
+    var asan_contents = [];
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
@@ -512,9 +514,20 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
         if(ind > -1) {
+          if(!self.asan_parse)
+            self._write(self.stderr);
+          else
+            io.message = self.stderr + io.message;
           spl = io.message.split("\n");
-          self._write(self.stderr);
-          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          while(spl.length>1) {
+            if(!self.asan_parse && /^=+$/.test(spl[0])) {
+              self.asan_parse = true;
+            }
+            else if(!self.asan_parse)
+              self._write(spl.shift() + "\n");
+            else
+              asan_contents.push(spl.shift());
+          }
           self.stderr = spl[0];
         }
         else
@@ -524,6 +537,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self._write(self.stdout);
         self._write(self.stderr);
         self.stdout = self.stderr = "";
+        if(self.asan_parse) {
+          _.each(asan_contents, function(line) {
+            self._write(asan_contents.shift() + "\n");
+          });
+          self.asan_parse = false;
+          asan_contents = [];
+        }
         self.write("Program finished with exit code "+io.status+".\n");
         self.PIDs = null;
         self.running = false;
