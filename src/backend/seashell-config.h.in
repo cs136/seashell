@@ -23,7 +23,7 @@
 /** Common definitions. **/
 
 #define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
-#define BUILD_DIR "@CMAKE_BUILD_DIR@"
+#define BUILD_DIR "@CMAKE_BINARY_DIR@"
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
 #define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 #define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
