@@ -119,13 +119,7 @@
                    ,@(map
                        (curry string-append (read-config 'linker-flag-prefix))
                        (list "--whole-archive"
-                             (cond
-                               [(read-config '_debug)
-                                (define debug-path (build-path SEASHELL_BUILD_PATH "src/runtime/libseashell-rt.a"))
-                                (if (file-exists? debug-path)
-                                  (some-system-path->string debug-path)
-                                  (some-system-path->string (read-config 'seashell-runtime-library)))]
-                               [else (some-system-path->string (read-config 'seashell-runtime-library))])
+                             (some-system-path->string (read-config 'seashell-runtime-library))
                              "--no-whole-archive"))
                    ,@(map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
         ;; Close unused port.
