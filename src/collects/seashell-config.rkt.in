@@ -60,8 +60,8 @@
   (= 1 @SEASHELL_DEBUG@))
 (define SEASHELL_INSTALLED
   (let
-    ([base SEASHELL_INSTALL_PATH]
-     [current (find-executable-path (find-system-path 'exec-file))])
+    ([base (simple-form-path SEASHELL_INSTALL_PATH)]
+     [current (simple-form-path (find-executable-path (find-system-path 'exec-file)))])
     (not (member 'up (explode-path (find-relative-path base current))))))
 
 ;; Generates a new (fresh) configuration populated only with default values.
@@ -137,15 +137,15 @@
                                               install-path)))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (let
-                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-backend-remote")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-backend-remote")])
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-user-backend")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-user-backend")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of LLVM symbolizer.
       (cons 'llvm-symbolizer               (let
                                             ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "llvm-symbolizer")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/seashell-backend-remote")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/llvm-symbolizer")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
@@ -161,7 +161,7 @@
       ;; Optional login tracking helper.  (Runs whenever a user logs in.)
       (cons 'login-tracking-helper         #f)
       ;; Enable debug mode execution (corresponds to seashell-numeric-debug value by default)
-      (cons 'debug                         (not SEASHELL_INSTALLED))
+      (cons 'debug                         SEASHELL_DEBUG)
       ;; Backend target host. The gateway will attempt to start user sessions on this host
       ;; via SSH.
       (cons 'host                          '("localhost"))
