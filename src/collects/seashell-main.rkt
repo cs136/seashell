@@ -33,8 +33,10 @@
   (match (mode)
          ['version (printf "Seashell v~a multi-tool binary (API version ~a) - built from ~a (~a).~n"
                            SEASHELL_VERSION SEASHELL_API_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)
-                   (printf "Built directory: ~a.~n" SEASHELL_BUILD_PATH)
-                   (printf "Build type: ~a.~n" (if SEASHELL_DEBUG "Debug" "Release"))]
+                   (printf "Executable path: ~a.~n" (path->string (find-executable-path (find-system-path 'exec-file))))
+                   (printf "Build directory: ~a.~n" SEASHELL_BUILD_PATH)
+                   (printf "Build type: ~a.~n" (if SEASHELL_DEBUG "Debug" "Release"))
+                   (printf "Installation status: ~a.~n" (if SEASHELL_INSTALLED (format "Installed in ~a" SEASHELL_INSTALL_PATH) "Not installed"))]
          ['login (gateway-main)]
          ['server (backend-main)]
          ['creds 
