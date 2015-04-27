@@ -71,11 +71,11 @@
      (lambda ()
        (let loop ()
          (define line (read-line error))
-         (when (not (eq? line eof))
-           (logf 'debug "tunnel stderr (~a:~a): ~a" (getenv "USER") host line)
-           (loop))
-         ;; EOF received - die.
-         (close-input-port error)))))
+         (when (not (eof-object? line))
+           (logf 'debug "tunnel stderr (~a@~a): ~a" (getenv "USER") host line)
+           (loop)))
+       ;; EOF received - die.
+       (close-input-port error))))
 
   ;; Set unbuffered mode for the ports, so nothing funny happens.
   (file-stream-buffer-mode out 'none)

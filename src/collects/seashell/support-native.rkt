@@ -29,7 +29,7 @@
          seashell_signal_detach
          try-and-lock-file)
 
-(define-ffi-definer define-support 
+(define-ffi-definer define-support
                     (ffi-lib (read-config 'seashell-support)))
 (define-ffi-definer define-self 
                     (ffi-lib #f))
