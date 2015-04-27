@@ -1060,6 +1060,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.editor.on("blur", updateColNums);
           onResize();
         };
+        function betterTab(){
+          if(self.editor.somethingSelected()){
+            self.editor.indentSelection("add");
+          } else {
+            self.editor.replaceSelection(Array(self.editor.getOption("indentUnit") + 1).join(" "), "end", "+input");
+          }
+        }
+        function negTab(){
+          if(self.editor.somethingSelected()){
+            self.editor.indentSelection("subtract");
+          }
+        }
         self.refreshSettings = function () {
           self.editorOptions = {
             autofocus: true,
@@ -1084,6 +1096,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
+              "Shift-Tab": negTab, 
             }
           };
           var main_hotkeys = [{
@@ -1146,8 +1159,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           
           if (self.editorOptions.vimMode) {
             delete self.editorOptions.extraKeys.Esc;
-          }
-          
+          } 
           // Force the font size at any rate.
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
@@ -1155,7 +1167,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
-            self.editor.addKeyMap({'Tab': 'insertSoftTab'});
+            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
         };
