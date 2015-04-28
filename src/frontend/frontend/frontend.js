@@ -497,6 +497,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     self._contents = "";
     var ind = "";
     var spl ="";
+    var return_codes = {
+      "1":"An error occurred",
+      "23":"Memory leak",
+      "134":"Assertion failed",
+      "136":"Erroneous arithmetic operation",
+      "139":"Segmentation fault",
+      "254":"Program was killed",
+      "255":"Timeout"
+    };
     var asan_contents = [];
 
     // contents is an array of lines of address sanitizer output
@@ -592,7 +601,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           self.asan_parse = false;
           asan_contents = [];
         }
-        self.write("Program finished with exit code "+io.status+".\n");
+        self.write("Program finished with exit code "+io.status);
+        if(io.status !== 0 && return_codes[io.status]) {
+          self.write(sprintf(" (%s)", return_codes[io.status]));
+        }
+        self.write(".\n");
         self.PIDs = null;
         self.running = false;
       }
