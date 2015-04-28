@@ -30,11 +30,10 @@ body {
 
 #question-controls button {
   text-decoration: none;
-  font-size: 14px;
 }
 
 #question-controls a {
-  padding-right: 5px;
+  font-size: 1.1em;
 }
 
 /** Editor and the console. */
@@ -74,6 +73,21 @@ body {
   border-bottom-color: #eee;
 }
 
+#current-file-controls button {
+  font-size: 1.2em;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 5px;
+  text-decoration: none;
+  font-variant: small-caps;
+}
+
+#toolbar-delete-file {
+  color: red;
+}
+#toolbar-rename-file {
+  padding-right: 10px;
+}
 .CodeMirror-fullscreen {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -488,4 +502,5 @@ input::-ms-clear {
 }
 #projectList a {
   display: block;
+  font-size: 1.25em;
 }
