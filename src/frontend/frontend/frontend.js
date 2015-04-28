@@ -499,6 +499,56 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
     var spl ="";
     var asan_contents = [];
 
+    // contents is an array of lines of address sanitizer output
+    function parse_asan_output(contents) {
+      var filepatt = /\/([^\/]+:[0-9]+)$/;
+      var addrpatt = /0x[0-9a-f]{12}/;
+      if(/ SEGV /.test(contents[1])) { // segfault
+        self._write(sprintf("%s: Attempt to access invalid address %s.\n",
+          filepatt.exec(contents[2])[1],
+          addrpatt.exec(contents[1])));
+      }
+      else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
+        self._write(sprintf("%s: Stack buffer overflow on address %s. Check array indices.\n",
+          filepatt.exec(contents[3])[1],
+          addrpatt.exec(contents[1])));
+      }
+      else if(/heap-buffer-(over|under)flow /.test(contents[1])) { // heap buffer overflow
+        self._write(sprintf("%s: Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
+          filepatt.exec(contents[3])[1],
+          addrpatt.exec(contents[1])));
+      }
+      else if(/LeakSanitizer:/.test(contents[1])) { // memory leak
+        self._write("Memory leaks occurred:\n");
+        for(var idx=3; idx < contents.length; idx++) {
+          if(/^(Direct|Indirect)/.test(contents[idx])) {
+            var last = idx;
+            for(; !/^$/.test(contents[last]); last++);
+            last--;
+            self._write(sprintf("  %s byte(s) allocated at %s never freed.\n",
+              /[0-9]+/.exec(contents[idx]),
+              filepatt.exec(asan_contents[last])[1]));
+            idx = last+1;
+          }
+        }
+      }
+      else if(/heap-use-after-free /.test(contents[1])) { // use after free
+        self._write(sprintf("%s: Using address %s after it has been freed.\n",
+          filepatt.exec(contents[3])[1],
+          addrpatt.exec(contents[1])));
+      }
+      else if(/double-free /.test(contents[1])) { // double free
+        self._write(sprintf("%s: Attempting to free address %s, which has already been freed.\n",
+          filepatt.exec(contents[3])[1],
+          addrpatt.exec(contents[1])));
+      }
+      else { // else print usual message
+        _.each(contents, function(line) {
+          self._write(line + "\n");
+        });
+      }
+    }
+
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
         ind = io.message.indexOf("\n");
@@ -538,51 +588,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self._write(self.stderr);
         self.stdout = self.stderr = "";
         if(self.asan_parse) {
-          if(/ SEGV /.test(asan_contents[1])) { // segfault
-            self._write(sprintf("%s: Attempt to access invalid address %s.\n",
-              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[2])[1],
-              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
-          }
-          else if(/stack-buffer-(over|under)flow /.test(asan_contents[1])) { // stack buffer overflow
-            self._write(sprintf("%s: Stack buffer overflow on address %s. Check array indices.\n",
-              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
-              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
-          }
-          else if(/heap-buffer-(over|under)flow /.test(asan_contents[1])) { // heap buffer overflow
-            self._write(sprintf("%s: Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
-              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
-              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
-          }
-          else if(/LeakSanitizer:/.test(asan_contents[1])) { // memory leak
-            self._write("Memory leaks occurred:\n");
-            for(var idx=3; idx<asan_contents.length; idx++) {
-              if(/^(Direct|Indirect)/.test(asan_contents[idx])) {
-                var last = idx;
-                for(; !/^$/.test(asan_contents[last]); last++);
-                console.log(sprintf("idx: %s, last: %s", idx, last));
-                last--;
-                self._write(sprintf("  %s byte(s) allocated at %s never freed.\n",
-                  /[0-9]+/.exec(asan_contents[idx]),
-                  /\/([^\/]+:[0-9]+)$/.exec(asan_contents[last])[1]));
-                idx = last+1;
-              }
-            }
-          }
-          else if(/heap-use-after-free /.test(asan_contents[1])) { // use after free
-            self._write(sprintf("%s: Using address %s after it has been freed.\n",
-              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
-              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
-          }
-          else if(/double-free /.test(asan_contents[1])) { // double free
-            self._write(sprintf("%s: Attempting to free address %s, which has already been freed.\n",
-              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
-              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
-          }
-          else { // else print usual message
-            _.each(asan_contents, function(line) {
-              self._write(line + "\n");
-            });
-          }
+          parse_asan_output(asan_contents);
           self.asan_parse = false;
           asan_contents = [];
         }
