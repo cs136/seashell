@@ -18,35 +18,49 @@
         <br /><br />
         <h4>Default Editor Shortcuts</h4>
         These are shortcuts that will work when the editor window is focused.
-        <ul class="list-group">
+        <br />
+        <label>
+        <input type="checkbox" class="btn btn-default" ng-model="shortShow" id="EditorShortcut">
+          Show
+          <span class="glyphicon glyphicon-chevron-right" ng-show="!shortShow"></span>
+          <span class="glyphicon glyphicon-chevron-down" ng-show="shortShow"></span> 
+        </label>
+        <ul class="list-group" ng-show="shortShow">
           <li class="list-group-item">
-          <span class="badge">Ctrl-f</span>
+          <span class="badge">Ctrl-f or Cmd-f</span>
           Start new search.
           </li>
           <li class="list-group-item">
-          <span class="badge">Ctrl-g</span>
+          <span class="badge">Ctrl-g or Cmd-g</span>
           Go to next match.
           </li>
           <li class="list-group-item">
-          <span class="badge">Ctrl-G</span>
+          <span class="badge">Ctrl-G or Cmd-G</span>
           Go to previous match.
           </li>
           <li class="list-group-item">
-          <span class="badge">Ctrl-z</span>
+          <span class="badge">Ctrl-z or Cmd-z</span>
           Undo.
           </li>
           <li class="list-group-item">
-          <span class="badge">Ctrl-y</span>
+          <span class="badge">Ctrl-y or Cmd-y</span>
           Redo.
           </li>
-          <!--
           <li class="list-group-item">
           <span class="badge">Ctrl-i</span>
-          Indent.
-          </li> -->
+          Indent all.
+          </li>
           <li class="list-group-item">
-          <span class="badge">Ctrl-j</span>
-          Go to line.
+          <span class="badge">Ctrl-Enter</span>
+          Fullscreen Editor.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Highlight Lines, Tab</span>
+          Block Indent.
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Highlight Line, Shift-Tab</span>
+          Block Unindent.
           </li>
         </ul>
       </div>
