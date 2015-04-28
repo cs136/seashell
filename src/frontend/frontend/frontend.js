@@ -553,6 +553,21 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
               /0x[0-9a-f]{12}/.exec(asan_contents[1])));
           }
+          else if(/LeakSanitizer:/.test(asan_contents[1])) { // memory leak
+            self._write("Memory leaks occurred:\n");
+            for(var idx=3; idx<asan_contents.length; idx++) {
+              if(/^(Direct|Indirect)/.test(asan_contents[idx])) {
+                var last = idx;
+                for(; !/^$/.test(asan_contents[last]); last++);
+                console.log(sprintf("idx: %s, last: %s", idx, last));
+                last--;
+                self._write(sprintf("  %s byte(s) allocated at %s never freed.\n",
+                  /[0-9]+/.exec(asan_contents[idx]),
+                  /\/([^\/]+:[0-9]+)$/.exec(asan_contents[last])[1]));
+                idx = last+1;
+              }
+            }
+          }
           else { // else print usual message
             _.each(asan_contents, function(line) {
               self._write(line + "\n");
