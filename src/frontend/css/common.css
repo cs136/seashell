@@ -33,6 +33,11 @@ body {
   font-size: 14px;
 }
 
+/** Help Modal */
+#EditorShortcut {
+  opacity: 0;
+}
+
 /** Editor and the console. */
 .CodeMirror {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;

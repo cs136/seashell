@@ -211,15 +211,12 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
     SET_ERROR(TUNNEL_ERROR_HOSTS_FILE);
     goto session_teardown;
   }
-#if SEASHELL_DEBUG
-  if (access(DEBUG_HOSTS_FILE, F_OK) != -1) {
+
+  if (!IS_INSTALLED() && access(DEBUG_HOSTS_FILE, F_OK) != -1) {
     libssh2_knownhost_readfile(hosts, DEBUG_HOSTS_FILE, LIBSSH2_KNOWNHOST_FILE_OPENSSH);
   } else {
     libssh2_knownhost_readfile(hosts, HOSTS_FILE, LIBSSH2_KNOWNHOST_FILE_OPENSSH);
   }
-#else
-  libssh2_knownhost_readfile(hosts, HOSTS_FILE, LIBSSH2_KNOWNHOST_FILE_OPENSSH);
-#endif
 
   const char* fingerprint = libssh2_session_hostkey(session, &len, &type);
   if (!fingerprint || type == LIBSSH2_HOSTKEY_TYPE_UNKNOWN) {

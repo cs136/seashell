@@ -18,7 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require (only-in ffi/unsafe ffi-lib))
 (provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
-         SEASHELL_BUILD_PATH SEASHELL_DEBUG)
+         SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
 
 ;; Versioning information.
 (define SEASHELL_VERSION "@SEASHELL_VERSION@")
@@ -54,10 +54,15 @@
   (load-config))
 
 ;; These constants are used to build several configuration values.
-(define seashell-install-path
+(define SEASHELL_INSTALL_PATH
   "@CMAKE_INSTALL_PREFIX@")
 (define SEASHELL_DEBUG
   (= 1 @SEASHELL_DEBUG@))
+(define SEASHELL_INSTALLED
+  (let
+    ([base (simple-form-path SEASHELL_INSTALL_PATH)]
+     [current (simple-form-path (find-executable-path (find-system-path 'exec-file)))])
+    (not (member 'up (explode-path (find-relative-path base current))))))
 
 ;; Generates a new (fresh) configuration populated only with default values.
 (define (make-config)
@@ -69,41 +74,41 @@
       ;; Note: In a debug build, prefer locations in BUILD_DIR over INSTALL_DIR if exists.
       ;; Location of Seashell (native) support library.
       (cons 'seashell-support              (let
-                                            ([install-path (build-path seashell-install-path "lib" "libseashell-support")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "lib" "libseashell-support")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/backend/user/libseashell-support")])
-                                            (if (and SEASHELL_DEBUG (ffi-lib build-path #:fail (thunk #f)))
+                                            (if (and (not SEASHELL_INSTALLED) (ffi-lib build-path #:fail (thunk #f)))
                                               build-path
                                               install-path)))
       ;; Location of Seashell clang library.
       (cons 'seashell-clang                (let
-                                            ([install-path (build-path seashell-install-path "lib" "libseashell-clang")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "lib" "libseashell-clang")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/backend/compiler/libseashell-clang")])
-                                            (if (and SEASHELL_DEBUG (ffi-lib build-path #:fail (thunk #f)))
+                                            (if (and (not SEASHELL_INSTALLED) (ffi-lib build-path #:fail (thunk #f)))
                                               build-path
                                               install-path)))
       ;; Location of SSH known hosts file.
       (cons 'seashell-known-hosts          (let
-                                            ([install-path (build-path seashell-install-path "etc" "seashell_hosts")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "etc" "seashell_hosts")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "etc/seashell_hosts")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of Seashell's Runtime Library
       (cons 'seashell-runtime-library      (let
-                                            ([install-path (build-path seashell-install-path "lib" "libseashell-rt.a")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "lib" "libseashell-rt.a")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/runtime/libseashell-rt.a")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       (cons 'seashell-racket-runtime-library
                                            (let
-                                            ([install-path (build-path seashell-install-path "lib" "seashell-runtime.rkt")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "lib" "seashell-runtime.rkt")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "src/runtime/seashell-runtime.rkt")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of install path.
-      (cons 'seashell-install              (build-path seashell-install-path))
+      (cons 'seashell-install              (build-path SEASHELL_INSTALL_PATH))
 
       ;; These flags can be overridden by the configuration file,
       ;; but the default parameters change depending on if this is a debug build or not.
@@ -111,44 +116,44 @@
       ;; (again, so we can run out of tree without installing Seashell)
       ;; Location of SSL key.
       (cons 'ssl-key                       (let
-                                            ([install-path (build-path seashell-install-path "etc" "keys" "server-key.pem")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "etc" "keys" "server-key.pem")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "etc" "keys" "server-key.pem")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of SSL certificate.
       (cons 'ssl-cert                     (let
-                                            ([install-path (build-path seashell-install-path "etc" "keys" "server.pem")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "etc" "keys" "server.pem")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "etc" "keys" "server.pem")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of SSH tunnel binary.
       (cons 'tunnel-binary                 (let
-                                            ([install-path (build-path seashell-install-path "bin" "seashell-tunnel")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-tunnel")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "backend/tunnel/seashell-tunnel")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (let
                                             ([install-path (build-path seashell-install-path "bin" "seashell-user-backend")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-user-backend")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of LLVM symbolizer.
       (cons 'llvm-symbolizer               (let
                                             ([install-path (build-path seashell-install-path "bin" "llvm-symbolizer")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/llvm-symbolizer")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Default binary to invoke when linking.
       (cons 'system-linker                 (let
-                                            ([install-path (build-path seashell-install-path "bin" "clang++")]
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "clang++")]
                                              [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/clang++")])
-                                            (if (and SEASHELL_DEBUG (file-exists? build-path))
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
 
@@ -207,13 +212,13 @@
 (define config-hash (make-config))
 
 ;; Attempt to override default config values with values read from config file
-(define release-config-file (build-path seashell-install-path "etc" "seashell_config.rkt"))
+(define release-config-file (build-path SEASHELL_INSTALL_PATH "etc" "seashell_config.rkt"))
 (define debug-config-file (build-path SEASHELL_BUILD_PATH "etc" "seashell_config.rkt"))
 
 ;; Overrides the current configuration with entries from $INSTALL/etc/seashell_config.rkt
 (define (load-config)
   (define config-file
-    (if (and SEASHELL_DEBUG (file-exists? debug-config-file))
+    (if (and (not SEASHELL_INSTALLED) (file-exists? debug-config-file))
       debug-config-file
       release-config-file))
   (with-handlers 

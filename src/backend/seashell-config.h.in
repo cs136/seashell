@@ -20,12 +20,45 @@
 #ifndef _SEASHELL_H_
 #define _SEASHELL_H_
 
-/** Common definitions. **/
+#include <string.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
 
+/** Common definitions. **/
 #define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
 #define BUILD_DIR "@CMAKE_BINARY_DIR@"
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
 #define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 #define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
 
+/** Common helper functions */
+static int IS_INSTALLED() {
+#ifdef __linux__
+  static int resolved = 0;
+  static int ret = 0;
+  char* linkname;
+  size_t sz = 1024;
+
+  /** Only run once. */
+  if (resolved)
+    return ret;
+
+  linkname = realpath("/proc/self/exe", NULL);
+  if (!linkname) {
+    /** Fail if we can't resolve the path. */
+    perror("realpath");
+    exit(1);
+  }
+  
+  ret = strncmp(INSTALL_PREFIX, linkname, strlen(INSTALL_PREFIX)) == 0;
+  free(linkname);
+  resolved = 1;
+  return ret; 
+#else
+#error Write platform specific code to test if Seashell is installed.
+#endif
+}
 #endif
