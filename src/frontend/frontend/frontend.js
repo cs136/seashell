@@ -548,6 +548,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
               /0x[0-9a-f]{12}/.exec(asan_contents[1])));
           }
+          else if(/heap-buffer-(over|under)flow /.test(asan_contents[1])) { // heap buffer overflow
+            self._write(sprintf("%s: Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
+              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[3])[1],
+              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
+          }
           else { // else print usual message
             _.each(asan_contents, function(line) {
               self._write(line + "\n");
