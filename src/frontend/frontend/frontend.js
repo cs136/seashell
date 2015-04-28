@@ -538,9 +538,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self._write(self.stderr);
         self.stdout = self.stderr = "";
         if(self.asan_parse) {
-          _.each(asan_contents, function(line) {
-            self._write(asan_contents.shift() + "\n");
-          });
+          if(/ SEGV /.test(asan_contents[1])) { // segfault
+            self._write(sprintf("%s: Attempt to access invalid address %s.\n",
+              /\/([^\/]+:[0-9]+)$/.exec(asan_contents[2])[1],
+              /0x[0-9a-f]{12}/.exec(asan_contents[1])));
+          }
+          else { // else print usual message
+            _.each(asan_contents, function(line) {
+              self._write(line + "\n");
+            });
+          }
           self.asan_parse = false;
           asan_contents = [];
         }
