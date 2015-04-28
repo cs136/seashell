@@ -33,6 +33,10 @@ body {
   font-size: 14px;
 }
 
+#question-controls a {
+  padding-right: 5px;
+}
+
 /** Editor and the console. */
 .CodeMirror {
 	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
@@ -481,4 +485,7 @@ input::-ms-clear {
   text-align: center;
   padding: 15px 0 15px 0;
   border-bottom: 1px solid #ddd;
+}
+#projectList a {
+  display: block;
 }
