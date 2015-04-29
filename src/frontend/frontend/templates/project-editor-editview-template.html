@@ -35,20 +35,14 @@
           <div id="current-file-controls" class="col-md-12 col-xs-12">
             <button id="toolbar-rename-file"
                     ng-click="editFileView.renameFile()"
-                    class="btn btn-link"
-                    style="padding-left: 0; padding-right: 5px; text-decoration: none">
-              <span style="font-size: 14px; font-variant: small-caps;">
-                rename/move
-              </span>
+                    class="btn btn-link">
+            rename/move
             </button>
 
             <button id="toolbar-delete-file"
                     ng-click="editFileView.deleteFile()"
-                    class="btn btn-link"
-                    style="padding-left: 0; padding-right: 0; text-decoration: none">
-              <span style="font-size: 14px; color: red; font-variant: small-caps;">
-                delete
-              </span>
+                    class="btn btn-link">
+            delete
             </button>
             <div ng-show="editFileView.editor.hasFocus()"
                  style="padding-top: 7px; float: right; 
