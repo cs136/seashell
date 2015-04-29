@@ -145,9 +145,8 @@
 
 ;; list-projects -> (listof (listof project-name? number?))
 ;; Lists existing Seashell projects.
-;; Using lambda for an "any?" predicate
 (define/contract (list-projects)
-  (-> (listof (list/c project-name? (lambda (p) #t))))
+  (-> (listof (list/c project-name? any/c)))
   (map (lambda (proj) (list (some-system-path->string proj) (file-or-directory-modify-seconds (build-project-path proj))))
        (filter (compose directory-exists? build-project-path)
                (directory-list (project-base-path)))))
