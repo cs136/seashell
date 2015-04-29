@@ -895,17 +895,17 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.refresh = function () {
           function groupfiles(lof) {
             function grpnm(nm) {
-              var lst = nm[nm.length-1].split(".");
+              var lst = nm.split(".");
               lst.pop();
               return lst.join(".");
             }
-            lof = _.sortBy(lof, "name");
+            lof.sort();
             var groups = [];
             for(var i=0; i<lof.length; i++) {
               groups.push([lof[i]]);
               while(i<lof.length-1 && grpnm(lof[i+1]) == grpnm(lof[i])) {
                 groups[groups.length-1].push(lof[i+1]);
-                lof = lof.splice(i+1, 1);
+                lof.splice(i+1, 1);
               }
             }
             return groups;
