@@ -269,7 +269,8 @@
         (hash-remove! locked-projects name))
       (define unlocked (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))
       (when unlocked
-        (seashell_update_timestamp (build-project-path name)))
+        (file-or-directory-modify-seconds (build-project-path name)
+                                          (current-seconds)))
       unlocked)))
 
 ;; (force-lock-project name)
