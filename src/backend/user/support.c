@@ -38,14 +38,3 @@ int seashell_try_and_lock_file(int fd) {
   return fcntl(fd, F_SETLK,  &lock);
 }
 
-/**
- * seashell_update_timestamp(const char* path)
- * Updates the accessed/modified timestamp on path with
- * the current time.
- */
-void seashell_update_timestamp(const char* path) {
-  struct timespec times[2] = {0};
-  times[0].tv_nsec = times[1].tv_nsec = UTIME_NOW;
-
-  utimensat(AT_FDCWD, path, times, 0);
-}

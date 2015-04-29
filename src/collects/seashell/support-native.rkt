@@ -27,7 +27,6 @@
          seashell_get_username
          seashell_set_umask
          seashell_signal_detach
-         seashell_update_timestamp
          try-and-lock-file)
 
 (define-ffi-definer define-support
@@ -45,7 +44,6 @@
 (define-support seashell_uw_check_remote_user (_fun -> _int))
 (define-support seashell_get_username (_fun -> _string))
 (define-support seashell_try_and_lock_file (_fun _int -> _int))
-(define-support seashell_update_timestamp (_fun _path -> _void))
 
 ;; Underlying Racket support functions.
 (define-self scheme_get_port_file_descriptor

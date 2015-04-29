@@ -288,7 +288,8 @@
   (call-with-semaphore
     lock-semaphore
     (thunk
-      (seashell_update_timestamp (build-project-path name))
+      (file-or-directory-modify-seconds (build-project-path name)
+                                        (current-seconds))
       (hash-set! locked-projects name thread-to-lock-on))))
 
 ;; (unlock-project name)
