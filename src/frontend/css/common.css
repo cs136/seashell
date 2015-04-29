@@ -56,7 +56,10 @@ a.dropdown-toggle{
 
 #question-controls button {
   text-decoration: none;
-  font-size: 14px;
+}
+
+#question-controls a {
+  font-size: 1.1em;
 }
 
 /** Help Modal */
@@ -101,6 +104,21 @@ a.dropdown-toggle{
   border-bottom-color: #ffaaaa;
 }
 
+#current-file-controls button {
+  font-size: 1.2em;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 5px;
+  text-decoration: none;
+  font-variant: small-caps;
+}
+
+#toolbar-delete-file {
+  color: red;
+}
+#toolbar-rename-file {
+  padding-right: 10px;
+}
 .CodeMirror-fullscreen {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -530,4 +548,8 @@ input::-ms-clear {
   text-align: center;
   padding: 15px 0 15px 0;
   border-bottom: 1px solid #ddd;
+}
+#projectList a {
+  display: block;
+  font-size: 1.25em;
 }

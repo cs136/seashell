@@ -143,11 +143,11 @@
   (make-directory* (project-base-path))
   (void))
 
-;; list-projects -> (listof project-name?)
+;; list-projects -> (listof (listof project-name? number?))
 ;; Lists existing Seashell projects.
 (define/contract (list-projects)
-  (-> (listof project-name?))
-  (map some-system-path->string
+  (-> (listof (list/c project-name? any/c)))
+  (map (lambda (proj) (list (some-system-path->string proj) (file-or-directory-modify-seconds (build-project-path proj))))
        (filter (compose directory-exists? build-project-path)
                (directory-list (project-base-path)))))
 
