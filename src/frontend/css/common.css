@@ -23,6 +23,9 @@ hr{
 h2.text-left{
   color: #ff9999;
 }
+.h3, h3{
+  color: #FF9999;
+}
 /** color of link on the landing pagei Dark theme change **/
 a{
   color: #FFFC99;
