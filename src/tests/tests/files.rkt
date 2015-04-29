@@ -1,64 +1,35 @@
 #lang racket
 
-(require "test-environment.rkt"
-         seashell/backend/project
-         seashell/backend/files)
+(require seashell/backend/project
+         seashell/backend/files
+         rackunit)
 
-(define total-tests 6)
-(define passed 0)
+(define/provide-test-suite file-suite
+  (test-suite "File test suite"
+    #:before (thunk (new-project "test"))
+    #:after (thunk (delete-project "test"))
+    (test-case "Create a file"
+      (new-file "test" "good.c" #"" 'raw #f)
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") "good.c")))
 
-;; Create a test project
-(new-project "test")
+    (test-case "Read a file"
+      (check-equal? (read-file "test" "good.c") #"")
+      (write-file "test" "good.c" #"foobar")
+      (check-equal? (read-file "test" "good.c") #"foobar"))
 
-;; Test 1: create a file
-(new-file "test" "good.c")
+    (test-case "Rename a file"
+      (rename-file "test" "good.c" "bad.c")
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
+      (check-false (file-exists? (check-and-build-path (build-project-path "test") "good.c"))))
+    
+    (test-case "List files"
+      (new-file "test" "good.c" #"" 'raw #f)
+      (check-match (list-files "test") (list-no-order
+        (list "default" #t _)
+        (list "default/main.c" #f _)
+        (list "good.c" #f _)
+        (list "bad.c" #f _))))
 
-(if (file-exists? (check-and-build-path (build-project-path "test") "good.c"))
-  (set! passed (add1 passed))
-  (display "Failed to create a new file.\n" (current-error-port)))
-
-;; Test 2: read an empty file
-
-(if (equal? (read-file "test" "good.c") #"")
-  (set! passed (add1 passed))
-  (display "Failed to read from file.\n" (current-error-port)))
-
-;; Test 3: write to file/read non-empty file
-
-(write-file "test" "good.c" #"foobar")
-
-(if (equal? (read-file "test" "good.c") #"foobar")
-  (set! passed (add1 passed))
-  (display "Failed to write to file.\n" (current-error-port)))
-
-;; Test 4: rename a file
-
-(with-handlers ([exn:project? (lambda (e)
-  (display (exn-message e) (current-error-port)))])
-  (rename-file "test" "good.c" "bad.c"))
-
-(if (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
-  (set! passed (add1 passed))
-  (display "Failed to rename a file.\n" (current-error-port)))
-
-;; Test 5: list the files
-
-(new-file "test" "good.c")
-(match (list-files "test")
-  [`(("tests" #t ,_) ("good.c" #f ,_) ("bad.c" #f ,_)) (set! passed (add1 passed))]
-  [_ (display "Failed to list files.\n" (current-error-port))])
-
-;; Test 6: remove a file
-
-(with-handlers ([exn? (lambda (e)
-  (display (exn-message e) (current-error-port)))])
-  (remove-file "test" "bad.c"))
-
-(if (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
-  (display "Failed to remove file.\n" (current-error-port))
-  (set! passed (add1 passed)))
-
-;; get rid of the project
-(delete-project "test")
-
-(printf "~a\n~a\n" total-tests passed)
+    (test-case "Delete a file"
+      (remove-file "test" "bad.c")
+      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))))

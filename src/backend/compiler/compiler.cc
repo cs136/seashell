@@ -778,9 +778,18 @@ static int compile_module (seashell_compiler* compiler,
       return 1;
     }
 
-    /** Set up the default headers */
+    /** Add compiler-specific headers. */
+    if (!IS_INSTALLED() && access (BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", F_OK) != -1) {
+      Clang.getHeaderSearchOpts().AddPath(BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", clang::frontend::System, false, true);
+    } else {
+      Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
+    } 
+    /** NOTE: this will have to change for different platforms */
+#ifdef MULTIARCH_PLATFORM
+    Clang.getHeaderSearchOpts().AddPath("/usr/include/" MULTIARCH_PLATFORM, clang::frontend::System, false, true);
+#endif
+    /** Set up the default (generic) headers */
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
-    Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
 
     clang::EmitLLVMOnlyAction Act(&compiler->context);
     Success = Clang.ExecuteAction(Act);

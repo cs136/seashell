@@ -2,7 +2,7 @@
 
 (require seashell/seashell-config
          seashell/compiler/place
-         seashell/git/place)
+         seashell/backend/project)
 
 ;; Common file for setting up the testing environment
 (define test-dir (build-path (find-system-path 'temp-dir)
@@ -15,7 +15,7 @@
 (make-directory test-dir)
 (config-set! 'seashell test-dir)
 (config-set! 'test-mode #t)
+(init-projects)
 
 ;; Start places.
 (seashell-compile-place/init)
-(seashell-git-place/init)
