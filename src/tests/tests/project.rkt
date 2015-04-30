@@ -2,7 +2,8 @@
 
 (require rackunit
          seashell/backend/project
-         seashell/backend/runner)
+         seashell/backend/runner
+         seashell/seashell-config)
 
 (define/provide-test-suite project-suite
   (test-suite "Project Tests"
@@ -36,4 +37,12 @@
 
     (test-case "Delete a Project"
       (delete-project "foo")
-      (check-equal? (list-projects) '()))))
+      (check-equal? (list-projects) '()))
+
+    (test-case "Archive Projects"
+      (new-project "bar")
+      (new-project "foobar")
+      (archive-projects "my-archive")
+      (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive")))
+      (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
+      (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))))
