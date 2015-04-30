@@ -8,6 +8,7 @@
          "tests/project.rkt"
          "tests/crypto.rkt")
 
+(setup-test-environment)
 ;; Run tests
 (define result
   (run-tests 
@@ -16,5 +17,6 @@
         file-suite
         project-suite
         crypto-suite))))
+(teardown-test-environment)
 
 (exit result)

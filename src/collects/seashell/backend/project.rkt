@@ -48,6 +48,7 @@
          seashell/compiler
          seashell/backend/runner
          seashell/websocket
+         seashell/support-native
          net/url
          net/head
          json
@@ -266,7 +267,11 @@
     (thunk
       (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
         (hash-remove! locked-projects name))
-      (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))))
+      (define unlocked (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))
+      (when unlocked
+        (file-or-directory-modify-seconds (build-project-path name)
+                                          (current-seconds)))
+      unlocked)))
 
 ;; (force-lock-project name)
 ;; Forcibly locks a project, even if it is already locked
@@ -284,6 +289,8 @@
   (call-with-semaphore
     lock-semaphore
     (thunk
+      (file-or-directory-modify-seconds (build-project-path name)
+                                        (current-seconds))
       (hash-set! locked-projects name thread-to-lock-on))))
 
 ;; (unlock-project name)
