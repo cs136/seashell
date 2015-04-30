@@ -803,8 +803,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       self.project = openProject;
       self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
-      self.project.prevCol = 0; self.project.prevLine = 0;
-      self.project.setNewCol = 0; self.project.setNewLine = 0;
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
@@ -904,10 +902,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
+          function groupfiles(lof) {
+            function grpnm(nm) {
+              var lst = nm.split(".");
+              lst.pop();
+              return lst.join(".");
+            }
+            lof.sort();
+            var groups = [];
+            for(var i=0; i<lof.length; i++) {
+              groups.push([lof[i]]);
+              while(i<lof.length-1 && grpnm(lof[i+1]) == grpnm(lof[i])) {
+                groups[groups.length-1].push(lof[i+1]);
+                lof.splice(i+1, 1);
+              }
+            }
+            return groups;
+          }
+
           var result = self.project.filesFor(self.question);
-          self.common_files = result.common;
-          self.question_files = result.question;
-          self.test_files = result.tests;
+          self.common_files = groupfiles(result.common);
+          self.question_files = groupfiles(result.question);
+          self.test_files = groupfiles(result.tests);
 
           self.project.currentMarmosetProject(self.question).then(function(target) {
             if(target) {
@@ -1004,16 +1020,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory) {
         var self = this;
         // Scope variable declarations follow.
+       
+        // These are all arguments passed into the controller,
+        // and persist after the controller is destroyed.
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
         self.file = openFile;
         self.console = Console;
+        self.settings = settings;
+        self.undoHistory = undoHistory;
+
+        // Instance fields.
         self.scrollInfo = scrollInfo;
         self.isBinaryFile = false;
         self.ready = false;
@@ -1023,7 +1046,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
-        self.settings = settings;
         /* runnerFile is the file to be run when RUN or TEST is clicked. false
          * if the current file is not runnable (and Seashell can't infer which
          * file to run). */
@@ -1047,7 +1069,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if(undefined===self.scrollInfo[self.folder])
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
-            {top:scr.top, left:scr.left};
+            {top:scr.top, left:scr.left, line:self.line, col:self.col};
+          if(undefined===self.undoHistory[self.folder])
+            self.undoHistory[self.folder] = {};
+          self.undoHistory[self.folder][self.file] = self.editor.getHistory();
         });
         self.editorFocus = false;
         self.contents = "";
@@ -1134,10 +1159,16 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.console.errors = [];
             } else {
               self.editor.clearHistory();
-              self.editor.setCursor(self.project.setNewLine - 1, self.project.setNewCol - 1);
-              var viewH = self.editor.getScrollInfo().clientHeight;
-              var curH = self.editor.cursorCoords().top;
-              self.editor.scrollTo(0, curH  - viewH);
+              if(self.undoHistory[self.folder] &&
+                self.undoHistory[self.folder][self.file]) {
+                self.editor.setHistory(self.undoHistory[self.folder][self.file]);
+              }
+              if(self.scrollInfo[self.folder] &&
+                self.scrollInfo[self.folder][self.file]) {
+                var scr = self.scrollInfo[self.folder][self.file];
+                self.editor.scrollTo(scr.left, scr.top);
+                self.editor.setCursor(scr.line - 1, scr.col - 1);
+              }
             }
             self.loaded = true;
           });
@@ -1400,13 +1431,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.refreshSettings();
-            $timeout(function() {
-              if(self.scrollInfo[self.folder]!==undefined &&
-                self.scrollInfo[self.folder][self.file]!==undefined) {
-                var scr = self.scrollInfo[self.folder][self.file];
-                self.editor.scrollTo(scr.left, scr.top);
-              }
-            }, 0);
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
@@ -1526,7 +1550,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         resolve: {openQuestion: ['$stateParams', function($stateParams) {
           return $stateParams.question;
         }],
-          scrollInfo: function() { return {}; }
+          scrollInfo: function() { return {}; },
+          undoHistory: function() { return {}; }
         }
       })
       .state("edit-project.editor.file", {

@@ -492,6 +492,16 @@ input::-ms-clear {
   text-align: center;
 }
 
+#projectOptions button {
+  width: 40%;
+  border-radius: 0 !important;
+  color: #337ab7;
+}
+
+#newProject {
+  margin-right: 20px;
+}
+
 #projectOptions a{
   padding: 0 25px;
   font-size: 1.25em;
@@ -528,6 +538,12 @@ input::-ms-clear {
 @media (max-width: 450px){
   .innerList {
     width: 100%;
+  }
+  #projectOptions button {
+    width: 100%;
+  }
+  #newProject {
+    margin-bottom: 10px;
   }
 }
 #projectList h3 {

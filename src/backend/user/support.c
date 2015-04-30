@@ -21,6 +21,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 /**
  * seashell_try_and_lock_file(int fd)
@@ -36,3 +37,4 @@ int seashell_try_and_lock_file(int fd) {
 
   return fcntl(fd, F_SETLK,  &lock);
 }
+
