@@ -891,10 +891,28 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
        
         /** Refreshes the controller [list of files, ...] */ 
         self.refresh = function () {
+          function groupfiles(lof) {
+            function grpnm(nm) {
+              var lst = nm.split(".");
+              lst.pop();
+              return lst.join(".");
+            }
+            lof.sort();
+            var groups = [];
+            for(var i=0; i<lof.length; i++) {
+              groups.push([lof[i]]);
+              while(i<lof.length-1 && grpnm(lof[i+1]) == grpnm(lof[i])) {
+                groups[groups.length-1].push(lof[i+1]);
+                lof.splice(i+1, 1);
+              }
+            }
+            return groups;
+          }
+
           var result = self.project.filesFor(self.question);
-          self.common_files = result.common;
-          self.question_files = result.question;
-          self.test_files = result.tests;
+          self.common_files = groupfiles(result.common);
+          self.question_files = groupfiles(result.question);
+          self.test_files = groupfiles(result.tests);
 
           self.project.currentMarmosetProject(self.question).then(function(target) {
             if(target) {
