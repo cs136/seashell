@@ -1,4 +1,4 @@
-/** Fixed height tags. */
+/* Fixed height tags. */
 body {
   position: relative; /* For scrollyspy */
   padding-top: 15px;
@@ -30,7 +30,15 @@ body {
 
 #question-controls button {
   text-decoration: none;
-  font-size: 14px;
+}
+
+#question-controls a {
+  font-size: 1.1em;
+}
+
+/** Help Modal */
+#EditorShortcut {
+  opacity: 0;
 }
 
 /** Editor and the console. */
@@ -70,6 +78,21 @@ body {
   border-bottom-color: #eee;
 }
 
+#current-file-controls button {
+  font-size: 1.2em;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 5px;
+  text-decoration: none;
+  font-variant: small-caps;
+}
+
+#toolbar-delete-file {
+  color: red;
+}
+#toolbar-rename-file {
+  padding-right: 10px;
+}
 .CodeMirror-fullscreen {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -417,4 +440,88 @@ input::-ms-clear {
   padding: 10px 6px;
   font-size: 12px;
   text-decoration: none;
+}
+
+/* Project List */
+
+#projectOptions {
+  text-align: center;
+}
+
+#projectOptions button {
+  width: 40%;
+  border-radius: 0 !important;
+  color: #337ab7;
+}
+
+#newProject {
+  margin-right: 20px;
+}
+
+#projectOptions a{
+  padding: 0 25px;
+  font-size: 1.25em;
+  font-weight: bold;
+}
+
+#projectList div{
+  display: inline-block;
+  vertical-align: middle;
+  float: left; 
+  padding: 0;
+}
+
+#projectList {
+  vertical-align: middle;
+}
+
+.outerList {
+  width: 50%;
+}
+
+.innerList {
+  width: 50%; 
+}
+.outerList {
+  margin: 0 auto;
+}
+
+@media (max-width: 700px){
+  .outerList {
+    width: 100%;
+  }
+}
+@media (max-width: 450px){
+  .innerList {
+    width: 100%;
+  }
+  #projectOptions button {
+    width: 100%;
+  }
+  #newProject {
+    margin-bottom: 10px;
+  }
+}
+#projectList h3 {
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 25px;
+}
+
+#projectList ul {
+  list-style-type: none;
+  display: block;
+  list-style-position: inside;
+  padding: 0;
+  text-align: center;
+}
+
+#projectList li {
+  text-align: center;
+  padding: 15px 0 15px 0;
+  border-bottom: 1px solid #ddd;
+}
+#projectList a {
+  display: block;
+  font-size: 1.25em;
 }

@@ -54,7 +54,7 @@
 
   ;; Randomly select a host
   (define host (if _host _host (first (shuffle (read-config 'host)))))
-
+ 
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
@@ -70,12 +70,11 @@
      (lambda ()
        (let loop ()
          (define line (read-line error))
-         (when (not (eq? line eof))
+         (when (not (eof-object? line))
            (logf 'debug "tunnel stderr (~a@~a): ~a" user host line)
-           (loop))
-         ;; EOF received - die.
-         (close-input-port error))
-       )))
+           (loop)))
+       ;; EOF received - die.
+       (close-input-port error))))
 
   ;; Set unbuffered mode for the ports, so nothing funny happens.
   (file-stream-buffer-mode out 'none)

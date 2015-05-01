@@ -20,6 +20,7 @@
          racket/async-channel
          racket/serialize
          racket/udp
+         racket/sandbox
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -51,13 +52,13 @@
      (define success
        (let ([sock (udp-open-socket ping-host ping-port)])
          (dynamic-wind
-           (thunk (void))
-           (thunk
-             (udp-connect! sock ping-host ping-port)
-             (udp-send sock #"ping")
-             (sync/timeout (read-config 'seashell-ping-timeout)
-                           (udp-receive!-evt sock (make-bytes 0))))
-           (thunk (udp-close sock)))))
+          (thunk (void))
+          (thunk
+           (udp-connect! sock ping-host ping-port)
+           (udp-send sock #"ping")
+           (sync/timeout (read-config 'seashell-ping-timeout)
+                         (udp-receive!-evt sock (make-bytes 0))))
+          (thunk (udp-close sock)))))
      ;; Remove stale credentials files.  This can be a race condition,
      ;; so make sure the file is locked with fcntl before continuing.
      ;; XXX you are not locking the file here...
@@ -66,10 +67,10 @@
        (delete-file credentials-file))
      (and success #t)]
     [else
-      ;; Outdated credentials file format. Delete it.
-      (logf 'info "Purging old credentials file...")
-      (delete-file credentials-file)
-      #f]))
+     ;; Outdated credentials file format. Delete it.
+     (logf 'info "Purging old credentials file...")
+     (delete-file credentials-file)
+     #f]))
 
 ;; dump-creds -> creds
 ;; Dumps the current credentials; raises one of:
@@ -79,14 +80,14 @@
 (define (dump-creds)
   (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
   (call-with-output-file
-    credentials-file
+      credentials-file
     (lambda (lock-file)
       (with-input-from-file
-        credentials-file
+          credentials-file
         (thunk
-          (with-handlers
-            ([exn:fail:read? (lambda (exn)
-                               (raise (exn:creds "Could not read credentials file!" (current-continuation-marks))))])
+         (with-handlers
+             ([exn:fail:read? (lambda (exn)
+                                (raise (exn:creds "Could not read credentials file!" (current-continuation-marks))))])
            (define result (read))
            (if (or (eof-object? result)
                    (not (try-and-lock-file lock-file))
@@ -117,10 +118,10 @@
 ;; Detaches backend.
 (define (detach)
   (call-as-atomic
-    (thunk
-      (flush-output (current-output-port))
-      (unless (= 0 (seashell_signal_detach))
-        (exit-from-seashell 5)))))
+   (thunk
+    (flush-output (current-output-port))
+    (unless (= 0 (seashell_signal_detach))
+      (exit-from-seashell 5)))))
 
 ;; make-udp-ping-listener -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
@@ -128,17 +129,15 @@
   (-> (values integer? custodian?))
   (parameterize ([current-custodian (make-custodian (current-custodian))])
     ;; Start the UDP ping listener
-    (define sock (udp-open-socket))
-    ;; Bind the socket.
+    (define sock (udp-open-socket "::0"))
     (udp-bind! sock #f 0)
-    ;; Get the ports.
     (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
     (thread
-      (thunk
-        (let loop ()
-          (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
-          (udp-send-to sock client-host client-port #"pong")
-          (loop))))
+     (thunk
+      (let loop ()
+        (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0))) 
+        (udp-send-to sock client-host client-port #"pong")
+        (loop))))
     (values ping-port (current-custodian))))
 
 ;; (backend/main)
@@ -147,7 +146,7 @@
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
   (define ssl-unit #f)
-
+  
   (with-handlers
       ([exn:fail? 
         (lambda (exn)
@@ -158,10 +157,10 @@
     
     ;; Install SSL keys.
     (set! ssl-unit
-      (make-ssl-tcp@
-       (read-config 'ssl-cert)
-       (read-config 'ssl-key)
-       #f #f #f #f #f))
+          (make-ssl-tcp@
+           (read-config 'ssl-cert)
+           (read-config 'ssl-key)
+           #f #f #f #f #f))
     
     ;; Dropping permissions.
     (unless (= 0 (seashell_drop_permissions))
@@ -181,7 +180,7 @@
     ;; Unbuffered mode for output ports.
     (file-stream-buffer-mode (current-output-port) 'none)
     (file-stream-buffer-mode (current-error-port) 'none)
-
+    
     ;; Install umask.
     ;; NOTE: This will not affect the permissions set for the ~/.seashell/{projects,runtime-files} directories.
     (seashell_set_umask)
@@ -209,111 +208,114 @@
      (thunk
       (call-with-continuation-barrier
        (thunk
-        ;; Install credentials or quit.
-        (set! credentials-port
-              (let loop ([tries 0])
-                (when (> tries 5)
-                  (logf 'error "Error opening credentials file - aborting!")
-                  (exit-from-seashell 4))
-                (define repeat (make-continuation-prompt-tag))
-                (call-with-continuation-prompt
-                 (thunk
-                  ;; Try to read the file...
-                  (with-handlers
-                      ([exn:fail:filesystem? 
-                         (lambda (exn)
-                           (cond
-                             ;; Case 1: File does not exist.
-                             [(not (file-exists? credentials-file))
-                              (void)]
-                             ;; Case 2: Something else...
-                             [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))
-                                   (abort-current-continuation repeat)]))]
-                       [exn:creds?
-                         (lambda (exn) (abort-current-continuation repeat))])
-                    (write (dump-creds))
-                    (logf 'info "Found existing Seashell instance; using existing credentials.")
-                    (exit-from-seashell 0))
-                  (logf 'info "Attempting to create new credentials file...")
-                  ;; If it does not exist, create it mode 600 and get a port to it.
-                  ;; This can lead to a race condition with the above code, so if we can't create it,
-                  ;; we loop again (up to a certain number of times)
-                  (when (not (= 0 (seashell_create_secret_file credentials-file)))
-                    (abort-current-continuation repeat))
-                  (with-handlers*
-                   ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
-                   (open-output-file credentials-file #:exists 'must-truncate)))
-                 repeat
-                 (thunk 
-                   (sleep (expt 2 tries))
-                   (loop (add1 tries))))))
-        
-        ;; Global dispatcher.
-        (define seashell-dispatch
-          (sequence:make
-           request-logging-dispatcher
-           (filter:make #rx"^/$" (make-websocket-dispatcher 
-                                  (curry conn-dispatch keepalive-chan)))
-           (filter:make #rx"^/export/" project-export-dispatcher)
-           (filter:make #rx"^/upload$" upload-file-dispatcher)
-           standard-error-dispatcher))
-
-        ;; Start our places.
-        (seashell-compile-place/init)
-        
-        ;; Start the server.
-        (define conf-chan  (make-async-channel))
-        (set! shutdown-server
-              (serve
-               #:dispatch seashell-dispatch
-               #:port 0
-               #:tcp@ ssl-unit
-               #:listen-ip #f
-               #:confirmation-channel conf-chan))
-        (define start-result (async-channel-get conf-chan))
-        (when (exn? start-result)
-          (raise start-result))
-
-        ;; Start the UDP ping listener.
-        (define-values (ping-port udp-custodian)
-          (make-udp-ping-listener))
-        (set! shutdown-listener
-          (thunk (custodian-shutdown-all udp-custodian)))
-
-        ;; Get current username
-        (define username (or (seashell_get_username) "unknown_user"))
-        
-        ;; Generate and send credentials, write lock file
-        (define host (read))
-        (logf 'debug "Read hostname '~a' from login server." host)
-        (define key (seashell-crypt-make-key))
-        (install-server-key! key)
-        (define creds 
-          `#hash((key . ,(seashell-crypt-key->client key))
-                 (host . ,host)
-                 (port . ,start-result)
-                 (pid . ,(getpid))
-                 (ping-port . ,ping-port)
-                 (user . ,username)))
-        
-        ;; Write credentials back to file and to tunnel.
-        (write (serialize creds))
-        (write (serialize creds) credentials-port)
-        
-        ;; Detach from backend, and close the credentials port.
-        (close-output-port credentials-port)
-        (detach)
-        
-        ;; Write out the listening port
-        (logf 'info "Listening on port ~a." start-result)
-        
-        ;; Loop and serve requests.
-        (with-handlers
-            ([exn:break? (lambda(e) (logf 'info "Terminating on break."))])
-          (let loop ()
-            (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
-              [#f (void)]
-              [else (loop)]))))))
+        (call-with-limits 
+         #f (read-config 'server-memory-limit)
+         (thunk
+          ;; Install credentials or quit.
+          (set! credentials-port
+                (let loop ([tries 0])
+                  (when (> tries 5)
+                    (logf 'error "Error opening credentials file - aborting!")
+                    (exit-from-seashell 4))
+                  (define repeat (make-continuation-prompt-tag))
+                  (call-with-continuation-prompt
+                   (thunk
+                    ;; Try to read the file...
+                    (with-handlers
+                        ([exn:fail:filesystem? 
+                          (lambda (exn)
+                            (cond
+                              ;; Case 1: File does not exist.
+                              [(not (file-exists? credentials-file))
+                               (void)]
+                              ;; Case 2: Something else...
+                              [else (logf 'warning "Retrying error on credentials file: ~a" (exn-message exn))
+                                    (abort-current-continuation repeat)]))]
+                         [exn:creds?
+                          (lambda (exn) (abort-current-continuation repeat))])
+                      (write (dump-creds))
+                      (logf 'info "Found existing Seashell instance; using existing credentials.")
+                      (exit-from-seashell 0))
+                    (logf 'info "Attempting to create new credentials file...")
+                    ;; If it does not exist, create it mode 600 and get a port to it.
+                    ;; This can lead to a race condition with the above code, so if we can't create it,
+                    ;; we loop again (up to a certain number of times)
+                    (when (not (= 0 (seashell_create_secret_file credentials-file)))
+                      (abort-current-continuation repeat))
+                    (with-handlers*
+                     ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
+                     (open-output-file credentials-file #:exists 'must-truncate)))
+                   repeat
+                   (thunk 
+                    (sleep (expt 2 tries))
+                    (loop (add1 tries))))))
+          
+          ;; Global dispatcher.
+          (define seashell-dispatch
+            (sequence:make
+             request-logging-dispatcher
+             (filter:make #rx"^/$" (make-websocket-dispatcher 
+                                    (curry conn-dispatch keepalive-chan)))
+             (filter:make #rx"^/export/" project-export-dispatcher)
+             (filter:make #rx"^/upload$" upload-file-dispatcher)
+             standard-error-dispatcher))
+          
+          ;; Start our places.
+          (seashell-compile-place/init)
+          
+          ;; Start the server.
+          (define conf-chan  (make-async-channel))
+          (set! shutdown-server
+                (serve
+                 #:dispatch seashell-dispatch
+                 #:port 0
+                 #:tcp@ ssl-unit
+                 #:listen-ip #f
+                 #:confirmation-channel conf-chan))
+          (define start-result (async-channel-get conf-chan))
+          (when (exn? start-result)
+            (raise start-result))
+          
+          ;; Start the UDP ping listener.
+          (define-values (ping-port udp-custodian)
+            (make-udp-ping-listener))
+          (set! shutdown-listener
+                (thunk (custodian-shutdown-all udp-custodian)))
+          
+          ;; Get current username
+          (define username (or (seashell_get_username) "unknown_user"))
+          
+          ;; Generate and send credentials, write lock file
+          (define host (read))
+          (logf 'debug "Read hostname '~a' from login server." host)
+          (define key (seashell-crypt-make-key))
+          (install-server-key! key)
+          (define creds 
+            `#hash((key . ,(seashell-crypt-key->client key))
+                   (host . ,host)
+                   (port . ,start-result)
+                   (pid . ,(getpid))
+                   (ping-port . ,ping-port)
+                   (user . ,username)))
+          
+          ;; Write credentials back to file and to tunnel.
+          (write (serialize creds))
+          (write (serialize creds) credentials-port)
+          
+          ;; Detach from backend, and close the credentials port.
+          (close-output-port credentials-port)
+          (detach)
+          
+          ;; Write out the listening port
+          (logf 'info "Listening on port ~a." start-result)
+          
+          ;; Loop and serve requests.
+          (with-handlers
+              ([exn:break? (lambda(e) (logf 'info "Terminating on break."))])
+            (let loop ()
+              (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
+                [#f (void)]
+                [else (loop)]))))))))
      (thunk
       (logf 'info "Shutting down...")
       ;; Close port (if not closed)

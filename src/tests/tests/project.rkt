@@ -1,68 +1,71 @@
 #lang racket
 
-(require "test-environment.rkt"
+(require rackunit
          seashell/backend/project
          seashell/backend/runner)
 
-(define total-tests 7)
-(define passed-tests 0)
+(define/provide-test-suite project-suite
+  (test-suite "Project Tests"
+    (test-case "Create a Project"
+      (new-project "foo")
+      (check-pred is-project? "foo"))
+    
+    (test-case "Lock a project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (check-true (lock-project "foo" (current-thread)))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check < current-timestamp new-timestamp))
+    
+    (test-case "Lock a locked project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (sync (thread (thunk
+        (check-false (lock-project "foo" (current-thread))))))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check-equal? current-timestamp new-timestamp))
 
-(define test-dir (string->path "./.seashell-test"))
+    (test-case "Force lock a locked project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (sync (thread (thunk
+        (force-lock-project "foo" (current-thread)))))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check < current-timestamp new-timestamp))
 
-;; Test 1
-;; make a project
-(new-project "foo")
-(if (is-project? "foo")
-  (set! passed-tests (add1 passed-tests))
-  (display "Project not successfully created.\n" (current-error-port)))
+    (test-case "Delete a non-Project"
+      (check-exn exn:fail? (thunk (delete-project "bar"))))
 
-;; Test 2
-;; delete a non-project
-(with-handlers ([exn:fail?
-  (lambda (e) (set! passed-tests (add1 passed-tests)))])
-  (delete-project "bar")
-  (display "Was able to delete non-existent project.\n"
-    (current-error-port)))
+    (test-case "Run a Project"
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
+        (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
+      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
+      (check-true success)
+      (sync (program-wait-evt (hash-ref hsh 'pid))))
 
-;; Test 3
-;; list projects when there is more than one
-(new-project "bar")
+    (test-case "Get a Compilation Error"
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
+        (thunk (display "great code;")))
+      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '()))
+      (check-false res)
+      (check string=? (hash-ref hsh 'status) "compile-failed"))
 
-(if (equal? (sort (list-projects) string<?) '("bar" "foo"))
-  (set! passed-tests (add1 passed-tests))
-  (display "list-projects failed.\n" (current-error-port)))
+    (test-case "Export a Project"
+      (export-project "foo"))
 
-;; Test 4
-;; delete an actual project
-(delete-project "foo")
-(if (is-project? "foo")
-  (display "Was unable to delete a project.\n" (current-error-port))
-  (set! passed-tests (add1 passed-tests)))
+    (test-case "Most Recently Used"
+      (update-most-recently-used "foo" #f '("fexists" "error.c") "some data")
+      (check string=? (get-most-recently-used "foo" #f) "some data"))
 
-;; Test 5
-;; Run a project
-(with-output-to-file (check-and-build-path (build-project-path "bar") "test.c")
-  (thunk (display "#include <stdlib.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-
-(with-handlers
-  ([exn? (lambda (e) (display (exn-message e) (current-error-port)))])
-  (define run-pid (run-project "bar" "test.c" #f))
-  (sync (program-wait-evt run-pid))
-  (set! passed-tests (add1 passed-tests)))
-
-;; Test 6
-;; Export project
-(with-handlers
-  ([exn:fail? (lambda (e) (display (exn-message e) (current-error-port)))])
-  (export-project "bar")
-  (set! passed-tests (add1 passed-tests)))
-
-;; Test 6
-;; try listing the projects when there are none
-(delete-project "bar")
-
-(if (equal? (list-projects) '())
-  (set! passed-tests (add1 passed-tests))
-  (display "list-projects is not working.\n" (current-error-port)))
-
-(printf "~a\n~a\n" total-tests passed-tests)
+    (test-case "Delete a Project"
+      (delete-project "foo")
+      (check-equal? (list-projects) '()))))

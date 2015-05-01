@@ -9,11 +9,15 @@
             <span>{{editView.question}}/
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="file in editView.question_files">
-            <a
-              ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
-              class="file-link"
-              ui-sref-active="file-link-active">{{file}}</a>
+            <span ng-repeat="group in editView.question_files">
+              <a ng-repeat-start="file in group" ng-if="$first"
+                ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
+                class="file-link"
+                ui-sref-active="file-link-active">{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
+                  ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
+                  class="file-link"
+                  ui-sref-active="file-link-active">{{file.split(".").pop()}}</a>
+              </span>
             </span> 
           </span>
         </div>
@@ -27,13 +31,13 @@
           <a href=""
              ng-click="editView.add_file()"
              class="btn btn-link"
-             style="border: 0; padding: 0; outline: 0; text-decoration: none">
+             style="border: 0; outline: 0; text-decoration: none">
             <span>add file…</span>
           </a>
           <a href=""
              ng-click="editView.submit_question()"
              class="btn btn-link"
-             style="border: 0; padding: 0; outline:0; text-decoration: none">
+             style="border: 0; outline:0; text-decoration: none">
             <span>submit question</span>
           </a>
           <span ng-show="editView.marmoset_short_results">
@@ -42,7 +46,7 @@
                   ng-click="editView.view_results()"
                   ng-show="editView.marmoset_short_results"
                   class="btn btn-link"
-                  style="border: 0; padding: 0; float: right; margin-top: 0px; outline: 0; text-decoration: none">
+                  style="border: 0; float: right; margin-top: 0px; outline: 0; text-decoration: none">
               <span>{{editView.marmoset_short_results}}</span>
             </a>
           </span>
@@ -52,11 +56,15 @@
         <div class="col-md-6 col-xs-8" id="common-files">
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="file in editView.common_files">
-            <a
-              ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
-              ui-sref-active='file-link-active'
-              class='file-link'>{{file}}</a> 
+            <span ng-repeat="group in editView.common_files">
+              <a ng-repeat-start="file in group" ng-if="$first"
+                 ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
+                 ui-sref-active='file-link-active'
+                 class='file-link'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
+                class='file-link'
+                ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
+                ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
+              </span>
             </span>
           </span>
         </div>
@@ -65,11 +73,15 @@
         <div class="col-md-6 col-xs-12">
           <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="file in editView.test_files">
-            <a
-              ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
-              class="file-link"
-              ui-sref-active="file-link-active">{{file}}</a> 
+            <span ng-repeat="group in editView.test_files">
+              <a ng-repeat-start="file in group" ng-if="$first"
+                 ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
+                 class='file-link'
+                 ui-sref-active='file-link-active'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
+                   class='file-link'
+                   ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
+                   ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
+              </span>
             </span>
           </span>
         </div>

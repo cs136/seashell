@@ -18,11 +18,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "compiler.h"
+#include <stdio.h>
+#include "seashell-config.h"
 
 /** This is an example usage of Seashell's clang interface,
- *  mainly for debugging memory leaks (and whatnot).
+ *  mainly for debugging memory leaks (and whatnot),
+ *  and for making sure the compiler builds correctly.
  */
 int main( int argc, char* argv[] ) {
+  printf("Build canary for Seashell's clang interface.\n");
+  printf("Installation prefix: %s.\n", INSTALL_PREFIX);
+  printf("Build directory: %s.\n", BUILD_DIR);
+  printf("Debug build: %d.\n", SEASHELL_DEBUG);
+  printf("Is installed: %d.\n", IS_INSTALLED());
   if (argc > 2) {
     struct seashell_compiler* compiler = seashell_compiler_make();
     seashell_compiler_add_file(compiler, argv[1]);
