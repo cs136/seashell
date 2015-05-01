@@ -44,6 +44,13 @@ SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
 # C++ 11 mode.
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
+# Query for multiarch
+execute_process(COMMAND gcc --print-multiarch RESULT_VARIABLE MA_EXIST OUTPUT_VARIABLE MULTIARCH)
+string(STRIP "${MULTIARCH}" MULTIARCH)
+if ( MA_EXIST EQUAL 0 AND MULTIARCH)
+  add_definitions("-DMULTIARCH_PLATFORM=\"${MULTIARCH}\"")
+endif()
+
 # Grab the core LLVM components.
 # llvm_map_components_to_libnames(REQ_LLVM_LIBRARIES native nativecodegen)
 llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES native nativecodegen) ## FIXME remove when we upgrade to clang 3.5

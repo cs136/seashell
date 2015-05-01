@@ -1,4 +1,4 @@
-/*u
+/*
  * Angular bindings for Seashell projects.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
@@ -173,19 +173,23 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * By default, actually creates a file at that path. If soft_place is true,
          *  does not create the file in the backend.
          */
-        SeashellFile.prototype._placeInTree = function(file, path, soft_place, contents, encoding) {
+        SeashellFile.prototype._placeInTree = function(file, path, soft_place,
+          contents, encoding, normalize) {
           var self = this;
           path = path ? path : file.name;
           if(path.length == 1) {
             if(!soft_place) {
               if(file.is_dir)
-                return $q.when(ws.socket.newDirectory(file.project.name, file.fullname())).then(function () {
+                return $q.when(ws.socket.newDirectory(file.project.name,
+                  file.fullname())).then(function () {
                   self.children.push(file);
                 });
               else
-                return $q.when(ws.socket.newFile(file.project.name, file.fullname(), contents, encoding)).then(function () {
-                  self.children.push(file);
-                });
+                return $q.when(ws.socket.newFile(file.project.name,
+                  file.fullname(), contents, encoding, normalize ? true : false))
+                    .then(function () {
+                      self.children.push(file);
+                    });
             } else {
               self.children.push(file);
             }
@@ -195,14 +199,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return path[0] == c.name[c.name.length-1];
             });
             if(match.length>0)
-              return match[0]._placeInTree(file, path.slice(1), soft_place, contents, encoding);
+              return match[0]._placeInTree(file, path.slice(1), soft_place,
+                contents, encoding, normalize);
             else {
-              var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
+              var dir = new SeashellFile(file.project,
+                file.name.slice(0,file.name.length-path.length+1).join('/'), true);
               return (dir.fullname === "" ? $q.when() : 
                   $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
-                  return self._placeInTree(file, path, soft_place, contents, encoding);
+                  return self._placeInTree(file, path, soft_place, contents,
+                    encoding, normalize);
                 });
             }
           }
@@ -329,7 +336,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Requires .init to be called already.
          *
          */
-        SeashellProject.prototype.createFile = function(folder, question, fname, contents, encoding) {
+        SeashellProject.prototype.createFile = function(folder, question, fname, contents, encoding, normalize) {
           var self = this;
           var path = self._getPath(question, folder, fname);
           contents = contents || "";
@@ -338,7 +345,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             return $q.reject("A file with that name already exists.");
           }
           var file = new SeashellFile(self, path);
-          return self.root._placeInTree(file, false, false, contents, encoding);
+          return self.root._placeInTree(file, false, false, contents, encoding, normalize);
         };
 
         SeashellProject.prototype.createQuestion = function(question) {
@@ -673,7 +680,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                   var skels = results.data;
                   var new_projects = _.filter(skels,
                       function (skel) {
-                        return projects.indexOf(skel) == -1;
+                        var index = -1;
+                        var len = projects.length;
+                        for(var i = 0; i < len; i++){
+                          index = projects[i].indexOf(skel);
+                          if(index != -1){
+                            return false;
+                          }
+                        }
+                        return true;
                       });
                   var failed_projects = [];
                   var start = $q.when();

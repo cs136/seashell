@@ -55,7 +55,9 @@
                     ,category
                     ,@args))
                  (list (current-continuation-marks) block))
-    (semaphore-wait block))
+    ;; Don't block if debug and not debug mode.
+    (unless (and (eq? category 'debug) (not (read-config 'debug)))
+      (semaphore-wait block)))
   (void))
 
 ;; make-log-reader: type-regexp -> evt?

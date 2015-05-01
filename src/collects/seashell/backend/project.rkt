@@ -40,13 +40,15 @@
          marmoset-submit
          get-most-recently-used
          update-most-recently-used
-         export-project)
+         export-project
+         archive-projects)
 
 (require seashell/log
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
          seashell/websocket
+         seashell/support-native
          net/url
          net/head
          json
@@ -142,11 +144,11 @@
   (make-directory* (project-base-path))
   (void))
 
-;; list-projects -> (listof project-name?)
+;; list-projects -> (listof (listof project-name? number?))
 ;; Lists existing Seashell projects.
 (define/contract (list-projects)
-  (-> (listof project-name?))
-  (map some-system-path->string
+  (-> (listof (list/c project-name? any/c)))
+  (map (lambda (proj) (list (some-system-path->string proj) (file-or-directory-modify-seconds (build-project-path proj))))
        (filter (compose directory-exists? build-project-path)
                (directory-list (project-base-path)))))
 
@@ -265,7 +267,11 @@
     (thunk
       (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
         (hash-remove! locked-projects name))
-      (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))))
+      (define unlocked (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))
+      (when unlocked
+        (file-or-directory-modify-seconds (build-project-path name)
+                                          (current-seconds)))
+      unlocked)))
 
 ;; (force-lock-project name)
 ;; Forcibly locks a project, even if it is already locked
@@ -283,6 +289,8 @@
   (call-with-semaphore
     lock-semaphore
     (thunk
+      (file-or-directory-modify-seconds (build-project-path name)
+                                        (current-seconds))
       (hash-set! locked-projects name thread-to-lock-on))))
 
 ;; (unlock-project name)
@@ -601,3 +609,22 @@
                                        (list predicate data))))
                          #:exists 'truncate))
   (void))
+
+;; (archive-projects archive-name) moves all existing project files into a
+;;   directory called archive-name
+;;
+;; Params:
+;;   archive-name - name of new folder to archive to, or #f to use timestamp
+;;
+;; Returns:
+;;   Nothing
+(define/contract (archive-projects archive-name)
+  (-> (or/c #f path-string?) void?)
+  (define dir-path (check-and-build-path (read-config 'seashell) "archives"
+    (if archive-name archive-name (number->string (current-seconds)))))
+  (define arch-root (build-path (read-config 'seashell) "archives"))
+  (define proj-root (build-path (read-config 'seashell) "projects"))
+  (unless (directory-exists? arch-root)
+    (make-directory arch-root))
+  (rename-file-or-directory proj-root dir-path)
+  (make-directory proj-root))
