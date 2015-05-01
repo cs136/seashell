@@ -1009,9 +1009,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory,
+          ws) {
         var self = this;
         // Scope variable declarations follow.
        
@@ -1053,6 +1054,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
+        /** Callback key when connected.
+         *  NOTE: This is slightly sketchy -- however, as
+         *  the editor will only be loaded if and only if
+         *  the socket exists in the first place, this is
+         *  fine for now. */
+        var cbC_key = ws.register_callback('connected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", false);
+        }, true);
+        var cbF_key = ws.register_callback('failed', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
+        var cbD_key = ws.register_callback('disconnected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
           if(undefined===self.scrollInfo[self.folder])
@@ -1062,6 +1080,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if(undefined===self.undoHistory[self.folder])
             self.undoHistory[self.folder] = {};
           self.undoHistory[self.folder][self.file] = self.editor.getHistory();
+          ws.unregister_callback(cbC_key);
+          ws.unregister_callback(cbF_key);
+          ws.unregister_callback(cbD_key);
         });
         self.editorFocus = false;
         self.contents = "";

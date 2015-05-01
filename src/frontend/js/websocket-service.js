@@ -84,30 +84,41 @@ angular.module('seashell-websocket', ['jquery-cookie'])
         return $q.reject("No credentials found!");
       }
 
-      self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get(SEASHELL_CREDS_COOKIE).host, cookie.get(SEASHELL_CREDS_COOKIE).port),
-                                          cookie.get(SEASHELL_CREDS_COOKIE).key,
-                                          /** Failure - probably want to prompt the user to attempt to reconnect/
-                                           *  log in again.
-                                           */
-                                          function () {
-                                            self.failed = true;
-                                            $scope.$apply(function () {
-                                              $interval.cancel(timeout_interval);
-                                              _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
-                                                           function (x) {return x.cb;}),
-                                                function (x) {x();});
+      try {
+        self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get(SEASHELL_CREDS_COOKIE).host, cookie.get(SEASHELL_CREDS_COOKIE).port),
+                                            cookie.get(SEASHELL_CREDS_COOKIE).key,
+                                            /** Failure - probably want to prompt the user to attempt to reconnect/
+                                             *  log in again.
+                                             */
+                                            function () {
+                                              self.failed = true;
+                                              $timeout(function () {
+                                                $interval.cancel(timeout_interval);
+                                                _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
+                                                             function (x) {return x.cb;}),
+                                                  function (x) {x();});
+                                              }, 0);
+                                            },
+                                            /** Socket closed - probably want to prompt the user to reconnect? */
+                                            function () {
+                                              self.connected = false;
+                                              $timeout(function () {
+                                                $interval.cancel(timeout_interval);
+                                                _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'disconnected';}),
+                                                             function (x) {return x.cb;}),
+                                                  function (x) {x();});
+                                              }, 0);
                                             });
-                                          },
-                                          /** Socket closed - probably want to prompt the user to reconnect? */
-                                          function () {
-                                            self.connected = false;
-                                            $scope.$apply(function () {
-                                              $interval.cancel(timeout_interval);
-                                              _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'disconnected';}),
-                                                           function (x) {return x.cb;}),
-                                                function (x) {x();});
-                                            });
-                                          });
+      } catch (e) {
+        self.failed = true;
+        $timeout(function () {
+          _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
+                       function (x) {return x.cb;}),
+            function (x) {x();});
+        }, 0);
+        return $q.reject(e);
+      }
+
       return $q.when(self.socket.ready)
         .then(function () {
           console.log("Seashell socket set up properly.");
@@ -134,7 +145,9 @@ angular.module('seashell-websocket', ['jquery-cookie'])
           console.log("Websocket disconnection monitor set up properly.");
           /** Run the callbacks. */
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'connected';}),
-                       function (x) {return x.cb;}),
+                       function (x) {
+                         return x.cb;
+                       }),
             function (x) {x();});
         });
     };
