@@ -187,35 +187,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }).result;
         };
       }])
-  // Commit Project Modal Service
-  .factory('CommitProjectModal', ['$modal', 'error-service',
-      function ($modal, errors) {
-        return function (project) {
-          var modal = $modal.open({
-            templateUrl: "frontend/templates/commit-project-template.html",
-            controller: ['$scope', 'socket', 'error-service',
-            function ($scope,  ws, errors) {
-              $scope.commit_descr = "Saved "+(new Date()).toUTCString()+".";
-              $scope.editor = null;
-              $scope.codemirror_opts = {
-                lineWrapping: true,
-                mode: "text/plain",
-                onLoad: function (cm) {
-                  $scope.editor = cm;
-                }
-              };
-              $scope.commit_project = function () {
-                $scope.$close();
-                project.save($scope.commit_descr)
-                       .catch(function (error) {
-                         errors.report(error, sprintf("Could not commit %s to storage!", project.name));
-                       });
-              };
-            }]
-          });
-          return modal.result;
-        };
-      }])
   // Directive for binding a mutator watcher (HTML5)
   .directive('whenVisible', ['$parse', function ($parse) {
     return {
@@ -841,10 +812,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'CommitProjectModal', 'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
+      'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, submitMarmosetModal,
-        $interval, marmoset, commitProjectModal, newQuestionModal,
+        $interval, marmoset, newQuestionModal,
         marmosetResultsModal, Console) {
         var self = this;
         self.question = openQuestion;
@@ -956,11 +927,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         }
 
-        /** Commits the project. */
-        self.commit_project = function () {runWhenSaved(function (){
-          commitProjectModal(self.project);
-        });};
-
         self.view_results = function() {
           marmosetResultsModal(self.marmoset_long_results);
         };
@@ -1020,9 +986,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       }])
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
-          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory) {
+          settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory,
+          ws) {
         var self = this;
         // Scope variable declarations follow.
        
@@ -1064,6 +1031,23 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           mode: "text/plain",
           onLoad: self.consoleLoad
         };
+        /** Callback key when connected.
+         *  NOTE: This is slightly sketchy -- however, as
+         *  the editor will only be loaded if and only if
+         *  the socket exists in the first place, this is
+         *  fine for now. */
+        var cbC_key = ws.register_callback('connected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", false);
+        }, true);
+        var cbF_key = ws.register_callback('failed', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
+        var cbD_key = ws.register_callback('disconnected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
           if(undefined===self.scrollInfo[self.folder])
@@ -1073,6 +1057,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if(undefined===self.undoHistory[self.folder])
             self.undoHistory[self.folder] = {};
           self.undoHistory[self.folder][self.file] = self.editor.getHistory();
+          ws.unregister_callback(cbC_key);
+          ws.unregister_callback(cbF_key);
+          ws.unregister_callback(cbD_key);
         });
         self.editorFocus = false;
         self.contents = "";
