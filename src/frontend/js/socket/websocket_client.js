@@ -46,6 +46,9 @@ function SeashellWebsocket(uri, key, failure, closes) {
   self.server_nonce = null;
   self.failure = failure;
   self.closes = closes;
+  self.failed = false;
+  self.closed = false;
+  self.started = false;
 
   // Ready to authenticate [-1]
   self.requests[-1] = {
@@ -63,11 +66,20 @@ function SeashellWebsocket(uri, key, failure, closes) {
   };
 
   self.websocket = new WebSocket(uri);
+  self.started = true;
 
   self.websocket.onerror = function() {
+    self.failed = true;
+    if (!self.authenticated) {
+     self.ready.reject("Error during authentication!"); 
+    }
     return self.failure && self.failure();
   };
   self.websocket.onclose = function() {
+    self.closed = true;
+    if (!self.authenticated) {
+     self.ready.reject("Socket closed during authentication!"); 
+    }
     return self.closes && self.closes();
   };
 
@@ -182,7 +194,10 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
   var self = this;
   deferred = deferred || $.Deferred();
 
-  if (self.authenticated) {
+  if (self.failed || self.closed || !self.started) {
+    return deferred.reject("Socket closed or failed!").promise();
+  }
+  else if (self.authenticated) {
     return self._sendMessage(message, deferred);
   } else {
     self.ready.done(function () {

@@ -10,6 +10,38 @@
     (test-case "Create a Project"
       (new-project "foo")
       (check-pred is-project? "foo"))
+    
+    (test-case "Lock a project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (check-true (lock-project "foo" (current-thread)))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check < current-timestamp new-timestamp))
+    
+    (test-case "Lock a locked project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (sync (thread (thunk
+        (check-false (lock-project "foo" (current-thread))))))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check-equal? current-timestamp new-timestamp))
+
+    (test-case "Force lock a locked project"
+      (sleep 2) ;; make sure we have enough delay to make sure timestamps
+                ;; will be updated correctly.
+      (define current-timestamp (file-or-directory-modify-seconds
+                                  (build-project-path "foo")))
+      (sync (thread (thunk
+        (force-lock-project "foo" (current-thread)))))
+      (define new-timestamp (file-or-directory-modify-seconds
+                             (build-project-path "foo")))
+      (check < current-timestamp new-timestamp))
 
     (test-case "Delete a non-Project"
       (check-exn exn:fail? (thunk (delete-project "bar"))))

@@ -1,4 +1,4 @@
-/*u
+/*
  * Angular bindings for Seashell projects.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
@@ -680,7 +680,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                   var skels = results.data;
                   var new_projects = _.filter(skels,
                       function (skel) {
-                        return projects.indexOf(skel) == -1;
+                        var index = -1;
+                        var len = projects.length;
+                        for(var i = 0; i < len; i++){
+                          index = projects[i].indexOf(skel);
+                          if(index != -1){
+                            return false;
+                          }
+                        }
+                        return true;
                       });
                   var failed_projects = [];
                   var start = $q.when();
