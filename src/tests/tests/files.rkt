@@ -32,4 +32,12 @@
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
-      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))))
+      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))
+
+    (test-case "Create a directory"
+      (new-directory "test" "boost")
+      (check-true (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))
+
+    (test-case "Delete a directory"
+      (remove-directory "test" "boost")
+      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))))
