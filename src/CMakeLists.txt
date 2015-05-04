@@ -34,7 +34,7 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-set(SEASHELL_VERSION "2.3.0")
+set(SEASHELL_VERSION "2.3.1")
 set(SEASHELL_API_VERSION "4")
 
 # Variable needed for backend and collects.
