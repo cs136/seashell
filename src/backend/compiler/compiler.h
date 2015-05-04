@@ -36,7 +36,7 @@ extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler
 extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k);
 extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k);
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler);
-extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length);
+extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length);
 extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler);
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler);
 #endif

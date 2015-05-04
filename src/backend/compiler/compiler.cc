@@ -459,10 +459,10 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
  * Returns
  *  A pointer to the resulting executable or NULL.
  */
-extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length) {
+extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length) {
   if (compiler->output_object.size() > 0) {
     *length = compiler->output_object.size();
-    return (void*)&compiler->output_object.at(0);
+    return (const char*)&compiler->output_object.at(0);
   } else {
     *length = 0;
     return NULL;
