@@ -64,6 +64,7 @@
                                 (list _ mime charset b64? data)
                                 (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)$" contents))
                               ;; Apparently Safari sometimes sets the mime type to 'base64'...
+                              ;; (data:base64, ....)
                               (if (or b64? (bytes=? mime #"base64"))
                                 (base64-decode data)
                                 (string->bytes/utf-8 (uri-decode (bytes->string/utf-8 data))))]
