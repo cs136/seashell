@@ -60,7 +60,6 @@
                          (thunk 
                            (write-bytes (cond
                              [(eq? encoding 'url)
-                              (logf 'debug "~a\n" contents)
                               (match-define 
                                 (list _ mime charset b64? data)
                                 (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)$" contents))
