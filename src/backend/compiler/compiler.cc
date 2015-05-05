@@ -653,7 +653,6 @@ static int final_link_step (struct seashell_compiler* compiler)
 {
   Module* mod = &compiler->module;
   /** Compile to Object code if running natively. */
-#ifndef __EMSCRIPTEN__
   std::string Error;
 
 
@@ -666,6 +665,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
+#ifndef __EMSCRIPTEN__
   const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
   if (!TheTarget) {
     compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
