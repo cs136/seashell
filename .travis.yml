@@ -28,6 +28,6 @@ script:
   - mkdir build >/dev/null
   - cd build >/dev/null
   - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
-  - make >/dev/null
+  - travis_wait "make >/dev/null"
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - make install >/dev/null
