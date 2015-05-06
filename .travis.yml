@@ -1,22 +1,16 @@
 language: c++
-compiler: clang
+compiler: g++-4.8
 sudo: false
-cache:
-  directories:
-    - $HOME/.ccache
+cache: ccache
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.6
     packages:
       - g++-4.8
-      - clang-3.6
 env:
-  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1 CC=clang-3.6 CXX=clang++-3.6
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1 OURCC=g++-4.8 OURCXX=g++-4.8
 before_install:
-  # Set up home directory
-  - mkdir $HOME/bin >/dev/null
   # Get Racket
   - git clone https://github.com/greghendershott/travis-racket.git >/dev/null
   - cat travis-racket/install-racket.sh | bash >/dev/null
@@ -26,19 +20,10 @@ before_install:
   - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake >/dev/null
   # JavaScript linter
   - npm install -g jshint >/dev/null
-  # CCache
-  - curl -L http://samba.org/ftp/ccache/ccache-3.2.1.tar.gz | tar xzf - >/dev/null
-  - pushd ccache-3.2.1 >/dev/null
-  - ./configure --prefix=$HOME/ccache >/dev/null
-  - make install >/dev/null
-  # Environment Setup
-  - ln -s ccache $HOME/ccache/bin/$CC >/dev/null
-  - ln -s ccache $HOME/ccache/bin/$CXX >/dev/null
-  - popd >/dev/null
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
-  - $HOME/cmake/bin/cmake -DCMAKE_C_COMPILER=$HOME/ccache/bin/${CC} -DCMAKE_CXX_COMPILER=$HOME/ccache/bin/${CXX} -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
+  - $HOME/cmake/bin/cmake -DCMAKE_C_COMPILER=${OURCC} -DCMAKE_CXX_COMPILER=${OURCXX} -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
   - make >/dev/null
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - make install >/dev/null
