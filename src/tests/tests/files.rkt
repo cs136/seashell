@@ -29,7 +29,32 @@
         (list "default/main.c" #f _)
         (list "good.c" #f _)
         (list "bad.c" #f _))))
+    
+    (test-case "Create a file, with a data URL"
+      (new-file "test" "foo1.c" #"data:,A brief note" 'url #f)
+      (check-equal? (read-file "test" "foo1.c") #"A brief note"))
+
+    (test-case "Create a file, with a data URL (base64)"
+      (new-file "test" "foo2.c" #"data:text/html;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
+      (check-equal? (read-file "test" "foo2.c") #"This is a test\n"))
+    
+    (test-case "Create a file, with a data URL (base64) (missing MIME)"
+      (new-file "test" "foo3.c" #"data:;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
+      (check-equal? (read-file "test" "foo3.c") #"This is a test\n"))
+    
+    (test-case "Create a file, with a data URL (base64) (permissive)"
+      (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
+      (check-equal? (read-file "test" "foo4.c") #"This is a test\n"))
+
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
-      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))))
+      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))
+
+    (test-case "Create a directory"
+      (new-directory "test" "boost")
+      (check-true (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))
+
+    (test-case "Delete a directory"
+      (remove-directory "test" "boost")
+      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))))
