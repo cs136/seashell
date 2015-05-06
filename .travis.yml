@@ -1,5 +1,5 @@
 language: c++
-compiler: g++-4.8
+compiler: gcc
 sudo: false
 cache: ccache
 addons:
@@ -9,7 +9,7 @@ addons:
     packages:
       - g++-4.8
 env:
-  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1 OURCC=g++-4.8 OURCXX=g++-4.8
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
 before_install:
   # Get Racket
   - git clone https://github.com/greghendershott/travis-racket.git >/dev/null
@@ -20,10 +20,14 @@ before_install:
   - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake >/dev/null
   # JavaScript linter
   - npm install -g jshint >/dev/null
+  # Set CC/CXX properly
+  - export CXX="g++-4.8" CC="gcc-4.8"
+  # Echo Path
+  - echo $PATH
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
-  - $HOME/cmake/bin/cmake -DCMAKE_C_COMPILER=${OURCC} -DCMAKE_CXX_COMPILER=${OURCXX} -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
+  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
   - make >/dev/null
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - make install >/dev/null
