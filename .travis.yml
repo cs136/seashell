@@ -21,7 +21,7 @@ before_install:
   # JavaScript linter
   - npm install -g jshint >/dev/null
   # Set CC/CXX properly
-  - export CXX="g++-4.8" CC="gcc-4.8"
+  - export CXX="/usr/lib/ccache/g++-4.8" CC="/usr/lib/ccache/gcc-4.8"
   # Echo Path
   - echo $PATH
 script:
