@@ -90,11 +90,17 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+#include <llvm/IR/DiagnosticPrinter.h>
+#include <llvm/Target/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR ==4
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#include <llvm/Linker/Linker.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DIBuilder.h>
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
 #include <llvm/Linker.h>
 #include <llvm/DebugInfo.h>
 #include <llvm/DIBuilder.h>
@@ -696,8 +702,13 @@ static int final_link_step (struct seashell_compiler* compiler)
   /** Drive the code generator. */
   std::string result;
   llvm::raw_string_ostream raw(result);
+  llvm::formatted_raw_ostream adapt(raw);
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+  if (const DataLayout *TD = Target.getSubtargetImpl()->getDataLayout())
+    mod->setDataLayout(TD);
+  PM.add(new DataLayoutPass());
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
   if (const DataLayout *TD = Target.getDataLayout())
     mod->setDataLayout(TD);
   PM.add(new DataLayoutPass(mod));
@@ -710,12 +721,13 @@ static int final_link_step (struct seashell_compiler* compiler)
 #error "Unsupported version of clang."
 #endif
 
-  if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
+  if (Target.addPassesToEmitFile(PM, adapt, llvm::TargetMachine::CGFT_ObjectFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
     return 1;
   }
 
   PM.run(*mod);
+  adapt.flush();
 #else
   std::string result;
   llvm::raw_string_ostream raw(result);
@@ -815,7 +827,7 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
     Clang.setInvocation(CI.get());
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
@@ -868,7 +880,13 @@ static int compile_module (seashell_compiler* compiler,
      *  NOTE: We destroy the source as we've taken the module
      *  (and that for some awful reason, copying modules breaks horribly
      *   LLVM's DWARF emitter.  Someone really ought to file a bug) */
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+    raw_string_ostream Stream(Error);
+    DiagnosticPrinterRawOStream DP(Stream);
+    Success = !llvm::Linker::LinkModules(module, &*mod, [&](const DiagnosticInfo &DI) { DI.print(DP); });
+#else
     Success = !llvm::Linker::LinkModules(module, &*mod, llvm::Linker::DestroySource, &Error);
+#endif
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: llvm::Linker::LinkModules() failed: " + Error);
       return 1;
