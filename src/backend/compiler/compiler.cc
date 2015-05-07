@@ -166,10 +166,11 @@ seashell_compiler::seashell_compiler() :
  * Performs necessary LLVM setup.
  */
 static void seashell_llvm_setup() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-    InitializeAllAsmPrinters();
-    InitializeAllAsmParsers();
+#ifndef __EMSCRIPTEN__
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
+    InitializeNativeTargetAsmParser();
+    InitializeNativeTargetDisassembler();
 
     PassRegistry *Registry = PassRegistry::getPassRegistry();
     initializeCore(*Registry);
@@ -177,6 +178,7 @@ static void seashell_llvm_setup() {
     initializeLoopStrengthReducePass(*Registry);
     initializeLowerIntrinsicsPass(*Registry);
     initializeUnreachableBlockElimPass(*Registry);
+#endif
 }
 
 /**
