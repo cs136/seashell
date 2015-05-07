@@ -159,7 +159,11 @@ seashell_compiler::seashell_compiler() :
   module("seashell-compiler-output", context) {
 }
 
-
+#ifdef __EMSCRIPTEN__
+extern "C" __attribute__((weak)) void llvm_assume(bool c) {
+  return;
+}
+#endif
 
 /**
  * seashell_llvm_setup (void)
@@ -178,6 +182,9 @@ static void seashell_llvm_setup() {
     initializeLoopStrengthReducePass(*Registry);
     initializeLowerIntrinsicsPass(*Registry);
     initializeUnreachableBlockElimPass(*Registry);
+#else
+    // Compiler bug in emcc (as of 7 April/15)
+    llvm_assume(true);
 #endif
 }
 
