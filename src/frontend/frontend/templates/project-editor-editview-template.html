@@ -25,7 +25,7 @@
               </button>
               <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
                       ng-disabled="!(editFileView.runnerFile)"
-                      style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px" tooltip-placement="right" tooltip="control+U"
+                      style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px" tooltip-placement="left" tooltip="control+U"
                       ng-show="editFileView.console.PIDs === null">
                 <span style="font-size: 18px">test</span>
               </button>
@@ -90,7 +90,7 @@
               </div>
               <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
                 type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running"
-                focus-on="program-running">
+                focus-on="program-running" placeholder="Type here and press <Enter>">
               <div class="console-controls"
                    style="position: absolute; top: 5px; right: 0"
                    tooltip-placement="left"
