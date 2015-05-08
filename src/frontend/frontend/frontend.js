@@ -931,6 +931,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               self.marmoset_refresh_interval = $interval(function () {
                 marmoset.results(target).then(function (result) {
                   self.handleMarmosetResults(result, target);
+                  var data = result.result;
                   if(data.length > 0 && data[0].status != "complete") {
                     self.marmoset_short_results = 
                       sprintf("received %s (waiting on tests)",
