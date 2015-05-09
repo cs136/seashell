@@ -56,23 +56,25 @@
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (with-output-to-file path
-                         (thunk 
-                           (write-bytes (cond
-                             [(eq? encoding 'url)
-                              (match-define 
-                                (list _ mime charset b64? data)
-                                (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)$" contents))
-                              ;; Apparently Safari sometimes sets the mime type to 'base64'...
-                              ;; (data:base64, ....)
-                              (if (or b64? (bytes=? mime #"base64"))
-                                (base64-decode data)
-                                (string->bytes/utf-8 (uri-decode (bytes->string/utf-8 data))))]
-                             [else
-                               contents])))
-                         #:exists 'error)
-    (when normalize?
-      (display-lines-to-file (file->lines path) path #:exists 'replace)))
+    (define to-write
+      (with-input-from-bytes contents
+        (thunk 
+          (cond
+            [(eq? encoding 'url)
+             (match-define 
+               (list _ mime charset b64?)
+               (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?," (current-input-port)))
+             ;; Apparently Safari sometimes sets the mime type to 'base64'...
+             ;; (data:base64, ....)
+             (if (or b64? (bytes=? mime #"base64"))
+               (base64-decode (port->bytes))
+               (string->bytes/utf-8 (uri-decode (port->string))))]
+            [else
+              ;; no-op (ignore port)
+              contents]))))
+    (if normalize?
+      (display-lines-to-file (call-with-input-string to-write port->lines) path #:exists 'error)
+      (with-output-to-file path (thunk (write-bytes to-write)) #:exists 'error)))
   (void))
 
 (define/contract (new-directory project dir)
