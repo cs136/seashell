@@ -7,4 +7,4 @@ Summary:
           @item["Tooltip UI Bugfixes"]
           @item["Red buttons on dangerous operations"]
           @item["Safari file-upload bugfix/workaround"]]
-Pull request URL: @link["https://github.com/cs136/seashell/pull/291" "Git Release Notes"]
+Pull request URL: @link["https://github.com/cs136/seashell/pull/298" "Git Release Notes"]
