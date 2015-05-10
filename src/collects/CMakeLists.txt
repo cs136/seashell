@@ -42,7 +42,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
 # Build the binaries.
 add_custom_command(OUTPUT seashell-main
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-main"
-                           ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
+                           ++lib seashell/backend/server ++lib seashell/login/login-gateway ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
                            DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt
                                    ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                    seashell-src-copy)
