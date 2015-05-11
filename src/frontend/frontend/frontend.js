@@ -395,6 +395,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       function ($rootScope, $modal, ws, errors, $q) {
         var self = this;
         self.settings =  {
+          font : "Courier New",
           font_size  : 10,
           editor_mode  : "standard",
           tab_width  : 2,
@@ -1262,7 +1263,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if (self.editorOptions.vimMode) {
             delete self.editorOptions.extraKeys.Esc;
           } 
-          // Force the font size at any rate.
+          // Force the font size at any rate (and font name)
+          $('.CodeMirror').css('font-family', sprintf("%s, monospace", settings.settings.font));
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
