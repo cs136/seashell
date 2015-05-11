@@ -25,6 +25,7 @@
          seashell/backend/runner
          racket/async-channel
          racket/serialize
+         racket/sandbox
          json)
 
 (provide conn-dispatch)
@@ -598,6 +599,7 @@
     (-> jsexpr? jsexpr?)
     (cond
       [(or (not (hash? message)) (not (hash-has-key? message 'id)))
+       (logf 'error "Got bad message!")
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
       [else
        (define id (hash-ref message 'id))
@@ -641,13 +643,23 @@
        (void)]
       [(var data)
        ;; Plain old data.
-       ;; This needs to run in blocking mode.
-       (define message (bytes->jsexpr data))
        (thread
         (lambda ()
-          (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
-          (define result (handle-message message))
-          (send-message connection result)))
+          (with-handlers
+            ([exn:fail:resource? (lambda (exn)
+                                   (logf 'error "Memory limits exceeded while processing request!")
+                                   (send-message connection `#hash((id . -2)
+                                                                   (result . "Request exceeded memory limits."))))]
+             [exn:fail? (lambda (exn)
+                          (logf 'error "Could not process request!")
+                          (send-message connection `#hash((id . -2)
+                                                          (result . "Could not process request!"))))])
+          (call-with-limits #f (read-config 'request-memory-limit)
+            (thunk
+              (define message (bytes->jsexpr data))
+              (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
+              (define result (handle-message message))
+              (send-message connection result))))))
        (main-loop)]))
   
   (with-handlers
