@@ -102,6 +102,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
+
+              var current = cookieStore.get(SEASHELL_CREDS_COOKIE);
+              if (current) {
+                $scope.username = current.user;
+              }
             
               $scope.login = function() {
                 $scope.busy = true;
