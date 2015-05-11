@@ -273,9 +273,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   _.forEach($scope.new_file_upload, function (file) {
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
+                    var extension = filename.split('.').pop();
+                    var normalize = $scope.normalize && ['c', 'h', 'txt', 'rkt', 'in', 'expect'].indexOf(extension) >= 0;
                     reader.onload = function () {
                       project.createFile($scope.new_file_folder, question,
-                        filename, reader.result, "url", $scope.normalize)
+                        filename, reader.result, "url", normalize)
                              .then(function () {
                                notify(true, true, project, question, $scope.new_file_folder, filename);
                              })
