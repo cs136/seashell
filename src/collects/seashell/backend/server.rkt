@@ -46,37 +46,14 @@
 ;; exn:creds -- Exception denoting an issue processing Seashell credentials.
 (struct exn:creds exn:fail:user ())
 
-;; creds-valid? creds credentials-file -> boolean?
-;; Checks whether or not the given creds point to a running seashell instance
-(define/contract (creds-valid? creds credentials-file)
-  (-> hash? path? boolean?)
-  (match creds
-    [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
-     (define success
-       (let ([sock (udp-open-socket ping-host ping-port)])
-         (dynamic-wind
-          (thunk (void))
-          (thunk
-           (udp-connect! sock ping-host ping-port)
-           (udp-send sock #"ping")
-           (sync/timeout (read-config 'seashell-ping-timeout)
-                         (udp-receive!-evt sock (make-bytes 0))))
-          (thunk (udp-close sock)))))
-     ;; Remove stale credentials files.  This can be a race condition,
-     ;; so make sure the file is locked with fcntl before continuing.
-     ;; XXX you are not locking the file here...
-     (unless success
-       (logf 'info "Credentials file was stale; regenerating.")
-       (delete-file credentials-file))
-     (and success #t)]
-    [else
-     ;; Outdated credentials file format. Delete it.
-     (logf 'info "Purging old credentials file...")
-     (delete-file credentials-file)
-     #f]))
-
-;; (dump-creds) -> creds
+;; (_dump-creds)/(dump-creds) -> creds
 ;; Dumps the current credentials.  Purges old/invalid/stale credentials.
+;;
+;; dump-creds is provided as an entry point from seashell-main.  Therefore,
+;; it sets up the logging system in addition to dumping the credentials.
+;;
+;; Internal users will probably want to use _dump-creds instead of
+;; dump-creds.
 ;;
 ;; Raises one of:
 ;;  exn:fail:filesystem -- file does not exist.
@@ -84,6 +61,35 @@
 (define/contract (_dump-creds)
   (-> hash?)
   (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
+  ;; creds-valid? creds credentials-file -> boolean?
+  ;; Checks whether or not the given creds point to a running seashell instance
+  (define/contract (creds-valid? creds)
+    (-> hash? path? boolean?)
+    (match creds
+      [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
+       (define success
+         (let ([sock (udp-open-socket ping-host ping-port)])
+           (dynamic-wind
+            (thunk (void))
+            (thunk
+             (udp-connect! sock ping-host ping-port)
+             (udp-send sock #"ping")
+             (sync/timeout (read-config 'seashell-ping-timeout)
+                           (udp-receive!-evt sock (make-bytes 0))))
+            (thunk (udp-close sock)))))
+       ;; Remove stale credentials files.  This can be a race condition,
+       ;; so make sure the file is locked with fcntl before continuing.
+       ;; XXX you are not locking the file here...
+       (unless success
+         (logf 'info "Credentials file was stale; regenerating.")
+         (delete-file credentials-file))
+       (and success #t)]
+      [else
+       ;; Outdated credentials file format. Delete it.
+       (logf 'info "Purging old credentials file...")
+       (delete-file credentials-file)
+       #f]))
+
   (with-handlers
     ([exn:creds? (lambda (exn)
                    (logf 'warning "Invalid credentials file detected, purging...")
@@ -105,8 +111,7 @@
                             (with-handlers
                               ([exn:fail? (lambda (exn)
                                             (raise exn:creds "Invalid contents in credentials file!"))])
-                              (deserialize result))
-                            credentials-file)))
+                              (deserialize result)))))
                  (raise (exn:creds "Could not read credentials file!" (current-continuation-marks)))
                  result)))))
       #:exists 'update)))
