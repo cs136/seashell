@@ -64,7 +64,7 @@
   ;; creds-valid? creds credentials-file -> boolean?
   ;; Checks whether or not the given creds point to a running seashell instance
   (define/contract (creds-valid? creds)
-    (-> hash? path? boolean?)
+    (-> hash? boolean?)
     (match creds
       [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
        (define success
