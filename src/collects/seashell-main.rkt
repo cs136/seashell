@@ -16,8 +16,6 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/login/login-gateway)
-(require seashell/backend/server)
 (require seashell/seashell-config)
 (require racket/cmdline racket/match)
 
@@ -37,10 +35,10 @@
                    (printf "Build directory: ~a.~n" SEASHELL_BUILD_PATH)
                    (printf "Build type: ~a.~n" (if SEASHELL_DEBUG "Debug" "Release"))
                    (printf "Installation status: ~a.~n" (if SEASHELL_INSTALLED (format "Installed in ~a" SEASHELL_INSTALL_PATH) "Not installed"))]
-         ['login (gateway-main)]
-         ['server (backend-main)]
+         ['login ((dynamic-require 'seashell/login/login-gateway 'gateway-main))]
+         ['server ((dynamic-require 'seashell/backend/server 'backend-main))]
          ['creds 
           (with-handlers
             ([exn:fail? (lambda (exn) (write #f))])
-            (write (dump-creds)))])
+            (write ((dynamic-require 'seashell/backend/server 'dump-creds))))])
   (void))

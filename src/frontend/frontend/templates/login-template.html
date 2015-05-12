@@ -4,16 +4,26 @@
     <span class="glyphicon glyphicon-log-in"></span>
     Log in Again</h4>
 </div>
-<form class="form-signin" role="form" ng-submit="login()">
+<form class="form-signin" name="loginForm" role="form" ng-submit="loginForm.$valid && login()">
 <div class="modal-body form-horizontal">
   <p>Log in again with your
     student.cs credentials below:</p>
-  <div style="width:50%">
-    <input type="text" class="form-control" placeholder="Username" ng-model="username"
-      ng-disabled="busy" />
-    <input type="password" class="form-control" placeholder="Password"
-      ng-model="password" ng-disabled="busy" /><br />
-    <label><input type="checkbox" ng-model="reset" /> Check to reset your Seashell instance</label>
+  <div class="form-group">
+    <div class="col-sm-6" ng-class="{'has-error': loginForm.login_username.$invalid}">
+      <input type="text" class="form-control" name="login_username" id="login_username" placeholder="Username" ng-model="username"
+        ng-disabled="busy" required/>
+    </div>
+    <div class="col-sm-6" ng-class="{'has-error': loginForm.login_password.$invalid}">
+    <input type="password" class="form-control" id="login_password" name="login_password" placeholder="Password"
+      ng-model="password" ng-disabled="busy" required/>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-sm-6">
+      <div class="checkbox">
+        <label><input ng-disabled="busy" type="checkbox" ng-model="reset" /> Reset Seashell?</label>
+      </div>
+    </div>
   </div>
   <div class="alert alert-info" ng-show="busy" ng-cloak>
     Logging in...

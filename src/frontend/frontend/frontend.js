@@ -102,6 +102,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
               $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
+
+              var current = cookieStore.get(SEASHELL_CREDS_COOKIE);
+              if (current) {
+                $scope.username = current.user;
+              }
             
               $scope.login = function() {
                 $scope.busy = true;
@@ -273,9 +278,11 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
                   _.forEach($scope.new_file_upload, function (file) {
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
+                    var extension = filename.split('.').pop();
+                    var normalize = $scope.normalize && ['c', 'h', 'txt', 'rkt', 'in', 'expect'].indexOf(extension) >= 0;
                     reader.onload = function () {
                       project.createFile($scope.new_file_folder, question,
-                        filename, reader.result, "url", $scope.normalize)
+                        filename, reader.result, "url", normalize)
                              .then(function () {
                                notify(true, true, project, question, $scope.new_file_folder, filename);
                              })
@@ -393,6 +400,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       function ($rootScope, $modal, ws, errors, $q) {
         var self = this;
         self.settings =  {
+          font : "Courier New",
           font_size  : 10,
           editor_mode  : "standard",
           tab_width  : 2,
@@ -1260,7 +1268,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           if (self.editorOptions.vimMode) {
             delete self.editorOptions.extraKeys.Esc;
           } 
-          // Force the font size at any rate.
+          // Force the font size at any rate (and font name)
+          $('.CodeMirror').css('font-family', sprintf("%s, monospace", settings.settings.font));
           $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
