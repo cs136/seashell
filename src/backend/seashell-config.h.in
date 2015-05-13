@@ -48,9 +48,9 @@ static int IS_INSTALLED() {
 
   linkname = realpath("/proc/self/exe", NULL);
   if (!linkname) {
-    /** Fail if we can't resolve the path. */
-    perror("realpath");
-    exit(1);
+    /** We're installed if we can't resolve the path. */
+    perror("[warning]: realpath");
+    return 0;
   }
   
   ret = strncmp(INSTALL_PREFIX, linkname, strlen(INSTALL_PREFIX)) == 0;
