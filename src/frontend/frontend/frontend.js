@@ -1022,6 +1022,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
+        self.consoleOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
         /* runnerFile is the file to be run when RUN or TEST is clicked. false
          * if the current file is not runnable (and Seashell can't infer which
@@ -1034,12 +1035,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             self.consoleEditor.scrollTo(scr.left, scr.height);
           });
           onResize();
-        };
-        self.consoleOptions = {
-          lineWrapping: true,
-          readOnly: true,
-          mode: "text/plain",
-          onLoad: self.consoleLoad
         };
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -1193,6 +1188,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           }
         }
         self.refreshSettings = function () {
+          self.consoleOptions = {
+            lineWrapping: true,
+            readOnly: true,
+            mode: "text/plain",
+            onLoad: self.consoleLoad,
+            theme: settings.settings.text_style
+          };
           self.editorOptions = {
             autofocus: true,
             lineWrapping: true,
@@ -1290,6 +1292,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
             }
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
+          }
+
+          if (self.consoleEditor) {
+            for (var consoleKey in self.consoleOptions) {
+              self.consoleEditor.setOption(consoleKey, self.consoleOptions[consoleKey]);
+            }
+            self.consoleEditor.refresh();
           }
         };
         self.renameFile = function() {
