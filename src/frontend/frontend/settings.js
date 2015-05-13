@@ -1,5 +1,5 @@
 /**
- * Seashell's frontend.
+ * Seashell's frontend settings service
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
