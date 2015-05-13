@@ -87,7 +87,7 @@ a.dropdown-toggle{
 /* Console input bar */
 #console-input {
   background-color: #fff;
-  border: 1px solid #ddd;
+  border: #ddd;
   border-top-color: #eee;
 }
 
@@ -129,7 +129,7 @@ a.file-link.ng-binding {
 
 /* Border surrounding the console output screen */
 #console > .CodeMirror {
-  border: 1px solid #666;
+  border: #666;
 }
 
 
@@ -143,12 +143,17 @@ a.file-link.ng-binding {
 
 /* New Project and Refresh button */
 #projectOptions button {
-  /*color: #FFF8DA;*/
   color: #FFF8DA;
   font-weight: bold;
 }
 
-/* Should add an id tag for both new project and refresh, will fix up later */
+#projectList h3 {
+  border-bottom: #ddd;
+} 
+
+#projectList li {
+  border-bottom: #ddd;
+}
 
 #refresh.btn-default, #newProject.btn-default {
   background-color: #444;
