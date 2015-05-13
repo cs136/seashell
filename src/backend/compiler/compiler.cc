@@ -33,7 +33,9 @@
 #include <signal.h>
 #include <stdio.h>
 
+#ifndef __EMSCRIPTEN__
 #include <seashell-config.h>
+#endif
 
 #include <clang/Basic/Version.h>
 #include <clang/Basic/Diagnostic.h>
@@ -88,11 +90,17 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+#include <llvm/IR/DiagnosticPrinter.h>
+#include <llvm/Target/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR ==4
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#include <llvm/Linker/Linker.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DIBuilder.h>
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
 #include <llvm/Linker.h>
 #include <llvm/DebugInfo.h>
 #include <llvm/DIBuilder.h>
@@ -151,17 +159,22 @@ seashell_compiler::seashell_compiler() :
   module("seashell-compiler-output", context) {
 }
 
-
+#ifdef __EMSCRIPTEN__
+extern "C" __attribute__((weak)) void llvm_assume(bool c) {
+  return;
+}
+#endif
 
 /**
  * seashell_llvm_setup (void)
  * Performs necessary LLVM setup.
  */
 static void seashell_llvm_setup() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-    InitializeAllAsmPrinters();
-    InitializeAllAsmParsers();
+#ifndef __EMSCRIPTEN__
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
+    InitializeNativeTargetAsmParser();
+    InitializeNativeTargetDisassembler();
 
     PassRegistry *Registry = PassRegistry::getPassRegistry();
     initializeCore(*Registry);
@@ -169,6 +182,10 @@ static void seashell_llvm_setup() {
     initializeLoopStrengthReducePass(*Registry);
     initializeLowerIntrinsicsPass(*Registry);
     initializeUnreachableBlockElimPass(*Registry);
+#else
+    // Compiler bug in emcc (as of 7 April/15)
+    llvm_assume(true);
+#endif
 }
 
 /**
@@ -192,7 +209,11 @@ class LLVMSetup {
  * seashell_clang_version (void)
  * Gets the Clang version string.
  */
+#ifdef __EMSCRIPTEN__
+std::string seashell_clang_version() {
+#else
 extern "C" const char* seashell_clang_version() {
+#endif
   return CLANG_VERSION_STRING;
 }
 
@@ -208,7 +229,11 @@ extern "C" const char* seashell_clang_version() {
  *  the cleanup function for garbage collection in the Racket FFI.
  */
 extern "C" struct seashell_compiler* seashell_compiler_make (void) {
-  return new seashell_compiler;
+  struct seashell_compiler* r = new seashell_compiler;
+#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
+  printf("[compiler] Allocating new compiler object at %p\n", r);
+#endif
+  return r;
 }
 
 /**
@@ -219,6 +244,9 @@ extern "C" struct seashell_compiler* seashell_compiler_make (void) {
  *  compiler - A Seashell compiler instance.
  */
 extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
+#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
+  printf("[compiler] De-Allocating new compiler object at %p\n", compiler);
+#endif
   delete compiler;
 }
 
@@ -230,7 +258,11 @@ extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
  *  compiler - A Seashell compiler instance.
  *  file - Pathname of file to add.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file) {
+#else
+void seashell_compiler_add_file (struct seashell_compiler* compiler, std::string file) {
+#endif
   compiler->source_paths.push_back(file);
 }
 
@@ -253,7 +285,11 @@ extern "C" void seashell_compiler_clear_files (struct seashell_compiler* compile
  *  compiler - A Seashell compiler instance.
  *  flag - Compilation flag to add.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, const char* flag) {
+#else
+void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, std::string flag) {
+#endif
   compiler->compiler_flags.push_back(flag);
 }
 
@@ -279,7 +315,11 @@ extern "C" void seashell_compiler_clear_compile_flags (struct seashell_compiler*
  *  The string returned is only valid while the compiler exists and until the next call
  *  of seashell_compiler_run.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" const char * seashell_compiler_get_linker_messages(struct seashell_compiler* compiler) {
+#else
+std::string seashell_compiler_get_linker_messages(struct seashell_compiler* compiler) {
+#endif
   return compiler->linker_messages.c_str();
 }
 
@@ -371,7 +411,11 @@ extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler
  *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k) {
+#else
+std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k) {
+#endif
   if (compiler->module_messages.size() <= n) {
     return NULL;
   } else {
@@ -396,7 +440,11 @@ extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_c
  *  The string returned is only valid while the compiler instance exists and until the next call
  *  of seashell_compiler_run.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k) {
+#else
+std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k) {
+#endif
   if (compiler->module_messages.size() <= n) {
     return NULL;
   } else {
@@ -459,14 +507,19 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
  * Returns
  *  A pointer to the resulting executable or NULL.
  */
-extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length) {
+#ifndef __EMSCRIPTEN__
+extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length) {
   if (compiler->output_object.size() > 0) {
     *length = compiler->output_object.size();
-    return (void*)&compiler->output_object.at(0);
+    return (const char*)&compiler->output_object.at(0);
   } else {
     *length = 0;
     return NULL;
   }
+#else
+std::string seashell_compiler_get_object(struct seashell_compiler* compiler) {
+  return std::string(compiler->output_object.begin(), compiler->output_object.end());
+#endif
 }
 
 /**
@@ -478,7 +531,11 @@ extern "C" void * seashell_compiler_get_object (struct seashell_compiler* compil
  * Returns:
  *  Architecture, or NULL.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler) {
+#else
+std::string seashell_compiler_object_arch(struct seashell_compiler* compiler) {
+#endif
   /** Grab the triple, get the right code generator. */
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getArch() == llvm::Triple::UnknownArch)
@@ -495,7 +552,11 @@ extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* 
  * Returns:
  *  OS name, or NULL.
  */
+#ifndef __EMSCRIPTEN__
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler) {
+#else
+std::string seashell_compiler_object_os (struct seashell_compiler* compiler) {
+#endif
   /** Grab the triple, get the right code generator. */
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getOS() == llvm::Triple::UnknownOS)
@@ -606,6 +667,7 @@ public:
 static int final_link_step (struct seashell_compiler* compiler)
 {
   Module* mod = &compiler->module;
+  /** Compile to Object code if running natively. */
   std::string Error;
 
 
@@ -618,6 +680,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
+#ifndef __EMSCRIPTEN__
   const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
   if (!TheTarget) {
     compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
@@ -648,9 +711,13 @@ static int final_link_step (struct seashell_compiler* compiler)
   /** Drive the code generator. */
   std::string result;
   llvm::raw_string_ostream raw(result);
-  llvm::formatted_raw_ostream output(raw);
+  llvm::formatted_raw_ostream adapt(raw);
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+  if (const DataLayout *TD = Target.getSubtargetImpl()->getDataLayout())
+    mod->setDataLayout(TD);
+  PM.add(new DataLayoutPass());
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
   if (const DataLayout *TD = Target.getDataLayout())
     mod->setDataLayout(TD);
   PM.add(new DataLayoutPass(mod));
@@ -663,19 +730,26 @@ static int final_link_step (struct seashell_compiler* compiler)
 #error "Unsupported version of clang."
 #endif
 
-  if (Target.addPassesToEmitFile(PM, output, llvm::TargetMachine::CGFT_ObjectFile)) {
+  if (Target.addPassesToEmitFile(PM, adapt, llvm::TargetMachine::CGFT_ObjectFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
     return 1;
   }
 
   PM.run(*mod);
-  output.flush();
+  adapt.flush();
+#else
+  std::string result;
+  llvm::raw_string_ostream raw(result);
+  mod->print(raw, nullptr);
+#endif
 
   /** Final link step needs to happen with an invocation to cc.
    *  We'll do this in Racket.  Pass back the completed object file
    *  in memory.
    */
+  raw.flush();
   compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
+
   return 0;
 }
 
@@ -762,7 +836,7 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
     Clang.setInvocation(CI.get());
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
@@ -779,6 +853,7 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     /** Add compiler-specific headers. */
+#ifndef __EMSCRIPTEN__
     if (!IS_INSTALLED() && access (BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", F_OK) != -1) {
       Clang.getHeaderSearchOpts().AddPath(BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", clang::frontend::System, false, true);
     } else {
@@ -790,6 +865,7 @@ static int compile_module (seashell_compiler* compiler,
 #endif
     /** Set up the default (generic) headers */
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
+#endif
 
     clang::EmitLLVMOnlyAction Act(&compiler->context);
     Success = Clang.ExecuteAction(Act);
@@ -813,7 +889,13 @@ static int compile_module (seashell_compiler* compiler,
      *  NOTE: We destroy the source as we've taken the module
      *  (and that for some awful reason, copying modules breaks horribly
      *   LLVM's DWARF emitter.  Someone really ought to file a bug) */
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
+    raw_string_ostream Stream(Error);
+    DiagnosticPrinterRawOStream DP(Stream);
+    Success = !llvm::Linker::LinkModules(module, &*mod, [&](const DiagnosticInfo &DI) { DI.print(DP); });
+#else
     Success = !llvm::Linker::LinkModules(module, &*mod, llvm::Linker::DestroySource, &Error);
+#endif
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: llvm::Linker::LinkModules() failed: " + Error);
       return 1;
@@ -823,3 +905,7 @@ static int compile_module (seashell_compiler* compiler,
     return 0;
     #undef PUSH_DIAGNOSTIC
 }
+
+#ifdef __EMSCRIPTEN__
+#include "compiler-binding.h"
+#endif

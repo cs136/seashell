@@ -4,7 +4,8 @@
 @author[@author+email["Edward Lee" "e45lee@uwaterloo.ca"]
         @author+email["Jacob Pollack" "jpollack@uwaterloo.ca"]
         @author+email["Kaleb Alway" "kpalway@uwaterloo.ca"]
-        @author+email["Bryan Coutts" "b2coutts@uwaterloo.ca"]]
+        @author+email["Bryan Coutts" "b2coutts@uwaterloo.ca"]
+        @author+email["Graham Cooper" "grcooper@uwaterloo.ca"]]
 
 @link["https://github.com/cs136/seashell" "Seashell"]
 is an online integrated development environment, primarily
@@ -21,5 +22,6 @@ The University of Waterloo's main Seashell instance can be found
 @include-section["user/main.scrbl"]
 @include-section["administrative/main.scrbl"]
 @include-section["developer/main.scrbl"]
+@include-section["release/main.scrbl"]
 
 @index-section[]
