@@ -20,34 +20,7 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys', 'seashell-filters'])
-  // Error service.
-  .service('error-service', ['$rootScope', '$timeout', '$sce',
-    function ($rootScope, $timeout, $sce) {
-    var self = this;
-    self.errors = [];
-
-    self.types = {
-      "seashell" : "If this error persists, please email <a href='mailto:seashell@cs.uwaterloo.ca'>seashell@cs.uwaterloo.ca</a> the error message, and the following information for debugging purposes:",
-      "marmoset" : "Make sure you can still access Marmoset's web interface, and try again in a few minutes.",
-      "webserver" : "Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes."
-    };
-
-    self.getMessage = function(type) {
-      return $sce.trustAsHtml(type ? self.types[type] : self.types.seashell);
-    };
-
-    self.report = function (error, shorthand, type) {
-      if (error) {
-        self.errors.push({shorthand: shorthand, error: error, type: type});
-        $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
-      }
-    };
-    self.suppress = function (index) {
-      self.errors.splice(index, 1);
-      $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
-    };
-  }])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Confirmation message modal service.
   .factory('ConfirmationMessageModal', ['$modal',
       function ($modal) {

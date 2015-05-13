@@ -19,7 +19,7 @@
 
 /* jshint supernew: true */
 
-angular.module('seashell-filters')
+angular.module('frontend-app')
   .filter('projectFilter', function() {
     return function(input, type){
       var pattAssn = new RegExp('^A[0-9]+$');
