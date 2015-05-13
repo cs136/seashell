@@ -1,5 +1,5 @@
 /**
- * Seashell's frontend.
+ * Seashell's frontend controller
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -102,82 +102,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
         ws.register_callback('failed', function () {self.failed = true;}, true);
       }])
-  // Controller for Project Lists
-  .controller('ProjectListController', ['projectList', 'projects',
-      'NewProjectModal', 'DeleteProjectModal', 'error-service',
-      function (projectList, projects, newProjectModal, deleteProjectModal, errors) {
-    var self = this;
-    self.projectList = projectList;
-    self.state = "list-projects";
-
-    /** Delete onClick handler. */
-    self.delete = function(project) {
-      deleteProjectModal(project).then(function () {
-        self.projectList.refresh();
-      });
-    };
-
-    /** New Project Handler */
-    self.new = function() {
-      newProjectModal().then(function () {
-        self.projectList.refresh();
-      });
-    };
-
-    /** Refresh onClick handler. */
-    self.refresh = function () {
-      self.projectList.refresh();
-    };
-
-    // Tests if project is deleteable
-    self.isDeletable = function(project) {
-      return ! /^[aA][0-9]+/.test(project);
-    };
-  }])
-  // Project controller.
-  .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore', 'NewQuestionModal', 'DeleteProjectModal',
-    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal, deleteProjectModal) {
-      var self = this;
-      self.state = 'edit-project';
-      self.project = openProject;
-      self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
-      self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
-      self.download = function(){
-        openProject.getDownloadToken().then(function (token){
-            var raw = JSON.stringify(token);
-            var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
-                              cookies.get(SEASHELL_CREDS_COOKIE).host,
-                              cookies.get(SEASHELL_CREDS_COOKIE).port,
-                              encodeURIComponent(openProject.name),
-                              encodeURIComponent(raw));
-
-            var ifrm = document.createElement("IFRAME");
-            ifrm.setAttribute("src", url);
-            ifrm.setAttribute("style", "display:none");
-            document.body.appendChild(ifrm);
-        });};
-        self.newQuestion = function () {
-          newQuestionModal(openProject);
-        };
-        self.close = function () {
-          $state.go('list-projects');
-        };
-        self.delete = function () {
-          deleteProjectModal(openProject.name).then(
-              function () {$state.go('list-projects');});
-        };
-
-      self.project.mostRecentlyUsed()
-        .then(function (recent) {
-          if (recent && $state.is('edit-project')) {
-            $state.go('edit-project.editor',
-                      {question: recent},
-                      {location: "replace"});
-          }
-          return recent;
-        });
-    }])
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
