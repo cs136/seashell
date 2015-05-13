@@ -20,7 +20,7 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
-    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys', 'door3.css'])
   .filter('projectFilter', function() {
     return function(input, type){
       var pattAssn = new RegExp('^A[0-9]+$');
@@ -653,9 +653,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
-    'settings-service', '$location',
+    'settings-service', '$location', '$css',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        cookieStore, $window, settings, $location) {
+        cookieStore, $window, settings, $location, $css) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -733,12 +733,13 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
         ws.register_callback('failed', function () {self.failed = true;}, true);
         settings.addWatcher(function () {
-          // TODO: check settings.settings.<name-of-theme-field> here
-          //if(settings.settings.theme_style === "default")
-            //  {self.stylesheet = "css/common_default.css";}
-          //if(settings.settings.theme_style === "dark")
-            //  {self.stylesheet = "css/common.css";}
-          // and update self.stylesheet accordingly
+          if (settings.settings.theme_style === "dark") {
+            $css.removeAll();
+            $css.add("css/dark.css");
+          } else {
+            $css.removeAll();
+            $css.add("css/light.css");
+          } 
         }, true);
       }])
   // Controller for Project Lists
