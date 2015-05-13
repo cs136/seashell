@@ -59,7 +59,7 @@ body {
 }
 
 .CodeMirror-gutters {
-  border: 1px dashed;
+  border: none;
 }
 
 .editor-console {
