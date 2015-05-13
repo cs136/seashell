@@ -8,15 +8,15 @@
 }
 
 .CodeMirror-gutters {
-  border: #eee;
+  border-color: #eee;
 }
 
 #editor > .CodeMirror {
-  border: #ddd;
+  border-color: #ddd;
 }
 
 #current-file-controls {
-  border: #ddd;
+  border-color: #ddd;
   border-bottom-color: #eee;
 }
 
@@ -25,13 +25,13 @@
 }
 
 .editor-console-title {
-  border: #ddd;
+  border-color: #ddd;
   background: #f4f4f4;
 }
 
 #console-input {
   background-color: #fff;
-  border: #ddd;
+  border-color: #ddd;
   border-top-color: #eee;
 }
 
@@ -68,7 +68,7 @@
 
 @media (min-width: 992px) {
   #console:not(.console-narrow) #console-title {
-    border: #ddd;
+    border-color: #ddd;
   }
 }
 
@@ -77,11 +77,11 @@
 }
 
 #projectList h3 {
-  border-bottom: #ddd;
+  border-bottom-color: #ddd;
 }
 
 #projectList li {
-  border-bottom: #ddd;
+  border-bottom-color: #ddd;
 }
 
 /* The new poject and refresh button on landing page */

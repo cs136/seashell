@@ -18,7 +18,7 @@ body {
 
 /** hr bar Dark theme change **/
 hr{
-  border-top: 1px solid #ff9999;
+  border-top-color: #ff9999;
 }
 
 /* Change for the [userID]/[project name] display tab after entering a project */
@@ -49,17 +49,17 @@ a.dropdown-toggle{
 
 /* CodeMirror gutter dashed outline colour change */
 .CodeMirror-gutters {
-  border: 1px dashed #ff9999;
+  border-color: #ff9999;
 }
 
 /* Editor border - also changed width of it. It's 1px in the default theme, 2px in the dark theme */
 #editor > .CodeMirror {
-  border: 1px solid #666;
+  border-color: #666;
 }
 
 /* Edtor bar below console border colour */
 #current-file-controls {
-  border: 1px solid #666;
+  border-color: #666;
   border-bottom-color: #888;
 }
 
@@ -68,7 +68,7 @@ a.dropdown-toggle{
 }
 /* Editor code and console bar (and text on it) style */
 .editor-console-title {
-  border: 1px solid #666;
+  border-color:  #666;
   background: #4f4f4f;
   color: #ddd;
 }
@@ -87,7 +87,7 @@ a.dropdown-toggle{
 /* Console input bar */
 #console-input {
   background-color: #fff;
-  border: #ddd;
+  border-color: #ddd;
   border-top-color: #eee;
 }
 
@@ -129,7 +129,7 @@ a.file-link.ng-binding {
 
 /* Border surrounding the console output screen */
 #console > .CodeMirror {
-  border: #666;
+  border-color: #666;
 }
 
 
@@ -137,7 +137,7 @@ a.file-link.ng-binding {
 @media (min-width: 992px) {
   #console:not(.console-narrow) #console-title {
     /* Dark theme change */
-    border: 1px solid #666;
+    border-color: #666;
   }
 }
 
@@ -148,11 +148,11 @@ a.file-link.ng-binding {
 }
 
 #projectList h3 {
-  border-bottom: #ddd;
+  border-bottom-color: #888;
 } 
 
 #projectList li {
-  border-bottom: #ddd;
+  border-bottom-color: #888;
 }
 
 #refresh.btn-default, #newProject.btn-default {
