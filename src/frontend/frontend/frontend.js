@@ -1093,7 +1093,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
                            min_height);
                    $('#editor > .CodeMirror')
-            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight()); 
+            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight() + 1); 
           $('#console > .CodeMirror')
             .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
           if(self.editor)
