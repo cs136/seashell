@@ -59,7 +59,7 @@
 ;;  exn:fail:filesystem -- file does not exist.
 ;;  exn:creds           -- credentials does not exist or stale.
 (define/contract (_dump-creds)
-  (-> hash?)
+  (-> list?)
   (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
   ;; creds-valid? creds credentials-file -> boolean?
   ;; Checks whether or not the given creds point to a running seashell instance
