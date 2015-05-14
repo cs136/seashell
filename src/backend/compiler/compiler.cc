@@ -865,6 +865,9 @@ static int compile_module (seashell_compiler* compiler,
 #endif
     /** Set up the default (generic) headers */
     Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
+#else
+    Clang.getHeaderSearchOpts().AddPath("/clang-include/", clang::frontend::System, false, true);
+    Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
 #endif
 
     clang::EmitLLVMOnlyAction Act(&compiler->context);
@@ -893,11 +896,12 @@ static int compile_module (seashell_compiler* compiler,
     raw_string_ostream Stream(Error);
     DiagnosticPrinterRawOStream DP(Stream);
     Success = !llvm::Linker::LinkModules(module, &*mod, [&](const DiagnosticInfo &DI) { DI.print(DP); });
+    Stream.flush();
 #else
     Success = !llvm::Linker::LinkModules(module, &*mod, llvm::Linker::DestroySource, &Error);
 #endif
     if (!Success) {
-      PUSH_DIAGNOSTIC("libseashell-clang: llvm::Linker::LinkModules() failed: " + Error);
+      PUSH_DIAGNOSTIC(Error);
       return 1;
     }
 
