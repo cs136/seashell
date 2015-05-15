@@ -118,7 +118,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
       });
     });
     // Set up resize
-    $($window).resize(function () {
+    $window.onresize = function () {
       $rootScope.$broadcast('window-resized');
-    });
+    };
   }]);
