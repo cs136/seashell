@@ -32,14 +32,14 @@ h2.text-left{
 }
 
 /** color of link (on all pages) Dark theme change **/
-a{
+/**a{
   color: #FFFC99;
   opacity: 0.7;
 }
 a:focus, a:hover{
   color: #FFFC99;
   opacity: 1;
-}
+}**/
 
 /* Color of the downward arrow for [userID]/[project name] display tab after entering a project */
 a.dropdown-toggle{
@@ -167,3 +167,12 @@ a.file-link.ng-binding {
   color: #fff8aa;
 }
 
+/*searing out the 3 glyphicons into separate custom CSS class */
+a.custom-glyph {
+  color: #FFFC99;
+  opacity: 0.7;
+}
+a.custom-glyph:hover, a.custom-glyph:focus, a.custom-glyph:active {
+  color: #FFFC99;
+  opacity: 1;
+}
