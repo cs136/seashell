@@ -36,7 +36,9 @@ angular.module('frontend-app')
                *  Returns a deferred that resolves when the state is properly loaded */
               self.refresh = function () {
                 return projects.fetch().catch(function (projects) {
-                  var type = projects.error.indexOf("503")===-1 ? "seashell" : "webserver";
+                  var type = projects.error ? 
+                    (projects.error.indexOf("503")===-1 ? "seashell" : "webserver")
+                    : "seashell";
                   errors.report(projects, 'Could not fetch projects.', type);
                 }).then(function () {
                   return projects.list().then(function (projects_list) {
