@@ -89,6 +89,7 @@
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Bitcode/ReaderWriter.h>
 
 #if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
 #include <llvm/IR/DiagnosticPrinter.h>
@@ -745,7 +746,7 @@ static int final_link_step (struct seashell_compiler* compiler)
 #else
   std::string result;
   llvm::raw_string_ostream raw(result);
-  mod->print(raw, nullptr);
+  llvm::WriteBitcodeToFile(mod, raw);
 #endif
 
   /** Final link step needs to happen with an invocation to cc.
