@@ -7,6 +7,20 @@
 <form name="settingsForm" ng-submit="settingsForm.$valid && saveSettings()" novalidate>
 <div class="modal-body">
     <div class="form-group"
+         ng-class="{'has-error': settingsForm.editor_font_name.$invalid}">
+      <label for="editor_font_name">Font:</label>
+      <input required list="fonts" name="editor_font_name" id="editor_font_name" ng-model="temp.font" class="form-control"
+        placeholder="(double click/tap to list options -- or enter your own)"/>
+      <datalist id="fonts">
+        <option value="Courier New">
+        <option value="Consolas">
+        <option value="Monaco">
+        <option value="Menlo">
+      </datalist>
+      <span class="help-block" ng-show="settingsForm.editor_font_name.$invalid">Required</span>
+    </div>
+
+    <div class="form-group"
       ng-class="{'has-error': settingsForm.font_size.$invalid}">
       <label for="editor_font">Font size:</label>
       <input type="number" required name="font_size" ng-model="temp.font_size" id="editor_font" class="form-control" placeholder="(in points)">
