@@ -48,12 +48,27 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
-      var filepatt = /\/([^\/]+:[0-9]+)$/;
+      console.log(contents.join('\n'));
+      var filepatt = /\/([^\/]+(:[0-9]+)?)\)?$/;
+      var fnpatt = /in ([_A-Za-z0-9]+) /;
+      function stack_trace(contents) {
+        _.each(_.filter(contents, function(line) {
+            return /^ +#[0-9]+/.test(line);
+          }), function(item) {
+            self._write(sprintf("  in %s, %s\n",
+              fnpatt.exec(item)[1],
+              filepatt.exec(item)[1]
+            ));
+          });
+      }
       var addrpatt = /0x[0-9a-f]{12}/;
-      if(/ SEGV /.test(contents[1])) { // segfault
-        self._write(sprintf("%s: Attempt to access invalid address %s.\n",
-          filepatt.exec(contents[2])[1],
+      if(/ SEGV /.test(contents[1]) && filepatt.test(contents[2])) { // segfault
+        self._write(sprintf("Attempt to access invalid address %s.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
+      }
+      else if(/ SEGV /.test(contents[1])) {
+        self._write(/^[^\(]*/.exec(contents[1]));
       }
       else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
         self._write(sprintf("%s: Stack buffer overflow on address %s. Check array indices.\n",
