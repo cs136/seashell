@@ -23,7 +23,7 @@ angular.module('frontend-app')
   .filter('projectFilter', function() {
     return function(input, type){
       var pattAssn = new RegExp('^A[0-9]+$');
-      var pattTut = new RegExp('^Tut[0-9]+$');
+      var pattTut = new RegExp('^Tut([0-9]+|[0-9]+Sol)$');
       var pattLec = new RegExp('^Lec[0-9]+$');
       var out = [];
       for(var i = 0; i < input.length; i++){
