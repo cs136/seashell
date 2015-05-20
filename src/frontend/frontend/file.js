@@ -208,7 +208,7 @@ angular.module('frontend-app')
           }
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
-          self.editor.on("blur", updateColNums); 
+          self.editor.on("blur", updateColNums);
           $timeout(onResize, 0);
         };
         function betterTab(){
