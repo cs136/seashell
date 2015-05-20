@@ -48,22 +48,40 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
-      var filepatt = /\/([^\/]+:[0-9]+)$/;
+      var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
+      var fnpatt = /in ([_A-Za-z0-9]+) /;
+      function stack_trace(contents) {
+        var in_stack = false;
+        for(var i=0; i<contents.length; i++) {
+          if(/^ +#[0-9]+/.test(contents[i])) {
+            in_stack = true;
+            self._write(sprintf("  in %s, %s\n",
+              fnpatt.exec(contents[i])[1],
+              filepatt.exec(contents[i])[1]));
+          }
+          else if(in_stack)
+            break;
+        }
+      }
       var addrpatt = /0x[0-9a-f]{12}/;
-      if(/ SEGV /.test(contents[1])) { // segfault
-        self._write(sprintf("%s: Attempt to access invalid address %s.\n",
-          filepatt.exec(contents[2])[1],
+      if(/ SEGV /.test(contents[1]) && filepatt.test(contents[2])) { // segfault
+        self._write(sprintf("Attempt to access invalid address %s.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
+      }
+      else if(/ SEGV /.test(contents[1])) {
+        self._write(sprintf("%s\n",
+          /^[^\(]*/.exec(contents[1])));
       }
       else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
-        self._write(sprintf("%s: Stack buffer overflow on address %s. Check array indices.\n",
-          filepatt.exec(contents[3])[1],
+        self._write(sprintf("Stack buffer overflow on address %s. Check array indices.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else if(/heap-buffer-(over|under)flow /.test(contents[1])) { // heap buffer overflow
-        self._write(sprintf("%s: Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
-          filepatt.exec(contents[3])[1],
+        self._write(sprintf("Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else if(/LeakSanitizer:/.test(contents[1])) { // memory leak
         self._write("Memory leaks occurred:\n");
@@ -80,14 +98,14 @@ angular.module('frontend-app')
         }
       }
       else if(/heap-use-after-free /.test(contents[1])) { // use after free
-        self._write(sprintf("%s: Using address %s after it has been freed.\n",
-          filepatt.exec(contents[3])[1],
+        self._write(sprintf("Using address %s after it has been freed.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else if(/double-free /.test(contents[1])) { // double free
-        self._write(sprintf("%s: Attempting to free address %s, which has already been freed.\n",
-          filepatt.exec(contents[3])[1],
+        self._write(sprintf("Attempting to free address %s, which has already been freed.\n",
           addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else { // else print usual message
         _.each(contents, function(line) {
