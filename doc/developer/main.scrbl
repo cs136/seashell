@@ -1,6 +1,7 @@
 #lang scribble/manual
+@(require "../utils.rkt")
 
-@title[#:tag "developer" #:style 'toc]{Developer Documentation}
+@seashell-title[#:tag "developer" #:style 'toc]{Developer Documentation}
 
 This section provides documentation relevant to developers of Seashell.
 Consult the @secref["user"] for general end-user documentation.

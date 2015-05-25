@@ -1,7 +1,7 @@
 #lang scribble/manual
 @(require "../utils.rkt")
 
-@title[#:tag "seashell-layout"]{Logistics}
+@seashell-title[#:tag "seashell-layout"]{Logistics}
 
 @section{Dependencies}
 This section lists all external libraries and tools that Seashell 

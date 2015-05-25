@@ -29,8 +29,8 @@
     [("-d" "--dump") "Dumps existing credentials." (mode 'creds)]
     [("-v" "--version") "Prints version information. [default]" (mode 'version)])
   (match (mode)
-         ['version (printf "Seashell v~a multi-tool binary (API version ~a) - built from ~a (~a).~n"
-                           SEASHELL_VERSION SEASHELL_API_VERSION SEASHELL_BRANCH SEASHELL_COMMIT)
+         ['version (printf "Seashell ~a (~a-~a) (API version ~a) multi-tool binary.~n"
+                           SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION)
                    (printf "Executable path: ~a.~n" (path->string (find-executable-path (find-system-path 'exec-file))))
                    (printf "Build directory: ~a.~n" SEASHELL_BUILD_PATH)
                    (printf "Build type: ~a.~n" (if SEASHELL_DEBUG "Debug" "Release"))

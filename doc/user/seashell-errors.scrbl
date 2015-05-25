@@ -2,7 +2,7 @@
 
 @(require "../utils.rkt")
 
-@title[#:tag "seashell-errors"]{Seashell Common Errors}
+@seashell-title[#:tag "seashell-errors"]{Seashell Common Errors}
 
 Below are some errors that may occur in Seashell, reasons why they may be
 occurring, and possible options to fix the error.
