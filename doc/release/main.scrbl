@@ -8,4 +8,5 @@ build pushed to live.
 
 @local-table-of-contents[]
 
-@include-section["layout.scrbl"]
+@include-section["2.4.1.scrbl"]
+@include-section["2.4.0.scrbl"]

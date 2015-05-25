@@ -15,6 +15,10 @@
   (string-append "https://github.com/cs136/seashell/blob/master/" path))
 (define (source-url-link path)
   (link (source-url path) path))
+(define (pr n)
+  (link (format "https://github.com/cs136/seashell/pull/~a" n) (format "#~a" n)))
+(define (issue n)
+  (link (format "https://github.com/cs136/seashell/issues/~a" n) (format "#~a" n)))
 
 ;; C/C++ FFI documentation
 (define (as-cpp-defn name s)
