@@ -28,7 +28,7 @@ set(SEASHELL_DOC share/frontend)
 file(GLOB_RECURSE seashell_doc *.scrbl)
 file(GLOB_RECURSE seashell_collects *.rkt)
 add_custom_command(OUTPUT docs
-  COMMAND ${SCRIBBLE} --htmls --dest-name docs --dest ${CMAKE_CURRENT_BINARY_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/main.scrbl
+  COMMAND ${SCRIBBLE} --htmls --dest-name docs --dest ${CMAKE_CURRENT_BINARY_DIR} +m --redirect-main "http://docs.racket-lang.org/" ++arg "${SEASHELL_VERSION} \\(${GIT_BRANCH}-${GIT_COMMIT_HASH}\\)" ++arg ${SEASHELL_API_VERSION} ${CMAKE_CURRENT_SOURCE_DIR}/main.scrbl
   DEPENDS ${seashell_doc} ${seashell_collects})
 add_custom_target(seashell-docs ALL DEPENDS docs)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs DESTINATION ${SEASHELL_DOC})
