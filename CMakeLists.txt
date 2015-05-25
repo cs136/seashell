@@ -26,9 +26,45 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
-# Global Destinations
-set(SEASHELL_FRONTEND share/frontend)
-set(SEASHELL_DOC ${SEASHELL_FRONTEND}/doc)
+# Versioning Information
+# Get the current working branch
+execute_process(
+  COMMAND git rev-parse --abbrev-ref HEAD
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the latest abbreviated commit hash of the working branch
+execute_process(
+  COMMAND git log -1 --format=%h
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_COMMIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Run diff-index to check whether the tree is clean or not.
+EXECUTE_PROCESS(
+  COMMAND ${GIT} diff-index --name-only HEAD
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  RESULT_VARIABLE GIT_DIFF_INDEX_RESULT
+  OUTPUT_VARIABLE GIT_DIFF_INDEX_OUTPUT
+  ERROR_VARIABLE GIT_DIFF_INDEX_ERROR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+# Check if the tree is clean.
+IF(NOT GIT_DIFF_INDEX_RESULT AND NOT GIT_DIFF_INDEX_OUTPUT)
+  SET(GIT_DIRTY False)
+ELSE()
+  SET(GIT_DIRTY True)
+ENDIF()
+
+set(SEASHELL_VERSION "2.4.2")
+if(GIT_DIRTY)
+  set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
+endif()
+set(SEASHELL_API_VERSION "4")
 
 # Build our components.
 add_subdirectory(doc)

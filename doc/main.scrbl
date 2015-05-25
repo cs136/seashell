@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@title[#:tag "main" #:style 'multi-page]{Seashell: An Online Integrated Development Environment}
+@title[#:version @vector-ref[(current-command-line-arguments) 0] #:tag "main" #:style 'multi-page]{Seashell: An Online Integrated Development Environment}
 @author[@author+email["Edward Lee" "e45lee@uwaterloo.ca"]
         @author+email["Jacob Pollack" "jpollack@uwaterloo.ca"]
         @author+email["Kaleb Alway" "kpalway@uwaterloo.ca"]
@@ -15,6 +15,9 @@ as the main development environment for students taking
 
 The University of Waterloo's main Seashell instance can be found
 @link["https://www.student.cs.uwaterloo.ca/seashell" "here"].
+
+@margin-note{This documentation is current for version @vector-ref[(current-command-line-arguments) 0], and only
+             describes API calls present in API version @vector-ref[(current-command-line-arguments) 1].}
 
 @table-of-contents[]
 
