@@ -28,8 +28,9 @@ endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
 # Versioning Information
 # Get the current working branch
+find_program(GIT git)
 execute_process(
-  COMMAND git rev-parse --abbrev-ref HEAD
+  COMMAND ${GIT} rev-parse --abbrev-ref HEAD
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_BRANCH
   OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -37,7 +38,7 @@ execute_process(
 
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
-  COMMAND git log -1 --format=%h
+  COMMAND ${GIT} log -1 --format=%h
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_COMMIT_HASH
   OUTPUT_STRIP_TRAILING_WHITESPACE
