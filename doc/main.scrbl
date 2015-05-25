@@ -1,6 +1,7 @@
 #lang scribble/manual
+@(require "utils.rkt")
 
-@title[#:version @vector-ref[(current-command-line-arguments) 0] #:tag "main" #:style 'multi-page]{Seashell: An Online Integrated Development Environment}
+@seashell-title[#:tag "main" #:style 'multi-page]{Seashell: An Online Integrated Development Environment}
 @author[@author+email["Edward Lee" "e45lee@uwaterloo.ca"]
         @author+email["Jacob Pollack" "jpollack@uwaterloo.ca"]
         @author+email["Kaleb Alway" "kpalway@uwaterloo.ca"]

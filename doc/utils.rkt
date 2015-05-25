@@ -5,6 +5,11 @@
          scribble/decode
          scribble/scheme)
 
+(define (seashell-title #:tag [tag #f] #:tag-prefix [prefix #f] #:style [style #f]
+                        #:date [date #f]
+               . str)
+  (apply title str #:tag tag #:tag-prefix prefix #:style style #:date date #:version (vector-ref (current-command-line-arguments) 0)))
+
 ;; Source-URL handling functions
 (define (source-url path)
   (string-append "https://github.com/cs136/seashell/blob/master/" path))

@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require "../../utils.rkt")
-@title[#:tag "seashell-compiler-support"]{Compiler Support Library}
+@seashell-title[#:tag "seashell-compiler-support"]{Compiler Support Library}
 
 Seashell's compiler support library glues Seashell's Racket sources
 with the infrastructure provided by LLVM and Clang.

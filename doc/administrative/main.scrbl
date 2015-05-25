@@ -1,6 +1,7 @@
 #lang scribble/manual
+@(require "../utils.rkt")
 
-@title[#:tag "administrative"]{Administrator Documentation}
+@seashell-title[#:tag "administrative"]{Administrator Documentation}
 
 This section provides documentation relevant to administrators of Seashell.
 Consult the @secref["user"] for general end-user documentation.
