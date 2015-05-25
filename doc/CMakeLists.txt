@@ -24,5 +24,11 @@ find_program(SCRIBBLE scribble)
 # Target location - under frontend
 set(SEASHELL_DOC share/frontend)
 
-# Installing - build documentation, and deploy
-install(CODE "execute_process(COMMAND ${SCRIBBLE} --htmls --dest-name docs --dest \"${CMAKE_INSTALL_PREFIX}/${SEASHELL_DOC}\" \"${CMAKE_CURRENT_SOURCE_DIR}/main.scrbl\")")
+# Build scribble files.
+file(GLOB_RECURSE seashell_doc *.scrbl)
+file(GLOB_RECURSE seashell_collects *.rkt)
+add_custom_command(OUTPUT docs
+  COMMAND ${SCRIBBLE} --htmls --dest-name docs --dest ${CMAKE_CURRENT_BINARY_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/main.scrbl
+  DEPENDS ${seashell_doc} ${seashell_collects})
+add_custom_target(seashell-docs ALL DEPENDS docs)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs DESTINATION ${SEASHELL_DOC})

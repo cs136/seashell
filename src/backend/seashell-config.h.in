@@ -33,6 +33,29 @@
 #define SEASHELL_DEBUG @SEASHELL_DEBUG@
 #define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 #define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
+#define SEASHELL_VERSION "@SEASHELL_VERSION@"
+#define SEASHELL_BRANCH "@GIT_BRANCH@"
+#define SEASHELL_COMMIT_HASH "@GIT_COMMIT_HASH@"
+#define SEASHELL_API_VERSION @SEASHELL_API_VERSION@
+
+static const char copyright[] = (
+"Seashell @SEASHELL_VERSION@ (@GIT_BRANCH@-@GIT_COMMIT_HASH@) (API version @SEASHELL_API_VERSION@) - a C Development Environment.\r\n"
+"Copyright (C) 2013-2015 The Seashell Maintainers.                    \r\n"
+"                                                                     \r\n"
+"This program is free software: you can redistribute it and/or modify \r\n"
+"it under the terms of the GNU General Public License as published by \r\n"
+"the Free Software Foundation, either version 3 of the License, or    \r\n"
+"(at your option) any later version.                                  \r\n"  
+"                                                                     \r\n"
+"See also 'ADDITIONAL TERMS' at the end of the included LICENSE file. \r\n"
+"                                                                     \r\n"
+"This program is distributed in the hope that it will be useful,      \r\n"
+"but WITHOUT ANY WARRANTY; without even the implied warranty of       \r\n"
+"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        \r\n"
+"GNU General Public License for more details.                         \r\n" 
+"                                                                     \r\n"
+"You should have received a copy of the GNU General Public License    \r\n"
+"along with this program.  If not, see <http://www.gnu.org/licenses/>.\r\n");
 
 /** Common helper functions */
 static int IS_INSTALLED() {
