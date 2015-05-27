@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('seashell-websocket', ['jquery-cookie'])
+angular.module('seashell-websocket', ['ngCookies'])
   /**
    * WebSocket service:
    *  provides:
@@ -28,8 +28,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$rootScope', '$q', '$interval', 'cookie', 'cookieStore', '$timeout',
-      function($scope, $q, $interval, rawCookie, cookie, $timeout) {
+  .service('socket', ['$rootScope', '$q', '$interval', '$cookies', '$timeout',
+      function($scope, $q, $interval, $cookies, $timeout) {
     "use strict";
     var self = this;
     self.socket = null;
@@ -74,7 +74,7 @@ angular.module('seashell-websocket', ['jquery-cookie'])
 
     /** Connects the socket, sets up the disconnection monitor. */ 
     self.connect = function () {
-      if (!rawCookie.get(SEASHELL_CREDS_COOKIE)) {
+      if (!$cookies.get(SEASHELL_CREDS_COOKIE)) {
         self.failed = true;
         $timeout(function () {
           _.each(_.map(_.filter(callbacks, function (x) {return x.type === 'failed';}),
@@ -85,8 +85,8 @@ angular.module('seashell-websocket', ['jquery-cookie'])
       }
 
       try {
-        self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",cookie.get(SEASHELL_CREDS_COOKIE).host, cookie.get(SEASHELL_CREDS_COOKIE).port),
-                                            cookie.get(SEASHELL_CREDS_COOKIE).key,
+        self.socket = new SeashellWebsocket(sprintf("wss://%s:%d",$cookies.getObject(SEASHELL_CREDS_COOKIE).host, $cookies.getObject(SEASHELL_CREDS_COOKIE).port),
+                                            $cookies.getObject(SEASHELL_CREDS_COOKIE).key,
                                             /** Failure - probably want to prompt the user to attempt to reconnect/
                                              *  log in again.
                                              */
