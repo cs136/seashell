@@ -1,7 +1,7 @@
 #lang scribble/manual
 @(require "../utils.rkt")
 
-@title[#:tag "build-2.4.0"]{Build 2.4.0}
+@seashell-title[#:tag "build-2.4.0"]{v.2.4.0}
 Summary:
 @itemlist[@item["Clang 3.6"]
           @item["Tooltip UI Bugfixes"]
