@@ -48,21 +48,29 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
-      var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
-      var fnpatt = /in ([_A-Za-z0-9]+) /;
       function stack_trace(contents) {
-        var in_stack = false;
         for(var i=0; i<contents.length; i++) {
-          if(/^ +#[0-9]+/.test(contents[i])) {
-            in_stack = true;
-            self._write(sprintf("  in %s, %s\n",
-              fnpatt.exec(contents[i])[1],
-              filepatt.exec(contents[i])[1]));
+          if(/^{/.test(contents[i])) {
+            var json = contents[i].replace(/'/g, '"');
+            var frame = JSON.parse(json);
+            if (frame.function !== "<null>" && frame.file !== "<null>") {
+              var short_file = frame.file.split('/').pop();
+
+              self._write(sprintf("  in %s, %s:%d:%d\n",
+                frame.function,
+                short_file,
+                frame.line,
+                frame.column));
+            } else if (frame.function !== "<null>") {
+              self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, frame.module, frame.offset));
+            } else {
+              self._write(sprintf("  in module %s (+%x)\n", frame.module, frame.offset));
+            }
           }
-          else if(in_stack)
-            break;
         }
       }
+       
+      var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
       var addrpatt = /0x[0-9a-f]{12}/;
       if(/ SEGV /.test(contents[1]) && filepatt.test(contents[2])) { // segfault
         self._write(sprintf("Attempt to access invalid address %s.\n",
