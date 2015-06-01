@@ -532,3 +532,12 @@ input::-ms-clear {
 #newProject.btn-default:hover, #newProject.btn-default:focus, #newProject.btn-default:active,
 #refresh.btn-default:hover, #refresh.btn-default:focus, #refresh.btn-default:active {
 }
+
+/* Custom CSS for the 3 options glyphicons */
+a.custom-glyph{
+}
+
+a.custom-glyph:hover, a.custom-glyph:focus, a.custom-glyph:active{
+}
+
+
