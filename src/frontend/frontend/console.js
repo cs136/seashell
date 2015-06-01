@@ -56,7 +56,7 @@ angular.module('frontend-app')
             var short_file = frame.file.split('/').pop();
             self._write(sprintf("  in %s, %s:%d:%d\n",
               frame.function,
-              frame.file,
+              short_file,
               frame.line,
               frame.column));
           } else if (frame.function !== "<null>") {
