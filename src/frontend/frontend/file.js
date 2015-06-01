@@ -161,7 +161,7 @@ angular.module('frontend-app')
                   found.push({ from: CodeMirror.Pos(line, column),
                                to: CodeMirror.Pos(line),
                                message: message,
-                               severity: 'error' });
+                               severity: error ? 'error' : 'warning' });
               });
               return found;
             });
