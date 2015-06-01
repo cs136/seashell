@@ -156,7 +156,7 @@ body {
 #console-input input, #console-input input:focus {
   font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
   line-height: 1em;
-  padding: 0.4em;
+  padding-left: 0.4em;
   outline: none;
   -webkit-box-shadow: none !important;
   -moz-box-shadow: none !important;

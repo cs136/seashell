@@ -2,7 +2,7 @@
 
 @(require "../utils.rkt")
 
-@title[#:tag "seashell-faq"]{Frequently Asked Questions}
+@seashell-title[#:tag "seashell-faq"]{Frequently Asked Questions}
 
 @local-table-of-contents[]
 

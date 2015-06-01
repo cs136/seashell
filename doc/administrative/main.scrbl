@@ -1,6 +1,7 @@
 #lang scribble/manual
+@(require "../utils.rkt")
 
-@title[#:tag "administrative"]{Administrator Documentation}
+@seashell-title[#:tag "administrative"]{Administrator Documentation}
 
 This section provides documentation relevant to administrators of Seashell.
 Consult the @secref["user"] for general end-user documentation.
@@ -29,7 +30,7 @@ The following files are used to configure Seashell's behaviour:
 @tt{etc/seashell_config.rkt} is the main file used for configuring
 the Seashell backend server.
 @subsubsection{Organization}
-@tt{etc/seashell_config.rkt} is organized as a @link["http://docs.racket-lang.org/reference/reader.html" "S-expression"]
+@tt{etc/seashell_config.rkt} is organized as a @seclink["reader" #:doc '(lib "scribblings/reference/reference.scrbl") "S-expression"] 
 list of key-value pairs.  For example:
 @racketblock[
 ((ssl-key "/etc/seashell_keys/seashell.key")

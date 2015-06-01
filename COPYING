@@ -1,17 +1,18 @@
 Licenses and Authours
 ---------------------
-Seashell is Copyright (C) 2012-2014 The Seashell Maintainers, which is short form
+Seashell is Copyright (C) 2012-2015 The Seashell Maintainers, which is short form
 for the following list of current and past developers and contributors:
 
   Current Developers    Email                     Role                  Tenure
   Kaleb Paul Alway      <kpalway@uwaterloo.ca>    Developer             Winter 2014 - current.
   Bryan Coutts          <b2coutts@uwaterloo.ca>   Developer             Winter 2014 - current.
+  Graham Cooper         <grcooper@uwaterloo.ca>   Developer             Winter 2015 - current.
   Edward Lee            <e45lee@uwaterloo.ca>     Lead Developer        Spring 2013 - current.
-  Tappy He              <x32he@uwaterloo.ca>      Developer             Winter 2015 - current.
 
   Developers, in supporting role:
 
   Past Developers:
+  Tappy He              <x32he@uwaterloo.ca>      Developer             Winter 2015.
   Kirill Zorin          <k.zorin@me.com>          Developer             Spring 2014.
   Jacob Pollack         <jpollack@uwaterloo.ca>   Developer             Winter 2014.
   Marianna Rapoport     <mrapoport@uwaterloo.ca>  Frontend Developer    Spring 2013.
@@ -36,11 +37,6 @@ licensing information will be located in that library's subdirectory / submodule
   LLVM                  llvm.org                          University of Illinois/NCSA Open Source License
   Clang                 clang.llvm.org                    University of Illinois/NCSA Open Source License
   compiler-rt           compiler-rt.llvm.org              University of Illinois/NCSA Open Source License
-  libgit2 (unmodified)  libgit2.github.com                GNU General Public License version 2 only + linking exception
-  libtomcrypt           libtom.org                        Public Domain
-  SJCL                  bitwiseshiftleft.github.io/sjcl   2-clause BSD or GNU General Public License version 2 or later
-  sprintf.js            github.com/alexei/sprintf.js      3-clause BSD
-  Racket*               racket-lang.org                   GNU Lesser General Public License, version 3 (or later?)
   libssh2               www.libssh2.org                   3-clause BSD
 
 * Modified collections found in src/collects/seashell/overrides/.

@@ -125,15 +125,20 @@ angular.module('frontend-app')
         };
         //Resize on window size change
         function onResize() {
-          var narrow = (settings.settings.force_narrow || $($document).width() < 992);
+          var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
           var min_height = 500, margin_bottom = 30;
-          var min_y_element = $('#editor > .CodeMirror');
-          var h = Math.max($($window).height() - (min_y_element.offset().top - $($window).scrollTop()) - margin_bottom,
-                           min_height);
-                   $('#editor > .CodeMirror')
-            .height(Math.floor(narrow ? h * 0.7 : h) - $('#current-file-controls').outerHeight());
-          $('#console > .CodeMirror')
-            .height((narrow ? (h * 0.3 - $('#console-title').outerHeight()) : 1 + h) - $('#console-input').outerHeight());
+          var min_y_element = $window.document.querySelector('#editor > .CodeMirror');
+          var target_height = Math.max($window.innerHeight - min_y_element.getBoundingClientRect().top - margin_bottom, min_height);
+          var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
+          var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
+          var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
+          if (editor_elem)
+            editor_elem.style.height = sprintf("%fpx",
+              (narrow ? target_height * 0.7 : target_height) - file_control_height);
+          var console_elem = $window.document.querySelector("#console > .CodeMirror");
+          if (console_elem)
+            console_elem.style.height = sprintf("%fpx",
+              (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
           if(self.editor)
             self.editor.refresh();
         }
@@ -204,7 +209,7 @@ angular.module('frontend-app')
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
-          onResize();
+          $timeout(onResize, 0);
         };
         function betterTab(){
           if(self.editor.somethingSelected()){
@@ -306,8 +311,11 @@ angular.module('frontend-app')
             delete self.editorOptions.extraKeys.Esc;
           }
           // Force the font size at any rate (and font name)
-          $('.CodeMirror').css('font-family', sprintf("%s, monospace", settings.settings.font));
-          $('.CodeMirror').css('font-size', sprintf("%dpt", parseInt(settings.settings.font_size)));
+          _.each($window.document.querySelectorAll('.CodeMirror'),
+              function (elem) {
+                elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
+                elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
+              });
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {

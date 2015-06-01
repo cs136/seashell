@@ -89,6 +89,7 @@
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Bitcode/ReaderWriter.h>
 
 #if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
 #include <llvm/IR/DiagnosticPrinter.h>
@@ -624,30 +625,35 @@ public:
     llvm::raw_svector_ostream DiagMessageStream(OutStr);
     printDiagnosticOptions(DiagMessageStream, Level, Info, *DiagOpts);
 
-    const clang::SourceManager & SM = Info.getSourceManager();
-    const clang::SourceLocation & Loc = Info.getLocation();
-    clang::PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+    const clang::SourceManager* SM = Info.hasSourceManager() ? &Info.getSourceManager() : nullptr;
+    const clang::SourceLocation Loc = Info.getLocation();
     bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
+    
+    if (SM) {
+      clang::PresumedLoc PLoc = SM->getPresumedLoc(Loc);
 
-    if (PLoc.isInvalid()) {
-      clang::FileID FID = SM.getFileID(Loc);
-      if( !FID.isInvalid()) {
-        const clang::FileEntry * FE = SM.getFileEntryForID(FID);
-        if(FE && FE->getName()) {
-          messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
-          return;
+      if (PLoc.isInvalid()) {
+        clang::FileID FID = SM->getFileID(Loc);
+        if( !FID.isInvalid()) {
+          const clang::FileEntry * FE = SM->getFileEntryForID(FID);
+          if(FE && FE->getName()) {
+            messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
+            return;
+          } else {
+            messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+            return;
+          }
         } else {
           messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
           return;
         }
       } else {
-        messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+        messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
+                                          PLoc.getLine(), PLoc.getColumn()));
         return;
       }
     } else {
-      messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
-                                        PLoc.getLine(), PLoc.getColumn()));
-      return;
+      messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
     }
   }
 };
@@ -740,7 +746,7 @@ static int final_link_step (struct seashell_compiler* compiler)
 #else
   std::string result;
   llvm::raw_string_ostream raw(result);
-  mod->print(raw, nullptr);
+  llvm::WriteBitcodeToFile(mod, raw);
 #endif
 
   /** Final link step needs to happen with an invocation to cc.
@@ -790,6 +796,9 @@ clang::DiagnosticOptions * CreateAndPopulateDiagOpts(const char *const *start, c
 static int compile_module (seashell_compiler* compiler,
     llvm::Module* module, const char* src_path)
 {
+#ifndef NDEBUG
+  fprintf(stderr, "[compiler] Compiling file: %s\n", src_path);
+#endif
     std::string Error;
     bool Success;
     std::vector<const char*> args;

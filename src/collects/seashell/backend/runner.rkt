@@ -265,7 +265,7 @@
               ['C
                 ;; Behaviour is inconsistent if we just exec directly.
                 ;; This seems to work.  (why: who knows?)
-                (putenv "ASAN_OPTIONS" "detect_leaks=1")
+                (putenv "ASAN_OPTIONS" "detect_leaks=1:stack_trace_format=\"{'frame': '%n', 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"")
                 (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
                 (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
