@@ -213,3 +213,7 @@ label {
 #popup-text a{
   color: #f99;
 }
+
+.list-group-item{
+  background-color: #333;
+} 
