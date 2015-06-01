@@ -57,6 +57,7 @@
 #include <clang/FrontendTool/Utils.h>
 #include <clang/StaticAnalyzer/Frontend/FrontendActions.h>
 #include <clang/Lex/Lexer.h>
+#include <clang/Lex/Preprocessor.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
@@ -824,12 +825,6 @@ static int compile_module (seashell_compiler* compiler,
     {
       args.push_back(p->c_str());
     }
-    /** Add standard static analyzer options (clang/lib/Driver/Tools.cpp:2954) */
-    args.push_back("-analyzer-store=region");
-    args.push_back("-analyzer-opt-analyze-nested-blocks");
-    args.push_back("-analyzer-eagerly-assume");
-    /** Run all analysis passes. (clang -cc1 -analyzer-checker-help  | awk '{print $1}' | grep -v '^[A-Z]' | awk -F. '{print $1}' | sort | uniq) */
-    args.push_back("-analyzer-checker=alpha,core,cplusplus,deadcode,osx,security,unix");
     args.push_back(src_path);
     
     /** Parse Diagnostic Arguments */
