@@ -31,7 +31,7 @@ int main( int argc, char* argv[] ) {
   printf("Build directory: %s.\n", BUILD_DIR);
   printf("Debug build: %d.\n", SEASHELL_DEBUG);
   printf("Is installed: %d.\n", IS_INSTALLED());
-  if (argc > 2) {
+  if (argc > 1) {
     struct seashell_compiler* compiler = seashell_compiler_make();
     seashell_compiler_add_file(compiler, argv[1]);
     seashell_compiler_run(compiler);
