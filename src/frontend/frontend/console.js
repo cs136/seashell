@@ -105,6 +105,7 @@ angular.module('frontend-app')
             for(var i=idx; i <= last; i++)
               stack_trace_line(asan_contents[i]);
             idx = last+1;
+            self._write("\n");
           }
         }
       }
