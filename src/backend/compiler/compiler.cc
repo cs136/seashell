@@ -20,6 +20,8 @@
 #include "compiler.h"
 #include <string>
 #include <vector>
+#include <set>
+#include <tuple>
 #include <memory>
 #include <sstream>
 #include <iostream>
@@ -133,6 +135,10 @@ struct seashell_diag {
     /** Location known? */
     bool loc_known;
 };
+bool operator <(const seashell_diag& d1, const seashell_diag& d2) {
+  return std::tie(d1.error, d1.file, d1.mesg, d1.line, d1.col, d1.loc_known) <
+         std::tie(d2.error, d2.file, d2.mesg, d2.line, d2.col, d2.loc_known);
+}
 
 /** Seashell's compiler data structure.
  * Opaque to Racket - make sure to pass a cleanup function
@@ -614,7 +620,7 @@ class SeashellDiagnosticClient : public clang::DiagnosticConsumer {
   IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
 
 public:
-  std::vector<seashell_diag> messages;
+  std::set<seashell_diag> messages;
 
   SeashellDiagnosticClient(clang::DiagnosticOptions * diags) : DiagOpts(diags) { }
   virtual ~SeashellDiagnosticClient() { }
@@ -641,23 +647,23 @@ public:
         if( !FID.isInvalid()) {
           const clang::FileEntry * FE = SM->getFileEntryForID(FID);
           if(FE && FE->getName()) {
-            messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
+            messages.insert(seashell_diag(error, FE->getName(), OutStr.c_str()));
             return;
           } else {
-            messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+            messages.insert(seashell_diag(error, "?", OutStr.c_str()));
             return;
           }
         } else {
-          messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+          messages.insert(seashell_diag(error, "?", OutStr.c_str()));
           return;
         }
       } else {
-        messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
-                                          PLoc.getLine(), PLoc.getColumn()));
+        messages.insert(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
+                                      PLoc.getLine(), PLoc.getColumn()));
         return;
       }
     } else {
-      messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+      messages.insert(seashell_diag(error, "?", OutStr.c_str()));
     }
   }
 };
