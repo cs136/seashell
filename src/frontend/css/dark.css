@@ -184,3 +184,32 @@ a.custom-glyph:hover, a.custom-glyph:focus, a.custom-glyph:active {
   color: #FFFC99;
   opacity: 1;
 }
+
+/* Options menu */
+.modal-content {
+  border-color: #666;
+  box-shadow: 0px 5px 15px  #888; 
+  background-color: #222;
+}
+
+.modal-title {
+  color:wheat;
+}
+
+label {
+  color:wheat;
+}
+
+.form-control{
+  color: #fff;
+  border-color: #666;
+  background-color: #555;
+}
+
+#popup-text{
+  color: #ccc;
+}
+
+#popup-text a{
+  color: #f99;
+}
