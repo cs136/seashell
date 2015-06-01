@@ -55,6 +55,7 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/FrontendTool/Utils.h>
+#include <clang/StaticAnalyzer/Frontend/FrontendActions.h>
 #include <clang/Lex/Lexer.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
@@ -628,7 +629,9 @@ public:
     const clang::SourceManager* SM = Info.hasSourceManager() ? &Info.getSourceManager() : nullptr;
     const clang::SourceLocation Loc = Info.getLocation();
     bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
-    
+#ifndef _NDEBUG
+    fprintf(stderr, "Got diagnostic %s\n", OutStr.c_str());
+#endif    
     if (SM) {
       clang::PresumedLoc PLoc = SM->getPresumedLoc(Loc);
 
@@ -821,6 +824,12 @@ static int compile_module (seashell_compiler* compiler,
     {
       args.push_back(p->c_str());
     }
+    /** Add standard static analyzer options (clang/lib/Driver/Tools.cpp:2954) */
+    args.push_back("-analyzer-store=region");
+    args.push_back("-analyzer-opt-analyze-nested-blocks");
+    args.push_back("-analyzer-eagerly-assume");
+    /** Run all analysis passes. (clang -cc1 -analyzer-checker-help  | awk '{print $1}' | grep -v '^[A-Z]' | awk -F. '{print $1}' | sort | uniq) */
+    args.push_back("-analyzer-checker=alpha,core,cplusplus,deadcode,osx,security,unix");
     args.push_back(src_path);
     
     /** Parse Diagnostic Arguments */
@@ -879,8 +888,18 @@ static int compile_module (seashell_compiler* compiler,
     Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
 #endif
 
-    clang::EmitLLVMOnlyAction Act(&compiler->context);
-    Success = Clang.ExecuteAction(Act);
+    /** Run the static analysis pass. */
+    clang::ento::AnalysisAction Analyze;
+    Success = Clang.ExecuteAction(Analyze);
+    if (!Success) {
+      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(AnalysisAction) failed.");
+      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                  std::back_inserter(compile_messages));
+      return 1;
+    }
+
+    clang::EmitLLVMOnlyAction CodeGen(&compiler->context);
+    Success = Clang.ExecuteAction(CodeGen);
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed.");
       std::copy(diag_client.messages.begin(), diag_client.messages.end(),
@@ -892,7 +911,7 @@ static int compile_module (seashell_compiler* compiler,
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
-    std::unique_ptr<Module> mod(Act.takeModule());
+    std::unique_ptr<Module> mod(CodeGen.takeModule());
     if (!mod) {
       return 1;
     }
