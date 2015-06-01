@@ -20,6 +20,8 @@
 #include "compiler.h"
 #include <string>
 #include <vector>
+#include <set>
+#include <tuple>
 #include <memory>
 #include <sstream>
 #include <iostream>
@@ -55,7 +57,9 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/FrontendTool/Utils.h>
+#include <clang/StaticAnalyzer/Frontend/FrontendActions.h>
 #include <clang/Lex/Lexer.h>
+#include <clang/Lex/Preprocessor.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
@@ -131,6 +135,10 @@ struct seashell_diag {
     /** Location known? */
     bool loc_known;
 };
+bool operator <(const seashell_diag& d1, const seashell_diag& d2) {
+  return std::tie(d1.error, d1.file, d1.mesg, d1.line, d1.col, d1.loc_known) <
+         std::tie(d2.error, d2.file, d2.mesg, d2.line, d2.col, d2.loc_known);
+}
 
 /** Seashell's compiler data structure.
  * Opaque to Racket - make sure to pass a cleanup function
@@ -612,7 +620,7 @@ class SeashellDiagnosticClient : public clang::DiagnosticConsumer {
   IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
 
 public:
-  std::vector<seashell_diag> messages;
+  std::set<seashell_diag> messages;
 
   SeashellDiagnosticClient(clang::DiagnosticOptions * diags) : DiagOpts(diags) { }
   virtual ~SeashellDiagnosticClient() { }
@@ -628,7 +636,9 @@ public:
     const clang::SourceManager* SM = Info.hasSourceManager() ? &Info.getSourceManager() : nullptr;
     const clang::SourceLocation Loc = Info.getLocation();
     bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
-    
+#ifndef _NDEBUG
+    fprintf(stderr, "Got diagnostic %s\n", OutStr.c_str());
+#endif    
     if (SM) {
       clang::PresumedLoc PLoc = SM->getPresumedLoc(Loc);
 
@@ -637,23 +647,23 @@ public:
         if( !FID.isInvalid()) {
           const clang::FileEntry * FE = SM->getFileEntryForID(FID);
           if(FE && FE->getName()) {
-            messages.push_back(seashell_diag(error, FE->getName(), OutStr.c_str()));
+            messages.insert(seashell_diag(error, FE->getName(), OutStr.c_str()));
             return;
           } else {
-            messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+            messages.insert(seashell_diag(error, "?", OutStr.c_str()));
             return;
           }
         } else {
-          messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+          messages.insert(seashell_diag(error, "?", OutStr.c_str()));
           return;
         }
       } else {
-        messages.push_back(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
-                                          PLoc.getLine(), PLoc.getColumn()));
+        messages.insert(seashell_diag(error, PLoc.getFilename(), OutStr.c_str(),
+                                      PLoc.getLine(), PLoc.getColumn()));
         return;
       }
     } else {
-      messages.push_back(seashell_diag(error, "?", OutStr.c_str()));
+      messages.insert(seashell_diag(error, "?", OutStr.c_str()));
     }
   }
 };
@@ -879,8 +889,18 @@ static int compile_module (seashell_compiler* compiler,
     Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
 #endif
 
-    clang::EmitLLVMOnlyAction Act(&compiler->context);
-    Success = Clang.ExecuteAction(Act);
+    /** Run the static analysis pass. */
+    clang::ento::AnalysisAction Analyze;
+    Success = Clang.ExecuteAction(Analyze);
+    if (!Success) {
+      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(AnalysisAction) failed.");
+      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                  std::back_inserter(compile_messages));
+      return 1;
+    }
+
+    clang::EmitLLVMOnlyAction CodeGen(&compiler->context);
+    Success = Clang.ExecuteAction(CodeGen);
     if (!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(EmitLLVMOnlyAction) failed.");
       std::copy(diag_client.messages.begin(), diag_client.messages.end(),
@@ -892,7 +912,7 @@ static int compile_module (seashell_compiler* compiler,
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
                 std::back_inserter(compile_messages));
 
-    std::unique_ptr<Module> mod(Act.takeModule());
+    std::unique_ptr<Module> mod(CodeGen.takeModule());
     if (!mod) {
       return 1;
     }
