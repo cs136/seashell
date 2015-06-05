@@ -65,16 +65,33 @@
   (define/contract (creds-valid? creds)
     (-> hash? boolean?)
     (match creds
-      [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
+      [(hash-table ('host ping-host) ('ping-port ping-port) ('port port) (_ _) ...)
        (define success
          (let ([sock (udp-open-socket ping-host ping-port)])
            (dynamic-wind
             (lambda () (void))
             (lambda ()
-             (udp-connect! sock ping-host ping-port)
-             (udp-send sock #"ping")
-             (sync/timeout (read-config 'seashell-ping-timeout)
-                           (udp-receive!-evt sock (make-bytes 0))))
+             ;; This is slightly less reliable than just using udp-connect!
+             ;; but it avoids issues when the UDP server responds with a different
+             ;; IP address...
+             ;;
+             ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port 
+             (define ticket (random 4294967087))
+             (define challenge (integer->integer-bytes ticket 4 #f))
+             (define response (bitwise-xor ticket port))
+             (define expected  (integer->integer-bytes response 4 #f))
+             (define result (make-bytes 4))
+             (udp-send-to sock ping-host ping-port challenge)
+             (logf 'debug "Sent ping to ~a:~a! (~a ^ ~a -> ~a)::~v" ping-host ping-port ticket port response expected)
+             (define response? (sync/timeout (read-config 'seashell-ping-timeout)
+                                             (thread
+                                               (lambda ()
+                                                 (let loop ()
+                                                   (udp-receive! sock result) 
+                                                   (logf 'debug "Got ping back: ~v" result)
+                                                   (unless (equal? result expected)
+                                                     (loop)))))))
+             (and response? (equal? result expected)))
             (lambda () (udp-close sock)))))
        ;; Remove stale credentials files.  This can be a race condition,
        ;; so make sure the file is locked with fcntl before continuing.
@@ -145,21 +162,28 @@
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
 
-;; make-udp-ping-listener -> (values integer? custodian?)
+;; make-udp-ping-listener our-port -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
-(define/contract (make-udp-ping-listener)
-  (-> (values integer? custodian?))
+(define/contract (make-udp-ping-listener our-port)
+  (-> integer? (values integer? custodian?))
   (parameterize ([current-custodian (make-custodian (current-custodian))])
     ;; Start the UDP ping listener
+    ;; Note that we expect IPv4-mapped-in-IPv6 support when binding to ::0.
     (define sock (udp-open-socket "::0"))
     (udp-bind! sock #f 0)
     (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
     (thread
      (lambda ()
       (let loop ()
-        (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
-        (logf 'debug "Ping from ~a!" client-host)
-        (udp-send-to sock client-host client-port #"pong")
+        (define challenge (make-bytes 4))
+        (define-values (_ client-host client-port) (udp-receive! sock challenge))
+        (thread
+          (lambda ()
+            (define ticket (integer-bytes->integer challenge #f))
+            (define response (bitwise-xor ticket our-port))
+            (define result (integer->integer-bytes response 4 #f)) 
+            (logf 'debug "Ping from ~a! (~a ^ ~a -> ~a)::~v" client-host ticket our-port response result)
+            (udp-send-to sock client-host client-port result)))
         (loop))))
     (values ping-port (current-custodian))))
 
@@ -302,7 +326,7 @@
           
           ;; Start the UDP ping listener.
           (define-values (ping-port udp-custodian)
-            (make-udp-ping-listener))
+            (make-udp-ping-listener start-result))
           (set! shutdown-listener
                 (lambda () (custodian-shutdown-all udp-custodian)))
           
