@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -47,13 +47,18 @@
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
-         seashell/websocket
-         seashell/support-native
          net/url
          net/head
          json
          file/zip
-         file/unzip)
+         file/unzip
+         racket/contract
+         racket/file
+         racket/path
+         racket/match
+         racket/string
+         racket/list
+         racket/port)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -211,8 +216,8 @@
               [else
                (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
                (dynamic-wind
-                 (thunk #f)
-                 (thunk
+                 (lambda () #f)
+                 (lambda ()
                    (match-define (list _ status text headers) (regexp-match #rx"^HTTP/1\\.1 ([0-9][0-9][0-9]) ([^\n\r]*)(.*)" hdrs))
                    (when (not (equal? status "200"))
                      (raise (exn:project (format "Error when fetching template ~a for project ~a: ~a ~a." source name status text)
@@ -221,7 +226,7 @@
                      (raise (exn:project (format "Error when fetching template ~a for project ~a: template was not a ZIP file." source name)
                                          (current-continuation-marks))))
                    (unzip port (make-filesystem-entry-reader #:strip-count 1)))
-                 (thunk (close-input-port port)))])))]
+                 (lambda () (close-input-port port)))])))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))
@@ -264,7 +269,7 @@
   (-> (and/c project-name? is-project?) thread? boolean?)
   (call-with-semaphore
     lock-semaphore
-    (thunk
+    (lambda ()
       (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
         (hash-remove! locked-projects name))
       (define unlocked (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))
@@ -288,7 +293,7 @@
   (-> (and/c project-name? is-project?) thread? void?)
   (call-with-semaphore
     lock-semaphore
-    (thunk
+    (lambda ()
       (file-or-directory-modify-seconds (build-project-path name)
                                         (current-seconds))
       (hash-set! locked-projects name thread-to-lock-on))))
@@ -305,7 +310,7 @@
   (-> (and/c project-name? is-project?) boolean?)
   (call-with-semaphore
     lock-semaphore
-    (thunk
+    (lambda ()
       (cond
         [(hash-has-key? locked-projects name)
           (hash-remove! locked-projects name) #t]
@@ -380,7 +385,7 @@
     (when result
       (with-output-to-file output-path
                            #:exists 'replace
-                           (thunk
+                           (lambda ()
                              (write-bytes result)))
       (file-or-directory-permissions
         output-path
@@ -413,17 +418,18 @@
       (define pid (run-program target base lang #f))
       (when (equal? lang 'C)
         (thread
-          (thunk
+          (lambda ()
             (sync (program-wait-evt pid))
             (delete-directory/files target #:must-exist? #f))))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
       (define pids (map
-                     (curry run-program target base lang)
+                     (lambda (test)
+                       (run-program target base lang test))
                      tests))
       (when (equal? lang 'C)
         (thread
-          (thunk
+          (lambda ()
             (let loop ([evts (map program-wait-evt pids)])
               (unless (empty? evts)
                 (loop (remove (apply sync evts) evts))))
@@ -469,11 +475,11 @@
   (define tmpdir #f)
 
   (dynamic-wind
-    (thunk
+    (lambda ()
       (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a"))
       (set! tmpdir (make-temporary-file "seashell-marmoset-build-~a"
                                          'directory)))
-    (thunk
+    (lambda ()
       (cond
         ;; Two cases - either we're submitting a subdirectory...
         [subdirectory
@@ -517,13 +523,13 @@
               (copy-from! common-dir))
             (with-output-to-file
               tmpzip
-              (thunk (zip->output (pathlist-closure (directory-list))))
+              (lambda () (zip->output (pathlist-closure (directory-list))))
               #:exists 'truncate))]
         ;; Or we're submitting the entire project.
         [else
           (with-output-to-file
             tmpzip
-            (thunk (write-bytes (export-project project)))
+            (lambda () (write-bytes (export-project project)))
             #:exists 'truncate)])
 
       ;; Launch the submit process.
@@ -545,7 +551,7 @@
                                     exit-status
                                     stderr-output stdout-output)
                             (current-continuation-marks)))))
-    (thunk
+    (lambda ()
       (delete-directory/files tmpzip #:must-exist? #f)
       (delete-directory/files tmpdir #:must-exist? #f))))
 
@@ -571,7 +577,7 @@
      (let/ec escape
        (match-define `(,predicate ,data) (hash-ref (with-input-from-file recent read)
                                                    directory-hash
-                                                   (thunk (escape #f))))
+                                                   (lambda () (escape #f))))
        (match predicate
          [`("dexists" ,name)
            (if (directory-exists? (check-and-build-path (build-project-path project) name)) data #f)]
@@ -601,7 +607,7 @@
   (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
   (when (directory-exists? directory-path)
     (with-output-to-file recent-file 
-                         (thunk
+                         (lambda ()
                            (write
                              (hash-set (if (hash? recent-hash) recent-hash `#hash())
                                        directory-hash

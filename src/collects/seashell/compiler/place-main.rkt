@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,9 +16,10 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler)
-(require seashell/log)
-(require seashell/seashell-config)
+(require seashell/compiler/compiler
+         seashell/log
+         seashell/seashell-config
+         racket/place)
 (provide seashell-compiler-place)
 
 ;; (seashell-compiler-place channel)

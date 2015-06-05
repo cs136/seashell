@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -26,6 +26,9 @@
          racket/async-channel
          racket/serialize
          racket/sandbox
+         racket/match
+         racket/contract
+         racket/port
          json)
 
 (provide conn-dispatch)
@@ -73,7 +76,7 @@
   ;; Returns:
   ;;  Thread that is running the I/O.
   (define (project-test-thread project pid)
-    (thread (thunk
+    (thread (lambda ()
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
       (define stdout (program-stdout pid))
@@ -170,7 +173,7 @@
           (list tag result))))
     
     (thread
-      (thunk
+      (lambda ()
         (let loop ()
           (with-handlers
             ;; Data connection failure.  Quit.
@@ -520,7 +523,7 @@
         ('type "saveSettings")
         ('settings settings))
        (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-         (thunk (write settings)) #:exists 'truncate)
+         (lambda () (write settings)) #:exists 'truncate)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -655,7 +658,7 @@
                           (send-message connection `#hash((id . -2)
                                                           (result . "Could not process request!"))))])
           (call-with-limits #f (read-config 'request-memory-limit)
-            (thunk
+            (lambda ()
               (define message (bytes->jsexpr data))
               (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
               (define result (handle-message message))

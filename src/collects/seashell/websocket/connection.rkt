@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -46,6 +46,9 @@
 ;; the data that would be read from ws-recv invoked on itself,
 ;; <eof>, or an exception object.
 (require racket/async-channel
+         racket/port
+         racket/contract
+         racket/match
          seashell/log
          web-server/http/request-structs
          net/url)
@@ -168,7 +171,7 @@
        ;; quit.  Raising an exception here is probably a bad idea,
        ;; as we're running in a separate thread.
        (logf 'error (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
-       (thread (thunk (ws-close! conn)))
+       (thread (lambda () (ws-close! conn)))
        #f]
       [(ws-frame #t rsv 9 data)
        ;; Ping frame.
@@ -188,7 +191,7 @@
        ;; the server closes the connection, we may as well do it anyways.
 
        ;; Kill the connection.  (note: ws-close! ensures that the connection is closed only once).
-       (thread (thunk (ws-close! conn)))
+       (thread (lambda () (ws-close! conn)))
        #f]
       [else
        ;; Unhandled message - log it, quit.
@@ -245,9 +248,9 @@
   (->* (ws-connection?) (#:timeout (and/c real? (not/c negative?)))
        void?)
   (thread
-    (thunk
+    (lambda ()
       (call-with-semaphore (ws-connection-close-semaphore conn)
-        (thunk
+        (lambda ()
           (unless (ws-connection-closed? conn)
             (async-channel-put
               (ws-connection-out-chan conn)
@@ -268,7 +271,7 @@
 (define/contract (ws-close! conn)
   (-> ws-connection? void?)
   (call-with-semaphore (ws-connection-close-semaphore conn)
-    (thunk
+    (lambda ()
       (with-handlers
         ([exn:fail:network? void])
         (unless (ws-connection-closed? conn)

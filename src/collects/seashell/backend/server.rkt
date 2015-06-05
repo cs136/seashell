@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,11 +16,12 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require net/url
+(require racket/contract
          racket/async-channel
          racket/serialize
          racket/udp
          racket/sandbox
+         racket/match
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -33,9 +34,7 @@
          seashell/compiler
          seashell/crypto
          web-server/web-server
-         web-server/http/xexpr
          web-server/http/request-structs
-         web-server/dispatchers/dispatch
          ffi/unsafe/atomic
          mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
@@ -70,13 +69,13 @@
        (define success
          (let ([sock (udp-open-socket ping-host ping-port)])
            (dynamic-wind
-            (thunk (void))
-            (thunk
+            (lambda () (void))
+            (lambda ()
              (udp-connect! sock ping-host ping-port)
              (udp-send sock #"ping")
              (sync/timeout (read-config 'seashell-ping-timeout)
                            (udp-receive!-evt sock (make-bytes 0))))
-            (thunk (udp-close sock)))))
+            (lambda () (udp-close sock)))))
        ;; Remove stale credentials files.  This can be a race condition,
        ;; so make sure the file is locked with fcntl before continuing.
        ;; XXX you are not locking the file here...
@@ -100,7 +99,7 @@
       (lambda (lock-file)
         (with-input-from-file
             credentials-file
-          (thunk
+          (lambda ()
            (with-handlers
                ([exn:fail:read? (lambda (exn)
                                   (raise (exn:creds "Could not read credentials file!" (current-continuation-marks))))])
@@ -141,7 +140,7 @@
 ;; Detaches backend.
 (define (detach)
   (call-as-atomic
-   (thunk
+   (lambda ()
     (flush-output (current-output-port))
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
@@ -156,9 +155,10 @@
     (udp-bind! sock #f 0)
     (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
     (thread
-     (thunk
+     (lambda ()
       (let loop ()
-        (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0))) 
+        (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0)))
+        (logf 'debug "Ping from ~a!" client-host)
         (udp-send-to sock client-host client-port #"pong")
         (loop))))
     (values ping-port (current-custodian))))
@@ -228,12 +228,12 @@
     ;; Note: (exit-from-seashell ...) does not unwind the continuation stack.
     (dynamic-wind
      void
-     (thunk
+     (lambda ()
       (call-with-continuation-barrier
-       (thunk
+       (lambda ()
         (call-with-limits 
          #f (read-config 'server-memory-limit)
-         (thunk
+         (lambda ()
           ;; Install credentials or quit.
           (set! credentials-port
                 (let loop ([tries 0])
@@ -242,7 +242,7 @@
                     (exit-from-seashell 4))
                   (define repeat (make-continuation-prompt-tag))
                   (call-with-continuation-prompt
-                   (thunk
+                   (lambda ()
                     ;; Try to read the file...
                     (with-handlers
                         ([exn:fail:filesystem? 
@@ -269,7 +269,7 @@
                      ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
                      (open-output-file credentials-file #:exists 'must-truncate)))
                    repeat
-                   (thunk 
+                   (lambda () 
                     (sleep (expt 2 tries))
                     (loop (add1 tries))))))
           
@@ -278,7 +278,8 @@
             (sequence:make
              request-logging-dispatcher
              (filter:make #rx"^/$" (make-websocket-dispatcher 
-                                    (curry conn-dispatch keepalive-chan)))
+                                    (lambda (conn state)
+                                      (conn-dispatch keepalive-chan conn state))))
              (filter:make #rx"^/export/" project-export-dispatcher)
              (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
@@ -303,7 +304,7 @@
           (define-values (ping-port udp-custodian)
             (make-udp-ping-listener))
           (set! shutdown-listener
-                (thunk (custodian-shutdown-all udp-custodian)))
+                (lambda () (custodian-shutdown-all udp-custodian)))
           
           ;; Get current username
           (define username (or (seashell_get_username) "unknown_user"))
@@ -339,7 +340,7 @@
               (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
                 [#f (void)]
                 [else (loop)]))))))))
-     (thunk
+     (lambda ()
       (logf 'info "Shutting down...")
       ;; Close port (if not closed)
       (unless (or (not credentials-port)

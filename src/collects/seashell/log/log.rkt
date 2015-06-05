@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell collection
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,7 +16,9 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/seashell-config)
+(require seashell/seashell-config
+         racket/contract
+         racket/match)
 (provide logf make-port-logger standard-logger-setup format-stack-trace)
 
 (define logger (make-logger 'seashell))
@@ -80,7 +82,7 @@
 ;;  String representing a prettified stack trace.
 (define/contract (format-stack-trace trace)
   (-> continuation-mark-set? string?)
-  (string-join
+  (apply string-append
     `(,@(for/list ([item (in-list (continuation-mark-set->context trace))])
          (format "~a at:\n  ~a\n"
                   (if (car item)
@@ -91,8 +93,7 @@
                               (srcloc-line (cdr item))
                               (srcloc-column (cdr item))
                               (srcloc-source (cdr item)))
-                      "<unknown location>"))))
-    ""))
+                      "<unknown location>"))))))
 
 ;; make-port-logger
 ;; Creates a thread that receives events at level or higher
@@ -101,7 +102,7 @@
   (-> (or/c 'fatal 'error 'warning 'info 'debug) output-port? thread?)
   (define reader (make-log-reader level))
   (thread
-    (thunk
+    (lambda ()
       (let loop ()
         (match (sync reader)
           [(vector level message (list marks block) _)
