@@ -22,19 +22,19 @@
 angular.module('frontend-app')
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', 'cookieStore', 'NewQuestionModal', 'DeleteProjectModal',
-    function($state, $stateParams, $scope,  errors, openProject, cookies, newQuestionModal, deleteProjectModal) {
+      'openProject', '$cookies', 'NewQuestionModal', 'DeleteProjectModal',
+    function($state, $stateParams, $scope,  errors, openProject, $cookies, newQuestionModal, deleteProjectModal) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
-      self.userid = cookies.get(SEASHELL_CREDS_COOKIE).user;
+      self.userid = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
             var url = sprintf("https://%s:%s/export/%s.zip?token=%s",
-                              cookies.get(SEASHELL_CREDS_COOKIE).host,
-                              cookies.get(SEASHELL_CREDS_COOKIE).port,
+                              $cookies.getObject(SEASHELL_CREDS_COOKIE).host,
+                              $cookies.getObject(SEASHELL_CREDS_COOKIE).port,
                               encodeURIComponent(openProject.name),
                               encodeURIComponent(raw));
 

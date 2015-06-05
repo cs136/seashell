@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('marmoset-bindings', ['jquery-cookie'])
-  .service('marmoset', ['$q', 'cookieStore', '$http',
-      function ($q, cookieStore, $http) {
+angular.module('marmoset-bindings', ['ngCookies'])
+  .service('marmoset', ['$q', '$cookies', '$http',
+      function ($q, $cookies, $http) {
         "use strict";
         var self = this;
         var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
@@ -70,7 +70,7 @@ angular.module('marmoset-bindings', ['jquery-cookie'])
          */
         self.results = function(project) {
           return $http({url: test_url,
-                             params: {user: cookieStore.get(SEASHELL_CREDS_COOKIE).user,
+                             params: {user: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
                                       project: project}})
                  .then(function (result) {
                    return result.data;

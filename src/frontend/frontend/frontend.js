@@ -19,21 +19,21 @@
  */
 
 /* jshint supernew: true */
-angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jquery-cookie', 'ui.router',
+angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCookies', 'ui.router',
     'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
-    '$modal', 'LoginModal', 'ConfirmationMessageModal', 'cookieStore', '$window',
+    '$modal', 'LoginModal', 'ConfirmationMessageModal', '$cookies', '$window',
     'settings-service', '$location',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        cookieStore, $window, settings, $location) {
+        $cookies, $window, settings, $location) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
-        var cookie = cookieStore.get(SEASHELL_CREDS_COOKIE);
+        var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
           self.host = cookie.host;
         }
@@ -43,8 +43,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           $modal.open({
             templateUrl: "frontend/templates/help-template.html",
             controller: ['$scope', 'ConfirmationMessageModal', '$window',
-              'cookieStore',
-              function ($scope, confirm, $window, cookies) {
+              '$cookies',
+              function ($scope, confirm, $window, $cookies) {
                 $scope.login = function () {
                   self.login();
                   $scope.$dismiss();
@@ -75,7 +75,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
           confirm("Log out of Seashell",
             "Do you wish to logout?  Any unsaved data will be lost.")
             .then(function () {
-              cookieStore.remove(SEASHELL_CREDS_COOKIE);
+              $cookies.remove(SEASHELL_CREDS_COOKIE);
               $window.top.location = "https://cas.uwaterloo.ca/logout";
             });
         };
@@ -105,9 +105,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'jque
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
   }])
-  .run(['cookie', 'socket', 'settings-service', 'error-service', 'projects', 
+  .run(['$cookies', 'socket', 'settings-service', 'error-service', 'projects', 
         '$window', '$document', '$rootScope',
-        function(cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
+        function($cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
     ws.connect()
         .then(function () {
         });
