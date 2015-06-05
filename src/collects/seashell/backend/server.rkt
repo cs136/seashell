@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require net/url
+(require
          racket/async-channel
          racket/serialize
          racket/udp
@@ -33,9 +33,7 @@
          seashell/compiler
          seashell/crypto
          web-server/web-server
-         web-server/http/xexpr
          web-server/http/request-structs
-         web-server/dispatchers/dispatch
          ffi/unsafe/atomic
          mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)

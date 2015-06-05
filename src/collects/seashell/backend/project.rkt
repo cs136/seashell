@@ -47,8 +47,6 @@
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
-         seashell/websocket
-         seashell/support-native
          net/url
          net/head
          json

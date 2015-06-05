@@ -18,7 +18,6 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require ffi/unsafe
          ffi/unsafe/define)
-(require racket/runtime-path)
 (require seashell/seashell-config)
 
 (provide seashell_drop_permissions

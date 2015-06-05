@@ -17,14 +17,12 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require net/cgi
-         net/url
          net/cookie
          net/uri-codec
          seashell/seashell-config
          seashell/support-native
          seashell/log
          seashell/tunnel
-         seashell/crypto
          racket/sandbox
          racket/serialize
          json

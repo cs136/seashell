@@ -16,13 +16,12 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require net/base64
+(require
          net/tcp-sig
          net/url
          (prefix-in raw: net/tcp-unit)
          web-server/web-server
          web-server/dispatchers/dispatch
-         web-server/http/request
          web-server/http/request-structs
          web-server/http/response
          web-server/private/connection-manager

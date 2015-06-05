@@ -19,12 +19,10 @@
 (require ffi/unsafe
          ffi/unsafe/define 
          ffi/unsafe/alloc
-         racket/runtime-path
          openssl/libcrypto
          openssl/libssl
          openssl
          json)
-(require seashell/seashell-config)
 (require (prefix-in contract: racket/contract))
 
 (provide seashell-encrypt seashell-decrypt

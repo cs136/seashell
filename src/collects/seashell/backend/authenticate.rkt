@@ -20,7 +20,6 @@
          seashell/log
          seashell/backend/project
          racket/serialize
-         net/base64
          json)
 (provide exn:authenticate? authenticate install-server-key! make-nonce
          make-authenticate-response make-download-token check-download-token
