@@ -66,33 +66,35 @@
     (-> hash? boolean?)
     (match creds
       [(hash-table ('host ping-host) ('ping-port ping-port) ('port port) (_ _) ...)
+       (define test-custodian (make-custodian))
        (define success
-         (let ([sock (udp-open-socket ping-host ping-port)])
-           (dynamic-wind
-            (lambda () (void))
-            (lambda ()
-             ;; This is slightly less reliable than just using udp-connect!
-             ;; but it avoids issues when the UDP server responds with a different
-             ;; IP address...
-             ;;
-             ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port 
-             (define ticket (random 4294967087))
-             (define challenge (integer->integer-bytes ticket 4 #f))
-             (define response (bitwise-xor ticket port))
-             (define expected  (integer->integer-bytes response 4 #f))
-             (define result (make-bytes 4))
-             (udp-send-to sock ping-host ping-port challenge)
-             (logf 'debug "Sent ping to ~a:~a! (~a ^ ~a -> ~a)::~v" ping-host ping-port ticket port response expected)
-             (define response? (sync/timeout (read-config 'seashell-ping-timeout)
-                                             (thread
-                                               (lambda ()
-                                                 (let loop ()
-                                                   (udp-receive! sock result) 
-                                                   (logf 'debug "Got ping back: ~v" result)
-                                                   (unless (equal? result expected)
-                                                     (loop)))))))
-             (and response? (equal? result expected)))
-            (lambda () (udp-close sock)))))
+         (dynamic-wind
+           (lambda () #f)
+           (lambda ()
+             (parameterize [(current-custodian test-custodian)]
+              (define sock (udp-open-socket ping-host ping-port))
+              ;; This is slightly less reliable than just using udp-connect!
+              ;; but it avoids issues when the UDP server responds with a different
+              ;; IP address...
+              ;;
+              ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port 
+              (define ticket (random 4294967087))
+              (define challenge (integer->integer-bytes ticket 4 #f))
+              (define response (bitwise-xor ticket port))
+              (define expected  (integer->integer-bytes response 4 #f))
+              (define result (make-bytes 4))
+              (udp-send-to sock ping-host ping-port challenge)
+              (logf 'debug "Sent ping to ~a:~a! (~a ^ ~a -> ~a)::~v" ping-host ping-port ticket port response expected)
+              (define response? (sync/timeout (read-config 'seashell-ping-timeout)
+                                              (thread
+                                                (lambda ()
+                                                  (let loop ()
+                                                    (udp-receive! sock result) 
+                                                    (logf 'debug "Got ping back: ~v" result)
+                                                    (unless (equal? result expected)
+                                                      (loop)))))))
+              (and response? (equal? result expected))))
+           (lambda () (custodian-shutdown-all test-custodian))))
        ;; Remove stale credentials files.  This can be a race condition,
        ;; so make sure the file is locked with fcntl before continuing.
        ;; XXX you are not locking the file here...
