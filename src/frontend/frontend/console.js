@@ -48,25 +48,27 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
+      function stack_trace_line(line) {
+        if(/^{/.test(line)) {
+          var json = line.replace(/'/g, '"');
+          var frame = JSON.parse(json);
+          if (frame.function !== "<null>" && frame.file !== "<null>") {
+            var short_file = frame.file.split('/').pop();
+            self._write(sprintf("  in %s, %s:%d:%d\n",
+              frame.function,
+              short_file,
+              frame.line,
+              frame.column));
+          } else if (frame.function !== "<null>") {
+            self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, frame.module, frame.offset));
+          } else {
+            self._write(sprintf("  in module %s (+%x)\n", frame.module, frame.offset));
+          }
+        }
+      }
       function stack_trace(contents) {
         for(var i=0; i<contents.length; i++) {
-          if(/^{/.test(contents[i])) {
-            var json = contents[i].replace(/'/g, '"');
-            var frame = JSON.parse(json);
-            if (frame.function !== "<null>" && frame.file !== "<null>") {
-              var short_file = frame.file.split('/').pop();
-
-              self._write(sprintf("  in %s, %s:%d:%d\n",
-                frame.function,
-                short_file,
-                frame.line,
-                frame.column));
-            } else if (frame.function !== "<null>") {
-              self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, frame.module, frame.offset));
-            } else {
-              self._write(sprintf("  in module %s (+%x)\n", frame.module, frame.offset));
-            }
-          }
+          stack_trace_line(contents[i]);
         }
       }
        
@@ -98,10 +100,12 @@ angular.module('frontend-app')
             var last = idx;
             for(; !/^$/.test(contents[last]); last++);
             last--;
-            self._write(sprintf("  %s byte(s) allocated at %s never freed.\n",
-              /[0-9]+/.exec(contents[idx]),
-              filepatt.exec(asan_contents[last])[1]));
+            self._write(sprintf("  %s byte(s) allocated, never freed.\n",
+              /[0-9]+/.exec(contents[idx])));
+            for(var i=idx; i <= last; i++)
+              stack_trace_line(asan_contents[i]);
             idx = last+1;
+            self._write("\n");
           }
         }
       }
