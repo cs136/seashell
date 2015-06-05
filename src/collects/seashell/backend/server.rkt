@@ -85,11 +85,12 @@
              (logf 'debug "Sent ping to ~a:~a! (~a ^ ~a -> ~a)::~v" ping-host ping-port ticket port response expected)
              (define response? (sync/timeout (read-config 'seashell-ping-timeout)
                                              (thread
-                                               (let loop ()
-                                                 (udp-receive! sock result) 
-                                                 (logf 'debug "Got ping back: ~a/~v" response? result)
-                                                 (unless (equal? result expected)
-                                                   (loop))))))
+                                               (lambda ()
+                                                 (let loop ()
+                                                   (udp-receive! sock result) 
+                                                   (logf 'debug "Got ping back: ~v" result)
+                                                   (unless (equal? result expected)
+                                                     (loop)))))))
              (and response? (equal? result expected)))
             (lambda () (udp-close sock)))))
        ;; Remove stale credentials files.  This can be a race condition,
