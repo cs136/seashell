@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -24,7 +24,9 @@
 ;; Returns:
 ;;  Handshake response.
 (require net/base64
-         openssl/sha1)
+         openssl/sha1
+         racket/contract
+         racket/port)
 
 (provide handshake-solution-server
          handshake-solution-ok?

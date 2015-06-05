@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's authentication and communications backend.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -18,7 +18,10 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/seashell-config
          seashell/log
-         seashell/tunnel/structs)
+         seashell/tunnel/structs
+         racket/contract
+         racket/port
+         racket/list)
 
 (provide tunnel-launch)
 ;; (tunnel-launch user password) -> tunnel?

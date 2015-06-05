@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's login gateway.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -25,6 +25,10 @@
          seashell/tunnel
          racket/sandbox
          racket/serialize
+         racket/list
+         racket/match
+         racket/contract
+         racket/system
          json
          xml)
 

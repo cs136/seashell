@@ -1,4 +1,4 @@
-#lang racket 
+#lang racket/base
 ;; Seashell's (native/OS dependant) support functions.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;

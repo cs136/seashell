@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,7 +16,11 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler)
+(require seashell/compiler/compiler
+         racket/contract
+         racket/match
+         racket/place
+         racket/bool)
 (provide seashell-compile-files/place
          seashell-compile-place/init)
 
@@ -32,7 +36,7 @@
   (if (and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
     (call-with-semaphore
       compiler-place-lock
-      (thunk
+      (lambda ()
         (place-channel-put compiler-place 
                            (list user-cflags user-ldflags sources objects))
         (match-define 
