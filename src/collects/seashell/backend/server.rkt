@@ -168,6 +168,7 @@
   (-> integer? (values integer? custodian?))
   (parameterize ([current-custodian (make-custodian (current-custodian))])
     ;; Start the UDP ping listener
+    ;; Note that we expect IPv4-mapped-in-IPv6 support when binding to ::0.
     (define sock (udp-open-socket "::0"))
     (udp-bind! sock #f 0)
     (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
