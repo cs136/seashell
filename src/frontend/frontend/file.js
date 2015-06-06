@@ -53,20 +53,7 @@ angular.module('frontend-app')
          * if the current file is not runnable (and Seashell can't infer which
          * file to run). */
         self.runnerFile = false;
-        self.consoleLoad = function(console_cm) {
-          self.consoleEditor = console_cm;
-          self.consoleEditor.on("change", function() {
-            var scr = self.consoleEditor.getScrollInfo();
-            self.consoleEditor.scrollTo(scr.left, scr.height);
-          });
-          onResize();
-        };
-        self.consoleOptions = {
-          lineWrapping: true,
-          readOnly: true,
-          mode: "text/plain",
-          onLoad: self.consoleLoad
-        };
+        self.consoleOptions = {};
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -144,9 +131,17 @@ angular.module('frontend-app')
         }
         $scope.$on('window-resized', onResize);
         // Scope helper function follow.
+        self.consoleLoad = function(console_cm) {
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
+          });
+          onResize();
+        };
         self.editorLoad = function(editor) {
           self.editor = editor;
-          if (self.ext === "c" || self.ext==="h") {
+          if (self.ext === "c" || self.ext === "h") {
             CodeMirror.registerHelper("lint","clike",function() {
               var found = [];
               _.forEach(self.console.errors,function(err) {
@@ -250,6 +245,13 @@ angular.module('frontend-app')
               "Shift-Tab": negTab,
             }
           };
+          self.consoleOptions = {
+            lineWrapping: true,
+            readOnly: true,
+            mode: "text/plain",
+            theme: settings.settings.text_style,
+            onLoad: self.consoleLoad
+          };
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
@@ -323,6 +325,12 @@ angular.module('frontend-app')
             }
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
+          }
+          if (self.consoleEditor) {
+            for (var cKey in self.consoleOptions) {
+              self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
+            }
+            self.consoleEditor.refresh();
           }
         };
         self.renameFile = function() {
@@ -461,7 +469,6 @@ angular.module('frontend-app')
             self.contents = conts;
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
-            self.refreshSettings();
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
@@ -470,7 +477,6 @@ angular.module('frontend-app')
               errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
               $state.go('edit-project.editor');
             }
-            self.refreshSettings();
           });
 
         // true iff the given file has the given extension
