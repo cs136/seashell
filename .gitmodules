@@ -7,7 +7,7 @@
 [submodule "lib/compiler-rt"]
 	path = lib/compiler-rt
 	url = http://llvm.org/git/compiler-rt.git
-[submodule "lib.libgit2"]
+[submodule "lib/libgit2"]
   path = lib/libgit2
   url = https://github.com/libgit2/libgit2.git
 [submodule "lib/libssh2"]
