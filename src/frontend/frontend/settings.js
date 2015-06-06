@@ -25,13 +25,13 @@ angular.module('frontend-app')
       function ($rootScope, $modal, ws, errors, $q) {
         var self = this;
         self.settings =  {
-          font : "Courier New",
-          font_size  : 10,
+          font : "Consolas",
+          font_size  : 12,
           editor_mode  : "standard",
           tab_width  : 2,
-          text_style : "neat",
           use_space : true,
-          force_narrow : false
+          force_narrow : false,
+          theme : "dark"
         };
         self.notify = {};
         var nKey = 0;

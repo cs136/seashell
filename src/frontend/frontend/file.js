@@ -228,13 +228,14 @@ angular.module('frontend-app')
           }
         }
         self.refreshSettings = function () {
+          var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           self.editorOptions = {
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
             readOnly: !self.ready || self.isBinaryFile,
             mode: mime,
-            theme: settings.settings.text_style,
+            theme: theme,
             tabSize: parseInt(settings.settings.tab_width),
             indentUnit: parseInt(settings.settings.tab_width),
             onLoad: self.editorLoad,
@@ -258,7 +259,7 @@ angular.module('frontend-app')
             lineWrapping: true,
             readOnly: true,
             mode: "text/plain",
-            theme: settings.settings.text_style,
+            theme: theme,
             onLoad: self.consoleLoad
           };
           var main_hotkeys = [{
