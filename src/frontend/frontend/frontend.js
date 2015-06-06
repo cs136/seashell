@@ -33,7 +33,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
-        self.stylesheet = "css/common.css";
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
           self.host = cookie.host;
