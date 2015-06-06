@@ -66,7 +66,7 @@ angular.module('frontend-app')
         };
 
         self.save = function () {
-          return $q.when(ws.socket.saveSettings(self.settings));
+          return $q.when(ws.socket.saveSettings(self.settings)).then(notifyChanges);
         };
 
         self.dialog = function () {
@@ -77,7 +77,7 @@ angular.module('frontend-app')
               $scope.saveSettings = function () {
                 $scope.$close();
                 self.settings = $scope.temp;
-                self.save().then(notifyChanges).catch(
+                self.save().catch(
                   function (error) {
                     errors.report(error, "Could not save settings!");
                   });

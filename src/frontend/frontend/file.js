@@ -108,26 +108,35 @@ angular.module('frontend-app')
         self.activateResize = function(){
           settings.settings.force_narrow = !(settings.settings.force_narrow);
           settings.save();
-          onResize();
         };
-        //Resize on window size change
+        // Resize on window size change
         function onResize() {
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
           var min_height = 500, margin_bottom = 30;
-          var min_y_element = $window.document.querySelector('#editor > .CodeMirror');
-          var target_height = Math.max($window.innerHeight - min_y_element.getBoundingClientRect().top - margin_bottom, min_height);
-          var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
-          var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
-          if (editor_elem)
-            editor_elem.style.height = sprintf("%fpx",
-              (narrow ? target_height * 0.7 : target_height) - file_control_height);
           var console_elem = $window.document.querySelector("#console > .CodeMirror");
-          if (console_elem)
-            console_elem.style.height = sprintf("%fpx",
-              (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
-          if(self.editor)
-            self.editor.refresh();
+          // Run only when DOM is ready.
+          if (editor_elem && console_elem) {
+            var target_height = Math.max($window.innerHeight - editor_elem.getBoundingClientRect().top - margin_bottom, min_height);
+            var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
+            var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
+            if (editor_elem)
+              editor_elem.style.height = sprintf("%fpx",
+                (narrow ? target_height * 0.7 : target_height) - file_control_height);
+            if (console_elem)
+              console_elem.style.height = sprintf("%fpx",
+                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
+            if(self.editor)
+              self.editor.refresh();
+            if(self.consoleEditor)
+              self.consoleEditor.refresh();
+            // Force the font size at any rate (and font name)
+            _.each($window.document.querySelectorAll('.CodeMirror'),
+                function (elem) {
+                  elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
+                  elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
+                });
+          }
         }
         $scope.$on('window-resized', onResize);
         // Scope helper function follow.
@@ -137,7 +146,7 @@ angular.module('frontend-app')
             var scr = self.consoleEditor.getScrollInfo();
             self.consoleEditor.scrollTo(scr.left, scr.height);
           });
-          onResize();
+          $timeout(onResize, 0);
         };
         self.editorLoad = function(editor) {
           self.editor = editor;
@@ -312,12 +321,6 @@ angular.module('frontend-app')
           if (self.editorOptions.vimMode) {
             delete self.editorOptions.extraKeys.Esc;
           }
-          // Force the font size at any rate (and font name)
-          _.each($window.document.querySelectorAll('.CodeMirror'),
-              function (elem) {
-                elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
-                elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
-              });
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
@@ -332,6 +335,7 @@ angular.module('frontend-app')
             }
             self.consoleEditor.refresh();
           }
+          onResize();
         };
         self.renameFile = function() {
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
