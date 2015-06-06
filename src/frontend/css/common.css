@@ -1,3 +1,15 @@
+/* Seashell logo */
+#logoSeashell {
+    font-family: "Unkempt",cursive;
+    font-size: 25px;
+}
+
+#versionSeashell {
+    font-size: 14px;
+    font-variant: small-caps;
+    position: absolute;
+}
+
 /* Fixed height tags. */
 body {
   position: relative; /* For scrollyspy */
@@ -43,11 +55,11 @@ body {
 
 /** Editor and the console. */
 .CodeMirror {
-	font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 .CodeMirror-gutters {
-  border: 1px dashed #eee;
+  border: none;
 }
 
 .editor-console {
@@ -60,7 +72,7 @@ body {
 
 #editor > .CodeMirror {
   height: 300px;
-  border: 1px solid #ddd;
+  border: 1px solid;
   border-top: none;
 }
 
@@ -73,9 +85,9 @@ body {
 }
 
 #current-file-controls {
-  border: 1px solid #ddd;
+  border: 1px solid;
   border-top: none;
-  border-bottom-color: #eee;
+  border-bottom-color: ;
 }
 
 #current-file-controls button {
@@ -88,8 +100,8 @@ body {
 }
 
 #toolbar-delete-file {
-  color: red;
 }
+
 #toolbar-rename-file {
   padding-right: 10px;
 }
@@ -104,8 +116,7 @@ body {
 }
 
 .editor-console-title {
-  border: 1px solid #ddd;
-  background: #f4f4f4;
+  border: 1px solid;
   font-size: 18px;
   padding: 5px 0 3px 18px;
   font-weight: 200;
@@ -139,10 +150,8 @@ body {
 }
 
 #console-input {
-  background-color: #fff;
   clear: both;
-  border: 1px solid #ddd;
-  border-top-color: #eee;
+  border: 1px solid;
 }
 #console-input input, #console-input input:focus {
   font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
@@ -246,36 +255,26 @@ div.tooltip .tooltip-inner {
 }
 
 .question-link {
-  opacity: 0.5;
 }
 
 .question-link:hover, .question-link-active:hover {
   text-decoration: none;
-  opacity: 1;
-  color: black;
 }
 
 .question-link-active {
-  opacity: 1;
-  color: black;
 }
 
 .file-text {
   font-family: monospace;
 }
 .file-link {
-  opacity: 0.5;
 }
 
 .file-link:hover, .file-link-active:hover {
   text-decoration: none;
-  opacity: 1;
-  color: black;
 }
 
 .file-link-active {
-  opacity: 1;
-  color: black;
 }
 
 .questions-row {
@@ -343,7 +342,7 @@ div.tooltip .tooltip-inner {
 
 #console > .CodeMirror {
   height: 299px;
-  border: 1px solid #ddd;
+  border: 1px solid;
   border-top: none;
   border-bottom: none;
   clear: both;
@@ -370,11 +369,11 @@ div.tooltip .tooltip-inner {
 }
 
 @media (min-width: 992px) {
-	#resize-button { display: inline; }
+  #resize-button { display: inline; }
   #console:not(.console-narrow) #console-title {
-    border: 1px solid #ddd;
-	  border-left: none;
-	}
+    border: 1px solid;
+    border-left: none;
+  }
   #console:not(.console-narrow) .CodeMirror { border-left: none; }
   #console:not(.console-narrow) #console-input { border-left: none }
   #console.console-narrow { width: 100%; }
@@ -451,7 +450,6 @@ input::-ms-clear {
 #projectOptions button {
   width: 40%;
   border-radius: 0 !important;
-  color: #337ab7;
 }
 
 #newProject {
@@ -502,9 +500,10 @@ input::-ms-clear {
     margin-bottom: 10px;
   }
 }
+
 #projectList h3 {
   text-align: center;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid;
   padding-bottom: 25px;
 }
 
@@ -519,9 +518,46 @@ input::-ms-clear {
 #projectList li {
   text-align: center;
   padding: 15px 0 15px 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid;
 }
 #projectList a {
   display: block;
   font-size: 1.25em;
+}
+
+/* The new poject and refresh button on landing page */
+#refresh.btn-default, #newProject.btn-default {
+}
+
+#newProject.btn-default:hover, #newProject.btn-default:focus, #newProject.btn-default:active,
+#refresh.btn-default:hover, #refresh.btn-default:focus, #refresh.btn-default:active {
+}
+
+/* Custom CSS for the 3 options glyphicons */
+a.custom-glyph{
+}
+
+a.custom-glyph:hover, a.custom-glyph:focus, a.custom-glyph:active{
+}
+
+/* Options menu */
+.modal-content {
+}
+
+.modal-title {
+}
+
+label {
+}
+
+.form-control{
+}
+
+#popup-text{
+}
+
+#popup-text a{
+}
+
+.list-group-item{
 }

@@ -1,0 +1,219 @@
+/* Seashell logo Dark Theme Colours*/
+#logoSeashell {
+    color: #fff;
+}
+
+#versionSeashell {
+    color: #fff;
+}
+/* colour of backdrop (background) */
+
+body {
+  background-color: #333;
+}
+
+.container-fluid {
+  background-color: #333;
+}
+
+/** hr bar Dark theme change **/
+hr{
+  border-top-color: #ff9999;
+}
+
+/* Change for the [userID]/[project name] display tab after entering a project */
+h2.text-left{
+  color: #ff9999;
+}
+
+/* Landing page headings colours */
+.h3, h3{
+  color: #FF9999;
+}
+
+/** color of link (on all pages) Dark theme change **/
+/**a{
+  color: #FFFC99;
+  opacity: 0.7;
+}
+a:focus, a:hover{
+  color: #FFFC99;
+  opacity: 1;
+}**/
+
+/* Color of the downward arrow for [userID]/[project name] display tab after entering a project */
+a.dropdown-toggle{
+  /* this !important tag is here to override an inline style */
+  color: #ff9999 !important;
+}
+
+/* CodeMirror gutter dashed outline colour change */
+.CodeMirror-gutters {
+  border-color: #ff9999;
+}
+
+/* Editor border - also changed width of it. It's 1px in the default theme, 2px in the dark theme */
+#editor > .CodeMirror {
+  border-color: #666;
+}
+
+/* Edtor bar below console border colour */
+#current-file-controls {
+  border-color: #666;
+  border-bottom-color: #888;
+}
+
+ #toolbar-delete-file {
+  color: red;
+}
+/* Editor code and console bar (and text on it) style */
+.editor-console-title {
+  border-color:  #666;
+  background: #4f4f4f;
+  color: #ddd;
+}
+
+/** Code and console link colours **/
+.btn-link
+{
+  color: #fff8aa;
+}
+
+.btn-link:focus, .btn-link:hover
+{
+  color: #ffaaaa;
+}
+
+/* Console input bar */
+#console-input {
+  background-color: #fff;
+  border-color: #ddd;
+  border-top-color: #eee;
+}
+
+/* question numbers on the right hand upper corner on top of console */
+.question-link {
+  opacity: 0.5;
+}
+
+a.question-link.ng-binding {
+  color: #fff8c9;
+}
+
+.question-link:hover, .question-link-active:hover {
+  opacity: 1;
+}
+
+.question-link-active {
+  opacity: 1;
+}
+
+/* file-text is the folder number of the question (file) currently open */
+.file-text {
+  color: #ddd;
+}
+
+.file-link {
+  opacity: 0.5;
+}
+a.file-link.ng-binding {
+  color: #fff8c9;
+}
+.file-link:hover, .file-link-active:hover {
+  opacity: 1;
+}
+
+.file-link-active {
+  opacity: 1;
+}
+
+/* Border surrounding the console output screen */
+#console > .CodeMirror {
+  border-color: #666;
+}
+
+
+/* Border surrounding console bar */
+@media (min-width: 992px) {
+  #console:not(.console-narrow) #console-title {
+    /* Dark theme change */
+    border-color: #666;
+  }
+}
+
+/* New Project and Refresh button */
+#projectOptions button {
+  color: #FFF8DA;
+  font-weight: bold;
+}
+
+#projectList h3 {
+  border-bottom-color: #888;
+} 
+
+#projectList li {
+  border-bottom-color: #888;
+}
+#projectList a {
+  color:#FFFC99;
+  opacity: 0.7;
+}
+
+#projectList a:hover, #projectList a:focus, #projectList a:active {
+  color: #FFFC99;
+  opacity: 1;
+}
+#refresh.btn-default, #newProject.btn-default {
+  background-color: #444;
+  border-color: #777;
+}
+
+#newProject.btn-default:hover, #newProject.btn-default:focus, #newProject.btn-default:active,
+#refresh.btn-default:hover, #refresh.btn-default:focus, #refresh.btn-default:active {
+  background-color: #666;
+  border-color: #E6E6E6;
+  color: #fff8aa;
+}
+
+/*searing out the 3 glyphicons into separate custom CSS class */
+a.custom-glyph {
+  color: #FFFC99;
+  opacity: 0.7;
+}
+a.custom-glyph:hover, a.custom-glyph:focus, a.custom-glyph:active {
+  color: #FFFC99;
+  opacity: 1;
+}
+
+/* Options menu */
+.modal-content {
+  border-color: #666;
+  box-shadow: 0px 5px 15px  #888; 
+  background-color: #222;
+}
+
+.modal-title {
+  color:wheat;
+}
+
+label {
+  color:wheat;
+}
+
+.form-control{
+  color: #fff;
+  border-color: #666;
+  background-color: #555;
+}
+
+#popup-text{
+  color: #ccc;
+}
+
+#popup-text a{
+  color: #f99;
+}
+
+.list-group-item{
+  background-color: #333;
+} 

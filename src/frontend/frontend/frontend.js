@@ -101,6 +101,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
         ws.register_callback('failed', function () {self.failed = true;}, true);
+        settings.addWatcher(function () {
+          if (settings.settings.theme_style === "dark") {
+            $css.removeAll();
+            $css.add("css/dark.css");
+          } else {
+            $css.removeAll();
+            $css.add("css/light.css");
+          } 
+        }, true);
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
