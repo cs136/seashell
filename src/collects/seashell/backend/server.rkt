@@ -138,8 +138,8 @@
   (_dump-creds))
 
 
-;; Channel used to keep process alive.
-(define keepalive-chan (make-async-channel))
+;; Semaphore used to keep process alive.
+(define keepalive-sema (make-semaphore))
 
 ;; init-environment -> void?
 ;; Sets up the Seashell project environment
@@ -305,7 +305,7 @@
              request-logging-dispatcher
              (filter:make #rx"^/$" (make-websocket-dispatcher 
                                     (lambda (conn state)
-                                      (conn-dispatch keepalive-chan conn state))))
+                                      (conn-dispatch keepalive-sema conn state))))
              (filter:make #rx"^/export/" project-export-dispatcher)
              (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
@@ -363,7 +363,7 @@
           (with-handlers
               ([exn:break? (lambda(e) (logf 'info "Terminating on break."))])
             (let loop ()
-              (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
+              (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-sema)
                 [#f (void)]
                 [else (loop)]))))))))
      (lambda ()

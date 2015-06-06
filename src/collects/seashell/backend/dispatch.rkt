@@ -35,10 +35,10 @@
 
 ;; Dispatch function.
 ;; Arguments:
-;;  keepalive-chan - Keepalive channel.
+;;  keepalive-sema - Keepalive semaphore.
 ;;  wsc - WebSocket connection.
 ;;  state - [Unused]
-(define (conn-dispatch keepalive-chan connection state)
+(define (conn-dispatch keepalive-sema connection state)
   (define authenticated? #f)
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
@@ -660,7 +660,7 @@
           (call-with-limits #f (read-config 'request-memory-limit)
             (lambda ()
               (define message (bytes->jsexpr data))
-              (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
+              (semaphore-post keepalive-sema)
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))
