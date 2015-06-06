@@ -168,6 +168,7 @@ body {
   padding-right: 0;
   padding-left: 5px;
   border: none;
+  border-radius: 0px;
 }
 /** Callouts. */
 

@@ -103,9 +103,8 @@ a.dropdown-toggle{
 
 /* Console input bar */
 #console-input {
-  background-color: #fff;
-  border-color: #ddd;
-  border-top-color: #eee;
+  background-color: #888;
+  border-color: #666;
 }
 
 /* question numbers on the right hand upper corner on top of console */
@@ -233,4 +232,13 @@ label {
 
 .list-group-item{
   background-color: #333;
-} 
+}
+
+#input-line {
+  background-color: #000;
+  text-color: #fff;
+}
+
+#console-input .input-group-addon {
+  background-color: #000;
+}
