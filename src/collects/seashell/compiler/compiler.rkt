@@ -143,10 +143,20 @@
         (delete-file object-file)
         
         ;; Read the result:
-        (define linker-result #"")
-        (when (zero? linker-res)
-          (set! linker-result (call-with-input-file result-file port->bytes))
-          (delete-file result-file))
+        (define linker-result
+          (cond
+            [(zero? linker-res)
+              (call-with-input-file
+                result-file
+                (lambda (port)
+                  (file-position port eof)
+                  (define size (file-position port))
+                  (file-position port 0)
+                  (define result (make-shared-bytes size))
+                  (read-bytes! result port)
+                  result))]
+            [else
+              #f]))
         
         ;; Create the final diagnostics table:
         (define diags
