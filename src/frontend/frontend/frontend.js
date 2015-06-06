@@ -20,19 +20,20 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCookies', 'ui.router',
-    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys'])
+    'ui.bootstrap', 'ui.codemirror', 'cfp.hotkeys', 'door3.css'])
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', '$cookies', '$window',
-    'settings-service', '$location',
+    'settings-service', '$location', '$css',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        $cookies, $window, settings, $location) {
+        $cookies, $window, settings, $location, $css) {
         "use strict";
         var self = this;
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
         self.errors = errors;
+        self.stylesheet = "css/common.css";
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
           self.host = cookie.host;

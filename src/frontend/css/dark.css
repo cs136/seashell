@@ -1,10 +1,9 @@
 /* Seashell logo Dark Theme Colours*/
 #logoSeashell {
-    color: #fff;
+  color: #888;
 }
-
 #versionSeashell {
-    color: #fff;
+    color: #888;
 }
 /* colour of backdrop (background) */
 
@@ -45,6 +44,24 @@ a:focus, a:hover{
 a.dropdown-toggle{
   /* this !important tag is here to override an inline style */
   color: #ff9999 !important;
+}
+
+.btn-primary {
+  background-color: #666;
+  color: #fff8aa;
+  border-color: #888;
+}
+.btn-primary:hover {
+  background-color: #fff8aa;
+  color: #666;
+  border-color: #888;
+}
+.btn-default {
+  background-color: #666;
+}
+.btn-default:hover {
+  background-color: #444;
+  color: #888;
 }
 
 /* CodeMirror gutter dashed outline colour change */
