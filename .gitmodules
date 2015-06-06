@@ -8,8 +8,8 @@
 	path = lib/compiler-rt
 	url = http://llvm.org/git/compiler-rt.git
 [submodule "lib/libgit2"]
-  path = lib/libgit2
-  url = https://github.com/libgit2/libgit2.git
+	path = lib/libgit2
+	url = https://github.com/libgit2/libgit2.git
 [submodule "lib/libssh2"]
 	path = lib/libssh2
 	url = https://github.com/libssh2/libssh2.git
