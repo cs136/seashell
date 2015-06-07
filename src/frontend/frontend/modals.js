@@ -276,9 +276,10 @@ angular.module('frontend-app')
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
                        .catch(function (error) {
-                         var type = error.error.indexOf("marmoset_submit")===-1 ? "seashell" : "marmoset";
+                         var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
                          notify(false, $scope.selected_project);
+                         return $q.reject(error);
                        }).then(function () {
                          notify(true, $scope.selected_project);
                        });
