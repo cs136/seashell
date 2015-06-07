@@ -104,15 +104,15 @@ angular.module('frontend-app')
           } else if (/^allocated by/.test(line)) {
             self._write("allocated by:\n");
           } else if (suppstackaddrpatt.test(line)) {
-            var stackAddress = suppstackaddrpatt.exec(line)[1];
-            self._write(sprintf("\n  %s is contained in stack frame:\n", stackAddress));
+            var stackAddressInfo = suppstackaddrpatt.exec(line);
+            self._write(sprintf("\n  %s is contained %s bytes into stack frame:\n", stackAddressInfo[1], stackAddressInfo[2]));
           } else if (frameinfopatt.test(line)) {
             var numFrameObjects = frameinfopatt.exec(line)[1];
             self._write(sprintf("\n  This frame has %s object(s):\n", numFrameObjects));
           } else if (framevarpatt.test(line)) {
             var frameVarInfo = framevarpatt.exec(line);
             var objectSize = parseInt(frameVarInfo[2]) - parseInt(frameVarInfo[1]);
-            self._write(sprintf("  %d byte object %s located at offset %s in frame.", objectSize, frameVarInfo[3], frameVarInfo[1]));
+            self._write(sprintf("  %d byte object %s located %s bytes into frame.", objectSize, frameVarInfo[3], frameVarInfo[1]));
             if (/overflow/.test(line)) {
               self._write("  Access overflew this variable.\n");
             } else if (/underflow/.test(line)) {
