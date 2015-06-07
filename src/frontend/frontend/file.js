@@ -53,20 +53,7 @@ angular.module('frontend-app')
          * if the current file is not runnable (and Seashell can't infer which
          * file to run). */
         self.runnerFile = false;
-        self.consoleLoad = function(console_cm) {
-          self.consoleEditor = console_cm;
-          self.consoleEditor.on("change", function() {
-            var scr = self.consoleEditor.getScrollInfo();
-            self.consoleEditor.scrollTo(scr.left, scr.height);
-          });
-          onResize();
-        };
-        self.consoleOptions = {
-          lineWrapping: true,
-          readOnly: true,
-          mode: "text/plain",
-          onLoad: self.consoleLoad
-        };
+        self.consoleOptions = {};
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -121,32 +108,49 @@ angular.module('frontend-app')
         self.activateResize = function(){
           settings.settings.force_narrow = !(settings.settings.force_narrow);
           settings.save();
-          onResize();
         };
-        //Resize on window size change
+        // Resize on window size change
         function onResize() {
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
           var min_height = 500, margin_bottom = 30;
-          var min_y_element = $window.document.querySelector('#editor > .CodeMirror');
-          var target_height = Math.max($window.innerHeight - min_y_element.getBoundingClientRect().top - margin_bottom, min_height);
-          var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
-          var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
-          if (editor_elem)
-            editor_elem.style.height = sprintf("%fpx",
-              (narrow ? target_height * 0.7 : target_height) - file_control_height);
           var console_elem = $window.document.querySelector("#console > .CodeMirror");
-          if (console_elem)
-            console_elem.style.height = sprintf("%fpx",
-              (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
-          if(self.editor)
-            self.editor.refresh();
+          // Run only when DOM is ready.
+          if (editor_elem && console_elem) {
+            var target_height = Math.max($window.innerHeight - editor_elem.getBoundingClientRect().top - margin_bottom, min_height);
+            var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
+            var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
+            if (editor_elem)
+              editor_elem.style.height = sprintf("%fpx",
+                (narrow ? target_height * 0.7 : target_height) - file_control_height);
+            if (console_elem)
+              console_elem.style.height = sprintf("%fpx",
+                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
+            if(self.editor)
+              self.editor.refresh();
+            if(self.consoleEditor)
+              self.consoleEditor.refresh();
+            // Force the font size at any rate (and font name)
+            _.each($window.document.querySelectorAll('.CodeMirror'),
+                function (elem) {
+                  elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
+                  elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
+                });
+          }
         }
         $scope.$on('window-resized', onResize);
         // Scope helper function follow.
+        self.consoleLoad = function(console_cm) {
+          self.consoleEditor = console_cm;
+          self.consoleEditor.on("change", function() {
+            var scr = self.consoleEditor.getScrollInfo();
+            self.consoleEditor.scrollTo(scr.left, scr.height);
+          });
+          $timeout(onResize, 0);
+        };
         self.editorLoad = function(editor) {
           self.editor = editor;
-          if (self.ext === "c" || self.ext==="h") {
+          if (self.ext === "c" || self.ext === "h") {
             CodeMirror.registerHelper("lint","clike",function() {
               var found = [];
               _.forEach(self.console.errors,function(err) {
@@ -224,13 +228,14 @@ angular.module('frontend-app')
           }
         }
         self.refreshSettings = function () {
+          var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           self.editorOptions = {
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
             readOnly: !self.ready || self.isBinaryFile,
             mode: mime,
-            theme: settings.settings.text_style,
+            theme: theme,
             tabSize: parseInt(settings.settings.tab_width),
             indentUnit: parseInt(settings.settings.tab_width),
             onLoad: self.editorLoad,
@@ -249,6 +254,13 @@ angular.module('frontend-app')
               "Cmd-S": function() { },
               "Shift-Tab": negTab,
             }
+          };
+          self.consoleOptions = {
+            lineWrapping: true,
+            readOnly: true,
+            mode: "text/plain",
+            theme: theme,
+            onLoad: self.consoleLoad
           };
           var main_hotkeys = [{
             combo: 'ctrl+d',
@@ -310,12 +322,6 @@ angular.module('frontend-app')
           if (self.editorOptions.vimMode) {
             delete self.editorOptions.extraKeys.Esc;
           }
-          // Force the font size at any rate (and font name)
-          _.each($window.document.querySelectorAll('.CodeMirror'),
-              function (elem) {
-                elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
-                elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
-              });
           // If the CodeMirror has been loaded, add it to the editor.
           if (self.editor) {
             for (var key in self.editorOptions) {
@@ -324,6 +330,13 @@ angular.module('frontend-app')
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
+          if (self.consoleEditor) {
+            for (var cKey in self.consoleOptions) {
+              self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
+            }
+            self.consoleEditor.refresh();
+          }
+          onResize();
         };
         self.renameFile = function() {
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
@@ -461,7 +474,6 @@ angular.module('frontend-app')
             self.contents = conts;
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
-            self.refreshSettings();
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
@@ -470,7 +482,6 @@ angular.module('frontend-app')
               errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
               $state.go('edit-project.editor');
             }
-            self.refreshSettings();
           });
 
         // true iff the given file has the given extension
