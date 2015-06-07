@@ -58,6 +58,7 @@ angular.module('frontend-app')
             var frame = JSON.parse(json);
             var short_module = frame.module && frame.module.split('/').pop();
             var short_file = frame.file && frame.file.split('/').pop();
+            traced_main = traced_main || (frame.function === "main");
             if (frame.function === "__interceptor_free" || frame.function === "free") {
               traced_main = false;
               if (only_free) {
@@ -71,7 +72,6 @@ angular.module('frontend-app')
               self._write("  Allocated:\n");
             }
             else if (frame.function !== "<null>" && frame.file !== "<null>") {
-              traced_main = traced_main || (frame.function === "main");
               if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
                 self._write(sprintf("  in %s, %s:%d:%d\n",
                   frame.function,
@@ -79,7 +79,6 @@ angular.module('frontend-app')
                   frame.line,
                   frame.column));
             } else if (frame.function !== "<null>") {
-              traced_main = traced_main || (frame.function === "main");
               if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
                 self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, short_module, frame.offset));
             } else {
