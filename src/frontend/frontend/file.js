@@ -228,8 +228,10 @@ angular.module('frontend-app')
           }
         }
         self.refreshSettings = function () {
-          var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
+          // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
+          var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
           self.editorOptions = {
+            scrollbarStyle: "overlay",
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
@@ -242,6 +244,7 @@ angular.module('frontend-app')
             matchBrackets: true,
             rulers: [80],
             extraKeys: {
+              "Ctrl-Space": "autocomplete",
               "Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
@@ -256,6 +259,7 @@ angular.module('frontend-app')
             }
           };
           self.consoleOptions = {
+            scrollbarStyle: "overlay",
             lineWrapping: true,
             readOnly: true,
             mode: "text/plain",
