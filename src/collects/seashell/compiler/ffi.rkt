@@ -39,7 +39,8 @@
          seashell_compiler_get_object
          seashell_clang_version
          seashell_compiler_object_arch
-         seashell_compiler_object_os)
+         seashell_compiler_object_os
+         compiler_kernel_thread)
 
 (define-ffi-definer define-clang
                     (ffi-lib (read-config 'seashell-clang)))
@@ -89,4 +90,11 @@
                         (memcpy result address size)
                         result]
                       [else #f])))))
-
+;; Helper for compiler shutdown.
+(define-ffi-definer define-mzscheme (ffi-lib #f))
+(define-mzscheme scheme_make_custodian (_fun _pointer -> _scheme))
+(define (compiler_kernel_thread thunk)
+  ;; Since we provide #f to scheme_make_custodian,
+  ;;  the custodian is managed directly by the root:
+  (parameterize ([current-custodian (scheme_make_custodian #f)])
+    (thread thunk)))

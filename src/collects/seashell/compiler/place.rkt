@@ -20,7 +20,8 @@
          racket/contract
          racket/match
          racket/place
-         racket/bool)
+         racket/bool
+         seashell/compiler/ffi)
 (provide seashell-compile-files/place
          seashell-compile-place/init)
 
@@ -33,20 +34,33 @@
 (define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
   (-> (listof string?) (listof string?) (listof path?) (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
-  (if (and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
-    (call-with-semaphore
-      compiler-place-lock
-      (lambda ()
-        (place-channel-put compiler-place 
-                           (list user-cflags user-ldflags sources objects))
-        (match-define 
-          (list exn? result data)
-          (place-channel-get compiler-place))
-        (when exn?
-          (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
-                           (current-continuation-marks))))
-        (values result data)))
-    (values #f (make-hash))))
+  (cond
+    [(and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
+      (define result-channel (make-channel))
+      ;; This runs with the main custodian, as an early, unexpected shutdown
+      ;; of this thread will cause the compiler to end up in an inconsistent state.
+      (compiler_kernel_thread
+        (lambda ()
+          (call-with-semaphore
+            compiler-place-lock
+            (lambda ()
+              (place-channel-put compiler-place 
+                                 (list user-cflags user-ldflags sources objects))
+              (match-define 
+                (list exn? result data)
+                (place-channel-get compiler-place))
+              (cond
+                [exn?
+                 (channel-put result-channel
+                              (exn:fail (format "Exception raised in compiler place: ~a!" data)
+                                        (current-continuation-marks)))]
+                [else
+                 (channel-put result-channel
+                              (list result data))])))))
+      (match (channel-get result-channel)
+        [(? exn? exn) (raise exn)]
+        [(list result data) (values result data)])]
+    [else (values #f (make-hash))]))
 
 ;; seashell-compile-place/init
 ;; Sets up the place for compilation.
