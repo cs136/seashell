@@ -48,22 +48,46 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
+      var only_free = true;
+      var traced_main = false;
+
       function stack_trace_line(line) {
-        if(/^{/.test(line)) {
-          var json = line.replace(/'/g, '"');
-          var frame = JSON.parse(json);
-          if (frame.function !== "<null>" && frame.file !== "<null>") {
-            var short_file = frame.file.split('/').pop();
-            self._write(sprintf("  in %s, %s:%d:%d\n",
-              frame.function,
-              short_file,
-              frame.line,
-              frame.column));
-          } else if (frame.function !== "<null>") {
-            self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, frame.module, frame.offset));
-          } else {
-            self._write(sprintf("  in module %s (+%x)\n", frame.module, frame.offset));
+        try {
+          if(/^{/.test(line)) {
+            var json = line.replace(/'/g, '"');
+            var frame = JSON.parse(json);
+            var short_module = frame.module && frame.module.split('/').pop();
+            var short_file = frame.file && frame.file.split('/').pop();
+            if (frame.function === "__interceptor_free" || frame.function === "free") {
+              traced_main = false;
+              if (only_free) {
+                self._write("  Freed:\n");
+                only_free = false;
+              } else {
+                self._write("  First freed:\n");
+              }
+            } else if (frame.function === "malloc" || frame.function === "__interceptor_malloc") {
+              traced_main = true;
+              self._write("  Allocated:\n");
+            }
+            else if (frame.function !== "<null>" && frame.file !== "<null>") {
+              traced_main = traced_main || (frame.function === "main");
+              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
+                self._write(sprintf("  in %s, %s:%d:%d\n",
+                  frame.function,
+                  short_file,
+                  frame.line,
+                  frame.column));
+            } else if (frame.function !== "<null>") {
+              traced_main = traced_main || (frame.function === "main");
+              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
+                self._write(sprintf("  in %s, from module %s (+%x)\n", frame.function, short_module, frame.offset));
+            } else {
+              self._write(sprintf("  in module %s (+%x)\n", short_module, frame.offset));
+            }
           }
+        } catch (e) {
+          console.log("Could not produce stack trace from line: %s, %s", line, e);
         }
       }
       function stack_trace(contents) {
@@ -82,6 +106,11 @@ angular.module('frontend-app')
       else if(/ SEGV /.test(contents[1])) {
         self._write(sprintf("%s\n",
           /^[^\(]*/.exec(contents[1])));
+      }
+      else if(/stack-overflow /.test(contents[1])) {
+        self._write(sprintf("Stack overflow on address %s. Check call stack.\n",
+          addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
         self._write(sprintf("Stack buffer overflow on address %s. Check array indices.\n",
