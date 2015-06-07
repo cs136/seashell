@@ -165,7 +165,7 @@
       (cons 'compiler-flags               '(;; Warning flags.
                                             "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
                                             ;; Compilation flags.
-                                            "-gdwarf-4" "-O0" "-mdisable-fp-elim"
+                                            "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
                                             ;; Static Analyzer flags.
                                             ; Add standard static analyzer options (clang/lib/Driver/Tools.cpp:2954)
                                             "-analyzer-store=region"
