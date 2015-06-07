@@ -67,8 +67,10 @@ angular.module('frontend-app')
               } else {
                 self._write("  First freed:\n");
               }
-            } else if (frame.function === "malloc" || frame.function === "__interceptor_malloc") {
-              traced_main = true;
+            } else if (frame.function === "malloc" || frame.function === "__interceptor_malloc" ||
+                       frame.function === "realloc" || frame.function === "__interceptor_realloc" ||
+                       frame.function === "calloc" || frame.function === "__interceptor_calloc") {
+              traced_main = false;
               self._write("  Allocated:\n");
             }
             else if (frame.function !== "<null>" && frame.file !== "<null>") {
