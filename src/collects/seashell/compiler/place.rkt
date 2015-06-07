@@ -26,8 +26,6 @@
          seashell-compile-place/init)
 
 (define compiler-place #f)
-(define compiler-place-lock (make-semaphore 1))
-
 ;; seashell-compile-files/place 
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
@@ -36,30 +34,16 @@
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   (cond
     [(and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
-      (define result-channel (make-channel))
-      ;; This runs with the main custodian, as an early, unexpected shutdown
-      ;; of this thread will cause the compiler to end up in an inconsistent state.
-      (compiler_kernel_thread
-        (lambda ()
-          (call-with-semaphore
-            compiler-place-lock
-            (lambda ()
-              (place-channel-put compiler-place 
-                                 (list user-cflags user-ldflags sources objects))
-              (match-define 
-                (list exn? result data)
-                (place-channel-get compiler-place))
-              (cond
-                [exn?
-                 (channel-put result-channel
-                              (exn:fail (format "Exception raised in compiler place: ~a!" data)
-                                        (current-continuation-marks)))]
-                [else
-                 (channel-put result-channel
-                              (list result data))])))))
-      (match (channel-get result-channel)
-        [(? exn? exn) (raise exn)]
-        [(list result data) (values result data)])]
+      (define-values (read-end write-end) (place-channel))
+      (place-channel-put compiler-place 
+                         (list write-end user-cflags user-ldflags sources objects))
+      (match-define 
+        (list exn? result data)
+        (place-channel-get read-end))
+      (when exn?
+            (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
+                             (current-continuation-marks))))
+      (values result data)]
     [else (values #f (make-hash))]))
 
 ;; seashell-compile-place/init

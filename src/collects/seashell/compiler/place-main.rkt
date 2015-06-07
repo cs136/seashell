@@ -22,6 +22,17 @@
          racket/place)
 (provide seashell-compiler-place)
 
+;; (seashell-compiler-place/thread write-end . args)
+;; Thread that actually processes the compilation request.
+(define (seashell-compiler-place/thread write-end . args)
+  (thread
+    (lambda ()
+      (with-handlers
+        ([exn:fail?
+          (lambda (exn) (place-channel-put write-end (list #t #f (exn-message exn))))])
+        (define-values (result data) (apply seashell-compile-files args))
+        (place-channel-put write-end (list #f result data))))))
+       
 ;; (seashell-compiler-place channel)
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
@@ -35,7 +46,5 @@
     (with-handlers
       ([exn:fail?
         (lambda (exn) (place-channel-put channel (list #t #f (exn-message exn))))])
-      (define args (place-channel-get channel))
-      (define-values (result data) (apply seashell-compile-files args))
-      (place-channel-put channel (list #f result data)))
+      (apply seashell-compiler-place/thread (place-channel-get channel)))
     (loop)))
