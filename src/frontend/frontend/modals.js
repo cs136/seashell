@@ -35,15 +35,15 @@ angular.module('frontend-app')
       function($modal) {
         return function() { return $modal.open({
           templateUrl: "frontend/templates/login-template.html",
-          controller: ['$scope', '$window', 'cookieStore', 'socket',
-            function($scope, $window, cookieStore, ws) {
+          controller: ['$scope', '$window', '$cookies', 'socket',
+            function($scope, $window, $cookies, ws) {
               $scope.username = "";
               $scope.password = "";
               $scope.reset = false;
               $scope.busy = false;
               $scope.error = false;
 
-              var current = cookieStore.get(SEASHELL_CREDS_COOKIE);
+              var current = $cookies.getObject(SEASHELL_CREDS_COOKIE);
               if (current) {
                 $scope.username = current.user;
               }
@@ -66,7 +66,7 @@ angular.module('frontend-app')
                           data.error.message, data.error.code);
                         console.log(self.error);
                       } else if(data.port !== undefined) {
-                        cookieStore.add(SEASHELL_CREDS_COOKIE, data, {secure:true});
+                        $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure:true});
                         console.log("All done login!");
                         ws.connect().then(function() {
                           $scope.$dismiss();
@@ -276,9 +276,10 @@ angular.module('frontend-app')
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
                        .catch(function (error) {
-                         var type = error.error.indexOf("marmoset_submit")===-1 ? "seashell" : "marmoset";
+                         var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
                          errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
                          notify(false, $scope.selected_project);
+                         return $q.reject(error);
                        }).then(function () {
                          notify(true, $scope.selected_project);
                        });

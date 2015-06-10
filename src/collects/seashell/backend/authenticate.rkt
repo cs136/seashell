@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -19,9 +19,12 @@
 (require seashell/crypto
          seashell/log
          seashell/backend/project
+         json
+         racket/list
          racket/serialize
-         net/base64
-         json)
+         racket/contract
+         racket/match
+         racket/port)
 (provide exn:authenticate? authenticate install-server-key! make-nonce
          make-authenticate-response make-download-token check-download-token
          make-challenge make-file-upload-token check-upload-token)
@@ -83,7 +86,7 @@
 ;; Raises exn:authenticate if an error occurred.
 (define/contract (authenticate token challenge)
   (-> authenticate-token/c challenge/c void?)
-  (match-define `(,iv ,coded ,tag ,nonce) (map (curry apply bytes) token))
+  (match-define `(,iv ,coded ,tag ,nonce) (map (lambda (token) (apply bytes token)) token))
   (define challenge-bytes (apply bytes challenge))
   
   (with-handlers
@@ -129,7 +132,7 @@
   (define-values
     (iv coded tag)
     (seashell-encrypt server-key
-      (with-output-to-bytes (thunk (write (serialize (list project
+      (with-output-to-bytes (lambda () (write (serialize (list project
         (+ 60000 (current-milliseconds)))))))
       #""))
   (map bytes->list `(,iv ,coded ,tag)))
@@ -154,7 +157,7 @@
                   (map list->bytes token))
     (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
     (define vals (with-input-from-bytes
-      decrypted-token (thunk (deserialize (read)))))
+      decrypted-token (lambda () (deserialize (read)))))
     (if (and (project-name? (first vals))
              (is-project? (first vals)))
         (if (<= (current-milliseconds) (second vals))
@@ -203,7 +206,7 @@
                   (map list->bytes token))
     (define decrypted-token (seashell-decrypt server-key iv tag coded #""))
     (define vals (with-input-from-bytes
-      decrypted-token (thunk (deserialize (read)))))
+      decrypted-token (lambda () (deserialize (read)))))
     (if (and (project-name? (first vals))
              (is-project? (first vals)))
         (if (<= (current-milliseconds) (third vals))

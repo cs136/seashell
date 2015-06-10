@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's login gateway.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -17,16 +17,18 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require net/cgi
-         net/url
          net/cookie
          net/uri-codec
          seashell/seashell-config
          seashell/support-native
          seashell/log
          seashell/tunnel
-         seashell/crypto
          racket/sandbox
          racket/serialize
+         racket/list
+         racket/match
+         racket/contract
+         racket/system
          json
          xml)
 

@@ -1,4 +1,4 @@
-#lang racket 
+#lang racket/base
 ;; Seashell's cryptographic communications backend.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -19,12 +19,10 @@
 (require ffi/unsafe
          ffi/unsafe/define 
          ffi/unsafe/alloc
-         racket/runtime-path
          openssl/libcrypto
          openssl/libssl
          openssl
          json)
-(require seashell/seashell-config)
 (require (prefix-in contract: racket/contract))
 
 (provide seashell-encrypt seashell-decrypt
@@ -54,7 +52,7 @@
   (let* ([buffer (make-bytes 512)])
     (ERR_error_string_n id buffer (bytes-length buffer))
     (regexp-match #rx#"^[^\0]*" buffer)))
-(define (check result function [predicate? (curry = 1)])
+(define (check result function [predicate? (lambda (v) (= v 1))])
   (unless (predicate? result)
     (raise (exn:crypto (format "~a: ~a" function (get-error-message (ERR_get_error)))
                        (current-continuation-marks)))))
@@ -82,8 +80,8 @@
 ;; encrypt_aes128_gcm (key:16) (iv:12) text (aad/optional) -> (values encrypted (tag:16))
 ;;
 ;; Encrypts and Authenticates.
-(define/contract (encrypt_aes128_gcm key iv text [aad #f])
-  (contract:->* (bytes? bytes? bytes?) ((or/c bytes? #f)) (values bytes? bytes?))
+(contract:define/contract (encrypt_aes128_gcm key iv text [aad #f])
+  (contract:->* (bytes? bytes? bytes?) ((contract:or/c bytes? #f)) (values bytes? bytes?))
   (define CTX (EVP_CIPHER_CTX_new))
   (EVP_EncryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
   (when aad
@@ -101,8 +99,8 @@
 ;; decrypt_aes128_gcm (key:16) (iv:12) (tag:16) encrypted (aad/optional) -> text
 ;;
 ;; Decrypts and verifies.
-(define/contract (decrypt_aes128_gcm key iv tag text [aad #f])
-  (contract:->* (bytes? bytes? bytes? bytes?) ((or/c bytes? #f)) bytes?)
+(contract:define/contract (decrypt_aes128_gcm key iv tag text [aad #f])
+  (contract:->* (bytes? bytes? bytes? bytes?) ((contract:or/c bytes? #f)) bytes?)
   (define CTX (EVP_CIPHER_CTX_new))
   (EVP_DecryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
   (EVP_CIPHER_CTX_ctrl CTX EVP_CTRL_GCM_SET_TAG 16 tag)
@@ -120,7 +118,7 @@
 ;; (seashell-crypt-make-key)
 ;;
 ;; Returns a new AES-128 key.
-(define/contract (seashell-crypt-make-key)
+(contract:define/contract (seashell-crypt-make-key)
   (contract:-> bytes?)
   (define key (make-bytes 16))
   (RAND_bytes key 16)
@@ -129,7 +127,7 @@
 ;; (seashell-crypt-make-iv)
 ;; 
 ;; Returns a new AES-128-GCM IV [12 bytes long]
-(define/contract (seashell-crypt-make-iv)
+(contract:define/contract (seashell-crypt-make-iv)
   (contract:-> bytes?)
   (define iv (make-bytes 12))
   (RAND_bytes iv 12)
@@ -138,7 +136,7 @@
 ;; (seashell-crypt-make-token)
 ;; 
 ;; Returns a new token [32 bytes long]
-(define/contract (seashell-crypt-make-token)
+(contract:define/contract (seashell-crypt-make-token)
   (contract:-> bytes?)
   (define token (make-bytes 32))
   (RAND_bytes token 32)
@@ -155,7 +153,7 @@
 ;;
 ;; Returns:
 ;;  (values iv coded tag) - IV and GCM tag respectively.
-(define/contract (seashell-encrypt key frame plain)
+(contract:define/contract (seashell-encrypt key frame plain)
   (contract:-> bytes? bytes? bytes? (values bytes? bytes? bytes?))
   (define iv (seashell-crypt-make-iv))
   (define auth (bytes-append iv plain))
@@ -173,7 +171,7 @@
 ;;
 ;; Returns:
 ;;  Decrypted frame.
-(define/contract (seashell-decrypt key iv tag coded plain)
+(contract:define/contract (seashell-decrypt key iv tag coded plain)
   (contract:-> bytes? bytes? bytes? bytes? bytes? bytes?)
   (define auth (bytes-append iv plain))
   (decrypt_aes128_gcm key iv tag coded auth))
@@ -190,7 +188,7 @@
 ;; expected to in future versions of this library.  Everything
 ;; else currently is IV, ciphertext, extra authenticated data,
 ;; GCM authentication tag, and plaintext.
-(define/contract (seashell-crypt-key->client key)
+(contract:define/contract (seashell-crypt-key->client key)
   (contract:-> bytes? jsexpr?)
   ;; Currently, write out the key as a JSON
   ;; list of 4 4-byte big-endian signed words.
@@ -213,7 +211,7 @@
 ;; expected to in future versions of this library.  Everything
 ;; else currently is IV, ciphertext, extra authenticated data,
 ;; GCM authentication tag, and plaintext.
-(define/contract (seashell-crypt-key->server key)
+(contract:define/contract (seashell-crypt-key->server key)
   (contract:-> bytes? bytes?)
   key)
 
@@ -222,7 +220,7 @@
 ;; that the server siide code in Racket can easily handle.
 ;; 
 ;; See (seashell-crypt-key->server key)
-(define/contract (seashell-crypt-key-server-read port)
+(contract:define/contract (seashell-crypt-key-server-read port)
   (contract:-> port? bytes?)
   (read-bytes 16 port))
 

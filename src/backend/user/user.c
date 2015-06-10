@@ -74,6 +74,10 @@ int main() {
       return 1;
     }
 
+#ifndef NDEBUG
+    putenv("PLTSTDERR=debug");
+#endif
+
     // Prefer build directory if debug build.
     if(!IS_INSTALLED() && access(SEASHELL_DEBUG_MAIN, F_OK) != -1) {
       char * argv2[] = {SEASHELL_DEBUG_MAIN, "-s", NULL};

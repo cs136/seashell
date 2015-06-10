@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -26,16 +26,19 @@
          racket/async-channel
          racket/serialize
          racket/sandbox
+         racket/match
+         racket/contract
+         racket/port
          json)
 
 (provide conn-dispatch)
 
 ;; Dispatch function.
 ;; Arguments:
-;;  keepalive-chan - Keepalive channel.
+;;  keepalive-sema - Keepalive semaphore.
 ;;  wsc - WebSocket connection.
 ;;  state - [Unused]
-(define (conn-dispatch keepalive-chan connection state)
+(define (conn-dispatch keepalive-sema connection state)
   (define authenticated? #f)
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
@@ -73,7 +76,7 @@
   ;; Returns:
   ;;  Thread that is running the I/O.
   (define (project-test-thread project pid)
-    (thread (thunk
+    (thread (lambda ()
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
       (define stdout (program-stdout pid))
@@ -170,7 +173,7 @@
           (list tag result))))
     
     (thread
-      (thunk
+      (lambda ()
         (let loop ()
           (with-handlers
             ;; Data connection failure.  Quit.
@@ -520,7 +523,7 @@
         ('type "saveSettings")
         ('settings settings))
        (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-         (thunk (write settings)) #:exists 'truncate)
+         (lambda () (write settings)) #:exists 'truncate)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -655,9 +658,9 @@
                           (send-message connection `#hash((id . -2)
                                                           (result . "Could not process request!"))))])
           (call-with-limits #f (read-config 'request-memory-limit)
-            (thunk
+            (lambda ()
               (define message (bytes->jsexpr data))
-              (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
+              (semaphore-post keepalive-sema)
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))

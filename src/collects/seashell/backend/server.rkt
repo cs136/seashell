@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,11 +16,12 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require net/url
+(require racket/contract
          racket/async-channel
          racket/serialize
          racket/udp
          racket/sandbox
+         racket/match
          seashell/websocket
          seashell/log
          seashell/seashell-config
@@ -33,9 +34,7 @@
          seashell/compiler
          seashell/crypto
          web-server/web-server
-         web-server/http/xexpr
          web-server/http/request-structs
-         web-server/dispatchers/dispatch
          ffi/unsafe/atomic
          mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
@@ -66,17 +65,36 @@
   (define/contract (creds-valid? creds)
     (-> hash? boolean?)
     (match creds
-      [(hash-table ('host ping-host) ('ping-port ping-port) (_ _) ...)
+      [(hash-table ('host ping-host) ('ping-port ping-port) ('port port) (_ _) ...)
+       (define test-custodian (make-custodian))
        (define success
-         (let ([sock (udp-open-socket ping-host ping-port)])
-           (dynamic-wind
-            (thunk (void))
-            (thunk
-             (udp-connect! sock ping-host ping-port)
-             (udp-send sock #"ping")
-             (sync/timeout (read-config 'seashell-ping-timeout)
-                           (udp-receive!-evt sock (make-bytes 0))))
-            (thunk (udp-close sock)))))
+         (dynamic-wind
+           (lambda () #f)
+           (lambda ()
+             (parameterize [(current-custodian test-custodian)]
+              (define sock (udp-open-socket ping-host ping-port))
+              ;; This is slightly less reliable than just using udp-connect!
+              ;; but it avoids issues when the UDP server responds with a different
+              ;; IP address...
+              ;;
+              ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port 
+              (define ticket (random 4294967087))
+              (define challenge (integer->integer-bytes ticket 4 #f))
+              (define response (bitwise-xor ticket port))
+              (define expected  (integer->integer-bytes response 4 #f))
+              (define result (make-bytes 4))
+              (udp-send-to sock ping-host ping-port challenge)
+              (logf 'debug "Sent ping to ~a:~a! (~a ^ ~a -> ~a)::~v" ping-host ping-port ticket port response expected)
+              (define response? (sync/timeout (read-config 'seashell-ping-timeout)
+                                              (thread
+                                                (lambda ()
+                                                  (let loop ()
+                                                    (udp-receive! sock result) 
+                                                    (logf 'debug "Got ping back: ~v" result)
+                                                    (unless (equal? result expected)
+                                                      (loop)))))))
+              (and response? (equal? result expected))))
+           (lambda () (custodian-shutdown-all test-custodian))))
        ;; Remove stale credentials files.  This can be a race condition,
        ;; so make sure the file is locked with fcntl before continuing.
        ;; XXX you are not locking the file here...
@@ -100,7 +118,7 @@
       (lambda (lock-file)
         (with-input-from-file
             credentials-file
-          (thunk
+          (lambda ()
            (with-handlers
                ([exn:fail:read? (lambda (exn)
                                   (raise (exn:creds "Could not read credentials file!" (current-continuation-marks))))])
@@ -120,8 +138,8 @@
   (_dump-creds))
 
 
-;; Channel used to keep process alive.
-(define keepalive-chan (make-async-channel))
+;; Semaphore used to keep process alive.
+(define keepalive-sema (make-semaphore))
 
 ;; init-environment -> void?
 ;; Sets up the Seashell project environment
@@ -141,25 +159,33 @@
 ;; Detaches backend.
 (define (detach)
   (call-as-atomic
-   (thunk
+   (lambda ()
     (flush-output (current-output-port))
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
 
-;; make-udp-ping-listener -> (values integer? custodian?)
+;; make-udp-ping-listener our-port -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
-(define/contract (make-udp-ping-listener)
-  (-> (values integer? custodian?))
+(define/contract (make-udp-ping-listener our-port)
+  (-> integer? (values integer? custodian?))
   (parameterize ([current-custodian (make-custodian (current-custodian))])
     ;; Start the UDP ping listener
+    ;; Note that we expect IPv4-mapped-in-IPv6 support when binding to ::0.
     (define sock (udp-open-socket "::0"))
     (udp-bind! sock #f 0)
     (define-values (_1 ping-port _2 _3) (udp-addresses sock #t))
     (thread
-     (thunk
+     (lambda ()
       (let loop ()
-        (define-values (_ client-host client-port) (udp-receive! sock (make-bytes 0))) 
-        (udp-send-to sock client-host client-port #"pong")
+        (define challenge (make-bytes 4))
+        (define-values (_ client-host client-port) (udp-receive! sock challenge))
+        (thread
+          (lambda ()
+            (define ticket (integer-bytes->integer challenge #f))
+            (define response (bitwise-xor ticket our-port))
+            (define result (integer->integer-bytes response 4 #f)) 
+            (logf 'debug "Ping from ~a! (~a ^ ~a -> ~a)::~v" client-host ticket our-port response result)
+            (udp-send-to sock client-host client-port result)))
         (loop))))
     (values ping-port (current-custodian))))
 
@@ -228,12 +254,12 @@
     ;; Note: (exit-from-seashell ...) does not unwind the continuation stack.
     (dynamic-wind
      void
-     (thunk
+     (lambda ()
       (call-with-continuation-barrier
-       (thunk
+       (lambda ()
         (call-with-limits 
          #f (read-config 'server-memory-limit)
-         (thunk
+         (lambda ()
           ;; Install credentials or quit.
           (set! credentials-port
                 (let loop ([tries 0])
@@ -242,7 +268,7 @@
                     (exit-from-seashell 4))
                   (define repeat (make-continuation-prompt-tag))
                   (call-with-continuation-prompt
-                   (thunk
+                   (lambda ()
                     ;; Try to read the file...
                     (with-handlers
                         ([exn:fail:filesystem? 
@@ -269,7 +295,7 @@
                      ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
                      (open-output-file credentials-file #:exists 'must-truncate)))
                    repeat
-                   (thunk 
+                   (lambda () 
                     (sleep (expt 2 tries))
                     (loop (add1 tries))))))
           
@@ -278,7 +304,8 @@
             (sequence:make
              request-logging-dispatcher
              (filter:make #rx"^/$" (make-websocket-dispatcher 
-                                    (curry conn-dispatch keepalive-chan)))
+                                    (lambda (conn state)
+                                      (conn-dispatch keepalive-sema conn state))))
              (filter:make #rx"^/export/" project-export-dispatcher)
              (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
@@ -301,9 +328,9 @@
           
           ;; Start the UDP ping listener.
           (define-values (ping-port udp-custodian)
-            (make-udp-ping-listener))
+            (make-udp-ping-listener start-result))
           (set! shutdown-listener
-                (thunk (custodian-shutdown-all udp-custodian)))
+                (lambda () (custodian-shutdown-all udp-custodian)))
           
           ;; Get current username
           (define username (or (seashell_get_username) "unknown_user"))
@@ -336,10 +363,10 @@
           (with-handlers
               ([exn:break? (lambda(e) (logf 'info "Terminating on break."))])
             (let loop ()
-              (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-chan)
+              (match (sync/timeout/enable-break (/ (read-config 'backend-client-idle-timeout) 1000) keepalive-sema)
                 [#f (void)]
                 [else (loop)]))))))))
-     (thunk
+     (lambda ()
       (logf 'info "Shutting down...")
       ;; Close port (if not closed)
       (unless (or (not credentials-port)

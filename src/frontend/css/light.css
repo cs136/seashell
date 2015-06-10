@@ -1,0 +1,93 @@
+/* Seashell logo */
+#logoSeashell {
+    color: #888;
+}
+
+#versionSeashell {
+    color: #888;
+}
+
+.CodeMirror-gutters {
+  border-color: #eee;
+}
+
+#editor > .CodeMirror {
+  border-color: #ddd;
+}
+
+#current-file-controls {
+  border-color: #ddd;
+  border-bottom-color: #eee;
+}
+
+#toolbar-delete-file {
+  color: red;
+}
+
+.editor-console-title {
+  border-color: #ddd;
+  background: #f4f4f4;
+}
+
+#console-input {
+  background-color: #fff;
+  border-color: #ddd;
+  border-top-color: #eee;
+}
+
+.question-link {
+  opacity: 0.5;
+}
+.question-link:hover, .question-link-active:hover {
+  opacity: 1;
+  color: black;
+}
+
+.question-link-active {
+ opacity: 1; 
+ color: black;
+}
+
+.file-link {
+  opacity: 0.5;
+}
+
+.file-link:hover, .file-link-active:hover {
+  opacity: 1;
+  color: black;
+}
+
+.file-link-active {
+  opacity: 1;
+  color: black;
+}
+
+#console > .CodeMirror {
+  border:  #ddd;
+}
+
+@media (min-width: 992px) {
+  #console:not(.console-narrow) #console-title {
+    border-color: #ddd;
+  }
+}
+
+#projectOptions button {
+  color: #337ab7;
+}
+
+#projectList h3 {
+  border-bottom-color: #ddd;
+}
+
+#projectList li {
+  border-bottom-color: #ddd;
+}
+
+/* The new poject and refresh button on landing page */
+#refresh.btn-default, #newProject.btn-default {
+}
+
+#newProject.btn-default:hover, #newProject.btn-default:focus, #newProject.btn-default:active,
+#refresh.btn-default:hover, #refresh.btn-default:focus, #refresh.btn-default:active {
+}

@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's authentication and communications backend.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;

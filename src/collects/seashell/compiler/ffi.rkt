@@ -19,7 +19,6 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         ffi/unsafe/custodian
          seashell/seashell-config)
 
 ;; Exported FFI functions.  See compiler.cc for more details.
@@ -90,4 +89,3 @@
                         (memcpy result address size)
                         result]
                       [else #f])))))
-
