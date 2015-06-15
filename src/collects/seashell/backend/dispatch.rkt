@@ -664,13 +664,15 @@
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))
-  
-  (with-handlers
-      ([exn:websocket?
-        (lambda (exn)
-          (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
-    (logf 'info "Received new connection.")
-    (send-message connection `#hash((id . -1)
-                                    (success . #t)
-                                    (result . ,our-challenge)))
-    (main-loop)))
+ 
+  (parameterize
+    ([current-subprocess-custodian-mode 'interrupt])
+    (with-handlers
+        ([exn:websocket?
+          (lambda (exn)
+            (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
+      (logf 'info "Received new connection.")
+      (send-message connection `#hash((id . -1)
+                                      (success . #t)
+                                      (result . ,our-challenge)))
+      (main-loop))))
