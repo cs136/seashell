@@ -55,10 +55,12 @@ angular.module('frontend-app')
       var suppallocaddrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside)(?:[^0-9])*([0-9]+)-byte/;
       // .... 0xff is located in stack ...
       var suppstackaddrpatt = /(0x[0-9a-f]+).*located in stack.*offset ([0-9]+)/;
+      // 0xff is ... 0 bytes ... left ... global variable 'x' defined in 'foo.c:9:15' (0xff) of size 10
+      var suppglobaladdrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside).*global variable '([^']+)'.*'([^':]+):([0-9]+):([0-9]+)' \((0x[0-9a-f]+)\).*size ([0-9]+)$/;
       // frame ... 2 object(s)
       var frameinfopatt = /frame(?:[^0-9])*([0-9]+) object/;
       // [32, 40) 'x'
-      var framevarpatt = /\[([0-9]+), ([0-9]+)\) '([^']*)'/;
+      var framevarpatt = /\[([0-9]+), ([0-9]+)\) '([^']+)'/;
 
       function stack_trace_line(line) {
         try {
@@ -124,6 +126,19 @@ angular.module('frontend-app')
             self._write("\n  Allocated by:\n");
           } else if (/^freed by/.test(line)) {
             self._write("freed already by:\n");
+          } else if(suppglobaladdrpatt.test(line)) {
+            var globalAddrInfo = suppglobaladdrpatt.exec(line);
+            var shortAddrFileInfo = globalAddrInfo[5].split('/').pop();
+            self._write(sprintf("\n  %s is %s bytes %s of %s byte(s) global variable %s (located %s) defined at %s:%s:%s.\n",
+                                globalAddrInfo[1],
+                                globalAddrInfo[2],
+                                globalAddrInfo[3],
+                                globalAddrInfo[9],
+                                globalAddrInfo[4],
+                                globalAddrInfo[8],
+                                shortAddrFileInfo,
+                                globalAddrInfo[6],
+                                globalAddrInfo[7]));
           }
         } catch (e) {
           console.log("Could not produce stack trace from line: %s, %s", line, e);
@@ -146,6 +161,13 @@ angular.module('frontend-app')
       }
       else if(/stack-overflow /.test(contents[1])) {
         self._write(sprintf("Stack overflow on address %s. Check call stack.\n",
+          addrpatt.exec(contents[1])));
+        stack_trace(contents);
+      } 
+      else if(/global-buffer-(over|underflow)/.test(contents[1])) {
+        var globalErrorType = /(overflow|underflow)/.exec(contents[1])[1];
+        self._write(sprintf("Global buffer %s on address %s. Check array indices.\n",
+          globalErrorType,
           addrpatt.exec(contents[1])));
         stack_trace(contents);
       }
