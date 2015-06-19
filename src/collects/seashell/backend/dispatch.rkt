@@ -83,6 +83,7 @@
       (define stderr (program-stderr pid))
       (define stdin (program-stdin pid))
       (define wait-evt (program-wait-evt pid))
+      (define socket-closed-evt (ws-connection-closed-evt connection))
 
       ;; Close stderr and stdin, as they are not used in test mode.
       (close-output-port stdin)
@@ -97,8 +98,8 @@
              (program-kill pid)
              (program-destroy-handle pid)))]
         ;; Block on stdout and on the websocket.
-        (match (sync (ws-connection-closed-evt connection) (wrap-evt stdout (compose deserialize read)))
-           [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+        (match (sync socket-closed-evt (wrap-evt stdout (compose deserialize read)))
+           [(? (lambda (evt) (eq? evt socket-closed-evt)))
             ;; Connection died.
             (program-kill pid)
             (program-destroy-handle pid)]
@@ -145,6 +146,7 @@
     (define stdout (program-stdout pid))
     (define stderr (program-stderr pid))
     (define wait-evt (program-wait-evt pid))
+    (define socket-closed-evt (ws-connection-closed-evt connection))
    
     ;; Helper function for sending messages
     ;; Arguments:
@@ -184,7 +186,7 @@
                  (program-kill pid)
                  (program-destroy-handle pid)))]
             (match (sync wait-evt
-                         (ws-connection-closed-evt connection)
+                         socket-closed-evt
                          ;; Well, this is rather inefficient.  JavaScript
                          ;; only supports UTF-8 (and we don't support any
                          ;; fancy encodings), so unless we want to cause
@@ -195,7 +197,7 @@
                          (if (port-closed? stderr)
                            never-evt
                            (tag-event (list "stderr" stderr) (peek-string-evt 1 0 #f stderr))))
-                   [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+                   [(? (lambda (evt) (eq? evt socket-closed-evt)))
                     ;; Connection died.
                     (program-kill pid)
                     (program-destroy-handle pid)]
@@ -664,13 +666,15 @@
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))
-  
-  (with-handlers
-      ([exn:websocket?
-        (lambda (exn)
-          (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
-    (logf 'info "Received new connection.")
-    (send-message connection `#hash((id . -1)
-                                    (success . #t)
-                                    (result . ,our-challenge)))
-    (main-loop)))
+ 
+  (parameterize
+    ([current-subprocess-custodian-mode 'interrupt])
+    (with-handlers
+        ([exn:websocket?
+          (lambda (exn)
+            (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
+      (logf 'info "Received new connection.")
+      (send-message connection `#hash((id . -1)
+                                      (success . #t)
+                                      (result . ,our-challenge)))
+      (main-loop))))
