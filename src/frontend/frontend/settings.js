@@ -25,13 +25,13 @@ angular.module('frontend-app')
       function ($rootScope, $modal, ws, errors, $q) {
         var self = this;
         self.settings =  {
-          font : "Courier New",
-          font_size  : 10,
+          font : "Consolas",
+          font_size  : 12,
           editor_mode  : "standard",
           tab_width  : 2,
-          text_style : "neat",
           use_space : true,
-          force_narrow : false
+          force_narrow : false,
+          theme : "dark"
         };
         self.notify = {};
         var nKey = 0;
@@ -66,7 +66,7 @@ angular.module('frontend-app')
         };
 
         self.save = function () {
-          return $q.when(ws.socket.saveSettings(self.settings));
+          return $q.when(ws.socket.saveSettings(self.settings)).then(notifyChanges);
         };
 
         self.dialog = function () {
@@ -77,7 +77,7 @@ angular.module('frontend-app')
               $scope.saveSettings = function () {
                 $scope.$close();
                 self.settings = $scope.temp;
-                self.save().then(notifyChanges).catch(
+                self.save().catch(
                   function (error) {
                     errors.report(error, "Could not save settings!");
                   });

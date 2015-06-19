@@ -61,11 +61,11 @@ ELSE()
   SET(GIT_DIRTY True)
 ENDIF()
 
-set(SEASHELL_VERSION "2.4.1")
+set(SEASHELL_VERSION "2.5.0")
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()
-set(SEASHELL_API_VERSION "4")
+set(SEASHELL_API_VERSION "5")
 
 # Build our components.
 add_subdirectory(doc)

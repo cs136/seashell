@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -21,7 +21,12 @@
          seashell/log
          net/uri-codec
          net/base64
-         json)
+         json
+         racket/contract
+         racket/port
+         racket/match
+         racket/file
+         racket/path)
 
 (provide exn:project:file
          new-file
@@ -58,7 +63,7 @@
                   (current-continuation-marks)))))]
     (define to-write
       (with-input-from-bytes contents
-        (thunk 
+        (lambda () 
           (cond
             [(eq? encoding 'url)
              (match-define 
@@ -74,7 +79,7 @@
               contents]))))
     (if normalize?
       (display-lines-to-file (call-with-input-string to-write port->lines) path #:exists 'error)
-      (with-output-to-file path (thunk (write-bytes to-write)) #:exists 'error)))
+      (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
   (void))
 
 (define/contract (new-directory project dir)
@@ -214,7 +219,7 @@
 (define/contract (write-settings settings)
   (-> jsexpr? void?)
   (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-    (thunk (write settings)) #:exists 'truncate))
+    (lambda () (write settings)) #:exists 'truncate))
 
 ;; (read-settings)
 ;; Reads the user's seashell settings from ~/.seashell/settings.txt. If the
@@ -229,7 +234,7 @@
   (cond
     [(file-exists? (build-path (read-config 'seashell) "settings.txt"))
       (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
-        (thunk (read)))]
+        (lambda () (read)))]
     [else #f]))
 
 

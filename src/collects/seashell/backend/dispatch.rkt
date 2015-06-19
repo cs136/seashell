@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -26,16 +26,19 @@
          racket/async-channel
          racket/serialize
          racket/sandbox
+         racket/match
+         racket/contract
+         racket/port
          json)
 
 (provide conn-dispatch)
 
 ;; Dispatch function.
 ;; Arguments:
-;;  keepalive-chan - Keepalive channel.
+;;  keepalive-sema - Keepalive semaphore.
 ;;  wsc - WebSocket connection.
 ;;  state - [Unused]
-(define (conn-dispatch keepalive-chan connection state)
+(define (conn-dispatch keepalive-sema connection state)
   (define authenticated? #f)
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
@@ -73,13 +76,14 @@
   ;; Returns:
   ;;  Thread that is running the I/O.
   (define (project-test-thread project pid)
-    (thread (thunk
+    (thread (lambda ()
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
       (define stdout (program-stdout pid))
       (define stderr (program-stderr pid))
       (define stdin (program-stdin pid))
       (define wait-evt (program-wait-evt pid))
+      (define socket-closed-evt (ws-connection-closed-evt connection))
 
       ;; Close stderr and stdin, as they are not used in test mode.
       (close-output-port stdin)
@@ -94,8 +98,8 @@
              (program-kill pid)
              (program-destroy-handle pid)))]
         ;; Block on stdout and on the websocket.
-        (match (sync (ws-connection-closed-evt connection) (wrap-evt stdout (compose deserialize read)))
-           [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+        (match (sync socket-closed-evt (wrap-evt stdout (compose deserialize read)))
+           [(? (lambda (evt) (eq? evt socket-closed-evt)))
             ;; Connection died.
             (program-kill pid)
             (program-destroy-handle pid)]
@@ -142,6 +146,7 @@
     (define stdout (program-stdout pid))
     (define stderr (program-stderr pid))
     (define wait-evt (program-wait-evt pid))
+    (define socket-closed-evt (ws-connection-closed-evt connection))
    
     ;; Helper function for sending messages
     ;; Arguments:
@@ -170,7 +175,7 @@
           (list tag result))))
     
     (thread
-      (thunk
+      (lambda ()
         (let loop ()
           (with-handlers
             ;; Data connection failure.  Quit.
@@ -181,7 +186,7 @@
                  (program-kill pid)
                  (program-destroy-handle pid)))]
             (match (sync wait-evt
-                         (ws-connection-closed-evt connection)
+                         socket-closed-evt
                          ;; Well, this is rather inefficient.  JavaScript
                          ;; only supports UTF-8 (and we don't support any
                          ;; fancy encodings), so unless we want to cause
@@ -192,7 +197,7 @@
                          (if (port-closed? stderr)
                            never-evt
                            (tag-event (list "stderr" stderr) (peek-string-evt 1 0 #f stderr))))
-                   [(? (lambda (evt) (eq? evt (ws-connection-closed-evt connection))))
+                   [(? (lambda (evt) (eq? evt socket-closed-evt)))
                     ;; Connection died.
                     (program-kill pid)
                     (program-destroy-handle pid)]
@@ -520,7 +525,7 @@
         ('type "saveSettings")
         ('settings settings))
        (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-         (thunk (write settings)) #:exists 'truncate)
+         (lambda () (write settings)) #:exists 'truncate)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -655,19 +660,21 @@
                           (send-message connection `#hash((id . -2)
                                                           (result . "Could not process request!"))))])
           (call-with-limits #f (read-config 'request-memory-limit)
-            (thunk
+            (lambda ()
               (define message (bytes->jsexpr data))
-              (async-channel-put keepalive-chan "[...] And we're out of beta.  We're releasing on time.")
+              (semaphore-post keepalive-sema)
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))
-  
-  (with-handlers
-      ([exn:websocket?
-        (lambda (exn)
-          (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
-    (logf 'info "Received new connection.")
-    (send-message connection `#hash((id . -1)
-                                    (success . #t)
-                                    (result . ,our-challenge)))
-    (main-loop)))
+ 
+  (parameterize
+    ([current-subprocess-custodian-mode 'interrupt])
+    (with-handlers
+        ([exn:websocket?
+          (lambda (exn)
+            (logf 'error (format "Data connection failure: ~a" (exn-message exn))))])
+      (logf 'info "Received new connection.")
+      (send-message connection `#hash((id . -1)
+                                      (success . #t)
+                                      (result . ,our-challenge)))
+      (main-loop))))
