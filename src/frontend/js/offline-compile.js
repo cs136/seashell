@@ -3,6 +3,7 @@
 */
 
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
+self.importScripts('seashell-clang-js/bin/crt-headers.js');
 
 onmessage = function(msg) {
   var data = msg.data;
@@ -11,7 +12,6 @@ onmessage = function(msg) {
     var res = [];
     for(var i=0; i<files.length; i++) {
       var n = Module.seashell_compiler_get_diagnostic_count(cc, i);
-      console.log(n);
       if(n>0) {
         for(var k=0; k<n; k++) {
           res.push([
@@ -30,7 +30,7 @@ onmessage = function(msg) {
   function compile(sources) {
     var cc = Module.seashell_compiler_make();
     for(var i=0; i<sources.length; i++) {
-      Module.seashell_compiler_add_file(cc, sources[i]);
+      Module.seashell_compiler_add_file(cc, "/working/"+sources[i]);
     }
     var cres = Module.seashell_compiler_run(cc);
     var diags = diagnostics(cc, sources);
@@ -45,10 +45,11 @@ onmessage = function(msg) {
                status: 'compile-failed' };
     }
   }
-
+  
+  FS.mkdir("/working");
   var sources = [];
   for(var i=0; i<data.files.length; i++) {
-    var file = FS.open(data.files[i].name, 'w');
+    var file = FS.open("/working/"+data.files[i].name, 'w');
     var len = lengthBytesUTF8(data.files[i].contents)+1;
     var arr = new Uint8Array(len);
     var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
@@ -57,7 +58,6 @@ onmessage = function(msg) {
     sources.push(data.files[i].name);
   }
   var res = compile(sources);
-  console.log(res);
 
   postMessage(res);
 };
