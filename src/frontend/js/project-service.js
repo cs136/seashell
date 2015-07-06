@@ -74,7 +74,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var obj = { name: self.name[self.name.length-1],
                       contents: self.contents };
           return obj;
-        }
+        };
 
         /**
          * fullname()
