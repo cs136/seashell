@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -17,7 +17,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/compiler/ffi
-         seashell/seashell-config)
+         seashell/seashell-config
+         racket/contract
+         racket/list
+         racket/path
+         racket/file
+         racket/port
+         racket/string
+         racket/bool)
 
 (provide
  seashell-compile-files
@@ -69,8 +76,8 @@
      (define file-vec (list->vector sources))
      (seashell_compiler_clear_files compiler)
      (seashell_compiler_clear_compile_flags compiler)
-     (for-each ((curry seashell_compiler_add_compile_flag) compiler) cflags)
-     (for-each ((curry seashell_compiler_add_file) compiler) (map some-system-path->string sources))
+     (for-each (lambda (flag) (seashell_compiler_add_compile_flag compiler flag)) cflags)
+     (for-each (lambda (file) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
      
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler))
@@ -108,8 +115,10 @@
         (define object-file (make-temporary-file "seashell-object-~a.o"))
         (define result-file (make-temporary-file "seashell-result-~a"))
         (with-output-to-file object-file
-          (thunk (write-bytes object))
+          (lambda () (write-bytes object))
           #:exists 'truncate)
+        (define (append-linker-flag flag)
+          (string-append (read-config 'linker-flag-prefix) flag))
         (define-values (linker linker-output linker-input linker-error)
           (apply subprocess #f #f #f (read-config 'system-linker)
                  `("-o" ,(some-system-path->string result-file)
@@ -117,11 +126,11 @@
                    ,@(map some-system-path->string objects)
                    "-fsanitize=address"
                    ,@(map
-                       (curry string-append (read-config 'linker-flag-prefix))
+                       append-linker-flag
                        (list "--whole-archive"
                              (some-system-path->string (read-config 'seashell-runtime-library))
                              "--no-whole-archive"))
-                   ,@(map (curry string-append (read-config 'linker-flag-prefix)) ldflags))))
+                   ,@(map append-linker-flag ldflags))))
         ;; Close unused port.
         (close-output-port linker-input)
         (close-input-port linker-output)
@@ -134,10 +143,20 @@
         (delete-file object-file)
         
         ;; Read the result:
-        (define linker-result #"")
-        (when (zero? linker-res)
-          (set! linker-result (call-with-input-file result-file port->bytes))
-          (delete-file result-file))
+        (define linker-result
+          (cond
+            [(zero? linker-res)
+              (call-with-input-file
+                result-file
+                (lambda (port)
+                  (file-position port eof)
+                  (define size (file-position port))
+                  (file-position port 0)
+                  (define result (make-shared-bytes size))
+                  (read-bytes! result port)
+                  result))]
+            [else
+              #f]))
         
         ;; Create the final diagnostics table:
         (define diags
@@ -151,7 +170,8 @@
            compiler-diags
            ;; Create list of linker diagnostics:
            (list*
-            (map (curry cons (string->path "final-link-result"))
+            (map (lambda (message)
+                   (cons (string->path "final-link-result") message))
                  (string-split linker-messages #px"\n")))))
         
         (if (and (zero? compiler-res) (zero? linker-res))

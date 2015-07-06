@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,13 +16,13 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require net/base64
+(require racket/contract
+         racket/unit
          net/tcp-sig
          net/url
          (prefix-in raw: net/tcp-unit)
          web-server/web-server
          web-server/dispatchers/dispatch
-         web-server/http/request
          web-server/http/request-structs
          web-server/http/response
          web-server/private/connection-manager
@@ -43,7 +43,7 @@
 ;;   Dispatcher function.
 (define/contract (make-websocket-dispatcher
                    dispatch
-                   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values empty (void)))])
+                   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values '() (void)))])
   (->* ((-> ws-connection? any/c any/c))
        (#:conn-headers
         (bytes? url? (listof header?) . -> . (values (listof header?) any/c)))
@@ -102,11 +102,11 @@
 ;; Arguments:
 ;;   Consult http://docs.racket-lang.org/net/ws.html
 ;; Returns:
-;;   A thunk when invoked stops the Dispatching Server.
+;;   A lambda () when invoked stops the Dispatching Server.
 (define/contract
   (ws-serve
    conn-dispatch
-   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values empty (void)))]
+   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values '() (void)))]
    #:tcp@ [tcp@ raw:tcp@]
    #:port [port 80]
    #:listen-ip [listen-ip #f]

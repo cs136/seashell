@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;; Seashell
 ;; Copyright (C) 2012-2014 The Seashell Maintainers
 ;;
@@ -19,7 +19,12 @@
 (require seashell/log
          seashell/seashell-config
          seashell/diff
-         racket/serialize)
+         racket/serialize
+         racket/contract
+         racket/match
+         racket/port
+         racket/path
+         racket/file)
 
 (provide run-program program-stdin program-stdout program-stderr
          program-wait-evt program-kill program-status program-destroy-handle
@@ -246,7 +251,7 @@
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) integer?)
   (call-with-semaphore
     program-new-semaphore
-    (thunk
+    (lambda ()
       (with-handlers
           [(exn:fail:filesystem?
             (lambda (exn)
@@ -265,7 +270,7 @@
               ['C
                 ;; Behaviour is inconsistent if we just exec directly.
                 ;; This seems to work.  (why: who knows?)
-                (putenv "ASAN_OPTIONS" "detect_leaks=1")
+                (putenv "ASAN_OPTIONS" "detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"")
                 (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
                 (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
@@ -289,7 +294,7 @@
                                     (if test 'test 'run)))
             (define control-thread
               (thread
-                (thunk
+                (lambda ()
                   (if test
                     (program-control-test-thread result
                                                  test
@@ -307,7 +312,7 @@
             (define block-semaphore
               (call-with-semaphore
                 program-destroy-semaphore
-                (thunk
+                (lambda ()
                   (define handle (hash-ref program-table pid #f))
                   (if handle (program-destroy-semaphore handle) #f))))
             (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
@@ -409,7 +414,7 @@
   (-> integer? void?)
   (call-with-semaphore
     program-destroy-semaphore
-    (thunk
+    (lambda ()
       (define pgrm (hash-ref program-table pid))
       (match-define (program in-stdin in-stdout in-stderr
                              out-stdin out-stdout out-stderr

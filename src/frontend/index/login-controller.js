@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('login-app', ['jquery-cookie', 'seashell-websocket'])
-  .controller('LoginController', ['$scope', 'cookieStore', '$window', 'socket',
-      function($scope, cookieStore, $window, ws) {
+angular.module('login-app', ['ngCookies', 'seashell-websocket'])
+  .controller('LoginController', ['$scope', '$cookies', '$window', 'socket',
+      function($scope, $cookies, $window, ws) {
         "use strict";
         var self = this;
         self.error = false;
@@ -43,7 +43,7 @@ angular.module('login-app', ['jquery-cookie', 'seashell-websocket'])
                     data.error.code);
                   console.log(self.error);
                 } else if (data.port !== undefined) {
-                  cookieStore.add(SEASHELL_CREDS_COOKIE, data, {secure: true});
+                  $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure: true});
                   console.log("All done login!");
                   ws.connect().then(function () {
                     $window.top.location = "frontend.html";

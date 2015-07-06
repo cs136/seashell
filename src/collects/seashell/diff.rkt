@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 ;;; diff.rkt
 ;;; Copyright (c) 2011 M. Douglas Williams
 ;;;
@@ -22,7 +22,10 @@
 
 ;;; This module requires the list-index function from SRFI 1: List Library.
 
-(require (only-in srfi/1 list-index))
+(require (only-in srfi/1 list-index)
+         racket/list
+         racket/port
+         racket/contract)
 
 ;;; Longest Common Subsequence
 

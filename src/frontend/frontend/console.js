@@ -48,22 +48,108 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
+      var traced_main = false;
       var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
-      var fnpatt = /in ([_A-Za-z0-9]+) /;
-      function stack_trace(contents) {
-        var in_stack = false;
-        for(var i=0; i<contents.length; i++) {
-          if(/^ +#[0-9]+/.test(contents[i])) {
-            in_stack = true;
-            self._write(sprintf("  in %s, %s\n",
-              fnpatt.exec(contents[i])[1],
-              filepatt.exec(contents[i])[1]));
+      var addrpatt = /0x[0-9a-f]+/;
+      // 0xff is ... 3 bytes ... left ... 10-byte region
+      var suppallocaddrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside)(?:[^0-9])*([0-9]+)-byte/;
+      // .... 0xff is located in stack ...
+      var suppstackaddrpatt = /(0x[0-9a-f]+).*located in stack.*offset ([0-9]+)/;
+      // 0xff is ... 0 bytes ... left ... global variable 'x' defined in 'foo.c:9:15' (0xff) of size 10
+      var suppglobaladdrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside).*global variable '([^']+)'.*'([^':]+):([0-9]+):([0-9]+)' \((0x[0-9a-f]+)\).*size ([0-9]+)$/;
+      // frame ... 2 object(s)
+      var frameinfopatt = /frame(?:[^0-9])*([0-9]+) object/;
+      // [32, 40) 'x'
+      var framevarpatt = /\[([0-9]+), ([0-9]+)\) '([^']+)'/;
+
+      function stack_trace_line(line) {
+        try {
+          if(/^{/.test(line)) {
+            var json = line.replace(/'/g, '"');
+            var frame = JSON.parse(json);
+            var short_module = frame.module && frame.module.split('/').pop();
+            var short_file = frame.file && frame.file.split('/').pop();
+            traced_main = traced_main || (frame.function === "main");
+            if (frame.frame === 0) {
+              /** Reset the trace status when tracing a new frame. */
+              traced_main = false;
+            }
+
+            if (frame.function !== "<null>" && frame.file !== "<null>") {
+              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
+                self._write(sprintf("  frame %d: %s, %s:%d:%d\n",
+                  frame.frame,
+                  frame.function,
+                  short_file,
+                  frame.line,
+                  frame.column));
+            } else if (frame.function !== "<null>") {
+              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
+                self._write(sprintf("  frame %d: %s, from module %s (+%x)\n", frame.frame, frame.function, short_module, frame.offset));
+            } else {
+              self._write(sprintf("  frame %d: module %s (+%x)\n", frame.frame, short_module, frame.offset));
+            }
+          } else if (/^(Direct|Indirect)/.test(line)) {
+            self._write(sprintf("\n  %s byte(s) allocated, never freed.\n",
+              /[0-9]+/.exec(line)));
+          } else if (/^WRITE/.test(line)) {
+            var sizeWrite = /size ([0-9]+)/.exec(line)[1];
+            var addrWrite = addrpatt.exec(line)[0];
+            self._write(sprintf("  Error caused by write of size %d byte(s) to %s:\n", sizeWrite, addrWrite));
+          } else if (/^READ/.test(line)) {
+            var sizeRead = /size ([0-9]+)/.exec(line)[1];
+            var addrRead = addrpatt.exec(line)[0];
+            self._write(sprintf("  Error caused by read of size %d byte(s) to %s:\n", sizeRead, addrRead));
+          } else if (suppallocaddrpatt.test(line)) {
+            var suppAllocAddrInfo = suppallocaddrpatt.exec(line);
+            self._write(sprintf("\n  %s is %s bytes %s of %s-byte region ", suppAllocAddrInfo[1], suppAllocAddrInfo[2], suppAllocAddrInfo[3], suppAllocAddrInfo[4]));
+          } else if (/^allocated by/.test(line)) {
+            self._write("allocated by:\n");
+          } else if (suppstackaddrpatt.test(line)) {
+            var stackAddressInfo = suppstackaddrpatt.exec(line);
+            self._write(sprintf("\n  %s is contained %s bytes into stack frame:\n", stackAddressInfo[1], stackAddressInfo[2]));
+          } else if (frameinfopatt.test(line)) {
+            var numFrameObjects = frameinfopatt.exec(line)[1];
+            self._write(sprintf("\n  This frame has %s object(s):\n", numFrameObjects));
+          } else if (framevarpatt.test(line)) {
+            var frameVarInfo = framevarpatt.exec(line);
+            var objectSize = parseInt(frameVarInfo[2]) - parseInt(frameVarInfo[1]);
+            self._write(sprintf("  %d byte object %s located %s bytes into frame.", objectSize, frameVarInfo[3], frameVarInfo[1]));
+            if (/overflow/.test(line)) {
+              self._write("  Access overflew this variable.\n");
+            } else if (/underflow/.test(line)) {
+              self._write("  Access underflew this variable.\n");
+            } else {
+              self._write("\n");
+            }
+          } else if (/^previously allocated/.test(line)) {
+            self._write("\n  Allocated by:\n");
+          } else if (/^freed by/.test(line)) {
+            self._write("freed already by:\n");
+          } else if(suppglobaladdrpatt.test(line)) {
+            var globalAddrInfo = suppglobaladdrpatt.exec(line);
+            var shortAddrFileInfo = globalAddrInfo[5].split('/').pop();
+            self._write(sprintf("\n  %s is %s bytes %s of %s byte(s) global variable %s (located %s) defined at %s:%s:%s.\n",
+                                globalAddrInfo[1],
+                                globalAddrInfo[2],
+                                globalAddrInfo[3],
+                                globalAddrInfo[9],
+                                globalAddrInfo[4],
+                                globalAddrInfo[8],
+                                shortAddrFileInfo,
+                                globalAddrInfo[6],
+                                globalAddrInfo[7]));
           }
-          else if(in_stack)
-            break;
+        } catch (e) {
+          console.log("Could not produce stack trace from line: %s, %s", line, e);
         }
       }
-      var addrpatt = /0x[0-9a-f]{12}/;
+      function stack_trace(contents) {
+        for(var i=0; i<contents.length; i++) {
+          stack_trace_line(contents[i]);
+        }
+      }
+       
       if(/ SEGV /.test(contents[1]) && filepatt.test(contents[2])) { // segfault
         self._write(sprintf("Attempt to access invalid address %s.\n",
           addrpatt.exec(contents[1])));
@@ -73,29 +159,35 @@ angular.module('frontend-app')
         self._write(sprintf("%s\n",
           /^[^\(]*/.exec(contents[1])));
       }
+      else if(/stack-overflow /.test(contents[1])) {
+        self._write(sprintf("Stack overflow on address %s. Check call stack.\n",
+          addrpatt.exec(contents[1])));
+        stack_trace(contents);
+      } 
+      else if(/global-buffer-(over|underflow)/.test(contents[1])) {
+        var globalErrorType = /(overflow|underflow)/.exec(contents[1])[1];
+        self._write(sprintf("Global buffer %s on address %s. Check array indices.\n",
+          globalErrorType,
+          addrpatt.exec(contents[1])));
+        stack_trace(contents);
+      }
       else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
-        self._write(sprintf("Stack buffer overflow on address %s. Check array indices.\n",
+        var stackErrorType = /(overflow|underflow)/.exec(contents[1])[1];
+        self._write(sprintf("Stack buffer %s on address %s. Check array indices.\n",
+          stackErrorType,
           addrpatt.exec(contents[1])));
         stack_trace(contents);
       }
       else if(/heap-buffer-(over|under)flow /.test(contents[1])) { // heap buffer overflow
-        self._write(sprintf("Heap buffer overflow on address %s. Check indices used for dynamically allocated arrays.\n",
+        var heapErrorType = /(overflow|underflow)/.exec(contents[1])[1];
+        self._write(sprintf("Heap buffer %s on address %s. Check indices used for dynamically allocated arrays.\n",
+          heapErrorType,
           addrpatt.exec(contents[1])));
         stack_trace(contents);
       }
       else if(/LeakSanitizer:/.test(contents[1])) { // memory leak
-        self._write("Memory leaks occurred:\n");
-        for(var idx=3; idx < contents.length; idx++) {
-          if(/^(Direct|Indirect)/.test(contents[idx])) {
-            var last = idx;
-            for(; !/^$/.test(contents[last]); last++);
-            last--;
-            self._write(sprintf("  %s byte(s) allocated at %s never freed.\n",
-              /[0-9]+/.exec(contents[idx]),
-              filepatt.exec(asan_contents[last])[1]));
-            idx = last+1;
-          }
-        }
+        self._write("Memory leaks occurred:");
+        stack_trace(contents);
       }
       else if(/heap-use-after-free /.test(contents[1])) { // use after free
         self._write(sprintf("Using address %s after it has been freed.\n",

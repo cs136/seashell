@@ -2,7 +2,7 @@
 
 @(require "../utils.rkt")
 
-@title[#:tag "seashell-getting-started"]{Getting Started}
+@seashell-title[#:tag "seashell-getting-started"]{Getting Started}
 
 Welcome to Seashell, a web-interface for completing assignments in CS 136.
 Seashell is designed to work as an environment to both develop and test code

@@ -678,7 +678,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.submit = function(question, project) {
           var self = this;
-          return $q.when(ws.socket.marmosetSubmit(self.name, project || self.currentMarmosetProject(question), question));
+          return $q.when(ws.socket.marmosetSubmit(self.name, project, question));
         };
 
         SeashellProject.prototype.sendInput = function(pid, message) {

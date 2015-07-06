@@ -26,12 +26,12 @@
  *  and for making sure the compiler builds correctly.
  */
 int main( int argc, char* argv[] ) {
-  printf("Build canary for Seashell's clang interface.\n");
+  printf("Seashell %s (%s-%s) (API version %d) - clang build canary.\r\n", SEASHELL_VERSION, SEASHELL_BRANCH, SEASHELL_COMMIT_HASH, SEASHELL_API_VERSION);
   printf("Installation prefix: %s.\n", INSTALL_PREFIX);
   printf("Build directory: %s.\n", BUILD_DIR);
   printf("Debug build: %d.\n", SEASHELL_DEBUG);
   printf("Is installed: %d.\n", IS_INSTALLED());
-  if (argc > 2) {
+  if (argc > 1) {
     struct seashell_compiler* compiler = seashell_compiler_make();
     seashell_compiler_add_file(compiler, argv[1]);
     seashell_compiler_run(compiler);

@@ -61,6 +61,7 @@ target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGe
                               clangSerialization clangDriver
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
+                              clangStaticAnalyzerFrontend
                               ${REQ_LLVM_LIBRARIES})
 add_executable(seashell-test-clang driver.cc)
 target_link_libraries(seashell-test-clang seashell-clang)
