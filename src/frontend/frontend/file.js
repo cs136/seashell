@@ -457,9 +457,20 @@ angular.module('frontend-app')
 
         self.sendEOF = function() {
           if(self.console.running) {
-            self.project.sendEOF(self.console.PIDs[0]).then(function () {
-              self.console.running = false;
+            var d;
+            if(self.userInput) {
+              d = self.project.sendInput(self.console.PIDs[0], self.userInput);
+            }
+            else {
+              d = $q.defer();
+              d.resolve();
+              d = d.promise;
+            }
+            d.then(function() {
               self.userInput = "";
+              self.project.sendEOF(self.console.PIDs[0]).then(function () {
+                self.console.running = false;
+              });
             });
           }
         };
