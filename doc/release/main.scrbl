@@ -11,3 +11,4 @@ build pushed to live.
 @include-section["2.4.1.scrbl"]
 @include-section["2.4.0.scrbl"]
 @include-section["2.5.0.scrbl"]
+@include-section["2.5.1.scrbl"]
