@@ -32,5 +32,5 @@ script:
   - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
   - make
   - CTEST_OUTPUT_ON_FAILURE=true make test
-  - karma start /home/travis/cs136/seashell/src/tests/frontend-tests/seashell.conf.js
+  - karma start src/tests/frontend-tests/seashell.conf.js
   - make install >/dev/null
