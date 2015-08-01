@@ -21,6 +21,7 @@ before_install:
   # JavaScript linter
   - npm install -g jshint >/dev/null
   # JavaScript Frontend Testing Framework
+  - npm install -g jasmine >/dev/null
   - npm install -g karma >/dev/null
   # Set CC/CXX properly
   - export CXX="/usr/lib/ccache/g++-4.8" CC="/usr/lib/ccache/gcc-4.8"
