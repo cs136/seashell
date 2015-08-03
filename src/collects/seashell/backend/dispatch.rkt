@@ -394,11 +394,12 @@
          ('file file)
          ('normalize normalize)
          (_ _) ...)
-       (new-file project file
-                 (string->bytes/utf-8 (hash-ref message 'contents ""))
-                 (string->symbol (hash-ref message 'encoding "raw"))
-                 normalize)
+       (define tag (new-file project file
+                             (string->bytes/utf-8 (hash-ref message 'contents ""))
+                             (string->symbol (hash-ref message 'encoding "raw"))
+                             normalize))
        `#hash((id . ,id)
+              (checksum . ,tag)
               (success . #t)
               (result . #t))]
       [(hash-table

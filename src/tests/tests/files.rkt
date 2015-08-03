@@ -47,6 +47,11 @@
       (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
       (check-equal? (read-file "test" "foo4.c") #"This is a test\n"))
 
+    (test-case "Create a file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5)) 
+      (check-equal? tag (new-file "test" "foo4.5.c" contents 'raw #f)))
+
     (test-case "Write to file, check MD5 tag."
       (define contents #"Hello World!")
       (define tag (call-with-input-bytes contents md5)) 

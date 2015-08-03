@@ -51,10 +51,13 @@
 ;;  file - name of new file.
 ;;  normalize - boolean, whether or not to convert newlines to Unix
 ;;
+;; Returns:
+;;  MD5 checksum of file written.
+;;
 ;; Raises:
 ;;  exn:project:file if file exists.
 (define/contract (new-file project file contents encoding normalize?)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? void?)
+  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
@@ -62,7 +65,7 @@
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (define to-write
+    (define data
       (with-input-from-bytes contents
         (lambda () 
           (cond
@@ -78,10 +81,13 @@
             [else
               ;; no-op (ignore port)
               contents]))))
-    (if normalize?
-      (display-lines-to-file (call-with-input-string to-write port->lines) path #:exists 'error)
-      (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
-  (void))
+    (define to-write
+      (if normalize?
+        (with-output-to-bytes
+          (lambda () (for-each (lambda (line) (display line) (printf "~n")) (call-with-input-bytes data port->lines))))
+        data))
+    (with-output-to-file path (lambda () (write-bytes data)) #:exists 'error)
+    (call-with-input-bytes to-write md5)))
 
 (define/contract (new-directory project dir)
   (-> (and/c project-name? is-project?) path-string? void?)
