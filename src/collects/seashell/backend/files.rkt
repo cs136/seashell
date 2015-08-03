@@ -26,7 +26,8 @@
          racket/port
          racket/match
          racket/file
-         racket/path)
+         racket/path
+         openssl/md5)
 
 (provide exn:project:file
          new-file
@@ -151,11 +152,26 @@
 ;;  project - project.
 ;;  file - name of file to write.
 ;;  contents - contents of file.
-(define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes? void?)
-  (with-output-to-file (check-and-build-path (build-project-path project) file)
-                       (lambda () (write-bytes contents))
-                       #:exists 'must-truncate)
+;;  tag - MD5 of expected contents before file write, or #f
+;;        to force write.
+(define/contract (write-file project file contents [tag #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes?)
+       ((or/c #f string?))
+       void?)
+  (define file-to-write (check-and-build-path (build-project-path project) file))
+  (call-with-file-lock/timeout file-to-write 'exclusive 
+                               (lambda ()
+                                 (when tag
+                                   (define expected-tag (call-with-input-file file-to-write md5))
+                                   (unless (equal? tag expected-tag)
+                                     (raise (exn:project (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                         (current-continuation-marks)))))
+                                 (with-output-to-file (check-and-build-path (build-project-path project) file)
+                                                      (lambda () (write-bytes contents))
+                                                      #:exists 'must-truncate))
+                               (lambda ()
+                                 (raise (exn:project (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                     (current-continuation-marks)))))
   (void))
 
 ;; (list-files project)
@@ -166,7 +182,10 @@
 ;;  dir - optional, subdirectory within project to start at.
 ;;      Mainly used for recursive calls.
 ;; Returns:
-;;  (listof string?) - Files and directories in project.
+;;  (listof (string? boolean? number?)) - Files and directories in a project
+;;            \------|--------|---------  Name.
+;;                   \--------|---------  Is directory?
+;;                            \---------  Last modification time.
 (define/contract (list-files project [dir #f])
   (->* ((and/c project-name? is-project?))
     ((or/c #f (and/c string? path-string?)))
@@ -178,16 +197,16 @@
     (define relative (if dir (build-path dir path) path))
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
-      [(and (directory-exists? current) (not (directory-hidden? current)))
+      [(and (directory-exists? current) (not (path-hidden? current)))
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
-      [(file-exists? current)
+      [(and (file-exists? current) (not (path-hidden? current)))
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
-;; Determines if a directory is hidden (begins with a .)
-(define/contract (directory-hidden? path)
+;; Determines if a path is hidden (begins with a .)
+(define/contract (path-hidden? path)
   (-> path? boolean?)
   (define-values (_1 filename _2) (split-path (simplify-path path)))
   (string=? "." (substring (some-system-path->string filename) 0 1)))
