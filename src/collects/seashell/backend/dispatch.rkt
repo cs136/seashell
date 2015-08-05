@@ -436,10 +436,11 @@
         ('file file)
         ('contents contents)
         (_ _) ...)
-       (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f))
+       (define checksum
+         (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . checksum))]
       [(hash-table
         ('id id)
         ('type "readFile")
