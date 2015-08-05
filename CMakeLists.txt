@@ -65,7 +65,7 @@ set(SEASHELL_VERSION "2.5.1")
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()
-set(SEASHELL_API_VERSION "5")
+set(SEASHELL_API_VERSION "6")
 
 # Build our components.
 add_subdirectory(doc)

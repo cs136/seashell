@@ -145,11 +145,12 @@
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;  Contents of the file as a bytestring.
+;;  Contents of the file as a bytestring, and the MD5 checksum of the file.
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (check-and-build-path (build-project-path project) file)
-                        port->bytes))
+  (-> (and/c project-name? is-project?) path-string? (values bytes? string?))
+  (define data (with-input-from-file (check-and-build-path (build-project-path project) file)
+                                      port->bytes))
+  (values data (call-with-input-bytes data md5)))
 
 ;; (write-file project file contents) -> void?
 ;; Writes a file from a Racket bytestring.

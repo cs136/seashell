@@ -101,9 +101,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellFile.prototype.read = function() {
           var self = this;
+          // TODO: What to do with the checksum?
           return $q.when(ws.socket.readFile(self.project.name, self.fullname()))
             .then(function (conts) {
-              return conts;
+              return conts.data;
             });
         };
 
@@ -115,6 +116,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
+          // TODO: What to do with the checksum?
           return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
         };
 

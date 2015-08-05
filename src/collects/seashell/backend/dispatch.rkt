@@ -445,9 +445,12 @@
         ('type "readFile")
         ('project project)
         ('file file))
+       (define-values (data checksum) (read-file project file))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(bytes->string/utf-8 (read-file project file))))]
+              (result . 
+                      #hash((data . ,(bytes->string/utf-8 (read-file project file)))
+                            (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)
