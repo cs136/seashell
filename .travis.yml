@@ -9,7 +9,7 @@ addons:
     packages:
       - g++-4.8
 env:
-  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1 NODE_PATH=/usr/local/lib/node_modules
 before_install:
   # Get Racket
   - git clone https://github.com/greghendershott/travis-racket.git >/dev/null
@@ -20,6 +20,9 @@ before_install:
   - sh cmake-3.1.3-Linux-x86_64.sh --skip-license --prefix=$HOME/cmake >/dev/null
   # JavaScript linter
   - npm install -g jshint >/dev/null
+  # JavaScript Frontend Testing Framework
+  - npm install karma
+  - npm install karma-jasmine
   # Set CC/CXX properly
   - export CXX="/usr/lib/ccache/g++-4.8" CC="/usr/lib/ccache/gcc-4.8"
   # Echo Path
@@ -30,4 +33,5 @@ script:
   - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
   - make
   - CTEST_OUTPUT_ON_FAILURE=true make test
+  - ../node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js
   - make install >/dev/null
