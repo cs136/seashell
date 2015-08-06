@@ -21,8 +21,9 @@ before_install:
   # JavaScript linter
   - npm install -g jshint >/dev/null
   # JavaScript Frontend Testing Framework
-  - npm install -g karma-cli >/dev/null
-  - npm install -g karma-jasmine >/dev/null
+  - npm install karma --save-dev>/dev/null
+  - npm install karma-jasmine --save-dev >/dev/null
+  - npm install karma-phantomjs-launcher --save-dev >/dev/null
   # Set CC/CXX properly
   - export CXX="/usr/lib/ccache/g++-4.8" CC="/usr/lib/ccache/gcc-4.8"
   # Echo Path
@@ -33,5 +34,5 @@ script:
   - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
   - make
   - CTEST_OUTPUT_ON_FAILURE=true make test
-  - karma start ../src/tests/frontend-tests/seashell.conf.js
+  - node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js
   - make install >/dev/null
