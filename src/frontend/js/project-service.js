@@ -292,6 +292,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function(files) {
               self.root = new SeashellFile(self, "", true);
               _.map(files, function(f) {
+                // TODO: Do something with the checksum (f[4])
                 self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
               });
             });});

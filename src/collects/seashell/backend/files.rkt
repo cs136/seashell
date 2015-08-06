@@ -189,14 +189,15 @@
 ;;  dir - optional, subdirectory within project to start at.
 ;;      Mainly used for recursive calls.
 ;; Returns:
-;;  (listof (string? boolean? number?)) - Files and directories in a project
-;;            \------|--------|---------  Name.
-;;                   \--------|---------  Is directory?
-;;                            \---------  Last modification time.
+;;  (listof (string? boolean? number? string?)) - Files and directories in a project
+;;            \------|--------|-------|---------  Name.
+;;                   \--------|-------|---------  Is directory?
+;;                            \-------|---------  Last modification time.
+;;                                    \---------  Checksum, if file.
 (define/contract (list-files project [dir #f])
   (->* ((and/c project-name? is-project?))
     ((or/c #f (and/c string? path-string?)))
-    (listof (list/c (and/c string? path-string?) boolean? number?)))
+    (listof (list/c (and/c string? path-string?) boolean? number? (or/c #f string?))))
   (define start-path (if dir (check-and-build-path
     (build-project-path project) dir) (build-project-path project)))
   (foldl (lambda (path rest)
@@ -205,10 +206,11 @@
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
       [(and (directory-exists? current) (not (path-hidden? current)))
-        (cons (list (some-system-path->string relative) #t modified) (append (list-files project
+        (cons (list (some-system-path->string relative) #t modified #f) (append (list-files project
           relative) rest))]
       [(and (file-exists? current) (not (path-hidden? current)))
-        (cons (list (some-system-path->string relative) #f modified) rest)]
+        (define checksum (call-with-input-file current md5))
+        (cons (list (some-system-path->string relative) #f modified checksum) rest)]
       [else rest]))
     '() (directory-list start-path)))
 

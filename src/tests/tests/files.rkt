@@ -28,10 +28,10 @@
     (test-case "List files"
       (new-file "test" "good.c" #"" 'raw #f)
       (check-match (list-files "test") (list-no-order
-        (list "default" #t _)
-        (list "default/main.c" #f _)
-        (list "good.c" #f _)
-        (list "bad.c" #f _))))
+        (list "default" #t _ #f)
+        (list "default/main.c" #f _ _)
+        (list "good.c" #f _ _)
+        (list "bad.c" #f _ _))))
     
     (test-case "Create a file, with a data URL"
       (new-file "test" "foo1.c" #"data:,A brief note" 'url #f)
