@@ -76,6 +76,13 @@
       (new-file "test" "foo7.c" contents 'raw #f)
       (define-values (data checksum) (read-file "test" "foo7.c"))
       (check-equal? checksum tag))
+    
+    (test-case "Write file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5)) 
+      (new-file "test" "foo8.c" #"" 'raw #f)
+      (define checksum (write-file "test" "foo8.c" contents #f))
+      (check-equal? checksum tag))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

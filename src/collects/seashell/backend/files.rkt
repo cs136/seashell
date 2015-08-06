@@ -152,7 +152,7 @@
                                       port->bytes))
   (values data (call-with-input-bytes data md5)))
 
-;; (write-file project file contents) -> void?
+;; (write-file project file contents) -> string?
 ;; Writes a file from a Racket bytestring.
 ;;
 ;; Arguments:
@@ -161,10 +161,12 @@
 ;;  contents - contents of file.
 ;;  tag - MD5 of expected contents before file write, or #f
 ;;        to force write.
+;; Returns:
+;;  MD5 checksum of resulting file.
 (define/contract (write-file project file contents [tag #f])
   (->* ((and/c project-name? is-project?) path-string? bytes?)
        ((or/c #f string?))
-       void?)
+       string?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
   (call-with-file-lock/timeout file-to-write 'exclusive 
                                (lambda ()
@@ -179,7 +181,7 @@
                                (lambda ()
                                  (raise (exn:project (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
                                                      (current-continuation-marks)))))
-  (void))
+  (call-with-input-bytes contents md5))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.

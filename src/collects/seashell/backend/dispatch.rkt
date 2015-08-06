@@ -440,7 +440,7 @@
          (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
-              (result . checksum))]
+              (result . ,checksum))]
       [(hash-table
         ('id id)
         ('type "readFile")
@@ -450,7 +450,7 @@
        `#hash((id . ,id)
               (success . #t)
               (result . 
-                      #hash((data . ,(bytes->string/utf-8 (read-file project file)))
+                      #hash((data . ,(bytes->string/utf-8 data))
                             (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
