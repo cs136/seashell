@@ -522,16 +522,19 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
 
         /**
-         * SeashelLProject.run(...)
+         * SeashellProject.run(...)
          * Compiles [if necessary] and runs the project.
          *
          * test - boolean parameter, run with tests if true.
          */
-        SeashellProject.prototype.run = function(question, folder, filename, data, test) {
+        SeashellProject.prototype.run = function(question, folder, filename,
+                                          IOCallback, testCallback, data, test) {
           var self = this;
           // TODO: handle racket files.
           var file = self.root.find(self._getPath(question, folder, filename));
           var tests = test ? self.getTestsForFile(file) : [];
+          self.IOCallback = IOCallback;
+          self.testCallback = testCallback;
 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
@@ -552,7 +555,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               if(result.data.status == "compile-failed") {
                 res.reject(result.data);
               }
-              else {
+              else if(result.data.status == "running") {
+                var runner = new Worker("js/offline-run.js");
+                runner.onmessage = function(msg) {
+                  IOCallback(msg.data);
+                };
+                runner.postMessage(result.data.obj);
                 res.resolve(result.data);
               }
             };

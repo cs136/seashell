@@ -206,7 +206,7 @@ angular.module('frontend-app')
       }
     }
 
-    socket.register_callback("io", function(io) {
+    self.IOCallback = function(io) {
       if(io.type == "stdout") {
         ind = io.message.indexOf("\n");
         if(ind > -1) {
@@ -258,8 +258,9 @@ angular.module('frontend-app')
         self.running = false;
       }
       self.flush();
-    });
-    socket.register_callback("test", function(res) {
+    };
+    socket.register_callback("io", self.IOCallback);
+    self.testCallback = function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
@@ -289,7 +290,8 @@ angular.module('frontend-app')
       else if(res.result==="killed") {
         self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
-    });
+    };
+    socket.register_callback("test", self.testCallback);
 
     self.setRunning = function(project, PIDs, testing) {
       self.running = !testing;

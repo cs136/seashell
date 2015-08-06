@@ -60,16 +60,16 @@ angular.module('frontend-app')
          *  the socket exists in the first place, this is
          *  fine for now. */
         var cbC_key = ws.register_callback('connected', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", false);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", false);
         }, true);
         var cbF_key = ws.register_callback('failed', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", true);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", true);
         }, true);
         var cbD_key = ws.register_callback('disconnected', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", true);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", true);
         }, true);
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
@@ -379,7 +379,8 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, false)
+            self.project.run(self.question, "question", self.runnerFile,
+                self.console.IOCallback, self.console.testCallback, self.contents, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -401,7 +402,8 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, true)
+            self.project.run(self.question, "question", self.runnerFile,
+                self.console.IOCallback, self.console,testCallback, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);

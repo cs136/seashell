@@ -1,6 +1,34 @@
 /*
   This file will be run as a web worker to compile and run code offline.
+  TODO implement running tests with the compiled code. Do this after we
+     have the offline FS implemented.
 */
+
+var init = false;
+var init_queue = [];
+
+function block_for_libraries(callback) {
+  try {
+    FS.readFile("/include/stdio.h");
+    callback();
+  }
+  catch(e) {
+    setTimeout(function() {
+      block_for_libraries(callback);
+    }, 50);
+  }
+}
+
+function onInit() {
+  console.log('onRuntimeInitialized');
+  init = true;
+  for(var i=0; i<init_queue.length; i++) {
+    block_for_libraries(init_queue[i]);
+  }
+  init_queue = [];
+}
+
+Module = {onRuntimeInitialized:onInit};
 
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
@@ -34,19 +62,25 @@ onmessage = function(msg) {
     }
     var cres = Module.seashell_compiler_run(cc);
     var diags = diagnostics(cc, sources);
-    Module.seashell_compiler_free(cc);
     if(cres === 0) {
-      /* code to run it here */
+      var obj = Module.seashell_compiler_get_object(cc);
+      Module.seashell_compiler_free(cc);
       return { messages: diags,
+               obj: obj,
+               type: "result",
                status: 'running' };
     }
     else {
+      Module.seashell_compiler_free(cc);
       return { messages: diags,
+               type: "result",
                status: 'compile-failed' };
     }
   }
   
-  FS.mkdir("/working");
+  try {
+    FS.mkdir("/working");
+  } catch(e) { }
   var sources = [];
   for(var i=0; i<data.files.length; i++) {
     var file = FS.open("/working/"+data.files[i].name, 'w');
@@ -57,7 +91,15 @@ onmessage = function(msg) {
     FS.close(file);
     sources.push(data.files[i].name);
   }
-  var res = compile(sources);
 
-  postMessage(res);
+  if(init) {
+    var res = compile(sources);
+    postMessage(res);
+  }
+  else {
+    init_queue.push(function() {
+      var res = compile(sources);
+      postMessage(res);
+    });
+  }
 };
