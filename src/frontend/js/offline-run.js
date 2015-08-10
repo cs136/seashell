@@ -4,6 +4,8 @@
     compatibility.
 */
 
+// TODO: Make sure the XMLHTTPRequest is completed before running code.
+// TODO: Make sure the runtime is initialized before running code.
 function onInit() {
   console.log("onRuntimeInitialized");
 }

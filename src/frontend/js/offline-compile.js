@@ -7,6 +7,7 @@
 var init = false;
 var init_queue = [];
 
+
 function block_for_libraries(callback) {
   try {
     FS.readFile("/include/stdio.h");
@@ -19,6 +20,7 @@ function block_for_libraries(callback) {
   }
 }
 
+// TODO: should block everything until the runtime is loaded.
 function onInit() {
   console.log('onRuntimeInitialized');
   init = true;
