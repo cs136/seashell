@@ -4,6 +4,10 @@
     compatibility.
 */
 
+function onInit() {
+  console.log("onRuntimeInitialized");
+}
+Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
 self.importScripts("seashell-clang-js/bin/seashell-runner.js");
 
 var req = new XMLHttpRequest();

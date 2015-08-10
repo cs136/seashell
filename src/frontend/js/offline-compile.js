@@ -28,7 +28,7 @@ function onInit() {
   init_queue = [];
 }
 
-Module = {onRuntimeInitialized:onInit};
+Module = {onRuntimeInitialized:onInit, setStatus:(function (s) {console.log(s);})};
 
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
