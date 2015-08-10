@@ -29,4 +29,4 @@ self.onmessage = function(obj) {
   postMessage({message: run.result(),
                type: 'done'});
   close();
-}
+};
