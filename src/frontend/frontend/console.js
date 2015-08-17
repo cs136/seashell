@@ -198,6 +198,10 @@ angular.module('frontend-app')
         self._write(sprintf("Attempting to free address %s, which has already been freed.\n",
           addrpatt.exec(contents[1])));
         stack_trace(contents);
+      } else if(/attempting free on/.test(contents[1])) { // free, not malloc
+        self._write(sprintf("Attempting to free address %s, which not been malloc'd.\n",
+          addrpatt.exec(contents[1])));
+        stack_trace(contents);
       }
       else { // else print usual message
         _.each(contents, function(line) {
