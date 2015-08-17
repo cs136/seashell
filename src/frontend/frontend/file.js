@@ -346,8 +346,9 @@ angular.module('frontend-app')
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
             var path = newName.split("/");
             $scope.$parent.refresh();
-            $state.go("edit-project.editor.file", {question:path[0],
-              part:(path.length>2?path[1]:"question"),
+            $state.go("edit-project.editor.file", {
+              question:(path[0]=="common"?self.question:path[0]),
+              part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
               file:(path.length>2?path[2]:path[1])});
           });
         };
