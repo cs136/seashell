@@ -110,4 +110,11 @@ The following Seashell support components live here:
 @bold{@larger{templates directory:}}
 @itemlist[@item["HTML for the various pages"]]
 
-   
+@subsection{Fronted Testing - @source-url-link["/src/tests/frontend-tests"]}
+We use the testing framework Jasmine and test-runner Karma in our build.
+To run in the command line use the following command in the linked folder (above):
+@commandline{karma start seashell.conf.js}
+
+Make sure that the seashell.conf.js file is kept up to date with any dependancies that are located inside of it. You can also change different printing options as stated in the @link["http://karma-runner.github.io/0.13/config/configuration-file.html" "Karma API"].
+
+Spec files (located in the spec directory) are used to test your program, examples for testing with angularJS is simple and outlined @link["https://docs.angularjs.org/guide/unit-testing" "here"].
