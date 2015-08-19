@@ -138,7 +138,8 @@ angular.module('frontend-app')
           templateUrl: "frontend/templates/rename-file-template.html",
           controller: ["$scope", "$state", "error-service",
             function($scope, $state, errors) {
-              $scope.rename_name = file;
+              $scope.rename_name = (folder=='common' ? "" : question + "/") +
+                (folder=='question' ? "" : folder + "/") + file;
               $scope.renameFile = function() {
                 project.renameFile(question, folder, file, folder, $scope.rename_name)
                   .then(function() {

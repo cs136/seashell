@@ -569,13 +569,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * SeashellProject.renameFile(file, name)
          *
          * Renames the given file.
-         *  - file: the SeashellFile to rename
-         *  - name: a path from project root representing the location to rename to
          */
         SeashellProject.prototype.renameFile = function(question, folder, file, newFolder, newName) {
           var self = this;
           var path = self._getPath(question, folder, file);
-          var target = self._getPath(question, newFolder, newName); 
+          var target = newName; 
           if (self.root.find(path))
             return self.root.find(path).rename(target);
           else
