@@ -4,6 +4,12 @@
     compatibility.
 */
 
+// TODO: Make sure the XMLHTTPRequest is completed before running code.
+// TODO: Make sure the runtime is initialized before running code.
+function onInit() {
+  console.log("onRuntimeInitialized");
+}
+Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
 self.importScripts("seashell-clang-js/bin/seashell-runner.js");
 
 var req = new XMLHttpRequest();
@@ -29,4 +35,4 @@ self.onmessage = function(obj) {
   postMessage({message: run.result(),
                type: 'done'});
   close();
-}
+};

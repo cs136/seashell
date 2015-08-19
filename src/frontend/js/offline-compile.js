@@ -7,6 +7,7 @@
 var init = false;
 var init_queue = [];
 
+
 function block_for_libraries(callback) {
   try {
     FS.readFile("/include/stdio.h");
@@ -19,6 +20,7 @@ function block_for_libraries(callback) {
   }
 }
 
+// TODO: should block everything until the runtime is loaded.
 function onInit() {
   console.log('onRuntimeInitialized');
   init = true;
@@ -28,7 +30,7 @@ function onInit() {
   init_queue = [];
 }
 
-Module = {onRuntimeInitialized:onInit};
+Module = {onRuntimeInitialized:onInit, setStatus:(function (s) {console.log(s);})};
 
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
