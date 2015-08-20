@@ -4,13 +4,28 @@
     compatibility.
 */
 
-// TODO: Make sure the XMLHTTPRequest is completed before running code.
+var initialized = false;
+var toRun = null;
+
+console.log("offline-run thread begin");
+
 // TODO: Make sure the runtime is initialized before running code.
 function onInit() {
+  initialized = true;
   console.log("onRuntimeInitialized");
+  if(toRun !== null) {
+    run(toRun);
+  }
 }
+
 Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
 self.importScripts("seashell-clang-js/bin/seashell-runner.js");
+
+var stdout = "";
+
+Module._RT_stdout_write = function(str) {
+  stdout += str;
+};
 
 var req = new XMLHttpRequest();
 var runtime = "";
@@ -22,17 +37,23 @@ for(var i=0; i<view.length; i++) {
   runtime += String.fromCharCode(view[i]);
 }
 
-var stdout = "";
-
-self.onmessage = function(obj) {
-  var run = new Module.SeashellInterpreter();
-  obj = obj.data;
-  run.assemble(obj);
-  run.assemble(runtime);
-  run.run();
+function run(obj) {
+  console.log("run()");
+  var runner = Module.SeashellInterpreter();
+  runner.assemble(obj);
+  runner.assemble(runtime);
+  runner.run();
   postMessage({message: stdout,
                type: 'stdout'});
   postMessage({message: run.result(),
                type: 'done'});
   close();
+}
+
+self.onmessage = function(obj) {
+  obj = obj.data;
+  if(initialized)
+    run(obj);
+  else
+    toRun = obj;
 };

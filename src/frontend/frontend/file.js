@@ -235,7 +235,7 @@ angular.module('frontend-app')
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
-            readOnly: !self.ready || self.isBinaryFile,
+            readOnly: self.isBinaryFile,
             mode: mime,
             theme: theme,
             tabSize: parseInt(settings.settings.tab_width),

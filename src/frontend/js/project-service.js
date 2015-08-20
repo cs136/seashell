@@ -545,11 +545,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             if(!self.compiler) {
               self.compiler = new Worker("js/offline-compile.js");
             }
-            self.compiler.postMessage({
-              files: [file.toWorker()],
-              tests: tests
-            });
             self.compiler.onmessage = function(result) {
+              console.log("Received compiler message");
               if(result.data.status == "compile-failed") {
                 res.reject(result.data);
               }
@@ -562,6 +559,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 res.resolve(result.data);
               }
             };
+            self.compiler.postMessage({
+              files: [file.toWorker()],
+              tests: tests
+            });
             return res.promise;
           }
         };
