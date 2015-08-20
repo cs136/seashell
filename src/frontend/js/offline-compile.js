@@ -9,7 +9,6 @@ var init_queue = [];
 
 
 function block_for_libraries(callback) {
-  console.log("block_for_libraries");
   try {
     FS.readFile("/include/stdio.h");
     callback();
@@ -17,13 +16,12 @@ function block_for_libraries(callback) {
   catch(e) {
     setTimeout(function() {
       block_for_libraries(callback);
-    }, 500);
+    }, 200);
   }
 }
 
 // TODO: should block everything until the runtime is loaded.
 function onInit() {
-  console.log('offline-compile: onRuntimeInitialized');
   init = true;
   for(var i=0; i<init_queue.length; i++) {
     block_for_libraries(init_queue[i]);
@@ -59,7 +57,6 @@ self.onmessage = function(msg) {
   }
 
   function compile(sources) {
-    console.log("compile() starting...");
     var cc = Module.seashell_compiler_make();
     for(var i=0; i<sources.length; i++) {
       Module.seashell_compiler_add_file(cc, "/working/"+sources[i]);

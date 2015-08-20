@@ -7,14 +7,11 @@
 var initialized = false;
 var toRun = null;
 
-console.log("offline-run thread begin");
-
 // TODO: Make sure the runtime is initialized before running code.
 function onInit() {
   initialized = true;
-  console.log("onRuntimeInitialized");
   if(toRun !== null) {
-    run(toRun);
+    runObj(toRun);
   }
 }
 
@@ -37,15 +34,14 @@ for(var i=0; i<view.length; i++) {
   runtime += String.fromCharCode(view[i]);
 }
 
-function run(obj) {
-  console.log("run()");
-  var runner = Module.SeashellInterpreter();
+function runObj(obj) {
+  var runner = new Module.SeashellInterpreter();
   runner.assemble(obj);
   runner.assemble(runtime);
   runner.run();
   postMessage({message: stdout,
                type: 'stdout'});
-  postMessage({message: run.result(),
+  postMessage({status: runner.result(),
                type: 'done'});
   close();
 }
@@ -53,7 +49,7 @@ function run(obj) {
 self.onmessage = function(obj) {
   obj = obj.data;
   if(initialized)
-    run(obj);
+    runObj(obj);
   else
     toRun = obj;
 };
