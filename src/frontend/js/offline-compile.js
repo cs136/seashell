@@ -33,8 +33,8 @@ function onInit() {
 
 Module = {onRuntimeInitialized:onInit, setStatus:(function (s) {console.log(s);})};
 
-self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
+self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 
 self.onmessage = function(msg) {
   var data = msg.data;
