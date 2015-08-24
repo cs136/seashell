@@ -23,8 +23,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http',
-    function($scope, $q, ws, marmoset, $http) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http', 'settings-service',
+    function($scope, $q, ws, marmoset, $http, settings) {
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
@@ -537,10 +537,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
-          if(ws.connected) {
+          if(ws.connected && settings.settings.offline_mode !== 2) {
             return $q.when(ws.socket.compileAndRunProject(self.name, file.fullname(), tests));
           }
-          else {
+          else if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
             var res = $q.defer();
             if(!self.compiler) {
               self.compiler = new Worker("js/offline-compile.js");
@@ -564,6 +564,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               tests: tests
             });
             return res.promise;
+          } else {
+            return $q.reject("Offline mode disabled while disconnected!");
           }
         };
 
