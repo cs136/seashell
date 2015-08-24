@@ -31,7 +31,8 @@ angular.module('frontend-app')
           tab_width  : 2,
           use_space : true,
           force_narrow : false,
-          theme : "dark"
+          theme : "dark",
+          offline_mode : 1 /** Valid options: 0 - disabled, 1 - enabled, 2 - forced */
         };
         self.notify = {};
         var nKey = 0;
