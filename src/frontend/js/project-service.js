@@ -546,16 +546,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               self.compiler = new Worker("js/offline-compile.js");
             }
             self.compiler.onmessage = function(result) {
-              console.log("Received compiler message");
               if(result.data.status == "compile-failed") {
                 res.reject(result.data);
               }
               else if(result.data.status == "running") {
-                var runner = new Worker("js/offline-run.js");
-                runner.onmessage = function(msg) {
+                self.runner = new Worker("js/offline-run.js");
+                self.runner.onmessage = function(msg) {
                   io_callback(msg.data);
                 };
-                runner.postMessage(result.data.obj);
+                self.runner.postMessage(result.data.obj);
                 res.resolve(result.data);
               }
             };
@@ -690,6 +689,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
+          // handle offline mode:
+          if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
+            self.runner.postMessage(message);
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
+          }
           return $q.when(ws.socket.programInput(pid, message));
         };
 

@@ -38,12 +38,33 @@ function runObj(obj) {
   var runner = new Module.SeashellInterpreter();
   runner.assemble(obj);
   runner.assemble(runtime);
-  runner.run();
-  postMessage({message: stdout,
-               type: 'stdout'});
-  postMessage({status: runner.result(),
-               type: 'done'});
-  close();
+  runner._RT_stdin_buffer = "";
+
+  var running = true;
+  
+  self.onmessage = function(obj) {
+    Module._RT_stdin_buffer += obj.data;
+    if(!running)
+      run_loop();
+  }
+
+  function run_loop() {
+    running = true;
+    var loop = runner.run();
+    postMessage({message: stdout,
+                 type: 'stdout'});
+    stdout = "";
+    if(loop) {
+      running = false;
+    }
+    if(!loop) {
+      postMessage({status: runner.result(),
+                   type: 'done'});
+      close();
+    }
+  }
+
+  run_loop();
 }
 
 self.onmessage = function(obj) {
