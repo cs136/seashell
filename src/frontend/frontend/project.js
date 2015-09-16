@@ -1,4 +1,5 @@
 /**
+ *
  * Seashell's frontend project controller
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
@@ -22,13 +23,13 @@
 angular.module('frontend-app')
   // Project controller.
   .controller("ProjectController", ['$state', '$stateParams', '$scope', 'error-service',
-      'openProject', '$cookies', 'NewQuestionModal', 'DeleteProjectModal',
-    function($state, $stateParams, $scope,  errors, openProject, $cookies, newQuestionModal, deleteProjectModal) {
+      'openProject', '$cookies', 'NewQuestionModal', 'DeleteProjectModal', 'projects',
+    function($state, $stateParams, $scope,  errors, openProject, $cookies, newQuestionModal, deleteProjectModal, projects) {
       var self = this;
       self.state = 'edit-project';
       self.project = openProject;
       self.userid = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
-      self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.is_deleteable = projects.isDeleteable(self.project.name);
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);

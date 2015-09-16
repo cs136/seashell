@@ -47,8 +47,4 @@ angular.module('frontend-app')
       self.projectList.refresh();
     };
 
-    // Tests if project is deleteable
-    self.isDeletable = function(project) {
-      return ! /^[aA][0-9]+/.test(project);
-    };
-  }]);
+ }]);
