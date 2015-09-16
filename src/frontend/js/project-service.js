@@ -724,7 +724,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        * @returns {Boolean} 
        */
       self.isDeleteable = function (name) {
-          return ! /^[aA][1-9]+/.test(name);
+          return ! /^[aA][0-9]+/.test(name);
       };
 
       /**
