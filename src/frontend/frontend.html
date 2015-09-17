@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @(include "frontend/includes/styles.html")
+    @(include "frontend/includes/scripts.html")
     <title>Seashell</title>
     <script type='text/javascript'>
       var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
@@ -14,6 +15,5 @@
   <body ng-controller="FrontendController as frontend">
 @(include "frontend/includes/navigation.html")
 @(include "frontend/includes/body.html")
-@(include "frontend/includes/scripts.html")
   </body>
 </html>
