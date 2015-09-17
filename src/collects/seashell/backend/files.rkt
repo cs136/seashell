@@ -78,7 +78,7 @@
               ;; no-op (ignore port)
               contents]))))
     (if normalize?
-      (display-lines-to-file (call-with-input-string to-write port->lines) path #:exists 'error)
+      (display-lines-to-file (call-with-input-string (bytes->string/utf-8 to-write) port->lines) path #:exists 'error)
       (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
   (void))
 
