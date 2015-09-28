@@ -115,7 +115,7 @@ angular.module('frontend-app')
             function ($scope, $state, projects, errors) {
               $scope.new_project_name = "";
               $scope.newProject = function () {
-                if ($scope.new_project_name === "" || !projects.isDeleteable($scope.new_project_name)) {
+                if ($scope.new_project_name === "" || !projects.canCreate($scope.new_project_name)) {
                   return false;
                 } else {
                   $scope.$close();

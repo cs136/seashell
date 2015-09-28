@@ -728,6 +728,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       };
 
       /**
+       * Returns true if a project doesn't use a reserved name
+       * @param {String} name - Name of project.
+       * @returns {Boolean}
+       */
+      self.canCreate = function (name) {
+          return self.isDeleteable(name) && !/^Tut([0-9]+|[0-9]+Sol)$/.test(name) && !/^Lec[0-9]+$/.test(name);
+      };
+      /**
        * Deletes a project.
        * @param {String} name - Name of project.
        * @returns {Angular.$q -> ?} Angular deferred that resolves when
