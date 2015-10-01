@@ -66,14 +66,14 @@
         (lambda () 
           (cond
             [(eq? encoding 'url)
-             (match-define 
-               (list _ mime charset b64?)
-               (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?," (current-input-port)))
-             ;; Apparently Safari sometimes sets the mime type to 'base64'...
-             ;; (data:base64, ....)
-             (if (or b64? (bytes=? mime #"base64"))
-               (base64-decode (port->bytes))
-               (string->bytes/utf-8 (uri-decode (port->string))))]
+             (match (regexp-match #rx"^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?," (current-input-port))
+              [#f #""]
+              [(list _ mime charset b64?)
+               ;; Apparently Safari sometimes sets the mime type to 'base64'...
+               ;; (data:base64, ....)
+               (if (or b64? (bytes=? mime #"base64"))
+                 (base64-decode (port->bytes))
+                 (string->bytes/utf-8 (uri-decode (port->string))))])]
             [else
               ;; no-op (ignore port)
               contents]))))
