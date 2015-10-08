@@ -123,6 +123,12 @@ angular.module('frontend-app')
           });
         };
 
+        /** Adds a pair of .in and .expect files to the project
+         */
+        self.add_test = function () {
+          newFileModal(...);
+        };
+
         /** Dispatches a function to run when the
          *  current file is saved.
          *
