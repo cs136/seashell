@@ -238,6 +238,43 @@ angular.module('frontend-app')
           }).result;
         };
       }])
+
+  .factory('NewTestModal', ['$modal', 'error-service',
+          function ($modal, errors) {
+              return function(project, question, notify) {
+                  notify = notify || function () {};
+                  return $modal.open({
+                      templateUrl: "frontend/templates/new-test-template.html",
+                      controller: ['$scope', '$state', 'error-service', '$q',
+                      function($scope, $state, errors, $q) {
+                        $scope.new_file_name = "";
+                        $scope.question = question;
+                        $scope.inputError = false;
+                        $scope.newTest = function () {
+                           // three cases:
+                           // a .in or .expect file, which we create normally
+                           // a file without an extension, for which we create a pair 
+                           // an invalid extension
+                           var filename = $scope.new_file_name;
+                           var extension = filename.split('.').pop();
+                           var result = null;
+                             if (extension === 'in' || extension === 'expect') {
+                               result = project.createFile("tests", question, filename);
+                           } else if (filename.split('.').length < 2) {
+                               // no extension
+                               result = project.createFile("tests", question, filename + ".in");
+                               project.createFile("tests", question, filename + ".expect");
+                           } else {
+                               $scope.inputError = "Invalid test file name.";
+                               return false;
+                           }
+                         };
+                      }]
+                  }).result;
+              };
+          }])
+
+
   // Directive for New Question Modal Service
   .factory('NewQuestionModal', ['$modal', 'error-service',
     function ($modal, errors){
