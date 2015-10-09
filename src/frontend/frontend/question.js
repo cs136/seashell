@@ -22,10 +22,10 @@
 angular.module('frontend-app')
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
-      'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
+      'openProject', 'NewFileModal', 'NewTestModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
       'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
-        openProject, newFileModal, submitMarmosetModal,
+        openProject, newFileModal, newTestModal,  submitMarmosetModal,
         $interval, marmoset, newQuestionModal,
         marmosetResultsModal, Console) {
         var self = this;
@@ -126,7 +126,9 @@ angular.module('frontend-app')
         /** Adds a pair of .in and .expect files to the project
          */
         self.add_test = function () {
-          newFileModal(...);
+          newTestModal(self.project, self.question, function () {
+             self.refresh();
+          }); 
         };
 
         /** Dispatches a function to run when the
