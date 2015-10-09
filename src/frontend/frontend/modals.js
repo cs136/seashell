@@ -257,17 +257,33 @@ angular.module('frontend-app')
                            // an invalid extension
                            var filename = $scope.new_file_name;
                            var extension = filename.split('.').pop();
-                           var result = null;
+                           var results = [];
                              if (extension === 'in' || extension === 'expect') {
-                               result = project.createFile("tests", question, filename);
+                               results.push(project.createFile("tests", question, filename));
                            } else if (filename.split('.').length < 2) {
                                // no extension
-                               result = project.createFile("tests", question, filename + ".in");
-                               project.createFile("tests", question, filename + ".expect");
+                               results.push(project.createFile("tests", question, filename + ".in"));
+                               results.push(project.createFile("tests", question, filename + ".expect"));
                            } else {
                                $scope.inputError = "Invalid test file name.";
                                return false;
                            }
+                           results[0].then(function () {
+                                 notify(false, true, project, question, $scope.new_file_folder, filename);
+                           })
+                           .catch(function (error) {
+                                 notify(false, false, project, question, $scope.new_file_folder, filename);
+                                 errors.report(error, sprintf("Could not create file %s!", filename));
+                           });
+                           results[1].then(function () {
+                                 notify(false, true, project, question, $scope.new_file_folder, filename);
+                           })
+                           .catch(function (error) {
+                                 notify(false, false, project, question, $scope.new_file_folder, filename);
+                                 errors.report(error, sprintf("Could not create file %s!", filename));
+                           });
+                           $scope.$close();
+ 
                          };
                       }]
                   }).result;
