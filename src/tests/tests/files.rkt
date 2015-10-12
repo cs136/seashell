@@ -2,7 +2,8 @@
 
 (require seashell/backend/project
          seashell/backend/files
-         rackunit)
+         rackunit
+         openssl/md5)
 
 (define/provide-test-suite file-suite
   (test-suite "File test suite"
@@ -46,6 +47,17 @@
       (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
       (check-equal? (read-file "test" "foo4.c") #"This is a test\n"))
 
+    (test-case "Write to file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5)) 
+      (new-file "test" "foo5.c" contents 'raw #f)
+      (write-file "test" "foo5.c" #"Hello World 2.0!" tag))
+    
+    (test-case "Write to file, check MD5 tag. (failure)"
+      (define contents #"Hello World!")
+      (define tag "not a md5 tag.") 
+      (new-file "test" "foo6.c" contents 'raw #f)
+      (check-exn exn:fail? (lambda () (write-file "test" "foo6.c" #"Hello World 2.0!" tag))))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

@@ -433,8 +433,9 @@
         ('type "writeFile")
         ('project project)
         ('file file)
-        ('contents contents))
-       (write-file project file (string->bytes/utf-8 contents))
+        ('contents contents)
+        (_ _) ...)
+       (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f))
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
