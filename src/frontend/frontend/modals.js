@@ -268,19 +268,12 @@ angular.module('frontend-app')
                                $scope.inputError = "Invalid test file name.";
                                return false;
                            }
-                           results[0].then(function () {
-                                 notify(false, true, project, question, $scope.new_file_folder, filename);
-                           })
-                           .catch(function (error) {
-                                 notify(false, false, project, question, $scope.new_file_folder, filename);
-                                 errors.report(error, sprintf("Could not create file %s!", filename));
-                           });
-                           results[1].then(function () {
-                                 notify(false, true, project, question, $scope.new_file_folder, filename);
-                           })
-                           .catch(function (error) {
-                                 notify(false, false, project, question, $scope.new_file_folder, filename);
-                                 errors.report(error, sprintf("Could not create file %s!", filename));
+                           _.each(results, function (result) {
+                               result.then(function () { 
+                                   notify(false, true, project, question, $scope.new_file_folder, filename); 
+                               }).catch(function (error) {
+                                   notify(false, false, project, question, $scope_new_file_folder, filename);
+                               });
                            });
                            $scope.$close();
  
