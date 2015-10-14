@@ -279,7 +279,7 @@ angular.module('frontend-app')
  
                          };
                       }]
-                  }).result;
+                  }).results;
               };
           }])
 
