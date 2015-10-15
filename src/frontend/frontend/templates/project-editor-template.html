@@ -11,7 +11,7 @@
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
               <a ng-repeat-start="file in group" ng-if="$first"
-                ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
+                ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
                 ui-sref-active="file-link-active">{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
                   ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"

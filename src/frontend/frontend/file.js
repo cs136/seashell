@@ -34,7 +34,7 @@ angular.module('frontend-app')
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
-        self.file = openFile;
+        self.file = window.decodeURI(openFile); // unescape, to fix quotes
         self.console = Console;
         self.settings = settings;
         self.undoHistory = undoHistory;
