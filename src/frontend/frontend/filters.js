@@ -53,7 +53,4 @@ angular.module('frontend-app')
   })
   .filter('escapeFilter', function () {
     return window.escape;
-  })
-  .filter('unescapeFilter', function () {
-    return window.decodeURI;
   });
