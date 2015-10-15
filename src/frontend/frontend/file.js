@@ -178,7 +178,7 @@ angular.module('frontend-app')
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            if (self.loaded) {
+            if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
                 self.project.saveFile(self.question, self.folder, self.file, self.contents)
                   .catch(function (error) {
@@ -481,6 +481,7 @@ angular.module('frontend-app')
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
+
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
@@ -494,9 +495,12 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.refreshSettings();
           }).catch(function (error) {
-            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
+            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
               self.isBinaryFile = true;
+              self.refreshSettings();
+            }
             else {
               errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
               $state.go('edit-project.editor');
