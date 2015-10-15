@@ -50,4 +50,10 @@ angular.module('frontend-app')
       }
       return out;
     };
+  })
+  .filter('escapeFilter', function () {
+    return window.escape;
+  })
+  .filter('unescapeFilter', function () {
+    return window.decodeURI;
   });
