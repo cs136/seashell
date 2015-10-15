@@ -367,7 +367,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           var file = self.root.find(self._getPath(question, folder, filename));
           if(!file)
-            return $q.reject("Cannot open file!");
+            return $q.reject("Cannot open file! " + filename);
           if(file.is_dir)
             return $q.reject("Cannot open a directory in editor.");
           return file.read();

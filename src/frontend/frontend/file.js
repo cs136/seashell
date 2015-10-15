@@ -34,7 +34,7 @@ angular.module('frontend-app')
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
-        self.file = openFile;
+        self.file = openFile; 
         self.console = Console;
         self.settings = settings;
         self.undoHistory = undoHistory;
@@ -349,7 +349,7 @@ angular.module('frontend-app')
             $state.go("edit-project.editor.file", {
               question:(path[0]=="common"?self.question:path[0]),
               part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
-              file:(path.length>2?path[2]:path[1])});
+              file:escape(path.length>2?path[2]:path[1])});
           });
         };
 
