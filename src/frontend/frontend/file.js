@@ -269,6 +269,7 @@ angular.module('frontend-app')
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
+            allowIn: ['INPUT', 'TEXTAREA'],
             callback: function(evt) {
               evt.preventDefault();
               self.sendEOF();
@@ -438,9 +439,10 @@ angular.module('frontend-app')
         };
 
         self.indentAll = function() {
-          var lineCount = self.editor.lineCount();
-          for (var i = 0; i < lineCount; i++)
-            self.editor.indentLine(i);
+          self.editor.operation(function () {
+            var lineCount = self.editor.lineCount();
+            for (var i = 0; i < lineCount; i++) { self.editor.indentLine(i); }
+          });
         };
 
         self.userInput = "";
