@@ -6,7 +6,7 @@ Summary:
 @itemlist[
   @item{The import preprocessor directive is no longer allowed. @issue[385]}
   @item{Uploading an empty file no longer causes an error. @issue[378]}
-  @item{When attempting to load Seashell with an invalid/expired login, Seashell will now redirect to a login screen. @issue[376]
+  @item{When attempting to load Seashell with an invalid/expired login, Seashell will now redirect to a login screen. @issue[376]}
   @item{An error no longer occurs when trying to normalize newlines. @issue[367]}
   @item{Fixed being able to edit binary (.o) files for a few seconds after opening. @issue[388]}
   @item{Fixed hard tabs being inserted in some cases, which would mess up formatting in MarkUs. @issue[391]}
