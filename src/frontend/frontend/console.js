@@ -273,7 +273,9 @@ angular.module('frontend-app')
         _.each(res.diff, function(block) {
             if (_.isString(block)) self.write(block + "\n");
             else if (block[0] === false) {
-                _.each(block.slice(1), function(line) self.write(line + "\n"));
+                _.each(block.slice(1), function(line) {
+                    self.write(line + "\n");
+                });
             }
         });
     }
@@ -296,7 +298,7 @@ angular.module('frontend-app')
         printExpectedFromDiff(res);   
         self.write('=================\n');
 
-        self.write('Produced output (stderr):\n');
+        self.write('Produced errors (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
       } else if(res.result==="error") {
