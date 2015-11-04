@@ -8,6 +8,7 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-4.8
+      - ca-certificates
 env:
   - RACKET_DIR=$HOME/racket RACKET_VERSION=6.1.1 NODE_PATH=/usr/local/lib/node_modules
 before_install:
