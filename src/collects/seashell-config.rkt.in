@@ -163,7 +163,7 @@
       ;; These flags can be overridden by the configuration file.
       ;; Default compiler flags.
       (cons 'compiler-flags               '(;; Warning flags.
-                                            "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type"
+                                            "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic"
                                             ;; Compilation flags.
                                             "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
                                             ;; Static Analyzer flags.

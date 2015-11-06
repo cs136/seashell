@@ -34,7 +34,7 @@ angular.module('frontend-app')
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
-        self.file = openFile;
+        self.file = openFile; 
         self.console = Console;
         self.settings = settings;
         self.undoHistory = undoHistory;
@@ -178,7 +178,7 @@ angular.module('frontend-app')
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            if (self.loaded) {
+            if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
                 self.project.saveFile(self.question, self.folder, self.file, self.contents)
                   .catch(function (error) {
@@ -215,18 +215,7 @@ angular.module('frontend-app')
           self.editor.on("blur", updateColNums);
           $timeout(onResize, 0);
         };
-        function betterTab(){
-          if(self.editor.somethingSelected()){
-            self.editor.indentSelection("add");
-          } else {
-            self.editor.replaceSelection(Array(self.editor.getOption("indentUnit") + 1).join(" "), "end", "+input");
-          }
-        }
-        function negTab(){
-          if(self.editor.somethingSelected()){
-            self.editor.indentSelection("subtract");
-          }
-        }
+
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
@@ -255,7 +244,6 @@ angular.module('frontend-app')
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
-              "Shift-Tab": negTab,
             }
           };
           self.consoleOptions = {
@@ -269,6 +257,7 @@ angular.module('frontend-app')
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
+            allowIn: ['INPUT', 'TEXTAREA'],
             callback: function(evt) {
               evt.preventDefault();
               self.sendEOF();
@@ -331,7 +320,6 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
-            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
           if (self.consoleEditor) {
@@ -349,7 +337,7 @@ angular.module('frontend-app')
             $state.go("edit-project.editor.file", {
               question:(path[0]=="common"?self.question:path[0]),
               part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
-              file:(path.length>2?path[2]:path[1])});
+              file:escape(path.length>2?path[2]:path[1])});
           });
         };
 
@@ -438,9 +426,10 @@ angular.module('frontend-app')
         };
 
         self.indentAll = function() {
-          var lineCount = self.editor.lineCount();
-          for (var i = 0; i < lineCount; i++)
-            self.editor.indentLine(i);
+          self.editor.operation(function () {
+            var lineCount = self.editor.lineCount();
+            for (var i = 0; i < lineCount; i++) { self.editor.indentLine(i); }
+          });
         };
 
         self.userInput = "";
@@ -481,6 +470,7 @@ angular.module('frontend-app')
 
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
+
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
@@ -494,9 +484,12 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.refreshSettings();
           }).catch(function (error) {
-            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
+            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
               self.isBinaryFile = true;
+              self.refreshSettings();
+            }
             else {
               errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
               $state.go('edit-project.editor');
