@@ -100,7 +100,15 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         ws.register_callback('connected',
             function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
-        ws.register_callback('failed', function () {self.failed = true;}, true);
+        ws.register_callback('failed', function () {
+          // if on production, redirect to login screen; else, display error and
+          // login prompt
+          if(SEASHELL_BRANCH === 'stable'){
+            window.location = 'https://www.student.cs.uwaterloo.ca/seashell';
+          }else{
+            self.failed = true;
+          }
+        }, true);
         settings.addWatcher(function () {
           if (settings.settings.theme_style === "dark") {
             $css.removeAll();

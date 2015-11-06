@@ -84,6 +84,22 @@
       (define checksum (write-file "test" "foo8.c" contents #f))
       (check-equal? checksum tag))
 
+    ;; Normalizing newlines will ensure newline before EOF
+    (test-case "Create a file, with a data URL and normalized newlines"
+      (new-file "test" "foo9.c" #"data:,apple juice" 'url #t)
+      (define-values (data _) (read-file "test" "foo9.c"))
+      (check-equal? data #"apple juice\n"))
+
+    (test-case "Create a file, with a data URL and already-normalized newlines"
+      (new-file "test" "foo10.c" #"data:,apple juice\n\n" 'url #t)
+      (define-values (data _) (read-file "test" "foo10.c"))
+      (check-equal? data #"apple juice\n\n"))
+    
+    (test-case "Create a file, with a data URL and windows newlines"
+      (new-file "test" "foo11.c" #"data:,apple juice\r\n" 'url #t)
+      (define-values (data _) (read-file "test" "foo11.c"))
+      (check-equal? data #"apple juice\n"))
+
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))
