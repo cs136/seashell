@@ -66,9 +66,21 @@
   (close-input-port in-stdin)
   (close-output-port out-stderr)
 
+  (logf 'debug "Sending ~a bytes to program PID ~a." (bytes-length input) pid)
+
   ;; Send test input to program and wait. 
   (write-bytes input raw-stdin)
   (close-output-port raw-stdin)
+
+  ;; Background read stuff.
+  (define-values (buf-stderr cp-stderr) (make-pipe))
+  (define-values (buf-stdout cp-stdout) (make-pipe))
+  (thread (lambda ()
+            (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
+            (copy-port raw-stderr cp-stderr)))
+  (thread (lambda ()
+            (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
+            (copy-port raw-stdout cp-stdout)))
 
   ;; Helper to close ports
   (define (close)
@@ -85,8 +97,10 @@
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
        ;; Read stdout, stderr.
-       (define stdout (port->bytes raw-stdout))
-       (define stderr (port->bytes raw-stderr))
+       (close-output-port cp-stderr)
+       (close-output-port cp-stdout)
+       (define stdout (port->bytes buf-stdout))
+       (define stderr (port->bytes buf-stderr))
 
        (match (subprocess-status handle)
          [0
@@ -102,6 +116,7 @@
               (define expected-lines (regexp-split #rx"\n" expected))
               (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
          [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
+       (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
@@ -279,9 +294,12 @@
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe (read-config 'io-buffer-size)))
-            (define-values (in-stdin out-stdin) (make-pipe (read-config 'io-buffer-size)))
-            (define-values (in-stderr out-stderr) (make-pipe (read-config 'io-buffer-size)))
+            (define (make-io-pipe)
+              (if test (make-pipe) (make-pipe (read-config 'io-buffer-size))))
+
+            (define-values (in-stdout out-stdout) (make-io-pipe))
+            (define-values (in-stdin out-stdin) (make-io-pipe))
+            (define-values (in-stderr out-stderr) (make-io-pipe))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore
