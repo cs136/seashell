@@ -114,7 +114,8 @@
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
-              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
+              ;; hotfix: diff with empty because it's slow
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout)) out-stdout)])]
          [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
