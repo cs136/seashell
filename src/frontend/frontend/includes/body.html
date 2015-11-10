@@ -10,18 +10,18 @@
     reconnect).
   </div>
 
-  <div ng-show="frontend.failed"
+  <div ng-show="frontend.failed" ng-cloak
     class="alert alert-danger text-center" role="alert">
     Something bad happened!  Try reconnecting <a ng-click="frontend.reconnect()" href="">again</a>, or
     logging in <a ng-click="frontend.login()" href="">again</a>.
   </div>
 
-  <div ng-show="frontend.disconnected && !frontend.failed"
+  <div ng-show="frontend.disconnected && !frontend.failed" ng-cloak
     class="alert alert-danger text-center" role="alert">
     Lost contact with the server. You can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>, or logging in <a ng-click="frontend.login()" href="">again</a>.
   </div>
   
-  <alert ng-repeat="error in frontend.errors.errors"
+  <alert ng-repeat="error in frontend.errors.errors" ng-cloak
     type="danger" close="frontend.errors.suppress($index)" role="alert">
     <b>An error has occurred: </b>{{error.shorthand}} <span ng-bind-html="frontend.errors.getMessage(error.type)"></span>
     <pre ng-cloak>
