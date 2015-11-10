@@ -69,18 +69,24 @@
   (logf 'debug "Sending ~a bytes to program PID ~a." (bytes-length input) pid)
 
   ;; Send test input to program and wait. 
-  (write-bytes input raw-stdin)
-  (close-output-port raw-stdin)
+  (thread (lambda ()
+    (with-handlers
+      [(exn:fail?
+        (lambda (exn)
+          (logf 'info "write-bytes failed to write ~a.in to program stdin: received error: ~a"
+                      test-name (exn-message exn))))]
+      (write-bytes input raw-stdin))
+    (close-output-port raw-stdin)))
 
   ;; Background read stuff.
   (define-values (buf-stderr cp-stderr) (make-pipe))
   (define-values (buf-stdout cp-stdout) (make-pipe))
-  (thread (lambda ()
+  (define stderr-thread (thread (lambda ()
             (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
-            (copy-port raw-stderr cp-stderr)))
-  (thread (lambda ()
+            (copy-port raw-stderr cp-stderr))))
+  (define stdout-thread (thread (lambda ()
             (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
-            (copy-port raw-stdout cp-stdout)))
+            (copy-port raw-stdout cp-stdout))))
 
   ;; Helper to close ports
   (define (close)
@@ -96,6 +102,9 @@
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
+       ;; Wait for threads to finish copying
+       (thread-wait stderr-thread)
+       (thread-wait stdout-thread)
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
