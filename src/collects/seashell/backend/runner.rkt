@@ -75,12 +75,12 @@
   ;; Background read stuff.
   (define-values (buf-stderr cp-stderr) (make-pipe))
   (define-values (buf-stdout cp-stdout) (make-pipe))
-  (thread (lambda ()
+  (define stderr-thread (thread (lambda ()
             (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
-            (copy-port raw-stderr cp-stderr)))
-  (thread (lambda ()
+            (copy-port raw-stderr cp-stderr))))
+  (define stdout-thread (thread (lambda ()
             (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
-            (copy-port raw-stdout cp-stdout)))
+            (copy-port raw-stdout cp-stdout))))
 
   ;; Helper to close ports
   (define (close)
@@ -96,6 +96,9 @@
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
+       ;; Wait for threads to finish copying
+       (thread-wait stderr-thread)
+       (thread-wait stdout-thread)
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
