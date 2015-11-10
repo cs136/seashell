@@ -69,8 +69,14 @@
   (logf 'debug "Sending ~a bytes to program PID ~a." (bytes-length input) pid)
 
   ;; Send test input to program and wait. 
-  (write-bytes input raw-stdin)
-  (close-output-port raw-stdin)
+  (thread (lambda ()
+    (with-handlers
+      [(exn:fail?
+        (lambda (exn)
+          (logf 'info "write-bytes failed to write ~a.in to program stdin: received error: ~a"
+                      test-name (exn-message exn))))]
+      (write-bytes input raw-stdin))
+    (close-output-port raw-stdin)))
 
   ;; Background read stuff.
   (define-values (buf-stderr cp-stderr) (make-pipe))
