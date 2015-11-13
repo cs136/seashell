@@ -49,10 +49,6 @@ angular.module('frontend-app')
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
-        /* runnerFile is the file to be run when RUN or TEST is clicked. false
-         * if the current file is not runnable (and Seashell can't infer which
-         * file to run). */
-        self.runnerFile = false;
         self.consoleOptions = {};
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -371,7 +367,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, false)
+            self.project.run(self.question, "question", self.file, self.contents, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -393,7 +389,7 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, true)
+            self.project.run(self.question, "question", self.file, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
