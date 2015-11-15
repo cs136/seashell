@@ -1,390 +1,155 @@
-#lang racket/base
-;;; diff.rkt
-;;; Copyright (c) 2011 M. Douglas Williams
-;;;
-;;; This program is free software: you can redistribute it and/or modify it under
-;;; the terms of the GNU Lesser General Public License as published by the Free
-;;; Software Foundation, either version 3 of the License, or (at your option) any
-;;; later version.
-;;;
-;;; This program is distributed in the hope that it will be useful, but WITHOUT
-;;; ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-;;; FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
-;;; details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#lang typed/racket
+;; Seashell
+;; Copyright (C) 2013-2015 The Seashell Maintainers.
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(provide list-diff list-lcs
+         vector-diff vector-lcs)
 
-;;; This package provides a simple diff-like capability in Packet. This includes
-;;; diffs of arbitrary lists or of text files. It also includes an implementation
-;;; of the longest common subsequence (LCS) algorithm, which is the basis of the
-;;; diff algorithm.
+;; 2D Array Helpers
+(: offset (-> Integer Integer Integer Integer Integer))
+(define (offset M N i j)
+  (+ j (* i M)))
+(: make-2d-vector (All (a) (-> Integer Integer a (Vectorof a))))
+(define (make-2d-vector M N a)
+  (make-vector (* M N) a))
 
-;;; This module requires the list-index function from SRFI 1: List Library.
+;; (vector-lcs-C v1 v2)
+;; Computes the dynamic programming table for LCS(v1, v2)
+;;
+;; Arguments:
+;;  v1, v2 - Input vectors
+(: vector-lcs-C
+   (All (a) (-> (Vectorof a) (Vectorof a) (Vectorof Integer))))
+(define (vector-lcs-C v1 v2)
+  (define M (add1 (vector-length v1)))
+  (define N (add1 (vector-length v2)))
+  (define C (make-2d-vector M N 0))
+  (for ([i (in-range (sub1 M))])
+    (for ([j (in-range (sub1 N))])
+      (cond
+        [(equal? (vector-ref v1 i)
+                 (vector-ref v2 j))
+         (vector-set! C
+                      (offset M N (add1 i) (add1 j))
+                      (add1 (vector-ref C (offset M N i j))))]
+        [else
+         (vector-set! C
+                      (offset M N (add1 i) (add1 j))
+                      (max (vector-ref C (offset M N (add1 i) j))
+                           (vector-ref C (offset M N i (add1 j)))))])))
+  C)
 
-(require (only-in srfi/1 list-index)
-         racket/list
-         racket/port
-         racket/contract)
+;; (list/vector-lcs v1 v2)
+;; Computes the LCS of v1, v2
+;;
+;; Arguments:
+;;  v1, v2 - Input vectors
+(: vector-lcs
+   (All (a) (-> (Vectorof a) (Vectorof a) (Listof a))))
+(define (vector-lcs v1 v2)
+  (: vector-lcs-helper
+     (All (a) (-> (Vectorof a) (Vectorof a) (Listof a))))
+  (define (vector-lcs-helper v1 v2)
+    (define C (vector-lcs-C v1 v2))
+    (define M (add1 (vector-length v1)))
+    (define N (add1 (vector-length v2)))
+    
+    (: backtrack
+       (-> Integer Integer (Listof a)))
+    (define (backtrack i j)
+      (cond
+        [(= i -1) '()]
+        [(= j -1) '()]
+        [(equal? (vector-ref v1 i) (vector-ref v2 j))
+         (cons (vector-ref v1 i) (backtrack (sub1 i) (sub1 j)))]
+        [(> (vector-ref C (offset M N (add1 i) j))
+            (vector-ref C (offset M N i (add1 j))))
+         (backtrack i (sub1 j))]
+        [else
+         (backtrack (sub1 i) j)]))
+    (reverse (backtrack (- M 2) (- N 2))))
+  ;; Do the stupid thing eliminating common things at the head/tail
+  (define L1 (vector-length v1))
+  (define L2 (vector-length v2))
+  (define L (min L1 L2))
+  ;; Find end of common head
+  (: find-first (-> Integer))
+  (define (find-first)
+    (: find-first-helper (-> Integer Integer))
+    (define (find-first-helper i)
+      (cond
+        [(>= i L) L]
+        [(equal? (vector-ref v1 i) (vector-ref v2 i))
+         (find-first-helper (add1 i))]
+        [else i]))
+    (find-first-helper 0))
+  (define i (find-first))
+  ;; Find start of common tail
+  (: find-last (-> Integer))
+  (define (find-last)
+    (: find-last-helper (-> Integer Integer))
+    (define (find-last-helper j)
+      (cond
+        [(>= j L) L]
+        [(equal? (vector-ref v1 (- L1 1 j)) (vector-ref v2 (- L2 1 j)))
+         (find-last-helper (add1 j))]
+        [else j]))
+    (find-last-helper 0))
+  (define j0 (find-last))
+  ;; Correct j0 if it overlaps with i
+  (define j (min (- L1 i) (- L2 i) j0))
+  ;; Construct LCS
+  (append (vector->list (vector-take v1 i))
+          (vector-lcs-helper (vector-drop (vector-drop-right v1 j) i)
+                             (vector-drop (vector-drop-right v2 j) i))
+          (vector->list (vector-take-right v1 j))))
+(: list-lcs
+   (All (a) (-> (Listof a) (Listof a) (Listof a))))
+(define (list-lcs l1 l2)
+  (vector-lcs (list->vector l1) (list->vector l2)))
 
-;;; Longest Common Subsequence
-
-;;; The longest common subsequence (LCS) is the longest subsequence that is
-;;; common to a set of sequences. We are solving the special case with exactly
-;;; two sequences, which are represented as lists. This is the basis of the diff
-;;; algorithm.
-
-;;; The recursive longest common subsequence algorithm is given below. However,
-;;; it has time complexity approaching 2^n.
-
-;;; (define (list-lcs list-1 list-2 (test equal?))
-;;;   (cond ((null? list-1) '())
-;;;         ((null? list-2) '())
-;;;         ((test (car list-1) (car list-2))
-;;;          (cons (car list-1) (list-lcs (cdr list-1) (cdr list-2) test)))
-;;;         (else
-;;;          (let ((lcs-1 (list-lcs list-1 (cdr list-2) test))
-;;;                (lcs-2 (list-lcs (cdr list-1) list-2 test)))
-;;;            (if (> (length lcs-1) (length lcs-2))
-;;;                lcs-1
-;;;                lcs-2)))))
-
-;;; The problem with the naive recursive solution is that the same subproblems
-;;; are solved many different times. The solution is to use dynamic programming
-;;; to check to see if we've solved a subproblem before. If we have, we use the
-;;; previously computed solution. If not, we compute and store the solution. This
-;;; is done via memoization.
-
-;;; We could use David Herman's memoize package on PLaneT. I tried it and it
-;;; works fine, but there are two issues that made me revert to 'rolling my own'
-;;; memoization in this case.
-;;;  1) The tests in Dave's PLaneT package pull in a lot of other packages and
-;;;     many of them have not been converted to Racket. This results in many
-;;;     error messages that I would rather not have users subjected to. [Although
-;;;     they don't actually affect the memoization macros.]
-;;;  2) In the case of the longest common subsequence algorithm, problem
-;;;     instances are unique and we want a new cache for every problem instance.
-
-;;; (list-lcs list-1 list-2 [test]) -> list?
-;;;   list-1 : list?
-;;;   list-2 : list?
-;;;   test : (-> any/c any/c boolean?) = equal?
-;;; Returns the longest common subsequence (LCS) of list-1 and list-2 using test
-;;; to compare the elements. This is a memoized version of the recursive
-;;; algorithm above. Note that the memoization cache is implemented as a two level
-;;; index.
-(define (list-lcs list-1 list-2 (test equal?))
-  (let ((cache (make-hash)))
-    (define (do-list-lcs list-1 list-2)
-      (hash-ref!
-       (hash-ref! cache list-1 (make-hash))
-       list-2
-       (lambda ()
-         (cond ((null? list-1) '())
-               ((null? list-2) '())
-               ((test (car list-1) (car list-2))
-                (cons (car list-1) (do-list-lcs (cdr list-1) (cdr list-2))))
-               (else
-                (let ((lcs-1 (do-list-lcs list-1 (cdr list-2)))
-                      (lcs-2 (do-list-lcs (cdr list-1) list-2)))
-                  (if (> (length lcs-1) (length lcs-2))
-                      lcs-1
-                      lcs-2)))))))
-    (do-list-lcs list-1 list-2)))
-
-;;; Example:
-
-;;; (list-lcs '(a b c d f g h j q z) '(a b c d e f g i j k r x y z) eq?) =>
-;;; (a b c d f g j z)
-
-;;; Diff
-
-;;; The diff algorithm computes the differences between two sequences in the form
-;;; of what changes are required to the first sequence to produce the second
-;;; sequence. This is based on the longest common subsequence.
-
-;;; Once the longest common subsequence is computed (using list-lcs), it's easy
-;;; to produce the diff-like output:
-;;;   If an item is absent in the LCS but present in the first sequence, it must
-;;;   have been deleted.
-;;;   If an item is absent in the LCS but present in the second sequence, it must
-;;;   have been added.
-
-;;; (list-diff list-1 list-2 [test]) -> list?
-;;;   list-1 : list?
-;;;   list-2 : list?
-;;;   test : (-> any/c any/c boolean?) = equal?
-;;; Returns a list of the differences between list-1 and list-2 using test to
-;;; compare the elements. Items common to both lists are incuded in the list as
-;;; is. Items that have been added are included as a list whose first element is
-;;; #:added followed by the added elements. Items that have been removed are
-;;; included as a list whose first element is #:removed followed by the deleted
-;;; elements.
-(define (list-diff list-1 list-2 (test equal?))
-  (let ((lcs (list-lcs list-1 list-2 test))
-        (result '()))
-    (for ((item (in-list lcs)))
-      (let* ((sync-list-1 (list-index (lambda (x) (test x item)) list-1))
-             (sync-list-2 (list-index (lambda (x) (test x item)) list-2))
-             (removed (take list-1 sync-list-1))
-             (added (take list-2 sync-list-2)))
-        (set! list-1 (drop list-1 (add1 sync-list-1)))
-        (set! list-2 (drop list-2 (add1 sync-list-2)))
-        (when (not (null? removed))
-          (set! result (append result (list (cons #f removed)))))
-        (when (not (null? added))
-          (set! result (append result (list (cons #t added)))))
-        (set! result (append result (list item)))))
-    (when (not (null? list-1))
-      (set! result (append result (list (cons #f list-1)))))
-    (when (not (null? list-2))
-      (set! result (append result (list (cons #t list-2)))))
-    result))
-
-;;; Example:
-;;; (list-diff '(a b c d f g h j q z) '(a b c d e f g i j k r x y z) eq?) =>
-;;; (a b c d (#:added e) f g (#:removed h) (#:added i) j (#:removed q) (#:added k r x y) z)
-
-;;; Example:
-;;; (list-diff
-;;;  '("This part of the"
-;;;    "document has stayed the"
-;;;    "same from version to"
-;;;    "version.  It shouldn't"
-;;;    "be shown if it doesn't"
-;;;    "change.  Otherwise, that"
-;;;    "would not be helping to"
-;;;    "compress the size of the"
-;;;    "changes."
-;;;    ""
-;;;    "This paragraph contains"
-;;;    "text that is outdated."
-;;;    "It will be deleted in the"
-;;;    "near future."
-;;;    ""
-;;;    "It is important to spell"
-;;;    "check this dokument. On"
-;;;    "the other hand, a"
-;;;    "misspelled word isn't"
-;;;    "the end of the world."
-;;;    "Nothing in the rest of"
-;;;    "this paragraph needs to"
-;;;    "be changed. Things can"
-;;;    "be added after it.")
-;;;  '("This is an important"
-;;;    "notice! It should"
-;;;    "therefore be located at"
-;;;    "the beginning of this"
-;;;    "document!"
-;;;    ""
-;;;    "This part of the"
-;;;    "document has stayed the"
-;;;    "same from version to"
-;;;    "version.  It shouldn't"
-;;;    "be shown if it doesn't"
-;;;    "change.  Otherwise, that"
-;;;    "would not be helping to"
-;;;    "compress anything."
-;;;    ""
-;;;    "It is important to spell"
-;;;    "check this document. On"
-;;;    "the other hand, a"
-;;;    "misspelled word isn't"
-;;;    "the end of the world."
-;;;    "Nothing in the rest of"
-;;;    "this paragraph needs to"
-;;;    "be changed. Things can"
-;;;    "be added after it."
-;;;    ""
-;;;    "This paragraph contains"
-;;;    "important new additions"
-;;;    "to this document.")
-;;;  string=?) =>
-;;; ((#:added "This is an important" 
-;;;           "notice! It should"
-;;;           "therefore be located at"
-;;;           "the beginning of this"
-;;;           "document!"
-;;;           "")
-;;;   "This part of the"
-;;;   "document has stayed the"
-;;;   "same from version to"
-;;;   "version.  It shouldn't"
-;;;   "be shown if it doesn't"
-;;;   "change.  Otherwise, that"
-;;;   "would not be helping to"
-;;;   (#:removed "compress the size of the"
-;;;              "changes.")
-;;;   (#:added "compress anything.")
-;;;   ""
-;;;   (#:removed "This paragraph contains"
-;;;              "text that is outdated."
-;;;              "It will be deleted in the"
-;;;              "near future." "")
-;;;   "It is important to spell"
-;;;   (#:removed "check this dokument. On")
-;;;   (#:added "check this document. On")
-;;;   "the other hand, a"
-;;;   "misspelled word isn't"
-;;;   "the end of the world."
-;;;   "Nothing in the rest of"
-;;;   "this paragraph needs to"
-;;;   "be changed. Things can"
-;;;   "be added after it."
-;;;   (#:added ""
-;;;            "This paragraph contains"
-;;;            "important new additions"
-;;;            "to this document."))
-
-;;; Text File Diff
-
-;;; A common use of diff is to print the differences between two text file -
-;;; like the Unix diff command. The files are read as sequences of lines and
-;;; list-diff is used to compute the differences between the files. The
-;;; differences are then printed (and void returned). Lines common to both files
-;;; are denoted by "=|", lines that are added are denoted by ">|", and lines that
-;;; are removed are denoted by "<|".
-;;;
-;;; At some point it might me nice to change this to print in a format similar to
-;;; the Unix diff command format.
-
-;;; (ile-diff file-1 file-2) -> void?
-;;;   file-1 : path-string?
-;;;   file-2 : path-string?
-;;; Prints the differences between file-1 and file-2.
-(define (file-diff file-1 file-2 )
-  (let* ((port-1 (open-input-file file-1 #:mode 'text))
-         (port-2 (open-input-file file-2 #:mode 'text))
-         (diffs (list-diff (port->lines port-1) (port->lines port-2) string=?)))
-    (for ((diff (in-list diffs)))
-      (cond ((and (list? diff) (eq? (car diff) #t))
-             (for ((added (in-list (cdr diff))))
-               (printf ">|~a~n" added)))
-            ((and (list? diff) (eq? (car diff) #f))
-             (for ((added (in-list (cdr diff))))
-               (printf "<|~a~n" added)))
-            (else
-             (printf "=|~a~n" diff))))))
-
-;;; Example:
-;;; Print the differences between two text files.
-;;;
-;;; original.txt:
-;;; This part of the
-;;; document has stayed the
-;;; same from version to
-;;; version.  It shouldn't
-;;; be shown if it doesn't
-;;; change.  Otherwise, that
-;;; would not be helping to
-;;; compress the size of the
-;;; changes.
-;;; 
-;;; This paragraph contains
-;;; text that is outdated.
-;;; It will be deleted in the
-;;; near future.
-;;; 
-;;; It is important to spell
-;;; check this dokument. On
-;;; the other hand, a
-;;; misspelled word isn't
-;;; the end of the world.
-;;; Nothing in the rest of
-;;; this paragraph needs to
-;;; be changed. Things can
-;;; be added after it.
-;;;
-;;; new.txt:
-;;; This is an important
-;;; notice! It should
-;;; therefore be located at
-;;; the beginning of this
-;;; document!
-;;; 
-;;; This part of the
-;;; document has stayed the
-;;; same from version to
-;;; version.  It shouldn't
-;;; be shown if it doesn't
-;;; change.  Otherwise, that
-;;; would not be helping to
-;;; compress anything.
-;;; 
-;;; It is important to spell
-;;; check this document. On
-;;; the other hand, a
-;;; misspelled word isn't
-;;; the end of the world.
-;;; Nothing in the rest of
-;;; this paragraph needs to
-;;; be changed. Things can
-;;; be added after it.
-;;; 
-;;; This paragraph contains
-;;; important new additions
-;;; to this document.
-;;;
-;;; (file-diff "original.txt" "new.txt")
-;;; >|This is an important
-;;; >|notice! It should
-;;; >|therefore be located at
-;;; >|the beginning of this
-;;; >|document!
-;;; >|
-;;; =|This part of the
-;;; =|document has stayed the
-;;; =|same from version to
-;;; =|version.  It shouldn't
-;;; =|be shown if it doesn't
-;;; =|change.  Otherwise, that
-;;; =|would not be helping to
-;;; <|compress the size of the
-;;; <|changes.
-;;; >|compress anything.
-;;; =|
-;;; <|This paragraph contains
-;;; <|text that is outdated.
-;;; <|It will be deleted in the
-;;; <|near future.
-;;; <|
-;;; =|It is important to spell
-;;; <|check this dokument. On
-;;; >|check this document. On
-;;; =|the other hand, a
-;;; =|misspelled word isn't
-;;; =|the end of the world.
-;;; =|Nothing in the rest of
-;;; =|this paragraph needs to
-;;; =|be changed. Things can
-;;; =|be added after it.
-;;; >|
-;;; >|This paragraph contains
-;;; >|important new additions
-;;; >|to this document.
-
-;;; References
-;;;
-;;;  1) "Longest common subsequence problem", Wikipedia, The Free Encyclopedia, 
-;;;     http://en.wikipedia.org/wiki/Longest_common_subsequence_problem
-;;;     (Accessed January 13, 2011).
-;;;  2) "Diff", Wikipedia, The Free Encyclopedia,
-;;;     http://en.wikipedia.org/wiki/Diff (Accessed January 13, 2011).
-;;;  3) "Algorithm Implementation/Strings/Longest common subsequence", WikiBooks,
-;;;     Open books for an open world,
-;;;     http://en.wikibooks.org/wiki/Algorithm_implementation/Strings/Longest_common_subsequence
-;;;     (Accessed January 13, 2011).
-
-;;; Module Contracts
-
-(provide/contract
- (list-lcs
-  (->* (list? list?)
-       ((-> any/c any/c boolean?))
-       list?))
- (list-diff
-  (->* (list? list?)
-       ((-> any/c any/c boolean?))
-       list?))
- (file-diff
-  (-> path-string? path-string? void?)))
+;; (list/vector-diff v1 v2)
+;; Computes the difference of v1, v2
+;;
+;; Arguments:
+;;  v1, v2 - Input vectors
+(: vector-diff
+   (All (a) (-> (Vectorof a) (Vectorof a) (Listof (U a (List Boolean a))))))
+(define (vector-diff v1 v2)
+  (define lcs (vector-lcs v1 v2))
+  
+  (: helper
+     (-> (Listof a) (Listof a) (Listof a) (Listof (U a (List Boolean a)))))
+  (define (helper l1 l2 lcs)
+    (cond
+      [(and (null? l1) (null? l2) '())]
+      [(null? l1)
+       (cons (list #t (car l2)) (helper l1 (cdr l2) lcs))]
+      [(null? l2)
+       (cons (list #f (car l1)) (helper (cdr l1) l2 lcs))]
+      [(and (equal? (car l1) (car lcs))
+            (equal? (car l1) (car l2)))
+       (cons (car l1) (helper (cdr l1) (cdr l2) (cdr lcs)))]
+      [(equal? (car l1) (car lcs))
+       (cons (list #t (car l2)) (helper l1 (cdr l2) lcs))]
+      [else
+       (cons (list #f (car l1)) (helper (cdr l1) l2 lcs))]))
+  (helper (vector->list v1) (vector->list v2) lcs))
+(: list-diff
+   (All (a) (-> (Listof a) (Listof a) (Listof (U a (List Boolean a))))))
+(define (list-diff l1 l2)
+  (vector-diff (list->vector l1) (list->vector l2)))
