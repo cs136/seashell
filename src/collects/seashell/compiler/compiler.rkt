@@ -68,7 +68,7 @@
      ;; Might be worth writing stripped down C standard headers.
      (define cflags
        (list*
-        "-fsanitize=address"
+        ""
         user-cflags))
      
      ;; Set up the compiler instance.
@@ -124,7 +124,7 @@
                  `("-o" ,(some-system-path->string result-file)
                    ,(some-system-path->string object-file)
                    ,@(map some-system-path->string objects)
-                   "-fsanitize=address"
+                   ""
                    ,@(map
                        append-linker-flag
                        (list "--whole-archive"
