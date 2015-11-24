@@ -215,7 +215,18 @@ angular.module('frontend-app')
           self.editor.on("blur", updateColNums);
           $timeout(onResize, 0);
         };
-
+        function betterTab(){
+          if(self.editor.somethingSelected()){
+            self.editor.indentSelection("add");
+          } else {
+            self.editor.replaceSelection(Array(self.editor.getOption("indentUnit") + 1).join(" "), "end", "+input");
+          }
+        }
+        function negTab(){
+          if(self.editor.somethingSelected()){
+            self.editor.indentSelection("subtract");
+          }
+        }
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
@@ -322,6 +333,7 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
+            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
           if (self.consoleEditor) {
