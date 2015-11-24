@@ -244,6 +244,8 @@ angular.module('frontend-app')
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
+              "Tab": betterTab,
+              "Shift-Tab": negTab,
             }
           };
           self.consoleOptions = {
