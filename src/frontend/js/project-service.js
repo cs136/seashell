@@ -483,6 +483,30 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
         };
 
+        /**
+         * SeashellProject.getFileToRun(question)
+         *
+         * Returns the basename of the file to run when hitting run, from the 
+         * question settings file.
+         */
+        SeashellProject.prototype.getFileToRun = function (question) {
+            var self = this;
+            return $q.when(ws.socket.getFileToRun(self.name, question))
+                .then(function (result) {
+                    return result;
+                });
+        };
+
+
+        /**
+         * SeashellProject.setFileToRun(question, file)
+         *
+         * Modify the settings file to set which file to run.
+         */
+        SeashellProject.prototype.setFileToRun = function (question, file) {
+            var self = this;
+            return ws.socket.setFileToRun(self.name, question, file);
+        };
 
         /**
          * SeashellProject.remove()

@@ -37,11 +37,18 @@
          project-base-path
          runtime-files-path
          compile-and-run-project
+         compile-and-run-project/use-runner
          marmoset-submit
          get-most-recently-used
          update-most-recently-used
          export-project
-         archive-projects)
+         archive-projects
+         get-file-to-run
+         set-file-to-run
+         read-project-settings 
+         write-project-settings
+         write-project-settings/key
+         )
 
 (require seashell/log
          seashell/seashell-config
@@ -378,8 +385,7 @@
 ;;
 ;; Arguments:
 ;;  name - Name of project.
-;;  file - Full path and name of file we are compiling from, or #f
-;;         to denote no file.  (We attempt to do something reasonable in this case).
+;;  file - Full path and name of file we are compiling from
 ;;  test - Name of test, or empty to denote no test.
 ;;
 ;; Returns:
@@ -400,7 +406,6 @@
 
   (define project-base (build-project-path name))
   (define project-common (check-and-build-path project-base (read-config 'common-subdirectory)))
-
   ;; Figure out which language to run with
   (define lang
     (match (filename-extension file)
@@ -483,6 +488,21 @@
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
+
+;; (compile-and-run-project/use-runner name tests)
+;; is a wrapper around compile-and-run-project, supplying the file
+;; from the project settings file.
+;; Note: the file arg is used only to determine the question
+(define/contract (compile-and-run-project/use-runner name file tests)
+  (-> project-name? path-string? (listof path-string?)
+      (values boolean?
+              hash?))
+  (define question (car (string-split file "/")))
+  (define file-to-run (build-path question 
+                                       (get-file-to-run name question)))
+  (compile-and-run-project name file-to-run tests))
+
+ 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
 ;;
@@ -678,3 +698,84 @@
     (make-directory arch-root))
   (rename-file-or-directory proj-root dir-path)
   (make-directory proj-root))
+
+
+;; (read-project-settings project)
+;; Reads the project settings from the project root.
+;; If the file does not exist, false is returned
+;; 
+;; Returns:
+;;   settings - the project settings, or false
+(define/contract (read-project-settings project)
+  (-> (and/c project-name? is-project?) (or/c #f hash-eq?))
+  (define filename (read-config 'project-settings-filename))
+  (cond 
+    [(file-exists? (build-path (build-project-path project) filename))
+     (with-input-from-file 
+       (build-path (build-project-path project) filename)
+       (lambda () (read)))]
+    [else #f]))
+
+
+;; (write-project-settings project settings)
+;; Writes to the project settings in the project root.
+;;
+;; Arguments: settings, a hash of all the project settings
+;;
+;; Returns: nothing
+(define/contract (write-project-settings project settings)
+  (-> (and/c project-name? is-project?) hash-eq? void?)
+  (with-output-to-file
+    (build-path (build-project-path project) (read-config 'project-settings-filename))
+    (lambda () (write settings))
+    #:exists 'replace))
+
+
+;; (write-project-settings/key project key val)
+;; Updates the (key, val) pair in the project settings hash.
+;; Equivalent to a hash-set.
+;; Returns: nothing
+(define/contract (write-project-settings/key project key val)
+  (-> (and/c project-name? is-project?) symbol? any/c void?)
+  (define old-settings (read-project-settings project)) 
+  (define new-settings 
+    (hash-set (if old-settings old-settings #hasheq())  key val))
+  (write-project-settings project new-settings))
+
+
+;; (get-file-to-run project question) attempts to read the 
+;;   runner settings file, that specifies which file to run.
+;;
+;; Params:
+;;   project - name of the project (eg. "A10")
+;;   question - basename of the question (eg. "q2")
+;;
+;; Returns:
+;;   A string indicating the file to run
+(define/contract (get-file-to-run project question)
+  (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
+  (define settings-hash (read-project-settings project))
+  (if settings-hash
+    (hash-ref settings-hash (string->symbol (string-append question "-runner")))
+    ""
+    ))
+
+  
+;; (set-file-to-run project question file) writes to the question
+;;   settings file, specifying which file to run.
+;; 
+;; Params:
+;;   project - the path of the project
+;;   question - the basename of the question (eg. "q2")
+;;   file - the basename of the file to run (eg. "main.c")
+;;
+;; Returns:
+;;   Nothing
+(define/contract (set-file-to-run project question file)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project
+                              (string->symbol (string-append question "-runner"))
+                              file))
+  
+
+

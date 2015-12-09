@@ -461,3 +461,20 @@ SeashellWebsocket.prototype.archiveProjects = function(deferred) {
     location : false},
     deferred);
 };
+
+SeashellWebsocket.prototype.getFileToRun = function(project, question, deferred) {
+  return this.sendMessage({
+    type: "getFileToRun",
+    project: project,
+    question: question},
+    deferred);
+};
+
+SeashellWebsocket.prototype.setFileToRun = function(project, question, file, deferred) {
+  return this.sendMessage({
+    type: "setFileToRun",
+    project: project,
+    question: question,
+    file: file},
+    deferred);
+};

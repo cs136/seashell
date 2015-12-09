@@ -77,4 +77,29 @@
       (archive-projects "my-archive")
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
-      (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))))
+      (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))
+    
+    
+    (test-case "Read from nonexistent project settings"
+      (new-project "test-project")
+      (check-false (read-project-settings "test-project")))
+
+    (test-case "update nonexistent project settings"
+      (new-project "test-project-2")
+      (write-project-settings/key "test-project-2" 'key "val")
+      (check-equal? (read-project-settings "test-project-2") #hasheq((key . "val"))))
+
+    (test-case "Write project settings"
+      (write-project-settings "test-project" #hasheq((A . 5) (B . 6)))
+      (check-equal? (read-project-settings "test-project") #hasheq((A . 5) (B . 6))))
+
+    (test-case "Overwrite project settings"
+      (write-project-settings "test-project" #hasheq((A . 22)))
+      (check-equal? (read-project-settings "test-project") #hasheq((A . 22))))
+
+    (test-case "Update project settings"
+      (write-project-settings/key "test-project" 'A 55)
+      (write-project-settings/key "test-project" 'boost "boost")
+      (check-equal? (read-project-settings "test-project") #hasheq((A . 55) (boost . "boost"))))   
+
+    ))
