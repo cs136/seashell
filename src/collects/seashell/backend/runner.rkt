@@ -118,7 +118,7 @@
             [(not expected)
              (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
             [(equal? stdout expected)
-             (write (serialize `(,pid ,test-name "passed")) out-stdout)]
+             (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
             [else
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))

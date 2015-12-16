@@ -316,7 +316,7 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (compile-and-run project name file tests)
+;; (compile-and-run-project name file tests is-cli)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
@@ -324,6 +324,7 @@
 ;;  file - Full path and name of file we are compiling from, or #f
 ;;         to denote no file.  (We attempt to do something reasonable in this case).
 ;;  test - Name of test, or empty to denote no test.
+;;  is-cli - if #t, assumes all paths are relative to the current directory
 ;;
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
@@ -333,16 +334,19 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests)
-  (-> project-name? (or/c #f path-string?) (listof path-string?)
+(define/contract (compile-and-run-project name file tests is-cli)
+  (-> project-name? (or/c #f path-string?) (listof path-string?) boolean?
       (values boolean?
               hash?))
-  (when (not (is-project? name))
+  (when (and (not is-cli) (not (is-project? name)))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
-  (define project-base (build-project-path name))
-  (define project-common (check-and-build-path project-base (read-config 'common-subdirectory)))
+  (define project-base (if is-cli name (build-project-path name)))
+  (define project-common (if is-cli
+    (build-path project-base (read-config 'common-subdirectory))
+    (check-and-build-path project-base (read-config 'common-subdirectory))))
+
   (define project-common-list
     (if (directory-exists? project-common)
       (directory-list project-common #:build? #t)

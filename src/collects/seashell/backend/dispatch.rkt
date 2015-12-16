@@ -103,7 +103,7 @@
             ;; Connection died.
             (program-kill pid)
             (program-destroy-handle pid)]
-           [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed"))))
+           [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
            [(list pid test-name "error" exit-code stderr)
@@ -296,7 +296,7 @@
         ('project name)
         ('file file)
         ('tests test))
-       (define-values (success? result) (compile-and-run-project name file test))
+       (define-values (success? result) (compile-and-run-project name file test #f))
        `#hash((id . ,id)
               (success . ,success?)
               (result . ,result))]
