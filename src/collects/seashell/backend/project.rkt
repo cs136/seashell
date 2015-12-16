@@ -335,7 +335,7 @@
 ;; Raises:
 ;;  exn:project if project does not exist.
 (define/contract (compile-and-run-project name file tests is-cli)
-  (-> project-name? (or/c #f path-string?) (listof path-string?) boolean?
+  (-> path-string? (or/c #f path-string?) (listof path-string?) boolean?
       (values boolean?
               hash?))
   (when (and (not is-cli) (not (is-project? name)))
