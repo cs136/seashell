@@ -421,7 +421,7 @@
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base lang #f))
+      (define pid (run-program target base lang #f is-cli))
       (when (equal? lang 'C)
         (thread
           (lambda ()
@@ -431,7 +431,7 @@
     [result
       (define pids (map
                      (lambda (test)
-                       (run-program target base lang test))
+                       (run-program target base lang test is-cli))
                      tests))
       (when (equal? lang 'C)
         (thread

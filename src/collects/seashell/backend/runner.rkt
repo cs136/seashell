@@ -256,7 +256,7 @@
        (check-signals loop)]))
   (void))
 
-;; (run-program binary directory lang test)
+;; (run-program binary directory lang test is-cli)
 ;;  Runs a program.
 ;;
 ;; Arguments:
@@ -267,13 +267,17 @@
 ;;               a string representing the name of a test to use in tests/.
 ;;               i.e. if test is "foo", input is from tests/foo.in, output is
 ;;               diffed against tests/foo.expect
+;;   is-cli    - if #t, assumes seashell was run from CLI; treats test as a
+;;               relative path, rather than searching for it in the project's
+;;               tests/ directory
 ;;
 ;; Returns:
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(define/contract (run-program binary directory lang test)
-  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) integer?)
+(define/contract (run-program binary directory lang test is-cli)
+  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) boolean? integer?)
+  (define test-path (if is-cli (build-path ".") (build-path directory (read-config 'tests-subdirectory))))
   (call-with-semaphore
     program-new-semaphore
     (lambda ()
@@ -328,10 +332,10 @@
                   (if test
                     (program-control-test-thread result
                                                  test
-                                                 (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (file->bytes (build-path test-path (string-append test ".in")))
                                                  (with-handlers
                                                    ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                                                   (file->bytes (build-path test-path (string-append test ".expect")))))
                     (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table
