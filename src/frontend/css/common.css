@@ -562,3 +562,8 @@ label {
 
 .list-group-item{
 }
+
+.current-runner-file {
+  font-weight: bold;
+  color: #333;
+}

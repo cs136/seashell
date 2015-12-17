@@ -524,8 +524,7 @@ angular.module('frontend-app')
         var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
 
         // the below variables represent the precedence of rules for which file gets run
-        var openFileIsRkt = has_ext("rkt", openFile) ? openFile : false;
+        var anyRktFile = _.find(qfiles, _.partial(has_ext, "rkt"));
         var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
-        var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
-        self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
+        self.runnerFile = anyRktFile || anyCFile;
       }]);
