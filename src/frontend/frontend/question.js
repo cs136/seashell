@@ -104,7 +104,7 @@ angular.module('frontend-app')
               // isFileToRun is true if the file is the file to run
               groups[groups.length-1] = {
                 files: groups[groups.length-1],
-                isFileToRun: (grpnm(current_file) === grpnm(self.runnerFile))
+                isFileToRun: _.contains(groups[groups.length-1], self.runnerFile)
               }; 
                 
             }
