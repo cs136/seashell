@@ -223,7 +223,6 @@
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
-      (cons 'question-settings-file        (string->path ".qsettings"))
       (cons 'project-settings-filename     (string->path "project-settings.txt"))
       )))
   config-hash)
