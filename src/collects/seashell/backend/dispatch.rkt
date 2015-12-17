@@ -294,9 +294,10 @@
         ('id id)
         ('type "compileAndRunProject")
         ('project name)
-        ('file file)
+        ('question question)
         ('tests test))
-       (define-values (success? result) (compile-and-run-project/use-runner name file test))
+       (define-values (success? result) 
+         (compile-and-run-project/use-runner name question test))
        `#hash((id . ,id)
               (success . ,success?)
               (result . ,result))]

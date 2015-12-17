@@ -219,11 +219,11 @@ SeashellWebsocket.prototype.ping = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.compileAndRunProject = function(project, file, test, deferred) {
+SeashellWebsocket.prototype.compileAndRunProject = function(project, question, test, deferred) {
   return this.sendMessage({
     type : "compileAndRunProject",
     project : project,
-    file : file,
+    question: question,
     tests : test},
     deferred);
 };

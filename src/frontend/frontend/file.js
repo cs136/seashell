@@ -380,7 +380,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.file, self.contents, false)
+            self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -402,7 +402,7 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.file, self.contents, true)
+            self.project.run(self.question, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);

@@ -492,15 +492,19 @@
 ;; (compile-and-run-project/use-runner name tests)
 ;; is a wrapper around compile-and-run-project, supplying the file
 ;; from the project settings file.
-;; Note: the file arg is used only to determine the question
-(define/contract (compile-and-run-project/use-runner name file tests)
-  (-> project-name? path-string? (listof path-string?)
+;; 
+;; Arguments:
+;;  name: Name of project (eg. "A10")
+;;  question: Name of the question (eg. "q1") 
+;;  tests: Tests for the project.
+(define/contract (compile-and-run-project/use-runner name question tests)
+  (-> project-name? string? (listof path-string?)
       (values boolean?
               hash?))
-  (define question (car (string-split file "/")))
   (define file-to-run (get-file-to-run name question))
   (if (string=? file-to-run "")
-    (compile-and-run-project name file tests)
+    (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
+                        (current-continuation-marks)))
     (compile-and-run-project name (build-path question file-to-run) tests)))
 
  
