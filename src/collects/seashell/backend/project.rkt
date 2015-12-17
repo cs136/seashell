@@ -498,9 +498,10 @@
       (values boolean?
               hash?))
   (define question (car (string-split file "/")))
-  (define file-to-run (build-path question 
-                                       (get-file-to-run name question)))
-  (compile-and-run-project name file-to-run tests))
+  (define file-to-run (get-file-to-run name question))
+  (if (string=? file-to-run "")
+    (compile-and-run-project name file tests)
+    (compile-and-run-project name (build-path question file-to-run) tests)))
 
  
 ;; (export-project name) -> bytes?
