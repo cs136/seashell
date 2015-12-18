@@ -1,9 +1,21 @@
 #lang racket
 
 (require rackunit
+         racket/serialize
          seashell/backend/project
          seashell/backend/runner
          seashell/seashell-config)
+
+(define test-hdr-file "int add(int, int);\n")
+(define test-imp-file "#include \"add.h\"\nint add(int a, int b){ return a+b; }\n")
+(define test-main-file #<<HERE
+#include <stdio.h>
+#include "add.h"
+int main(){
+    printf("%d\n", add(3,4));
+}
+HERE
+)
 
 (define/provide-test-suite project-suite
   (test-suite "Project Tests"
@@ -52,6 +64,18 @@
       (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
+
+    (test-case "Run a Project with tests"
+      (for ([file '("add.h" "add.c" "main.c" "tests/a.in" "tests/a.expect")]
+            [contents (list test-hdr-file test-imp-file test-main-file "3\n4\n" "7\n")])
+        (with-output-to-file (check-and-build-path (build-project-path "foo") file)
+          (thunk (display contents))))
+      (define-values (success hsh) (compile-and-run-project "foo" "main.c" (list "a")))
+      (check-true success)
+      (sync (program-wait-evt (hash-ref hsh 'pid)))
+      (check-true (match (sync (wrap-evt (program-stdout (hash-ref hsh 'pid)) (compose deserialize read)))
+          [(list _ _ "passed" _ _) #t]
+          [_ #f])))
 
     (test-case "Get a Compilation Error"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
