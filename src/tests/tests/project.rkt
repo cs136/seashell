@@ -12,7 +12,11 @@
 #include <stdio.h>
 #include "add.h"
 int main(){
-    printf("%d\n", add(3,4));
+    int a,b;
+    scanf("%d", &a);
+    scanf("%d", &b);
+    if(a == 0) return 1;
+    printf("%d\n", add(a,b));
 }
 HERE
 )
@@ -66,16 +70,23 @@ HERE
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Run a Project with tests"
-      (for ([file '("add.h" "add.c" "main.c" "tests/a.in" "tests/a.expect")]
-            [contents (list test-hdr-file test-imp-file test-main-file "3\n4\n" "7\n")])
+      (make-directory (check-and-build-path (build-project-path "foo") "tests"))
+      (for ([file '("add.h" "add.c" "main.c"
+                    "tests/pass.in" "tests/pass.expect"
+                    "tests/fail.in" "tests/fail.expect"
+                    "tests/crash.in" "tests/crash.expect")]
+            [contents (list test-hdr-file test-imp-file test-main-file
+                            "3\n4\n" "7\n"
+                            "4\n5\n" "2\n"
+                            "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
       (define-values (success hsh) (compile-and-run-project "foo" "main.c" (list "a")))
       (check-true success)
-      (sync (program-wait-evt (hash-ref hsh 'pid)))
-      (check-true (match (sync (wrap-evt (program-stdout (hash-ref hsh 'pid)) (compose deserialize read)))
-          [(list _ _ "passed" _ _) #t]
-          [_ #f])))
+      (for ([pid (hash-ref hsh 'pids)]
+            [exp-result '("passed" "failed" "error")])
+        (sync (program-wait-evt pid))
+        (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
 
     (test-case "Get a Compilation Error"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
