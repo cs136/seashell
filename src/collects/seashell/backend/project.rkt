@@ -340,17 +340,22 @@
   (define-values (clang clang-output clang-input clang-error)
     ;; TODO: is 'system-linker the right binary?
     (apply subprocess #f #f #f (read-config 'system-linker) (list "-E" main-file)))
-  (remove-duplicates
-    (filter values
-      (for/list ([line (in-lines clang-output)])
-        (match (regexp-match #rx"^# [0-9]+ \"([^<][^\"]*)\"" line)
-          [(list _ file)
-            (match-define-values (hdrpath hdrname _) (split-path file))
-            (cond
-              [(and (equal? hdrpath file-dir) (regexp-match #rx"\\.h$" hdrname))
-                (substring file 0 (- (string-length file) 2))]
-              [else #f])]
-          [#f #f])))))
+  (define files
+    (remove-duplicates
+      (filter values
+        (for/list ([line (in-lines clang-output)])
+          (match (regexp-match #rx"^# [0-9]+ \"([^<][^\"]*)\"" line)
+            [(list _ file)
+              (match-define-values (hdrpath hdrname _) (split-path file))
+              (cond
+                [(and (equal? hdrpath file-dir) (regexp-match #rx"\\.h$" hdrname))
+                  (substring file 0 (- (string-length file) 2))]
+                [else #f])]
+            [#f #f])))))
+  (close-input-port clang-output)
+  (close-input-port clang-error)
+  (close-output-port clang-input)
+  files)
 
 ;; (get-co-files headers)
 ;; Produces a list of the local .c and .o files to be compiled/linked with a program
