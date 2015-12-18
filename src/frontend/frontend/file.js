@@ -479,11 +479,15 @@ angular.module('frontend-app')
         };
 
         self.setFileToRun = function() {
-            self.project.setFileToRun(self.question, self.file)
-                .then(function () {
-                    $scope.$emit('setFileToRun', []);
-                    self.runnerFile = true;
-                });
+            self.project.setFileToRun(self.question, self.folder, self.file)
+              .then(function () {
+                  $scope.$emit('setFileToRun', []);
+                  self.runnerFile = true;
+              })
+              .catch(function (error) {
+                 errors.report(error, "Could not set runner file!");
+              });
+            
             // emit an event to the parent scope for
             // since EditorController is in the child scope of EditorFileController
 

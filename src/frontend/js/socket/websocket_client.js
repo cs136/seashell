@@ -470,11 +470,12 @@ SeashellWebsocket.prototype.getFileToRun = function(project, question, deferred)
     deferred);
 };
 
-SeashellWebsocket.prototype.setFileToRun = function(project, question, file, deferred) {
+SeashellWebsocket.prototype.setFileToRun = function(project, question, folder, file, deferred) {
   return this.sendMessage({
     type: "setFileToRun",
     project: project,
     question: question,
+    folder: folder,
     file: file},
     deferred);
 };

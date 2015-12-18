@@ -785,21 +785,27 @@
                (current-continuation-marks)))]))
 
   
-;; (set-file-to-run project question file) writes to the question
+;; (set-file-to-run project question folder file) writes to the question
 ;;   settings file, specifying which file to run.
 ;; 
 ;; Params:
 ;;   project - the path of the project
 ;;   question - the basename of the question (eg. "q2")
+;;   folder - the basename of the folder of the file (eg. "q2")
+;;            used to prevent people from setting a test as a runner
 ;;   file - the basename of the file to run (eg. "main.c")
 ;;
 ;; Returns:
 ;;   Nothing
-(define/contract (set-file-to-run project question file)
-  (-> (and/c project-name? is-project?) path-string? path-string? void)
-  (write-project-settings/key project
-                              (string->symbol (string-append question "-runner"))
-                              file))
+(define/contract (set-file-to-run project question folder file)
+  (-> (and/c project-name? is-project?) path-string? path-string? path-string? void)
+  (if (or (string=? folder (read-config 'tests-subdirectory))
+          (string=? folder (read-config 'common-subdirectory)))
+    (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
+                        (current-continuation-marks)))
+    (write-project-settings/key project
+                                (string->symbol (string-append question "-runner"))
+                                file)))
   
 
 

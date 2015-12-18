@@ -499,13 +499,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
 
         /**
-         * SeashellProject.setFileToRun(question, file)
+         * SeashellProject.setFileToRun(question, folder, file)
          *
          * Modify the settings file to set which file to run.
          */
-        SeashellProject.prototype.setFileToRun = function (question, file) {
+        SeashellProject.prototype.setFileToRun = function (question, folder, file) {
             var self = this;
-            return ws.socket.setFileToRun(self.name, question, file);
+            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file));
         };
 
         /**

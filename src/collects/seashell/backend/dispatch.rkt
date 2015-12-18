@@ -533,9 +533,10 @@
         ('id id)
         ('type "setFileToRun")
         ('project project)
+        ('folder folder)
         ('question question)
         ('file file))
-       (set-file-to-run project question file)
+       (set-file-to-run project question folder file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

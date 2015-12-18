@@ -567,3 +567,7 @@ label {
   font-weight: bold;
   color: #333;
 }
+
+.runner-icon {
+  margin-right: -3px;
+}
