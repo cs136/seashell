@@ -81,7 +81,7 @@ HERE
                             "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
-      (define-values (success hsh) (compile-and-run-project "foo" "main.c" (list "a")))
+      (define-values (success hsh) (compile-and-run-project "foo" "main.c" '("pass" "fail" "crash")))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed" "failed" "error")])
