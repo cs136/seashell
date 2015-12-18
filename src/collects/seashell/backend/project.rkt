@@ -37,11 +37,18 @@
          project-base-path
          runtime-files-path
          compile-and-run-project
+         compile-and-run-project/use-runner
          marmoset-submit
          get-most-recently-used
          update-most-recently-used
          export-project
-         archive-projects)
+         archive-projects
+         get-file-to-run
+         set-file-to-run
+         read-project-settings 
+         write-project-settings
+         write-project-settings/key
+         )
 
 (require seashell/log
          seashell/seashell-config
@@ -316,13 +323,69 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
+;; (get-headers main-file)
+;; Produces a list of the local (i.e. the user's) header files included by a program, without .h
+;;
+;; Arguments:
+;;  main-file - The .c file being compiled
+;;  file-dir  - The directory containing main-file
+;;
+;; Returns:
+;;  A list of the .h files included by a program, with the .h extension stripped
+;; Raises:
+;;  exn:project if an included header is not a .h file
+;; TODO: need to clean up the subprocess and ports?
+(define/contract (get-headers main-file file-dir)
+  (-> path-string? path-string? (listof path-string?))
+  (define-values (clang clang-output clang-input clang-error)
+    ;; TODO: is 'system-linker the right binary?
+    (apply subprocess #f #f #f (read-config 'system-linker) (list "-E" main-file)))
+  (remove-duplicates
+    (filter values
+      (for/list ([line (in-lines clang-output)])
+        (match (regexp-match #rx"^# [0-9]+ \"([^<][^\"]*)\"" line)
+          [(list _ file)
+            (match-define-values (hdrpath hdrname _) (split-path file))
+            (cond
+              [(and (equal? hdrpath file-dir) (regexp-match #rx"\\.h$" hdrname))
+                (substring file 0 (- (string-length file) 2))]
+              [else #f])]
+          [#f #f])))))
+
+;; (get-co-files headers)
+;; Produces a list of the local .c and .o files to be compiled/linked with a program
+;;
+;; Arguments:
+;;  headers - The list of included local .h files, i.e., produced by get-headers
+;;
+;; Returns:
+;;  A list of the .c files and a list of the .o files to be compiled/linked with a program.
+;; Raises:
+;;  exn:project if an element of headers is not a .h file, if a .h file has no
+;;  corresponding .o or .c file, or if a .h file has both a .c and .o file.
+(define/contract (get-co-files headers)
+  (-> (listof path-string?) (values (listof path?) (listof path?)))
+  (for/fold ([c-files '()]
+             [o-files '()])
+            ([hdr headers])
+    (match-define-values (basedir hdrname _) (split-path hdr))
+    (match/values (values (file-exists? (string-append hdr ".c"))
+                          (file-exists? (string-append hdr ".o")))
+      [(#t #t) (raise (exn:project (format "You included ~a.h, but provided both ~a.c and ~a.o"
+                                            hdrname hdrname hdrname)
+                                   (current-continuation-marks)))]
+      [(#t #f) (values (cons (string->path (string-append hdr ".c")) c-files) o-files)]
+      [(#f #t) (values c-files (cons (string->path (string-append hdr ".o")) o-files))]
+      [(#f #f) (raise (exn:project (format "You included ~a.h, but did not provide ~a.c or ~a.o"
+                                          hdrname hdrname hdrname)
+                                   (current-continuation-marks)))])))
+
 ;; (compile-and-run-project name file tests is-cli)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
 ;;  name - Name of project.
-;;  file - Full path and name of file we are compiling from, or #f
-;;         to denote no file.  (We attempt to do something reasonable in this case).
+;;  file - Full path and name of file we are compiling from
 ;;  test - Name of test, or empty to denote no test.
 ;;  is-cli - if #t, assumes all paths are relative to the current directory
 ;;
@@ -336,8 +399,7 @@
 ;;  exn:project if project does not exist.
 (define/contract (compile-and-run-project name file tests is-cli)
   (-> path-string? (or/c #f path-string?) (listof path-string?) boolean?
-      (values boolean?
-              hash?))
+      (values boolean? hash?))
   (when (and (not is-cli) (not (is-project? name)))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -355,36 +417,26 @@
   ;; Figure out which language to run with
   (define lang
     (match (filename-extension file)
+      ;; TODO: allow students to run .o files as well?
       ['#"rkt" 'racket]
       ['#"c" 'C]
-      ['#"h" 'C] ;; TODO: this is a temporary fix, which we figure out racket vs. C running
       [_ (error "You can only run .c or .rkt files!")]))
-  ;; Base path.
-  (match-define-values (base _ _)
-                       (if file (split-path (check-and-build-path project-base file))
-                                (values (check-and-build-path project-base) #f #f)))
+  ;; Base path, and basename of the file being run
+  (match-define-values (base exe _)
+    (split-path (check-and-build-path project-base file)))
 
   (define (compile-c-files)
-    ;; TODO: Other languages? (C++, maybe?)
-    ;; Get *.c files in project.
-    (define c-files
-      (filter (lambda (file)
-                (equal? (filename-extension file) #"c"))
-              (append
-                (directory-list base #:build? #t)
-                project-common-list)))
-    (define o-files
-      (filter (lambda (file)
-                (equal? (filename-extension file) #"o"))
-              (append
-                (directory-list base #:build? #t)
-                project-common-list)))
+    ;; Get the .c and .o files needed to compile file
+    (define-values (c-files o-files) (get-co-files (get-headers (build-path base exe) base)))
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
+
     (define-values (result messages)
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
-                                    '("-lm") c-files o-files))
+                                    '("-lm")
+                                    (cons (build-path base exe) c-files)
+                                    o-files))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
@@ -444,6 +496,26 @@
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
+
+;; (compile-and-run-project/use-runner name tests)
+;; is a wrapper around compile-and-run-project, supplying the file
+;; from the project settings file.
+;; 
+;; Arguments:
+;;  name: Name of project (eg. "A10")
+;;  question: Name of the question (eg. "q1") 
+;;  tests: Tests for the project.
+(define/contract (compile-and-run-project/use-runner name question tests)
+  (-> project-name? string? (listof path-string?)
+      (values boolean?
+              hash?))
+  (define file-to-run (get-file-to-run name question))
+  (if (string=? file-to-run "")
+    (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
+                        (current-continuation-marks)))
+    (compile-and-run-project name (build-path question file-to-run) tests #f)))
+
+ 
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
 ;;
@@ -639,3 +711,84 @@
     (make-directory arch-root))
   (rename-file-or-directory proj-root dir-path)
   (make-directory proj-root))
+
+
+;; (read-project-settings project)
+;; Reads the project settings from the project root.
+;; If the file does not exist, false is returned
+;; 
+;; Returns:
+;;   settings - the project settings, or false
+(define/contract (read-project-settings project)
+  (-> (and/c project-name? is-project?) (or/c #f hash-eq?))
+  (define filename (read-config 'project-settings-filename))
+  (cond 
+    [(file-exists? (build-path (build-project-path project) filename))
+     (with-input-from-file 
+       (build-path (build-project-path project) filename)
+       (lambda () (read)))]
+    [else #f]))
+
+
+;; (write-project-settings project settings)
+;; Writes to the project settings in the project root.
+;;
+;; Arguments: settings, a hash of all the project settings
+;;
+;; Returns: nothing
+(define/contract (write-project-settings project settings)
+  (-> (and/c project-name? is-project?) hash-eq? void?)
+  (with-output-to-file
+    (build-path (build-project-path project) (read-config 'project-settings-filename))
+    (lambda () (write settings))
+    #:exists 'replace))
+
+
+;; (write-project-settings/key project key val)
+;; Updates the (key, val) pair in the project settings hash.
+;; Equivalent to a hash-set.
+;; Returns: nothing
+(define/contract (write-project-settings/key project key val)
+  (-> (and/c project-name? is-project?) symbol? any/c void?)
+  (define old-settings (read-project-settings project)) 
+  (define new-settings 
+    (hash-set (if old-settings old-settings #hasheq())  key val))
+  (write-project-settings project new-settings))
+
+
+;; (get-file-to-run project question) attempts to read the 
+;;   runner settings file, that specifies which file to run.
+;;
+;; Params:
+;;   project - name of the project (eg. "A10")
+;;   question - basename of the question (eg. "q2")
+;;
+;; Returns:
+;;   A string indicating the file to run
+(define/contract (get-file-to-run project question)
+  (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
+  (define settings-hash (read-project-settings project))
+  (if settings-hash
+    (hash-ref settings-hash (string->symbol (string-append question "-runner")))
+    ""
+    ))
+
+  
+;; (set-file-to-run project question file) writes to the question
+;;   settings file, specifying which file to run.
+;; 
+;; Params:
+;;   project - the path of the project
+;;   question - the basename of the question (eg. "q2")
+;;   file - the basename of the file to run (eg. "main.c")
+;;
+;; Returns:
+;;   Nothing
+(define/contract (set-file-to-run project question file)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project
+                              (string->symbol (string-append question "-runner"))
+                              file))
+  
+
+

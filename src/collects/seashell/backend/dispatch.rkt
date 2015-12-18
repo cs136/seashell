@@ -294,9 +294,10 @@
         ('id id)
         ('type "compileAndRunProject")
         ('project name)
-        ('file file)
+        ('question question)
         ('tests test))
-       (define-values (success? result) (compile-and-run-project name file test #f))
+       (define-values (success? result) 
+         (compile-and-run-project/use-runner name question test))
        `#hash((id . ,id)
               (success . ,success?)
               (result . ,result))]
@@ -517,6 +518,24 @@
         ('predicate predicate)
         ('data data))
        (update-most-recently-used project directory predicate data)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getFileToRun")
+        ('project project)
+        ('question question))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(get-file-to-run project question)))]
+      [(hash-table
+        ('id id)
+        ('type "setFileToRun")
+        ('project project)
+        ('question question)
+        ('file file))
+       (set-file-to-run project question file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

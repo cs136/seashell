@@ -71,4 +71,6 @@
 
     (test-case "Delete a directory"
       (remove-directory "test" "boost")
-      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))))
+      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))
+    
+    ))

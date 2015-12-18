@@ -222,7 +222,9 @@
       ;; Default system SSH binary
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
-      (cons 'linker-flag-prefix            "-Wl,"))))
+      (cons 'linker-flag-prefix            "-Wl,")
+      (cons 'project-settings-filename     (string->path "project-settings.txt"))
+      )))
   config-hash)
 
 ;; The hash table holding the configuration
