@@ -357,6 +357,7 @@ angular.module('frontend-app')
                 .then(function() {
                   $scope.$parent.refresh();
                   $state.go("edit-project.editor");
+                  self.refreshRunner();
                 });
             });
         };
@@ -478,9 +479,11 @@ angular.module('frontend-app')
         };
 
         self.setFileToRun = function() {
-            self.project.setFileToRun(self.question, self.file).then(function () {
-              $scope.$emit('setFileToRun', []);
-            });
+            self.project.setFileToRun(self.question, self.file)
+                .then(function () {
+                    $scope.$emit('setFileToRun', []);
+                    self.runnerFile = true;
+                });
             // emit an event to the parent scope for
             // since EditorController is in the child scope of EditorFileController
 
@@ -518,13 +521,13 @@ angular.module('frontend-app')
         function has_ext(ext, fname){
           return fname.split(".").pop() === ext;
         }
+        
+        self.refreshRunner = function () {
+          self.project.getFileToRun(self.question)
+             .then(function (result) { 
+                 self.runnerFile = (result !== "");
+             });
+        };
+        self.refreshRunner();
 
-        /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
-        var qfiles = self.project.filesFor(self.question).question;
-        var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
-
-        // the below variables represent the precedence of rules for which file gets run
-        var anyRktFile = _.find(qfiles, _.partial(has_ext, "rkt"));
-        var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
-        self.runnerFile = anyRktFile || anyCFile;
       }]);

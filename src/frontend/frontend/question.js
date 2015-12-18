@@ -119,6 +119,13 @@ angular.module('frontend-app')
                 self.question_files = groupfiles(result.question);
                 self.test_files = groupfiles(result.tests);
       
+              })
+              .catch(function () {
+                self.runnerFile = "";
+                var result = self.project.filesFor(self.question);
+                self.common_files = groupfiles(result.common);
+                self.question_files = groupfiles(result.question);
+                self.test_files = groupfiles(result.tests);
               });
 
 

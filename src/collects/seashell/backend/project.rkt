@@ -768,10 +768,21 @@
 (define/contract (get-file-to-run project question)
   (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
   (define settings-hash (read-project-settings project))
-  (if settings-hash
-    (hash-ref settings-hash (string->symbol (string-append question "-runner")))
-    ""
-    ))
+  (cond 
+    [settings-hash
+      (define file-to-run
+        (hash-ref settings-hash 
+                  (string->symbol (string-append question "-runner"))))
+      (if (not (file-exists? (build-path (build-project-path project)
+                                          question
+                                          file-to-run)))
+        (raise (exn:project (format "File ~a does not exist." file-to-run)
+                            (current-continuation-marks)))
+        file-to-run)]
+    [else 
+      (raise (exn:project 
+               (format "Question \"~a\" does not have a runner file." question)
+               (current-continuation-marks)))]))
 
   
 ;; (set-file-to-run project question file) writes to the question
