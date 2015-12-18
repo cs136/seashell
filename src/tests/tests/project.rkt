@@ -65,7 +65,7 @@ HERE
     (test-case "Run a Project"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
+      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '() #f))
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
@@ -81,7 +81,7 @@ HERE
                             "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
-      (define-values (success hsh) (compile-and-run-project "foo" "main.c" '("pass" "fail" "crash")))
+      (define-values (success hsh) (compile-and-run-project "foo" "main.c" '("pass" "fail" "crash") #f))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed" "failed" "error")])
@@ -91,7 +91,7 @@ HERE
     (test-case "Get a Compilation Error"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '() #f))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed"))
 

@@ -13,7 +13,7 @@
       (new-project "foo1")
       (with-output-to-file (check-and-build-path (build-project-path "foo1") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo1" "test.c" '()))
+      (define-values (success hsh) (compile-and-run-project "foo1" "test.c" '() #f))
       (check-true success)
       (define pid (hash-ref hsh 'pid))
       (sync (program-wait-evt pid))
@@ -24,23 +24,11 @@
       (new-project "foo2")
       (with-output-to-file (check-and-build-path (build-project-path "foo2") "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo2" "error.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo2" "error.c" '() #f))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed")
       (delete-project "foo2"))
 
-     ;; TODO: Fix this test, because compile-and-run-project has changed
-   ;;  (test-case "ok-multiple-files"
-   ;;    (new-project "foo3")
-   ;;    (new-file "foo3" "2.c" #"#include <stdio.h>\nvoid a() {\nprintf(\"Hello.\");\n}\n" 'raw #f)
-   ;;    (new-file "foo3" "1.c" #"int main() {a(); return 0;}" 'raw #f)
-   ;;    (define-values (success hsh) (compile-and-run-project "foo3" "1.c" '()))
-   ;;    (check-true success)
-   ;;    (define pid (hash-ref hsh 'pid))
-   ;;    (sync (program-wait-evt pid))
-   ;;    (check string=? (port->string (program-stdout pid)) "Hello.")
-   ;;    (delete-project "foo3"))
-    
     (test-case "bad-werror-return-type-no-return"
       (new-project "foo4")
       (new-file "foo4" "1.c" (string->bytes/utf-8
@@ -51,7 +39,7 @@
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo4" "1.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo4" "1.c" '() #f))
       (check-false res)
       (delete-project "foo4"))
     
@@ -66,7 +54,7 @@ EOF
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo5" "1.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo5" "1.c" '() #f))
       (check-false res)
       (delete-project "foo5"))
     
@@ -79,7 +67,7 @@ EOF
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo6" "1.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo6" "1.c" '() #f))
       (check-false res)
       (delete-project "foo6"))
     
@@ -97,7 +85,7 @@ int main() {
     }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo7" "1.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo7" "1.c" '() #f))
       (check-false res)
       (delete-project "foo7"))
 
