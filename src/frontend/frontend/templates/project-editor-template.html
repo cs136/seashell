@@ -10,10 +10,13 @@
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
+                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-arrow-right runner-icon"></span>
+              <a ng-repeat-start="file in group.files" ng-if="$first"
                 ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
-                ui-sref-active="file-link-active">{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
+                ui-sref-active="file-link-active"
+                ng-class="{'current-runner-file': group.isFileToRun}">
+                {{file}}</a><span ng-repeat-end ng-if="!$first">,<a
                   ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                   class="file-link"
                   ui-sref-active="file-link-active">{{file.split(".").pop()}}</a>
@@ -57,7 +60,7 @@
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.common_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
+              <a ng-repeat-start="file in group.files" ng-if="$first"
                  ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
                  ui-sref-active='file-link-active'
                  class='file-link'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
@@ -74,7 +77,7 @@
           <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.test_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
+              <a ng-repeat-start="file in group.files" ng-if="$first"
                  ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
                  class='file-link'
                  ui-sref-active='file-link-active'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a

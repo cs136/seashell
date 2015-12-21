@@ -44,6 +44,13 @@
                     class="btn btn-link">
             delete
             </button>
+            <button id="toolbar-set-runner"
+                    ng-click="editFileView.setFileToRun()"
+                    class="btn btn-link"
+                    ng-disabled="editFileView.folder !== 'question'">
+            <span class="glyphicon glyphicon-arrow-right runner-icon"></span>
+            set as runner
+            </button>
             <div ng-show="editFileView.editor.hasFocus()"
                  style="padding-top: 7px; float: right; 
                          font-size: 14px; font-variant: small-caps; color: #999">

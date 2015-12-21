@@ -49,10 +49,6 @@ angular.module('frontend-app')
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
-        /* runnerFile is the file to be run when RUN or TEST is clicked. false
-         * if the current file is not runnable (and Seashell can't infer which
-         * file to run). */
-        self.runnerFile = false;
         self.consoleOptions = {};
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -361,6 +357,7 @@ angular.module('frontend-app')
                 .then(function() {
                   $scope.$parent.refresh();
                   $state.go("edit-project.editor");
+                  self.refreshRunner();
                 });
             });
         };
@@ -384,7 +381,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, false)
+            self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -406,7 +403,7 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile, self.contents, true)
+            self.project.run(self.question, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -481,6 +478,21 @@ angular.module('frontend-app')
           }
         };
 
+        self.setFileToRun = function() {
+            self.project.setFileToRun(self.question, self.folder, self.file)
+              .then(function () {
+                  $scope.$emit('setFileToRun', []);
+                  self.runnerFile = true;
+              })
+              .catch(function (error) {
+                 errors.report(error, "Could not set runner file!");
+              });
+            
+            // emit an event to the parent scope for
+            // since EditorController is in the child scope of EditorFileController
+
+        };
+
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
 
@@ -513,14 +525,13 @@ angular.module('frontend-app')
         function has_ext(ext, fname){
           return fname.split(".").pop() === ext;
         }
+        
+        self.refreshRunner = function () {
+          self.project.getFileToRun(self.question)
+             .then(function (result) { 
+                 self.runnerFile = (result !== "");
+             });
+        };
+        self.refreshRunner();
 
-        /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
-        var qfiles = self.project.filesFor(self.question).question;
-        var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
-
-        // the below variables represent the precedence of rules for which file gets run
-        var openFileIsRkt = has_ext("rkt", openFile) ? openFile : false;
-        var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
-        var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
-        self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
       }]);
