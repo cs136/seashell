@@ -440,7 +440,7 @@
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm")
-                                    (cons (build-path base exe) c-files)
+                                    (remove-duplicates (cons (build-path base exe) c-files))
                                     o-files))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
