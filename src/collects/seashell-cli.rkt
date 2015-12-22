@@ -28,12 +28,21 @@
       #:exists 'truncate))
   (void))
 
+;; nicely formats a compiler message to be output to the user
+(define/contract (format-message msg)
+  (-> list? string?)
+  (match-define (list _ file line column errstr) msg)
+  (format "~a:~a:~a: error: ~a\n" file line column errstr))
+
 (standard-logger-setup)
 (seashell-compile-place/init)
 (define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t))
 (match info 
   [(hash-table ('messages msgs) ('status "compile-failed"))
-    (eprintf "Compilation failed.\n")
+    (eprintf "Compilation failed. Compiler errors:\n")
+    (define compiler-errors (apply string-append (map format-message msgs)))
+    (eprintf compiler-errors)
+    (write-outputs #f (string->bytes/utf-8 compiler-errors))
     (exit 10)]
   [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
     (eprintf "Waiting for program to finish...\n")
