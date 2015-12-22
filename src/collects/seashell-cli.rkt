@@ -57,5 +57,12 @@
      [(list pid _ "failed" diff stderr stdout)
       (eprintf "Test failed the test (but did not crash)\n")
       (write-outputs stdout stderr)
-      (exit 30)])]
+      (exit 30)]
+     [(list pid _ "timeout")
+      (eprintf "Test timed out (but did not crash)\n")
+      (exit 50)]
+     [x
+      (eprintf "Unknown error occurred: ~a" x)
+      (exit 98)]
+     )]
   [x (error (format "Seashell failed: compile-and-run-project returned ~s" x))])
