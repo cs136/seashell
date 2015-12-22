@@ -96,7 +96,7 @@
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt)
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
@@ -128,7 +128,7 @@
          [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
-      [#f ;; Program timed out (30 seconds pass without any event)
+      [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
        (subprocess-kill handle #t)
@@ -191,7 +191,7 @@
 
   (let loop ()
     (define receive-evt (thread-receive-evt))
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt
                          (if (port-closed? in-stdin)
