@@ -4,15 +4,24 @@
          seashell/backend/runner
          seashell/log
          seashell/compiler
+         seashell/seashell-config
          racket/serialize
          racket/cmdline)
 
 
+(define RUN-TIMEOUT (make-parameter #f))
 (define-values (project-dir main-file test-name out-file err-file)
   (command-line
     #:usage-help "Seashell command-line runner. Return codes:\n  10 means failed compilation\n  20 means the program crashed at runtime\n  30 means the program failed its test\n  40 means the program passed its test"
+    #:once-each
+    [("-t" "--timeout") timeout
+                        "Override the default seashell timeout (seconds)"
+                        (RUN-TIMEOUT (string->number timeout))]
     #:args (project-dir main-file test-name out-file err-file)
     (values project-dir main-file test-name out-file err-file)))
+
+(when (RUN-TIMEOUT)
+  (config-set! 'program-run-timeout (RUN-TIMEOUT)))
 
 (define/contract (write-outputs stdout stderr)
   (-> (or/c bytes? #f) (or/c bytes? #f) void?)
@@ -28,12 +37,21 @@
       #:exists 'truncate))
   (void))
 
+;; nicely formats a compiler message to be output to the user
+(define/contract (format-message msg)
+  (-> list? string?)
+  (match-define (list _ file line column errstr) msg)
+  (format "~a:~a:~a: error: ~a\n" file line column errstr))
+
 (standard-logger-setup)
 (seashell-compile-place/init)
 (define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t))
 (match info 
   [(hash-table ('messages msgs) ('status "compile-failed"))
-    (eprintf "Compilation failed.\n")
+    (eprintf "Compilation failed. Compiler errors:\n")
+    (define compiler-errors (apply string-append (map format-message msgs)))
+    (eprintf compiler-errors)
+    (write-outputs #f (string->bytes/utf-8 compiler-errors))
     (exit 10)]
   [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
     (eprintf "Waiting for program to finish...\n")
@@ -57,5 +75,12 @@
      [(list pid _ "failed" diff stderr stdout)
       (eprintf "Test failed the test (but did not crash)\n")
       (write-outputs stdout stderr)
-      (exit 30)])]
+      (exit 30)]
+     [(list pid _ "timeout")
+      (eprintf "Test timed out (but did not crash)\n")
+      (exit 50)]
+     [x
+      (eprintf "Unknown error occurred: ~a" x)
+      (exit 98)]
+     )]
   [x (error (format "Seashell failed: compile-and-run-project returned ~s" x))])

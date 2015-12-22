@@ -499,6 +499,7 @@
             (delete-directory/files target #:must-exist? #f))))
       (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
+      (eprintf "b2coutts: messages are ~s\n" messages)
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 
