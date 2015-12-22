@@ -131,6 +131,9 @@
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
+       ;; Kill copy-threads before killing program 
+       (kill-thread stderr-thread)
+       (kill-thread stdout-thread)
        (subprocess-kill handle #t)
        (write (serialize `(,pid ,test-name "timeout")) out-stdout)
        (close)]
@@ -138,6 +141,8 @@
        (match (thread-receive)
          ['kill
           (logf 'info "Program with PID ~a killed." pid)
+          (kill-thread stderr-thread)
+          (kill-thread stdout-thread)
           (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
           (write (serialize `(,pid ,test-name "killed")) out-stdout)
