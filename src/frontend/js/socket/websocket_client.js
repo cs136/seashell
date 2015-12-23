@@ -219,11 +219,11 @@ SeashellWebsocket.prototype.ping = function(deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.compileAndRunProject = function(project, file, test, deferred) {
+SeashellWebsocket.prototype.compileAndRunProject = function(project, question, test, deferred) {
   return this.sendMessage({
     type : "compileAndRunProject",
     project : project,
-    file : file,
+    question: question,
     tests : test},
     deferred);
 };
@@ -459,5 +459,23 @@ SeashellWebsocket.prototype.archiveProjects = function(deferred) {
   return this.sendMessage({
     type : "archiveProjects",
     location : false},
+    deferred);
+};
+
+SeashellWebsocket.prototype.getFileToRun = function(project, question, deferred) {
+  return this.sendMessage({
+    type: "getFileToRun",
+    project: project,
+    question: question},
+    deferred);
+};
+
+SeashellWebsocket.prototype.setFileToRun = function(project, question, folder, file, deferred) {
+  return this.sendMessage({
+    type: "setFileToRun",
+    project: project,
+    question: question,
+    folder: folder,
+    file: file},
     deferred);
 };
