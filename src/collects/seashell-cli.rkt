@@ -23,6 +23,9 @@
 (when (RUN-TIMEOUT)
   (config-set! 'program-run-timeout (RUN-TIMEOUT)))
 
+(config-set! 'seashell (build-path project-dir))
+(make-directory* (runtime-files-path))
+
 (define/contract (write-outputs stdout stderr)
   (-> (or/c bytes? #f) (or/c bytes? #f) void?)
   (when stdout
