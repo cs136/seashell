@@ -96,7 +96,7 @@
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt)
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
@@ -118,7 +118,7 @@
             [(not expected)
              (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
             [(equal? stdout expected)
-             (write (serialize `(,pid ,test-name "passed")) out-stdout)]
+             (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
             [else
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))
@@ -128,9 +128,12 @@
          [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
-      [#f ;; Program timed out (30 seconds pass without any event)
+      [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
+       ;; Kill copy-threads before killing program 
+       (kill-thread stderr-thread)
+       (kill-thread stdout-thread)
        (subprocess-kill handle #t)
        (write (serialize `(,pid ,test-name "timeout")) out-stdout)
        (close)]
@@ -138,6 +141,8 @@
        (match (thread-receive)
          ['kill
           (logf 'info "Program with PID ~a killed." pid)
+          (kill-thread stderr-thread)
+          (kill-thread stdout-thread)
           (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
           (write (serialize `(,pid ,test-name "killed")) out-stdout)
@@ -191,7 +196,7 @@
 
   (let loop ()
     (define receive-evt (thread-receive-evt))
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt
                          (if (port-closed? in-stdin)
@@ -256,7 +261,7 @@
        (check-signals loop)]))
   (void))
 
-;; (run-program binary directory lang test)
+;; (run-program binary directory lang test is-cli)
 ;;  Runs a program.
 ;;
 ;; Arguments:
@@ -267,13 +272,17 @@
 ;;               a string representing the name of a test to use in tests/.
 ;;               i.e. if test is "foo", input is from tests/foo.in, output is
 ;;               diffed against tests/foo.expect
+;;   is-cli    - if #t, assumes seashell was run from CLI; treats test as a
+;;               relative path, rather than searching for it in the project's
+;;               tests/ directory
 ;;
 ;; Returns:
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(define/contract (run-program binary directory lang test)
-  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) integer?)
+(define/contract (run-program binary directory lang test is-cli)
+  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) boolean? integer?)
+  (define test-path (if is-cli (build-path ".") (build-path directory (read-config 'tests-subdirectory))))
   (call-with-semaphore
     program-new-semaphore
     (lambda ()
@@ -328,10 +337,10 @@
                   (if test
                     (program-control-test-thread result
                                                  test
-                                                 (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (file->bytes (build-path test-path (string-append test ".in")))
                                                  (with-handlers
                                                    ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                                                   (file->bytes (build-path test-path (string-append test ".expect")))))
                     (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table
