@@ -442,6 +442,7 @@
                                     '("-lm")
                                     (remove-duplicates (cons (build-path base exe) c-files))
                                     o-files))
+    (make-directory* (runtime-files-path))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
