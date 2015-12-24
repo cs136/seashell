@@ -34,7 +34,7 @@ angular.module('frontend-app')
         self.project = openProject;
         self.question = openQuestion;
         self.folder = openFolder;
-        self.file = openFile; 
+        self.file = openFile;
         self.console = Console;
         self.settings = settings;
         self.undoHistory = undoHistory;
@@ -289,7 +289,7 @@ angular.module('frontend-app')
               self.runFile();
             }
           }, {
-            combo: 'ctrl+u',
+            combo: 'ctrl+t',
             description: "Starts Tests",
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
@@ -487,7 +487,7 @@ angular.module('frontend-app')
               .catch(function (error) {
                  errors.report(error, "Could not set runner file!");
               });
-            
+
             // emit an event to the parent scope for
             // since EditorController is in the child scope of EditorFileController
 
@@ -525,10 +525,10 @@ angular.module('frontend-app')
         function has_ext(ext, fname){
           return fname.split(".").pop() === ext;
         }
-        
+
         self.refreshRunner = function () {
           self.project.getFileToRun(self.question)
-             .then(function (result) { 
+             .then(function (result) {
                  self.runnerFile = (result !== "");
              });
         };
