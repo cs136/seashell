@@ -289,7 +289,7 @@ angular.module('frontend-app')
               self.runFile();
             }
           }, {
-            combo: 'ctrl+shift+r',
+            combo: 'ctrl+e',
             description: "Starts Tests",
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
