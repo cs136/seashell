@@ -64,5 +64,5 @@ angular.module('frontend-app')
              });
            }
          });
-       }; 
- }});
+       }}; 
+ });

@@ -483,6 +483,30 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
         };
 
+        /**
+         * SeashellProject.getFileToRun(question)
+         *
+         * Returns the basename of the file to run when hitting run, from the 
+         * question settings file.
+         */
+        SeashellProject.prototype.getFileToRun = function (question) {
+            var self = this;
+            return $q.when(ws.socket.getFileToRun(self.name, question))
+                .then(function (result) {
+                    return result;
+                });
+        };
+
+
+        /**
+         * SeashellProject.setFileToRun(question, folder, file)
+         *
+         * Modify the settings file to set which file to run.
+         */
+        SeashellProject.prototype.setFileToRun = function (question, folder, file) {
+            var self = this;
+            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file));
+        };
 
         /**
          * SeashellProject.remove()
@@ -498,21 +522,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
 
         /**
-         * SeashelLProject.run(...)
+         * SeashellProject.run(...)
          * Compiles [if necessary] and runs the project.
          *
          * test - boolean parameter, run with tests if true.
          */
-        SeashellProject.prototype.run = function(question, folder, filename, data, test) {
+        SeashellProject.prototype.run = function(question, test) {
           var self = this;
           // TODO: handle racket files.
-          var file = self.root.find(self._getPath(question, folder, filename));
           var tests = test ? self.getTestsForFile(file) : [];
 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
-          return $q.when(ws.socket.compileAndRunProject(self.name, file.fullname(), tests));
+          return $q.when(ws.socket.compileAndRunProject(self.name, question, tests));
         };
 
         /** 
