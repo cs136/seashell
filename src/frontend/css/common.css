@@ -562,3 +562,12 @@ label {
 
 .list-group-item{
 }
+
+.current-runner-file {
+  font-weight: bold;
+  color: #333;
+}
+
+.runner-icon {
+  margin-right: -3px;
+}

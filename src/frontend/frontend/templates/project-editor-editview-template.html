@@ -44,6 +44,13 @@
                     class="btn btn-link">
             delete
             </button>
+            <button id="toolbar-set-runner"
+                    ng-click="editFileView.setFileToRun()"
+                    class="btn btn-link"
+                    ng-disabled="editFileView.folder !== 'question'">
+            <span class="glyphicon glyphicon-arrow-right runner-icon"></span>
+            set as runner
+            </button>
             <div ng-show="editFileView.editor.hasFocus()"
                  style="padding-top: 7px; float: right; 
                          font-size: 14px; font-variant: small-caps; color: #999">
@@ -90,7 +97,7 @@
               </div>
               <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
                 type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running"
-                focus-on="program-running" placeholder="Type here and press <Enter>">
+                ng-trim="false" focus-on="program-running" placeholder="Type here and press <Enter>">
               <div class="console-controls"
                    style="position: absolute; top: 5px; right: 0"
                    tooltip-placement="left"

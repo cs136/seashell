@@ -4,7 +4,7 @@
 @seashell-title[#:tag "release" #:style 'toc]{Release Notes}
 
 This section will be updated every time there is a new 
-build pushed to live.
+version of Seashell.
 
 @local-table-of-contents[]
 
@@ -13,3 +13,5 @@ build pushed to live.
 @include-section["2.5.0.scrbl"]
 @include-section["2.5.1.scrbl"]
 @include-section["2.5.2.scrbl"]
+@include-section["2.5.3.scrbl"]
+@include-section["2.5.4.scrbl"]
