@@ -425,14 +425,15 @@ angular.module('frontend-app')
           if(!self.console.PIDs) {
             return $q.when();
           }
-          return $q.all(_.map(self.console.PIDs, function(id) {
+          var p = $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);
           }))
           .catch(function (error) {
             errors.report(error, "Could not stop program!");
-            self.console.PIDs = null;
-            self.console.running = false;
           });
+          self.console.running = false;
+          self.console.PIDs = null;
+          return p;
         };
 
         self.indentAll = function() {
