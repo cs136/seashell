@@ -21,25 +21,22 @@
 angular.module('frontend-app')
   // Confirmation message modal service
   .factory('ConfirmationMessageModal', ['$modal',
-    function ($modal) {
-      return function (title, message) {
-        return $modal.open({
-          templateUrl: "frontend/templates/confirmation-template.html",
-          controller: ['$scope', function ($scope) {
-            $scope.title = title;
-            $scope.message = message;
-          }]
-        }).result;
-      };
-    }
-  ])
+      function ($modal) {
+        return function (title, message) {
+          return $modal.open({
+            templateUrl: "frontend/templates/confirmation-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.title = title;
+              $scope.message = message;
+            }]}).result;
+        };
+      }])
   .factory('LoginModal', ['$modal',
-    function ($modal) {
-      return function () {
-        return $modal.open({
+      function($modal) {
+        return function() { return $modal.open({
           templateUrl: "frontend/templates/login-template.html",
           controller: ['$scope', '$window', '$cookies', 'socket',
-            function ($scope, $window, $cookies, ws) {
+            function($scope, $window, $cookies, ws) {
               $scope.username = "";
               $scope.password = "";
               $scope.reset = false;
@@ -51,47 +48,39 @@ angular.module('frontend-app')
                 $scope.username = current.user;
               }
 
-              $scope.login = function () {
+              $scope.login = function() {
                 $scope.busy = true;
                 $scope.error = false;
                 var target = sprintf("https://%s%s/cgi-bin/login2.cgi",
                   $window.location.host,
                   $window.location.pathname.substring(0, $window.location.pathname.lastIndexOf('/')));
-                $.ajax({
-                    url: target,
-                    type: "POST",
-                    data: {
-                      "u": $scope.username,
-                      "p": $scope.password,
-                      "reset": $scope.reset
-                    },
-                    dataType: "json"
-                  })
-                  .done(function (data) {
-                    $scope.$apply(function () {
+                $.ajax({url: target,
+                        type: "POST",
+                        data: {"u": $scope.username, "p": $scope.password, "reset": $scope.reset},
+                        dataType: "json"})
+                  .done(function(data) {
+                    $scope.$apply(function() {
                       $scope.busy = false;
-                      if (data.error !== undefined) {
+                      if(data.error !== undefined) {
                         $scope.error = sprintf("An error was encountered while logging in: %s (code %d)",
                           data.error.message, data.error.code);
                         console.log(self.error);
-                      } else if (data.port !== undefined) {
-                        $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {
-                          secure: true
-                        });
+                      } else if(data.port !== undefined) {
+                        $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure:true});
                         console.log("All done login!");
-                        ws.connect().then(function () {
-                            $scope.$dismiss();
-                          })
-                          .catch(function () {
-                            $scope.error = "Could not connect to the websocket!";
-                          });
+                        ws.connect().then(function() {
+                          $scope.$dismiss();
+                        })
+                        .catch(function() {
+                          $scope.error = "Could not connect to the websocket!";
+                        });
                       } else {
                         $scope.error = "An internal error occurred: " + textStatus;
                         console.log(error);
                       }
                     });
-                  }).fail(function (error) {
-                    $scope.$apply(function () {
+                  }).fail(function(error) {
+                    $scope.$apply(function() {
                       $scope.busy = false;
                       $scope.error = error;
                       console.log(error);
@@ -99,34 +88,30 @@ angular.module('frontend-app')
                   });
               };
             }
-          ]
-        }).result;
-      };
-    }
-  ])
+          ]}).result; };
+      }])
   .factory('DeleteProjectModal', ['$modal', 'projects', 'error-service',
-    function ($modal, projects, errors) {
-      return function (project) {
-        return $modal.open({
-          templateUrl: "frontend/templates/delete-project-template.html",
-          controller: ['$scope', function ($scope) {
-            $scope.project = project;
-          }]
-        }).result.then(function () {
-          return projects.delete(project).catch(
-            function (error) {
-              errors.report(error, sprintf("Could not delete project %s!", project));
-            });
-        });
-      };
-    }
-  ])
+      function ($modal, projects, errors) {
+        return function (project) {
+          return $modal.open({
+            templateUrl: "frontend/templates/delete-project-template.html",
+            controller: ['$scope', function ($scope) {
+              $scope.project = project;
+            }]
+          }).result.then(function () {
+            return projects.delete(project).catch(
+                function (error) {
+                  errors.report(error, sprintf("Could not delete project %s!", project));
+                });
+          });
+        };
+      }])
   .factory('NewProjectModal', ['$modal', 'projects', 'error-service',
-    function ($modal, projects, errors) {
-      return function () {
-        return $modal.open({
-          templateUrl: "frontend/templates/new-project-template.html",
-          controller: ['$scope', '$state', 'projects', 'error-service',
+      function ($modal, projects, errors) {
+        return function () {
+          return $modal.open({
+            templateUrl: "frontend/templates/new-project-template.html",
+            controller: ['$scope', '$state', 'projects', 'error-service',
             function ($scope, $state, projects, errors) {
               $scope.new_project_name = "";
               $scope.newProject = function () {
@@ -135,56 +120,50 @@ angular.module('frontend-app')
                 } else {
                   $scope.$close();
                   projects.create($scope.new_project_name).then(function () {
-                    $state.go('edit-project', {
-                      project: $scope.new_project_name
-                    });
+                    $state.go('edit-project', {project: $scope.new_project_name});
                   }).catch(function (error) {
                     errors.report(error, sprintf("Could not create project %s!", $scope.new_project_name));
                   });
                 }
               };
-            }
-          ]
-        }).result;
-      };
-    }
-  ])
+            }]
+          }).result;
+        };
+      }])
   .factory('RenameFileModal', ['$modal', 'error-service',
-    function ($modal, errors) {
-      return function (project, question, folder, file, notify) {
-        notify = notify || function () {};
+    function($modal, errors) {
+      return function(project, question, folder, file, notify) {
+        notify = notify || function() {};
         return $modal.open({
           templateUrl: "frontend/templates/rename-file-template.html",
           controller: ["$scope", "$state", "error-service",
-            function ($scope, $state, errors) {
-              $scope.rename_name = (folder == 'common' ? "" : question + "/") +
-                (folder == 'question' ? "" : folder + "/") + file;
-              $scope.renameFile = function () {
+            function($scope, $state, errors) {
+              $scope.rename_name = (folder=='common' ? "" : question + "/") +
+                (folder=='question' ? "" : folder + "/") + file;
+              $scope.renameFile = function() {
                 project.renameFile(question, folder, file, folder, $scope.rename_name)
-                  .then(function () {
+                  .then(function() {
                     $scope.$close();
                     notify($scope.rename_name);
                   })
-                  .catch(function (err) {
+                  .catch(function(err) {
                     $scope.$dismiss();
                     errors.report(err, "An error occurred while renaming the file.");
                   });
               };
-            }
-          ]
-        });
+            }]
+          });
       };
-    }
-  ])
+  }])
   // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
-    function ($modal, errors) {
-      return function (project, question, notify) {
-        notify = notify || function () {};
-        return $modal.open({
-          templateUrl: "frontend/templates/new-file-template.html",
-          controller: ['$scope', '$state', 'error-service', '$q', '$timeout',
+      function ($modal, errors) {
+        return function (project, question, notify) {
+          notify = notify || function () {};
+          return $modal.open({
+            templateUrl: "frontend/templates/new-file-template.html",
+            controller: ['$scope', '$state', 'error-service', '$q', '$timeout',
             function ($scope, $state, errors, $q, $timeout) {
               $scope.new_file_name = "";
               $scope.new_file_folder = question;
@@ -209,14 +188,14 @@ angular.module('frontend-app')
                     var normalize = $scope.normalize && ['c', 'h', 'txt', 'rkt', 'in', 'expect'].indexOf(extension) >= 0;
                     reader.onload = function () {
                       project.createFile($scope.new_file_folder, question,
-                          filename, reader.result, "url", normalize)
-                        .then(function () {
-                          notify(true, true, project, question, $scope.new_file_folder, filename);
-                        })
-                        .catch(function (error) {
-                          notify(true, false, project, question, $scope.new_file_folder, filename);
-                          errors.report(error, sprintf("Could not upload file %s!", filename));
-                        });
+                        filename, reader.result, "url", normalize)
+                             .then(function () {
+                               notify(true, true, project, question, $scope.new_file_folder, filename);
+                             })
+                             .catch(function (error) {
+                               notify(true, false, project, question, $scope.new_file_folder, filename);
+                               errors.report(error, sprintf("Could not upload file %s!", filename));
+                             });
                     };
                     reader.onerror = function () {
                       $timeout(function () {
@@ -234,151 +213,138 @@ angular.module('frontend-app')
                   var result = null;
                   // Write default contents.
                   if (extension === 'c' || extension === 'h') {
-                    result = project.createFile($scope.new_file_folder, question, filename,
-                      sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n", filename));
+                      result = project.createFile($scope.new_file_folder, question, filename,
+                                        sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n", filename));
                   } else if (extension === 'rkt') {
-                    result = project.createFile($scope.new_file_folder, question, filename,
-                      sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n", filename));
+                      result = project.createFile($scope.new_file_folder, question, filename,
+                                        sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n", filename));
                   } else {
-                    result = project.createFile($scope.new_file_folder, question, filename);
+                      result = project.createFile($scope.new_file_folder, question, filename);
                   }
                   result.then(function () {
-                      notify(false, true, project, question, $scope.new_file_folder, filename);
-                    })
-                    .catch(function (error) {
-                      notify(false, false, project, question, $scope.new_file_folder, filename);
-                      errors.report(error, sprintf("Could not create file %s!", filename));
-                    });
+                    notify(false, true, project, question, $scope.new_file_folder, filename);
+                  })
+                  .catch(function (error) {
+                    notify(false, false, project, question, $scope.new_file_folder, filename);
+                    errors.report(error, sprintf("Could not create file %s!", filename));
+                  });
                   $scope.$close();
                 } else {
                   $scope.inputError = "Need to specify file!";
                   return false;
                 }
               };
-            }
-          ]
-        }).result;
-      };
-    }
-  ])
+            }]
+          }).result;
+        };
+      }])
 
-.factory('NewTestModal', ['$modal', 'error-service',
-  function ($modal, errors) {
-    return function (project, question, notify) {
-      notify = notify || function () {};
-      return $modal.open({
-        templateUrl: "frontend/templates/new-test-template.html",
-        controller: ['$scope', '$state', 'error-service', '$q',
-          function ($scope, $state, errors, $q) {
-            $scope.new_file_name = "";
-            $scope.question = question;
-            $scope.inputError = false;
-            $scope.newTest = function () {
-              // three cases:
-              // a .in or .expect file, which we create normally
-              // a file without an extension, for which we create a pair 
-              // an invalid extension
-              var filename = $scope.new_file_name;
-              var extension = filename.split('.').pop();
-              var results = [];
-              if (extension === 'in' || extension === 'expect') {
-                results.push(project.createFile("tests", question, filename));
-              } else if (filename.split('.').length < 2) {
-                // no extension
-                results.push(project.createFile("tests", question, filename + ".in"));
-                results.push(project.createFile("tests", question, filename + ".expect"));
-              } else {
-                $scope.inputError = "Invalid test file name.";
-                return false;
-              }
-              _.each(results, function (result) {
-                result.then(function () {
-                  notify(false, true, project, question, $scope.new_file_folder, filename);
-                }).catch(function (error) {
-                  notify(false, false, project, question, $scope_new_file_folder, filename);
-                });
-              });
-              $scope.$close();
-
-            };
-          }
-        ]
-      }).results;
-    };
-  }
-])
-
-
-// Directive for New Question Modal Service
-.factory('NewQuestionModal', ['$modal', 'error-service',
-    function ($modal, errors) {
-      return function (project) {
-        return $modal.open({
-          templateUrl: "frontend/templates/new-question.template.html",
-          controller: ['$scope', '$state', 'error-service', '$q',
-            function ($scope, $state, errors, $q) {
-              $scope.new_question_name = "";
-              $scope.inputError = false;
-              $scope.newQuestion = function () {
-                var promise = project.createQuestion($scope.new_question_name);
-                if (promise) promise.then(function () {
-                  $state.go("edit-project.editor", {
-                    question: $scope.new_question_name
-                  });
-                  $scope.$close();
-                });
+  .factory('NewTestModal', ['$modal', 'error-service',
+          function ($modal, errors) {
+              return function(project, question, notify) {
+                  notify = notify || function () {};
+                  return $modal.open({
+                      templateUrl: "frontend/templates/new-test-template.html",
+                      controller: ['$scope', '$state', 'error-service', '$q',
+                      function($scope, $state, errors, $q) {
+                        $scope.new_file_name = "";
+                        $scope.question = question;
+                        $scope.inputError = false;
+                        $scope.newTest = function () {
+                           // three cases:
+                           // a .in or .expect file, which we create normally
+                           // a file without an extension, for which we create a pair 
+                           // an invalid extension
+                           var filename = $scope.new_file_name;
+                           var extension = filename.split('.').pop();
+                           var results = [];
+                             if (extension === 'in' || extension === 'expect') {
+                               results.push(project.createFile("tests", question, filename));
+                           } else if (filename.split('.').length < 2) {
+                               // no extension
+                               results.push(project.createFile("tests", question, filename + ".in"));
+                               results.push(project.createFile("tests", question, filename + ".expect"));
+                           } else {
+                               $scope.inputError = "Invalid test file name.";
+                               return false;
+                           }
+                           _.each(results, function (result) {
+                               result.then(function () { 
+                                   notify(false, true, project, question, $scope.new_file_folder, filename); 
+                               }).catch(function (error) {
+                                   notify(false, false, project, question, $scope_new_file_folder, filename);
+                               });
+                           });
+                           $scope.$close();
+ 
+                         };
+                      }]
+                  }).results;
               };
-            }
-          ]
-        }).result;
-      };
-    }
-  ])
+          }])
+
+
+  // Directive for New Question Modal Service
+  .factory('NewQuestionModal', ['$modal', 'error-service',
+    function ($modal, errors){
+        return function(project){
+            return $modal.open({
+                templateUrl: "frontend/templates/new-question.template.html",
+                controller:  ['$scope', '$state', 'error-service', '$q',
+                function ($scope, $state, errors, $q){
+                    $scope.new_question_name = "";
+                    $scope.inputError = false;
+                    $scope.newQuestion = function () {
+                        var promise = project.createQuestion($scope.new_question_name);
+                        if(promise) promise.then(function () {
+                            $state.go("edit-project.editor",
+                                      {question:$scope.new_question_name});
+                            $scope.$close();
+                        });
+                    };
+                }]
+            }).result;
+        };
+    }])
   // Submit to Marmoset Modal
   .factory('SubmitMarmosetModal', ['$modal', 'error-service',
-    function ($modal, errors) {
-      return function (project, question, notify) {
-        notify = notify || function () {};
-        return $modal.open({
-          templateUrl: "frontend/templates/marmoset-submit-template.html",
-          controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
+      function ($modal, errors) {
+        return function (project, question, notify) {
+          notify = notify || function () {};
+          return $modal.open({
+            templateUrl: "frontend/templates/marmoset-submit-template.html",
+            controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
             function ($scope, $state, errors, $q, marmoset) {
               $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
-                .then(function (res) {
+                .then(function(res) {
                   $scope.marmoset_projects = res[0];
                   $scope.selected_project = res[1];
-                  $scope.submit = function () {
+                  $scope.submit = function() {
                     $scope.$close();
                     project.submit(question, $scope.selected_project)
-                      .catch(function (error) {
-                        var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
-                        errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
-                        notify(false, $scope.selected_project);
-                        return $q.reject(error);
-                      }).then(function () {
-                        notify(true, $scope.selected_project);
-                      });
+                       .catch(function (error) {
+                         var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
+                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
+                         notify(false, $scope.selected_project);
+                         return $q.reject(error);
+                       }).then(function () {
+                         notify(true, $scope.selected_project);
+                       });
                   };
                 });
-            }
-          ]
-        }).result;
-      };
-    }
-  ])
+            }]}).result;
+        };
+      }])
   // Marmoset Results Modal
   .factory('MarmosetResultsModal', ['$modal', 'error-service',
-    function ($modal, errors) {
-      return function (results) {
-        return $modal.open({
-          templateUrl: "frontend/templates/marmoset-results-template.html",
-          size: "lg",
-          controller: ['$scope', '$state', 'error-service',
-            function ($scope, $state, errors) {
-              $scope.results = results;
-            }
-          ]
-        });
-      };
-    }
-  ]);
+      function ($modal, errors) {
+        return function (results) {
+          return $modal.open({
+            templateUrl: "frontend/templates/marmoset-results-template.html",
+            size: "lg",
+            controller: ['$scope', '$state', 'error-service',
+              function ($scope, $state, errors) {
+                $scope.results = results;
+              }]});
+        };
+      }]);
