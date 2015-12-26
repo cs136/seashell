@@ -14,20 +14,20 @@
             <span style="position: relative; bottom: 2px; left: 2px"> code</span>
             <div id="editor-controls"
                  style="position: absolute; right: 13px; top: 0px">
+              <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
+                      ng-disabled="!(editFileView.runnerFile)"
+                      style="padding-left: 0; padding-right: 0; margin-right: 15px; padding-top: 2px" tooltip-placement="left" tooltip="control+U"
+                      ng-show="editFileView.console.PIDs === null">
+                <span style="font-size: 18px">test</span>
+              </button>
               <button id="toolbar-run" ng-click="editFileView.runFile()" ng-show="editFileView.console.PIDs === null" class="btn btn-link"
                       ng-disabled="!(editFileView.runnerFile)"
-                      style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="control+R">
+                      style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="Control+R">
                 <span style="font-size: 18px">run</span>
               </button>
               <button id="toolbar-kill" ng-click="editFileView.killProgram()" ng-show="editFileView.console.PIDs !== null" class="btn btn-link"
-                      style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="control+K">
+                      style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="Control+K">
                 <span style="font-size: 18px">stop</span>
-              </button>
-              <button id="toolbar-run-tests" ng-click="editFileView.testFile()" class="btn btn-link"
-                      ng-disabled="!(editFileView.runnerFile)"
-                      style="padding-left: 0; padding-right: 0; margin-left: 15px; padding-top: 2px" tooltip-placement="left" tooltip="control+U"
-                      ng-show="editFileView.console.PIDs === null">
-                <span style="font-size: 18px">test</span>
               </button>
             </div>
           </div>
@@ -52,7 +52,7 @@
             set as runner
             </button>
             <div ng-show="editFileView.editor.hasFocus()"
-                 style="padding-top: 7px; float: right; 
+                 style="padding-top: 7px; float: right;
                          font-size: 14px; font-variant: small-caps; color: #999">
                  <span>ln {{editFileView.line}}</span>
                  <span ng-class="{'col-too-long': editFileView.col > 80}">col {{editFileView.col}}</span>
@@ -101,7 +101,7 @@
               <div class="console-controls"
                    style="position: absolute; top: 5px; right: 0"
                    tooltip-placement="left"
-                   tooltip="control+D">
+                   tooltip="Control+D">
                 <button id="send-eof" ng-click="editFileView.sendEOF()" ng-disabled="!editFileView.console.running"
                         class="btn btn-link console-control">eof</button>
               </div>
