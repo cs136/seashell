@@ -23,8 +23,12 @@
 (when (RUN-TIMEOUT)
   (config-set! 'program-run-timeout (RUN-TIMEOUT)))
 
-(config-set! 'seashell (build-path project-dir))
-(make-directory* (runtime-files-path))
+(define temp-dir-path (make-temporary-file "seashell-rutime-~a" 'directory))
+(define default-exit-handler (exit-handler))
+(exit-handler (lambda (exit-code)
+                (delete-directory/files temp-dir-path #:must-exist? #f)
+                (default-exit-handler exit-code)))
+(config-set! 'runtime-files-path temp-dir-path)
 
 (define/contract (write-outputs stdout stderr)
   (-> (or/c bytes? #f) (or/c bytes? #f) void?)

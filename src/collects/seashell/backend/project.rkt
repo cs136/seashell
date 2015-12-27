@@ -146,7 +146,7 @@
 ;; Gets the path where runtime files are stored.
 (define/contract (runtime-files-path)
   (-> path?)
-  (build-path (read-config 'seashell) "runtime-files"))
+  (build-path (read-config 'runtime-files-path)))
 
 ;; (init-projects)
 ;; Creates the directories for projects
