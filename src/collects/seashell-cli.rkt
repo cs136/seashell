@@ -12,10 +12,10 @@
 (define RUN-TIMEOUT (make-parameter #f))
 (define-values (project-dir main-file test-name out-file err-file)
   (command-line
-    #:usage-help "Seashell command-line runner. Return codes:\n  10 means failed compilation\n  20 means the program crashed at runtime\n  30 means the program failed its test\n  40 means the program passed its test"
+    #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  30 means the program failed its test.\n  40 means the program passed its test."
     #:once-each
     [("-t" "--timeout") timeout
-                        "Override the default seashell timeout (seconds)"
+                        "Override the default seashell timeout (seconds)."
                         (RUN-TIMEOUT (string->number timeout))]
     #:args (project-dir main-file test-name out-file err-file)
     (values project-dir main-file test-name out-file err-file)))
@@ -23,7 +23,7 @@
 (when (RUN-TIMEOUT)
   (config-set! 'program-run-timeout (RUN-TIMEOUT)))
 
-(define temp-dir-path (make-temporary-file "seashell-rutime-~a" 'directory))
+(define temp-dir-path (make-temporary-file "seashell-runtime-~a" 'directory))
 (define default-exit-handler (exit-handler))
 (exit-handler (lambda (exit-code)
                 (delete-directory/files temp-dir-path #:must-exist? #f)
