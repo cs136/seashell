@@ -18,6 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/contract
          racket/unit
+         racket/tcp
          net/tcp-sig
          net/url
          (prefix-in raw: net/tcp-unit)
@@ -28,7 +29,6 @@
          web-server/private/connection-manager
          web-server/private/timer
          racket/async-channel
-         unstable/contract
          seashell/websocket/connection
          seashell/websocket/handshake)
 
@@ -119,7 +119,7 @@
         #:tcp@
         (unit/c (import) (export tcp^))
         #:port
-        tcp-listen-port?
+        listen-port-number?
         #:listen-ip
         (or/c string? false/c)
         #:max-waiting
