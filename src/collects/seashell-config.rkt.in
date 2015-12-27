@@ -168,6 +168,8 @@
                                             "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
                                             ;; Need this to detect global buffer overflow 
                                             "-fno-common"
+                                            ;; Standard compilation mode
+                                            "-std=c99"
                                             ; Add standard static analyzer options (clang/lib/Driver/Tools.cpp:2954)
                                             ;; "-analyzer-store=region"
                                             ;; "-analyzer-opt-analyze-nested-blocks"
