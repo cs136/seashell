@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project
+         seashell/backend/template
          seashell/seashell-config
          seashell/log
          net/uri-codec
@@ -26,7 +27,9 @@
          racket/port
          racket/match
          racket/file
-         racket/path)
+         racket/path
+         file/unzip
+         openssl/md5)
 
 (provide exn:project:file
          new-file
@@ -210,6 +213,36 @@
     (unless (equal? old-file new-file)
       (rename-file-or-directory (check-and-build-path proj-path old-file)
                                 (check-and-build-path proj-path new-file)))))
+
+;; (restore-file-from-template project file template)
+;; Restores a file from a skeleton/template.
+;;
+;; Args:
+;;  project - Project.
+;;  file - Path to file.
+;;  template - Path (possibly URL) to template.
+;; Returns:
+;;  MD5 hash of file.
+(define/contract (restore-file-from-template project file template)
+  (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
+  (define ok #f)
+  (define destination (check-and-build-path (build-project-path project) file))
+  (define source (path->zip-path (build-path project file)))
+  (call-with-template source
+                      (lambda (port)
+                        (unzip port
+                               (lambda (name _2 contents)
+                                 (when (equal? source name)
+                                   (call-with-output-file destination
+                                                          (lambda (dport)
+                                                            (define-values (md5in md5out) (make-pipe))
+                                                            (copy-port contents dport md5out)
+                                                            (set! ok (md5 md5in)))
+                                                          #:exists 'replace))))))
+  (when (not ok)
+    (raise (exn:fail (format "File ~a not found in template ~a!" file template))
+           (current-continuation-marks)))
+  ok)
 
 ;; (write-settings font-size editor-mode tab-width use-spaces)
 ;; Writes the user's seashell settings to ~/.seashell/settings.txt

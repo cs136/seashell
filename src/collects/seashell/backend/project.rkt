@@ -54,6 +54,7 @@
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
+         seashell/backend/template
          net/url
          net/head
          json
@@ -120,15 +121,6 @@
 (define-syntax-rule (check-and-build-path args ...)
   (check-path (build-path args ...)))
 
-
-;; (url-string? str) -> bool?
-;; Predicate for testing if a string is a valid URL
-(define/contract (url-string? str)
-  (-> string? boolean?)
-  (with-handlers
-    ([url-exception? (lambda (exn) #f)])
-    (string->url str)
-    #t))
 
 ;; (project-base-path)
 ;; Gets the base path where projects are located
@@ -214,26 +206,9 @@
                (delete-directory/files (build-project-path name) #:must-exist? #f)
                (raise exn))])
           (parameterize ([current-directory (build-project-path name)])
-            (define surl (string->url source))
-            (cond
-              [(equal? (url-scheme surl) "file")
-               (call/input-url surl get-pure-port
-                               (lambda (port)
-                                 (unzip port (make-filesystem-entry-reader #:strip-count 1))))]
-              [else
-               (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
-               (dynamic-wind
-                 (lambda () #f)
-                 (lambda ()
-                   (match-define (list _ status text headers) (regexp-match #rx"^HTTP/1\\.1 ([0-9][0-9][0-9]) ([^\n\r]*)(.*)" hdrs))
-                   (when (not (equal? status "200"))
-                     (raise (exn:project (format "Error when fetching template ~a for project ~a: ~a ~a." source name status text)
-                                         (current-continuation-marks))))
-                   (when (not (equal? (string-trim (extract-field "Content-Type" headers)) "application/zip"))
-                     (raise (exn:project (format "Error when fetching template ~a for project ~a: template was not a ZIP file." source name)
-                                         (current-continuation-marks))))
-                   (unzip port (make-filesystem-entry-reader #:strip-count 1)))
-                 (lambda () (close-input-port port)))])))]
+            (call-with-template source
+                                (lambda (port)
+                                  (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))
