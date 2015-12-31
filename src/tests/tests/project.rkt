@@ -135,6 +135,13 @@ HERE
     (test-case "Update project settings"
       (write-project-settings/key "test-project" 'A 55)
       (write-project-settings/key "test-project" 'boost "boost")
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 55) (boost . "boost"))))   
+      (check-equal? (read-project-settings "test-project") #hasheq((A . 55) (boost . "boost"))))
 
+    (test-case "Fetch template (from HTTP)"
+      (new-project-from "test-project-template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip")
+      (check-true (file-exists? (build-path (build-project-path "test-project-template-http") "default/main.c"))))
+
+    (test-case "Fetch template (from file)"
+      (new-project-from "test-project-template-file" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+      (check-true (file-exists? (build-path (build-project-path "test-project-template-http") "default/main.c"))))
     ))
