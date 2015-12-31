@@ -40,8 +40,8 @@
   (-> string? boolean?)
   (with-handlers
     ([url-exception? (lambda (exn) #f)])
-    (string->url str)
-    #t))
+    (define res (string->url str))
+    (not (not (url-scheme res)))))
 
 ;; (call-with-template source thunk)
 ;; Calls thunk, passing an input-port refering to the template located at source.

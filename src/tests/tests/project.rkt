@@ -59,6 +59,8 @@ HERE
                              (build-project-path "foo")))
       (check < current-timestamp new-timestamp))
 
+    (test-case "Create an existing project."
+      (check-exn exn:fail? (thunk (new-project "foo"))))
     (test-case "Delete a non-Project"
       (check-exn exn:fail? (thunk (delete-project "bar"))))
 
@@ -114,7 +116,6 @@ HERE
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))
     
-    
     (test-case "Read from nonexistent project settings"
       (new-project "test-project")
       (check-false (read-project-settings "test-project")))
@@ -141,7 +142,14 @@ HERE
       (new-project-from "test-project-template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       (check-true (file-exists? (build-path (build-project-path "test-project-template-http") "default/main.c"))))
 
+    (test-case "Fetch template (from URL, file)"
+      (new-project-from "test-project-template-file-url" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+      (check-true (file-exists? (build-path (build-project-path "test-project-template-file-url") "default/main.c"))))
+
     (test-case "Fetch template (from file)"
-      (new-project-from "test-project-template-file" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+      (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file") "default/main.c"))))
+
+    (test-case "Test template does not overwrite existing project."
+      (check-exn exn:fail? (thunk (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH)))))
     ))

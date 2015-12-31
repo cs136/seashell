@@ -180,8 +180,8 @@
 ;;
 ;; source is a string which can be the following:
 ;;  * A old project, in which we clone it directly.
-;;  * A URI, in which we clone the URI.  This is useful for setting up
-;;    the base files for a given CS 136 assignment question.
+;;  * A URL to a ZIP file.
+;;  * A path to a ZIP file.
 ;;
 ;; Arguments:
 ;;  name - Name of the new project.
@@ -190,7 +190,7 @@
 ;; Raises:
 ;;  exn:project if the project already exists.
 (define/contract (new-project-from name source)
-  (-> project-name? (or/c project-name? url-string?) void?)
+  (-> project-name? (or/c project-name? url-string? path-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
@@ -198,7 +198,7 @@
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
     (cond
-      [(url-string? source)
+      [(or (path-string? source) (url-string? source))
         (make-directory (build-project-path name))
         (with-handlers
           ([exn:fail?
