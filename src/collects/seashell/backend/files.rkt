@@ -40,6 +40,7 @@
          write-file
          list-files
          rename-file
+         restore-file-from-template
          read-settings
          write-settings)
 
@@ -227,20 +228,23 @@
   (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
   (define ok #f)
   (define destination (check-and-build-path (build-project-path project) file))
-  (define source (path->zip-path (build-path project file)))
-  (call-with-template source
+  (define source (explode-path file))
+  (call-with-template template
                       (lambda (port)
                         (unzip port
                                (lambda (name _2 contents)
-                                 (when (equal? source name)
+                                 (define lname (explode-path (simplify-path (bytes->path name) #f)))
+                                 (when (and (not (null? lname))
+                                            (equal? source (cdr lname)))
                                    (call-with-output-file destination
                                                           (lambda (dport)
                                                             (define-values (md5in md5out) (make-pipe))
                                                             (copy-port contents dport md5out)
+                                                            (close-output-port md5out)
                                                             (set! ok (md5 md5in)))
                                                           #:exists 'replace))))))
   (when (not ok)
-    (raise (exn:fail (format "File ~a not found in template ~a!" file template))
+    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template))
            (current-continuation-marks)))
   ok)
 

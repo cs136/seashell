@@ -104,7 +104,7 @@ HERE
 
     (test-case "Delete a Project"
       (delete-project "foo")
-      (check-equal? (list-projects) '()))
+      (check-true (not (member "foo" (list-projects)))))
 
     (test-case "Archive Projects"
       (new-project "bar")
@@ -143,5 +143,5 @@ HERE
 
     (test-case "Fetch template (from file)"
       (new-project-from "test-project-template-file" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
-      (check-true (file-exists? (build-path (build-project-path "test-project-template-http") "default/main.c"))))
+      (check-true (file-exists? (build-path (build-project-path "test-project-template-file") "default/main.c"))))
     ))
