@@ -530,7 +530,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.run = function(question, test) {
           var self = this;
           // TODO: handle racket files.
-          var tests = test ? self.getTestsForFile(file) : [];
+          var tests = test ? self.getTestsForQuestion(question) : [];
 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
@@ -605,13 +605,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
 
         /**
-         * SeashellProject.getTestsForFile(file)
+         * SeashellProject.getTestsForQuestion(question)
          *
-         * Returns a list of tests for the given SeashellFile.
+         * Returns a list of tests for the given question.
          */
-        SeashellProject.prototype.getTestsForFile = function(file) {
+        SeashellProject.prototype.getTestsForQuestion = function(question) {
           var self = this;
-          var testDir = self.root.find(file.name[0]+"/tests");
+          var testDir = self.root.find(question+"/tests");
           var arr = [];
           if(testDir && testDir.is_dir) {
             for(var i=0; i < testDir.children.length; i++) {
