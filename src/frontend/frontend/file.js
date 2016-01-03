@@ -44,6 +44,8 @@ angular.module('frontend-app')
         self.isBinaryFile = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
+        self.runnerFile = false; // true if a runner file is present in the project
+        self.isFileToRun = false; // true if the current file is the runner file
         self.editor = null;
         self.timeout = null;
         self.loaded = false;
@@ -484,6 +486,7 @@ angular.module('frontend-app')
               .then(function () {
                   $scope.$emit('setFileToRun', []);
                   self.runnerFile = true;
+                  self.isFileToRun = true;
               })
               .catch(function (error) {
                  errors.report(error, "Could not set runner file!");
@@ -531,6 +534,7 @@ angular.module('frontend-app')
           self.project.getFileToRun(self.question)
              .then(function (result) {
                  self.runnerFile = (result !== "");
+                 self.isFileToRun = (result === self.file);
              });
         };
         self.refreshRunner();

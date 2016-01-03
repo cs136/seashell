@@ -47,7 +47,7 @@
             <button id="toolbar-set-runner"
                     ng-click="editFileView.setFileToRun()"
                     class="btn btn-link"
-                    ng-disabled="editFileView.folder !== 'question'">
+                    ng-disabled="editFileView.folder !== 'question' || editFileView.isFileToRun">
             <span class="glyphicon glyphicon-arrow-right runner-icon"></span>
             set as runner
             </button>
