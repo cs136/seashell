@@ -10,7 +10,7 @@
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
-                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-arrow-right runner-icon"></span>
+                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play runner-icon"></span>
               <a ng-repeat-start="file in group.files" ng-if="$first"
                 ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
