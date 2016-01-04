@@ -10,7 +10,7 @@
     ng-class="{'has-error': newProjectForm.new_project_name.$invalid}">
     <label class="control-label col-sm-4" for="new_project_name">Project Name:</label>
     <div class="col-sm-6">
-      <input type="text" id="new_project_name" ng-model="new_project_name" required  name="new_project_name" class="form-control">
+      <input type="text" id="new_project_name" ng-model="new_project_name" required  name="new_project_name" focus-me="true" class="form-control">
       <span class="help-block" ng-show="newProjectForm.new_project_name.$invalid">Required</span>
     </div>
   </div>
