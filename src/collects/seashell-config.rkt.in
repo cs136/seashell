@@ -168,6 +168,8 @@
                                             "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
                                             ;; Need this to detect global buffer overflow 
                                             "-fno-common"
+                                            ;; Standard compilation mode
+                                            "-std=c99"
                                             ; Add standard static analyzer options (clang/lib/Driver/Tools.cpp:2954)
                                             ;; "-analyzer-store=region"
                                             ;; "-analyzer-opt-analyze-nested-blocks"
@@ -185,6 +187,8 @@
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      ;; Location of the runtime-files directory.
+      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie

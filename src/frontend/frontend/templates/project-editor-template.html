@@ -10,7 +10,7 @@
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
-                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-arrow-right runner-icon"></span>
+                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
               <a ng-repeat-start="file in group.files" ng-if="$first"
                 ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
@@ -31,6 +31,12 @@
              style="border: 0; padding: 0; outline: 0; text-decoration: none">
             <span>commit project…</span>
           </a>-->
+          <a href=""
+             ng-click="editView.add_test()"
+             class="btn btn-link"
+             style="border: 0; outline: 0; text-decoration: none">
+            <span>add test…</span>
+          </a>
           <a href=""
              ng-click="editView.add_file()"
              class="btn btn-link"
