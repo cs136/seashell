@@ -44,7 +44,7 @@ angular.module('frontend-app')
       }
 
       out = _.filter(_.map(input, function(x) {
-          return x[0]
+          return x[0];
         }),
         function(name) {
           var assnMatch = pattAssn.test(name);
