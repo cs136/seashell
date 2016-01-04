@@ -24,6 +24,7 @@
                       ng-disabled="!(editFileView.runnerFile)"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="Control+R">
                 <span style="font-size: 18px">run</span>
+                <span class="glyphicon glyphicon-play-circle"></span>
               </button>
               <button id="toolbar-kill" ng-click="editFileView.killProgram()" ng-show="editFileView.console.PIDs !== null" class="btn btn-link"
                       style="padding-left: 0; padding-right: 0; padding-top: 2px" tooltip-placement="left" tooltip="Control+K">
@@ -47,9 +48,8 @@
             <button id="toolbar-set-runner"
                     ng-click="editFileView.setFileToRun()"
                     class="btn btn-link"
-                    ng-disabled="editFileView.folder !== 'question'">
-            <span class="glyphicon glyphicon-arrow-right runner-icon"></span>
-            set as runner
+                    ng-disabled="editFileView.folder !== 'question' || editFileView.isFileToRun">
+                    set as <span class="glyphicon glyphicon-play-circle"></span> file 
             </button>
             <div ng-show="editFileView.editor.hasFocus()"
                  style="padding-top: 7px; float: right;
