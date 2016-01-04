@@ -24,7 +24,7 @@ angular.module('frontend-app')
     return function(input, type) {
       var pattAssn = new RegExp('^A[0-9]+$');
       var pattTut = new RegExp('^Tut([0-9]+|[0-9]+Sol)$');
-      var pattLec = new RegExp('^Lec[0-9]+$');
+      var pattLec = new RegExp('^(Lec|Sec)[0-9]+$');
 
       var out = [];
       var pattern;
