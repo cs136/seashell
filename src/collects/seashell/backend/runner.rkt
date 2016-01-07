@@ -66,9 +66,27 @@
   (close-input-port in-stdin)
   (close-output-port out-stderr)
 
+  (logf 'debug "Sending ~a bytes to program PID ~a." (bytes-length input) pid)
+
   ;; Send test input to program and wait. 
-  (write-bytes input raw-stdin)
-  (close-output-port raw-stdin)
+  (thread (lambda ()
+    (with-handlers
+      [(exn:fail?
+        (lambda (exn)
+          (logf 'info "write-bytes failed to write ~a.in to program stdin: received error: ~a"
+                      test-name (exn-message exn))))]
+      (write-bytes input raw-stdin))
+    (close-output-port raw-stdin)))
+
+  ;; Background read stuff.
+  (define-values (buf-stderr cp-stderr) (make-pipe))
+  (define-values (buf-stdout cp-stdout) (make-pipe))
+  (define stderr-thread (thread (lambda ()
+            (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
+            (copy-port raw-stderr cp-stderr))))
+  (define stdout-thread (thread (lambda ()
+            (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
+            (copy-port raw-stdout cp-stdout))))
 
   ;; Helper to close ports
   (define (close)
@@ -78,15 +96,20 @@
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt)
       [(? (lambda (evt) (eq? handle evt))) ;; Program quit
        (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
        (set-program-exit-status! pgrm (subprocess-status handle))
+       ;; Wait for threads to finish copying
+       (thread-wait stderr-thread)
+       (thread-wait stdout-thread)
        ;; Read stdout, stderr.
-       (define stdout (port->bytes raw-stdout))
-       (define stderr (port->bytes raw-stderr))
+       (close-output-port cp-stderr)
+       (close-output-port cp-stdout)
+       (define stdout (port->bytes buf-stdout))
+       (define stderr (port->bytes buf-stderr))
 
        (match (subprocess-status handle)
          [0
@@ -95,17 +118,22 @@
             [(not expected)
              (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
             [(equal? stdout expected)
-             (write (serialize `(,pid ,test-name "passed")) out-stdout)]
+             (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
             [else
               ;; Split expected and output, difference them.
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
-              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines output-lines) ,stderr ,stdout)) out-stdout)])]
+              ;; hotfix: diff with empty because it's slow
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout)) out-stdout)])]
          [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
+       (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
-      [#f ;; Program timed out (30 seconds pass without any event)
+      [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
+       ;; Kill copy-threads before killing program 
+       (kill-thread stderr-thread)
+       (kill-thread stdout-thread)
        (subprocess-kill handle #t)
        (write (serialize `(,pid ,test-name "timeout")) out-stdout)
        (close)]
@@ -113,6 +141,8 @@
        (match (thread-receive)
          ['kill
           (logf 'info "Program with PID ~a killed." pid)
+          (kill-thread stderr-thread)
+          (kill-thread stdout-thread)
           (set-program-exit-status! pgrm 254)
           (subprocess-kill handle #t)
           (write (serialize `(,pid ,test-name "killed")) out-stdout)
@@ -166,7 +196,7 @@
 
   (let loop ()
     (define receive-evt (thread-receive-evt))
-    (match (sync/timeout 30
+    (match (sync/timeout (read-config 'program-run-timeout)
                          handle
                          receive-evt
                          (if (port-closed? in-stdin)
@@ -231,7 +261,7 @@
        (check-signals loop)]))
   (void))
 
-;; (run-program binary directory lang test)
+;; (run-program binary directory lang test is-cli)
 ;;  Runs a program.
 ;;
 ;; Arguments:
@@ -242,13 +272,17 @@
 ;;               a string representing the name of a test to use in tests/.
 ;;               i.e. if test is "foo", input is from tests/foo.in, output is
 ;;               diffed against tests/foo.expect
+;;   is-cli    - if #t, assumes seashell was run from CLI; treats test as a
+;;               relative path, rather than searching for it in the project's
+;;               tests/ directory
 ;;
 ;; Returns:
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(define/contract (run-program binary directory lang test)
-  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) integer?)
+(define/contract (run-program binary directory lang test is-cli)
+  (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) boolean? integer?)
+  (define test-path (if is-cli (build-path ".") (build-path directory (read-config 'tests-subdirectory))))
   (call-with-semaphore
     program-new-semaphore
     (lambda ()
@@ -270,7 +304,9 @@
               ['C
                 ;; Behaviour is inconsistent if we just exec directly.
                 ;; This seems to work.  (why: who knows?)
-                (putenv "ASAN_OPTIONS" "detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"")
+                (putenv "ASAN_OPTIONS"
+                        "detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\" 
+                          detect_stack_use_after_return=1")
                 (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
                 (subprocess #f #f #f binary)]
               ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
@@ -279,9 +315,12 @@
                                    "-u" binary)])))
 
             ;; Construct the I/O ports.
-            (define-values (in-stdout out-stdout) (make-pipe (read-config 'io-buffer-size)))
-            (define-values (in-stdin out-stdin) (make-pipe (read-config 'io-buffer-size)))
-            (define-values (in-stderr out-stderr) (make-pipe (read-config 'io-buffer-size)))
+            (define (make-io-pipe)
+              (if test (make-pipe) (make-pipe (read-config 'io-buffer-size))))
+
+            (define-values (in-stdout out-stdout) (make-io-pipe))
+            (define-values (in-stdin out-stdin) (make-io-pipe))
+            (define-values (in-stderr out-stderr) (make-io-pipe))
             ;; Set buffering modes
             (file-stream-buffer-mode raw-stdin 'none)
             ;; Construct the destroyed-semaphore
@@ -298,10 +337,10 @@
                   (if test
                     (program-control-test-thread result
                                                  test
-                                                 (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".in")))
+                                                 (file->bytes (build-path test-path (string-append test ".in")))
                                                  (with-handlers
                                                    ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path directory (read-config 'tests-subdirectory) (string-append test ".expect")))))
+                                                   (file->bytes (build-path test-path (string-append test ".expect")))))
                     (program-control-thread result)))))
             (set-program-control! result control-thread)
             ;; Install it in the hash-table

@@ -22,10 +22,10 @@
 angular.module('frontend-app')
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
-      'openProject', 'NewFileModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
+      'openProject', 'NewFileModal', 'NewTestModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
       'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
       function ($state, openQuestion, $scope, errors,
-        openProject, newFileModal, submitMarmosetModal,
+        openProject, newFileModal, newTestModal,  submitMarmosetModal,
         $interval, marmoset, newQuestionModal,
         marmosetResultsModal, Console) {
         var self = this;
@@ -33,6 +33,7 @@ angular.module('frontend-app')
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
+        self.runner_file = "";
         self.test_files = [];
         self.console = Console;
         self.marmoset_short_results = null;
@@ -94,17 +95,39 @@ angular.module('frontend-app')
             var groups = [];
             for(var i=0; i<lof.length; i++) {
               groups.push([lof[i]]);
+              var current_file = lof[i];
               while(i<lof.length-1 && grpnm(lof[i+1]) == grpnm(lof[i])) {
                 groups[groups.length-1].push(lof[i+1]);
                 lof.splice(i+1, 1);
               }
+              // wrap the list in an object with a boolean
+              // isFileToRun is true if the file is the file to run
+              groups[groups.length-1] = {
+                files: groups[groups.length-1],
+                isFileToRun: _.contains(groups[groups.length-1], self.runnerFile)
+              }; 
+                
             }
             return groups;
           }
-          var result = self.project.filesFor(self.question);
-          self.common_files = groupfiles(result.common);
-          self.question_files = groupfiles(result.question);
-          self.test_files = groupfiles(result.tests);
+          
+          self.project.getFileToRun(self.question)
+              .then(function (fileToRun) {
+                self.runnerFile = fileToRun;
+                var result = self.project.filesFor(self.question);
+                self.common_files = groupfiles(result.common);
+                self.question_files = groupfiles(result.question);
+                self.test_files = groupfiles(result.tests);
+      
+              })
+              .catch(function () {
+                self.runnerFile = "";
+                var result = self.project.filesFor(self.question);
+                self.common_files = groupfiles(result.common);
+                self.question_files = groupfiles(result.question);
+                self.test_files = groupfiles(result.tests);
+              });
+
 
           self.project.currentMarmosetProject(self.question).then(function(target) {
             if(target) {
@@ -116,11 +139,26 @@ angular.module('frontend-app')
         };
         $scope.refresh = self.refresh;
 
+        /** Handle the setFileToRun broadcast 
+         *  by refreshing the file list
+         */
+        $scope.$on('setFileToRun', function () { 
+            self.refresh();
+        });
+
         /** Adds file to the project. */
         self.add_file = function () {
           newFileModal(self.project, self.question, function () {
             self.refresh();
           });
+        };
+
+        /** Adds a pair of .in and .expect files to the project
+         */
+        self.add_test = function () {
+          newTestModal(self.project, self.question, function () {
+             self.refresh();
+          }); 
         };
 
         /** Dispatches a function to run when the

@@ -94,7 +94,7 @@ body {
   font-size: 1.2em;
   padding-top: 0;
   padding-left: 0;
-  padding-right: 5px;
+  padding-right: 1em;
   text-decoration: none;
   font-variant: small-caps;
 }
@@ -561,4 +561,13 @@ label {
 }
 
 .list-group-item{
+}
+
+.current-runner-file {
+  font-weight: bold;
+  color: #333;
+}
+
+.runner-icon {
+  margin-right: -3px;
 }

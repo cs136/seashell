@@ -262,9 +262,25 @@ angular.module('frontend-app')
         self.running = false;
       }
       self.flush();
-    };
-    socket.register_callback("io", self.IOCallback);
-    self.testCallback = function(res) {
+    });
+
+    function printExpectedFromDiff(res) {
+        // res.diff is an array of (string || Array)
+        // a string is a line that matches in the diff, so we print 
+        // an array a has a[0] false if it came from the expected output
+        // a[0] true if it came from the actual output
+        // The array contains n lines of text from the lines that differ, n >= 1
+        _.each(res.diff, function(block) {
+            if (_.isString(block)) self.write(block + "\n");
+            else if (block[0] === false) {
+                _.each(block.slice(1), function(line) {
+                    self.write(line + "\n");
+                });
+            }
+        });
+    }
+
+    socket.register_callback("test", function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
@@ -274,7 +290,15 @@ angular.module('frontend-app')
         self.write(sprintf("Test %s failed.\n", res.test_name));
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
-        self.write('Produced output (stderr):\n');
+        self.write('\n'); 
+        // need to print a newline so that it matches up with printExpectedFromDiff
+        self.write('=================\n');
+
+        self.write('Expected output (stdout):\n');
+        printExpectedFromDiff(res);   
+        self.write('=================\n');
+
+        self.write('Produced errors (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
       } else if(res.result==="error") {

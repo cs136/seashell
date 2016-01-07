@@ -46,6 +46,20 @@
       (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
       (check-equal? (read-file "test" "foo4.c") #"This is a test\n"))
 
+    ;; Normalizing newlines will ensure newline before EOF
+    (test-case "Create a file, with a data URL and normalized newlines"
+      (new-file "test" "foo5.c" #"data:,apple juice" 'url #t)
+      (check-equal? (read-file "test" "foo5.c") #"apple juice\n"))
+
+    (test-case "Create a file, with a data URL and already-normalized newlines"
+      (new-file "test" "foo6.c" #"data:,apple juice\n\n" 'url #t)
+      (check-equal? (read-file "test" "foo6.c") #"apple juice\n\n"))
+    
+    (test-case "Create a file, with a data URL and windows newlines"
+      (new-file "test" "foo7.c" #"data:,apple juice\r\n" 'url #t)
+      (check-equal? (read-file "test" "foo7.c") #"apple juice\n"))
+
+
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
@@ -57,4 +71,6 @@
 
     (test-case "Delete a directory"
       (remove-directory "test" "boost")
-      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))))
+      (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))
+    
+    ))

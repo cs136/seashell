@@ -44,15 +44,13 @@ angular.module('frontend-app')
         self.isBinaryFile = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
+        self.runnerFile = false; // true if a runner file is present in the project
+        self.isFileToRun = false; // true if the current file is the runner file
         self.editor = null;
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
-        /* runnerFile is the file to be run when RUN or TEST is clicked. false
-         * if the current file is not runnable (and Seashell can't infer which
-         * file to run). */
-        self.runnerFile = false;
         self.consoleOptions = {};
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -178,7 +176,7 @@ angular.module('frontend-app')
               $timeout.cancel(self.timeout);
               self.timeout = null;
             }
-            if (self.loaded) {
+            if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
                 self.project.saveFile(self.question, self.folder, self.file, self.contents)
                   .catch(function (error) {
@@ -255,6 +253,7 @@ angular.module('frontend-app')
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
+              "Tab": betterTab,
               "Shift-Tab": negTab,
             }
           };
@@ -269,6 +268,7 @@ angular.module('frontend-app')
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
+            allowIn: ['INPUT', 'TEXTAREA'],
             callback: function(evt) {
               evt.preventDefault();
               self.sendEOF();
@@ -291,7 +291,7 @@ angular.module('frontend-app')
               self.runFile();
             }
           }, {
-            combo: 'ctrl+u',
+            combo: 'ctrl+e',
             description: "Starts Tests",
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
@@ -331,7 +331,6 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
-            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
           if (self.consoleEditor) {
@@ -349,7 +348,7 @@ angular.module('frontend-app')
             $state.go("edit-project.editor.file", {
               question:(path[0]=="common"?self.question:path[0]),
               part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
-              file:(path.length>2?path[2]:path[1])});
+              file:escape(path.length>2?path[2]:path[1])});
           });
         };
 
@@ -360,6 +359,7 @@ angular.module('frontend-app')
                 .then(function() {
                   $scope.$parent.refresh();
                   $state.go("edit-project.editor");
+                  self.refreshRunner();
                 });
             });
         };
@@ -383,8 +383,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile,
-                self.console.IOCallback, self.console.testCallback, self.contents, false)
+            self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -406,8 +405,12 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
+<<<<<<< HEAD
             self.project.run(self.question, "question", self.runnerFile,
                 self.console.IOCallback, self.console,testCallback, self.contents, true)
+=======
+            self.project.run(self.question, true)
+>>>>>>> cs136/master
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -429,20 +432,22 @@ angular.module('frontend-app')
           if(!self.console.PIDs) {
             return $q.when();
           }
-          return $q.all(_.map(self.console.PIDs, function(id) {
+          var p = $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);
           }))
           .catch(function (error) {
             errors.report(error, "Could not stop program!");
-            self.console.PIDs = null;
-            self.console.running = false;
           });
+          self.console.running = false;
+          self.console.PIDs = null;
+          return p;
         };
 
         self.indentAll = function() {
-          var lineCount = self.editor.lineCount();
-          for (var i = 0; i < lineCount; i++)
-            self.editor.indentLine(i);
+          self.editor.operation(function () {
+            var lineCount = self.editor.lineCount();
+            for (var i = 0; i < lineCount; i++) { self.editor.indentLine(i); }
+          });
         };
 
         self.userInput = "";
@@ -481,8 +486,25 @@ angular.module('frontend-app')
           }
         };
 
+        self.setFileToRun = function() {
+            self.project.setFileToRun(self.question, self.folder, self.file)
+              .then(function () {
+                  $scope.$emit('setFileToRun', []);
+                  self.runnerFile = true;
+                  self.isFileToRun = true;
+              })
+              .catch(function (error) {
+                 errors.report(error, "Could not set runner file!");
+              });
+
+            // emit an event to the parent scope for
+            // since EditorController is in the child scope of EditorFileController
+
+        };
+
         // Initialization code goes here.
         var key = settings.addWatcher(function () {self.refreshSettings();}, true);
+
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
@@ -496,9 +518,12 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.refreshSettings();
           }).catch(function (error) {
-            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1)
+            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
               self.isBinaryFile = true;
+              self.refreshSettings();
+            }
             else {
               errors.report(error, sprintf("Unexpected error while reading file %s!", self.file));
               $state.go('edit-project.editor');
@@ -510,13 +535,13 @@ angular.module('frontend-app')
           return fname.split(".").pop() === ext;
         }
 
-        /* the following code updates which file (if any) will be run with RUN/TEST is clicked */
-        var qfiles = self.project.filesFor(self.question).question;
-        var rktFiles = _.filter(qfiles, _.partial(has_ext, "rkt"));
+        self.refreshRunner = function () {
+          self.project.getFileToRun(self.question)
+             .then(function (result) {
+                 self.runnerFile = (result !== "");
+                 self.isFileToRun = (result === self.file);
+             });
+        };
+        self.refreshRunner();
 
-        // the below variables represent the precedence of rules for which file gets run
-        var openFileIsRkt = has_ext("rkt", openFile) ? openFile : false;
-        var anyCFile = _.find(qfiles, _.partial(has_ext, "c"));
-        var uniqueRktFile = rktFiles.length === 1 ? rktFiles[0] : false;
-        self.runnerFile = openFileIsRkt || anyCFile || uniqueRktFile;
       }]);

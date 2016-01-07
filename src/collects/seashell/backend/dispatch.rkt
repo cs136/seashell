@@ -103,7 +103,7 @@
             ;; Connection died.
             (program-kill pid)
             (program-destroy-handle pid)]
-           [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed"))))
+           [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
            [(list pid test-name "error" exit-code stderr)
@@ -294,9 +294,10 @@
         ('id id)
         ('type "compileAndRunProject")
         ('project name)
-        ('file file)
+        ('question question)
         ('tests test))
-       (define-values (success? result) (compile-and-run-project name file test))
+       (define-values (success? result) 
+         (compile-and-run-project/use-runner name question test))
        `#hash((id . ,id)
               (success . ,success?)
               (result . ,result))]
@@ -517,6 +518,25 @@
         ('predicate predicate)
         ('data data))
        (update-most-recently-used project directory predicate data)
+       `#hash((id . ,id)
+              (success . #t)
+              (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "getFileToRun")
+        ('project project)
+        ('question question))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(get-file-to-run project question)))]
+      [(hash-table
+        ('id id)
+        ('type "setFileToRun")
+        ('project project)
+        ('folder folder)
+        ('question question)
+        ('file file))
+       (set-file-to-run project question folder file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

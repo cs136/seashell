@@ -121,7 +121,7 @@ angular.module('frontend-app')
         templateUrl: "frontend/templates/project-editor-editview-template.html",
         controller: "EditFileController as editFileView",
         resolve: {openFile: ['$stateParams', function($stateParams) {
-            return $stateParams.file;
+            return decodeURIComponent($stateParams.file);
           }],
           openFolder: ['$stateParams', function($stateParams) {
             return $stateParams.part;

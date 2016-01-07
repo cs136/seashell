@@ -35,7 +35,7 @@ describe('Testing the Project Filter', function() {
   });
   it('filters other', function () {
     var f = $filter('projectFilter');
-    var fArray = f(testDict);
+    var fArray = f(testDict, 'NONE');
     expect(fArray.length).toEqual(3);
     expect(fArray[0]).toEqual('hi');
     expect(fArray[1]).toEqual('bye');

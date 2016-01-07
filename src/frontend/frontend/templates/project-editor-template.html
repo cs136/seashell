@@ -10,11 +10,14 @@
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
-                ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
+                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
+              <a ng-repeat-start="file in group.files" ng-if="$first"
+                ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
-                ui-sref-active="file-link-active">{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
-                  ui-sref="edit-project.editor.file({part: 'question', file: '{{file}}'})"
+                ui-sref-active="file-link-active"
+                ng-class="{'current-runner-file': group.isFileToRun}">
+                {{file}}</a><span ng-repeat-end ng-if="!$first">,<a
+                  ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                   class="file-link"
                   ui-sref-active="file-link-active">{{file.split(".").pop()}}</a>
               </span>
@@ -28,6 +31,12 @@
              style="border: 0; padding: 0; outline: 0; text-decoration: none">
             <span>commit project…</span>
           </a>-->
+          <a href=""
+             ng-click="editView.add_test()"
+             class="btn btn-link"
+             style="border: 0; outline: 0; text-decoration: none">
+            <span>add test…</span>
+          </a>
           <a href=""
              ng-click="editView.add_file()"
              class="btn btn-link"
@@ -57,12 +66,12 @@
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.common_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
-                 ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
+              <a ng-repeat-start="file in group.files" ng-if="$first"
+                 ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
                  ui-sref-active='file-link-active'
                  class='file-link'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
                 class='file-link'
-                ui-sref="edit-project.editor.file({part: 'common', file: '{{file}}'})"
+                ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
                 ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
               </span>
             </span>
@@ -74,12 +83,12 @@
           <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.test_files">
-              <a ng-repeat-start="file in group" ng-if="$first"
-                 ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
+              <a ng-repeat-start="file in group.files" ng-if="$first"
+                 ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
                  class='file-link'
                  ui-sref-active='file-link-active'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
                    class='file-link'
-                   ui-sref="edit-project.editor.file({part: 'tests', file: '{{file}}'})"
+                   ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
                    ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
               </span>
             </span>
