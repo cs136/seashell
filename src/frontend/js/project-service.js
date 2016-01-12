@@ -17,14 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
+angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 'seashell-local-files'])
   /**
    * Project [factory] service.
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http',
-    function($scope, $q, ws, marmoset, $http) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', 'localfiles', '$http',
+    function($scope, $q, ws, marmoset, localfiles, $http) {
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
@@ -41,7 +41,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         function SeashellProject (name) {
           var self = this;
-
           self.name = name;
         }
 
@@ -53,14 +52,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * @param {String} name - Full name of file.
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
+         * @param {String} checksum - Checksum of file.
          */
-        function SeashellFile(project, name, is_dir, last_saved) {
+        function SeashellFile(project, name, is_dir, last_saved, checksum) {
           var self = this;
           self.name = name.split("/");
           self.project = project;
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
+          self.checksum = checksum;
         }
 
         /**
@@ -101,9 +102,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellFile.prototype.read = function() {
           var self = this;
+          console.log(localfiles.readFile(self.project.name, self.fullname()));
           return $q.when(ws.socket.readFile(self.project.name, self.fullname()))
             .then(function (conts) {
-              return conts;
+              // TODO: should do something here if the checksum is not what we expect.
+              self.checksum = conts.checksum;
+              return conts.data;
             });
         };
 
@@ -115,6 +119,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
+          // TODO: What to do with the checksum?
+          return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data))
+            .then(function (checksum) {
+              self.checksum = checksum;
+              localfiles.writeFile(self.project.name, self.fullname(), data, self.checksum);
+            }).catch(function {
+              // error case: force an offline write
+              console.log("[localfiles] Offline write");
+              localfiles.writeFile(self.project.name, self.fullname(), data, false);  
+            });
           return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
         };
 
@@ -290,7 +304,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function(files) {
               self.root = new SeashellFile(self, "", true);
               _.map(files, function(f) {
-                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
+                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true);
               });
             });});
           return result.then(function () {return self;});

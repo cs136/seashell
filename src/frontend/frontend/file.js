@@ -331,6 +331,7 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
+            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
           if (self.consoleEditor) {
