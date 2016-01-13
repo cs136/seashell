@@ -327,19 +327,20 @@
 ;; Produces a list of the local (i.e. the user's) header files included by a program, without .h
 ;;
 ;; Arguments:
-;;  main-file - The .c file being compiled
-;;  file-dir  - The directory containing main-file
+;;  main-file  - The .c file being compiled
+;;  file-dir   - The directory containing main-file
+;;  common-dir - The directory containing the common subdirectory
 ;;
 ;; Returns:
 ;;  A list of the .h files included by a program, with the .h extension stripped
 ;; Raises:
 ;;  exn:project if an included header is not a .h file
 ;; TODO: need to clean up the subprocess and ports?
-(define/contract (get-headers main-file file-dir)
-  (-> path-string? path-string? (listof path-string?))
+(define/contract (get-headers main-file file-dir common-dir)
+  (-> path-string? path? path? (listof path-string?))
   (define-values (clang clang-output clang-input clang-error)
     ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f #f (read-config 'system-linker) (list "-E" main-file)))
+    (apply subprocess #f #f #f (read-config 'system-linker) (list "-E" main-file "-I" common-dir)))
   (define files
     (remove-duplicates
       (filter values
@@ -348,7 +349,9 @@
             [(list _ file)
               (match-define-values (hdrpath hdrname _) (split-path file))
               (cond
-                [(and (equal? hdrpath file-dir) (regexp-match #rx"\\.h$" hdrname))
+                [(and (or (equal? (path->directory-path hdrpath) (path->directory-path file-dir))
+                          (equal? (path->directory-path hdrpath) (path->directory-path common-dir)))
+                      (regexp-match #rx"\\.h$" hdrname))
                   (substring file 0 (- (string-length file) 2))]
                 [else #f])]
             [#f #f])))))
@@ -432,10 +435,15 @@
 
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
-    (define-values (c-files o-files) (get-co-files (get-headers (build-path base exe) base)))
+    (define headers (get-headers (build-path base exe) base project-common))
+    (logf 'debug "Header files are ~s." headers)
+
+    (define-values (c-files o-files) (get-co-files headers))
+    (logf 'debug ".c files are ~s." c-files)
+    (logf 'debug ".o files are ~s." o-files)
+
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
-
     (define-values (result messages)
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
