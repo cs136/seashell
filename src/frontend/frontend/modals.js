@@ -188,7 +188,7 @@ angular.module('frontend-app')
                   // check if the filename exists in the "common" directory
                   var conflicts = _.map(_.filter($scope.new_file_upload, function(uploadFile) {
                      return common_files.some(function(commonFileGroup) {
-                        return commonFileGroup.files.some(function(name) {return name === uploadFile.name});
+                        return commonFileGroup.files.some(function(name) {return name === uploadFile.name;  });
                      });
                   }), function(uploadFile) {
                      return uploadFile.name;
@@ -229,11 +229,11 @@ angular.module('frontend-app')
                   var filename = $scope.new_file_name;
                   // Check if the filename exists in the "common" directory
                   if (common_files.some(function(commonFileGroup) {
-                        return commonFileGroup.files.some(function(name) {return name === filename});
+                        return commonFileGroup.files.some(function(name) {return name === filename;});
                      })) {
                      $scope.inputError = 'Please avoid using a filename that exists in the "common/" directory. Could not create: "' + filename + '".';
                      return false;
-                  };
+                  }
                   // Check passes
                   var extension = filename.split('.').pop();
                   var result = null;
