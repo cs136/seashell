@@ -159,7 +159,7 @@ angular.module('frontend-app')
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
       function ($modal, errors) {
-        return function (project, question, notify) {
+        return function (project, question, common_files, notify) {
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/new-file-template.html",
@@ -169,18 +169,35 @@ angular.module('frontend-app')
               $scope.new_file_folder = question;
               $scope.new_file_upload = [];
               $scope.question = question;
+              $scope.common_files = common_files;
               $scope.inputError = false;
               $scope.normalize = false;
               $scope.newFile = function () {
-                // 4 cases: file name specified AND file to upload
-                //          no file name AND file to upload
-                //          file name AND no file to upload
-                //          no file name AND no file to upload
+                // 4 cases: file name specified AND file to upload (1)
+                //          no file name AND file to upload (2)
+                //          file name AND no file to upload (3)
+                //          no file name AND no file to upload (4)
+                // For case (2) and (3), we need to check if the filename already exists in the "common" directory.
+                // Students are not allowed to upload a file overriding common files.
+                // case (1)
                 if ($scope.new_file_upload.length > 0 && $scope.new_file_name.length > 0) {
                   $scope.inputError = "Can't specify file name when uploading files!";
                   return false;
+                // case (2)
                 } else if ($scope.new_file_upload.length > 0 && $scope.new_file_name.length === 0) {
-                  // For each file, upload.
+                  // check if the filename exists in the "common" directory
+                  var conflicts = _.map(_.filter($scope.new_file_upload, function(uploadFile) {
+                     return common_files.some(function(commonFileGroup) {
+                        return commonFileGroup.files.some(function(name) {return name === uploadFile.name});
+                     });
+                  }), function(uploadFile) {
+                     return uploadFile.name;
+                  });
+                  if (conflicts.length > 0) {
+                     $scope.inputError = "These files already exist in the common directory: " + conflicts.join(", ");
+                     return false;
+                  }
+                  // Check passes. For each file, upload.
                   _.forEach($scope.new_file_upload, function (file) {
                     var filename = file.name; // NOTE: does not contain path information!
                     var reader = new FileReader();
@@ -207,8 +224,17 @@ angular.module('frontend-app')
 
                   });
                   $scope.$close();
+                // case (3)
                 } else if ($scope.new_file_upload.length === 0 && $scope.new_file_name.length > 0) {
                   var filename = $scope.new_file_name;
+                  // Check if the filename exists in the "common" directory
+                  if (common_files.some(function(commonFileGroup) {
+                        return commonFileGroup.files.some(function(name) {return name === filename});
+                     })) {
+                     $scope.inputError = "These files already exist in the common directory: " + filename;
+                     return false;
+                  };
+                  // Check passes
                   var extension = filename.split('.').pop();
                   var result = null;
                   // Write default contents.
@@ -229,6 +255,7 @@ angular.module('frontend-app')
                     errors.report(error, sprintf("Could not create file %s!", filename));
                   });
                   $scope.$close();
+                // case (4)
                 } else {
                   $scope.inputError = "Need to specify file!";
                   return false;

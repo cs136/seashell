@@ -148,9 +148,12 @@ angular.module('frontend-app')
 
         /** Adds file to the project. */
         self.add_file = function () {
-          newFileModal(self.project, self.question, function () {
-            self.refresh();
-          });
+          newFileModal(self.project, 
+                       self.question, 
+                       self.common_files, //.length ? self.common_files[0].files : [], // awkward 
+                       function () {
+                           self.refresh();
+                       });
         };
 
         /** Adds a pair of .in and .expect files to the project
