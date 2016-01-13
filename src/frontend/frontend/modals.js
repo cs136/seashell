@@ -194,7 +194,7 @@ angular.module('frontend-app')
                      return uploadFile.name;
                   });
                   if (conflicts.length > 0) {
-                     $scope.inputError = "These files already exist in the common directory: " + conflicts.join(", ");
+                     $scope.inputError = 'Please avoid uploading a file with a name that exists in the "common/" directory. Could not upload: "' + conflicts.join('", "') + '".';
                      return false;
                   }
                   // Check passes. For each file, upload.
@@ -231,7 +231,7 @@ angular.module('frontend-app')
                   if (common_files.some(function(commonFileGroup) {
                         return commonFileGroup.files.some(function(name) {return name === filename});
                      })) {
-                     $scope.inputError = "These files already exist in the common directory: " + filename;
+                     $scope.inputError = 'Please avoid using a filename that exists in the "common/" directory. Could not create: "' + filename + '".';
                      return false;
                   };
                   // Check passes
