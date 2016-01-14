@@ -262,7 +262,7 @@ angular.module('frontend-app')
         self.running = false;
       }
       self.flush();
-    });
+    };
 
     function printExpectedFromDiff(res) {
         // res.diff is an array of (string || Array)
@@ -318,7 +318,7 @@ angular.module('frontend-app')
       else if(res.result==="killed") {
         self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
-    };
+    });
     socket.register_callback("test", self.testCallback);
 
     self.setRunning = function(project, PIDs, testing) {

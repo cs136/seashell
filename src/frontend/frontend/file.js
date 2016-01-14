@@ -405,12 +405,8 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-<<<<<<< HEAD
             self.project.run(self.question, "question", self.runnerFile,
-                self.console.IOCallback, self.console,testCallback, self.contents, true)
-=======
-            self.project.run(self.question, true)
->>>>>>> cs136/master
+                self.console.IOCallback, self.console.testCallback, self.contents, true)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
