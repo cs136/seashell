@@ -2,7 +2,7 @@
   <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
   <h4 class="modal-title" id="new-file-label">New test...</h4>
 </div>
-<form name="newTestForm" novalidate ng-submit="newTest()">
+<form name="newTestForm" novalidate ng-submit="newTestForm.$valid && newTest()">
 <div class="modal-body" style="font-size: 16px; padding-bottom: 0">
   <div ng-class="{'has-error': inputError}" class="form-group">
     <div class="row">
@@ -14,14 +14,14 @@
           </label>
         <input type="text"
                ng-model="new_file_name"
+               required
                name="new_file_name"
                class="form-control"
-               placeholder="(file name)"
+               placeholder="(test name)"
                focus-me="true" 
                style="outline: none; width: 200px; padding-left: 5px">
         <span class="text-muted">Enter a name without an extension to create a test pair</span>
         <span class="text-muted">Eg. "test" will create test.in and test.expect</span>
-        <span class="help-block" ng-show="inputError">{{inputError}}</span>
       </div>
     </div>
     </div>
