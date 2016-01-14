@@ -395,11 +395,12 @@
          ('file file)
          ('normalize normalize)
          (_ _) ...)
-       (new-file project file
-                 (string->bytes/utf-8 (hash-ref message 'contents ""))
-                 (string->symbol (hash-ref message 'encoding "raw"))
-                 normalize)
+       (define tag (new-file project file
+                             (string->bytes/utf-8 (hash-ref message 'contents ""))
+                             (string->symbol (hash-ref message 'encoding "raw"))
+                             normalize))
        `#hash((id . ,id)
+              (checksum . ,tag)
               (success . #t)
               (result . #t))]
       [(hash-table
@@ -434,19 +435,24 @@
         ('type "writeFile")
         ('project project)
         ('file file)
-        ('contents contents))
-       (write-file project file (string->bytes/utf-8 contents))
+        ('contents contents)
+        (_ _) ...)
+       (define checksum
+         (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . ,checksum))]
       [(hash-table
         ('id id)
         ('type "readFile")
         ('project project)
         ('file file))
+       (define-values (data checksum) (read-file project file))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(bytes->string/utf-8 (read-file project file))))]
+              (result . 
+                      #hash((data . ,(bytes->string/utf-8 data))
+                            (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)
