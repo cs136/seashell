@@ -6,17 +6,20 @@
          seashell/backend/runner
          seashell/seashell-config)
 
-(define test-hdr-file "int add(int, int);\n")
-(define test-imp-file "#include \"add.h\"\nint add(int a, int b){ return a+b; }\n")
+(define test-add-hdr "int add(int, int);\n")
+(define test-add-imp "#include \"add.h\"\nint add(int a, int b){ return a+b; }\n")
+(define test-mult-hdr "int mult(int, int);\n")
+(define test-mult-imp "#include \"multiply.h\"\nint mult(int a, int b){ return a*b; }\n")
 (define test-main-file #<<HERE
 #include <stdio.h>
 #include "add.h"
+#include "multiply.h"
 int main(){
     int a,b;
     scanf("%d", &a);
     scanf("%d", &b);
     if(a == 0) return 1;
-    printf("%d\n", add(a,b));
+    printf("%d\n", add(a,mult(1,b)));
 }
 HERE
 )
@@ -69,13 +72,18 @@ HERE
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
-    (test-case "Run a Project with tests"
+    (test-case "Run a Project with common and tests"
       (make-directory (check-and-build-path (build-project-path "foo") "tests"))
-      (for ([file '("add.h" "add.c" "main.c"
+      (make-directory (check-and-build-path (build-project-path "foo") "common"))
+      (for ([file '("main.c"
+                    "add.h" "add.c"
+                    "common/multiply.h" "common/multiply.c"
                     "tests/pass.in" "tests/pass.expect"
                     "tests/fail.in" "tests/fail.expect"
                     "tests/crash.in" "tests/crash.expect")]
-            [contents (list test-hdr-file test-imp-file test-main-file
+            [contents (list test-main-file
+                            test-add-hdr test-add-imp
+                            test-mult-hdr test-mult-imp
                             "3\n4\n" "7\n"
                             "4\n5\n" "2\n"
                             "0\n0\n" "0\n")])
