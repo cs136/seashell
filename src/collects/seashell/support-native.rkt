@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's (native/OS dependant) support functions.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,9 +16,49 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require ffi/unsafe
-         ffi/unsafe/define)
-(require seashell/seashell-config)
+(module ffi racket/base
+  (require ffi/unsafe
+           ffi/unsafe/define)
+  (require seashell/seashell-config)
+
+  (provide seashell_drop_permissions
+           seashell_create_secret_file
+           seashell_uw_check_remote_user
+           seashell_get_username
+           seashell_set_umask
+           seashell_signal_detach
+           seashell_try_and_lock_file
+           scheme_get_port_file_descriptor)
+
+  (define-ffi-definer define-support
+                      (ffi-lib (read-config 'seashell-support)))
+  (define-ffi-definer define-self 
+                      (ffi-lib #f))
+
+  ;; These functions return 0 on success and 1 on failure if they return anything.
+  ;; Manually check the result of these functions - as failure can indicate there's
+  ;; an underlying security issue that needs to be addressed.
+  (define-support seashell_drop_permissions (_fun -> _int))
+  (define-support seashell_set_umask (_fun -> _void))
+  (define-support seashell_signal_detach (_fun -> _int))
+  (define-support seashell_create_secret_file (_fun _path -> _int))
+  (define-support seashell_uw_check_remote_user (_fun -> _int))
+  (define-support seashell_get_username (_fun -> _string))
+  (define-support seashell_try_and_lock_file (_fun _int -> _int))
+
+  ;; Underlying Racket support functions.
+  (define-self scheme_get_port_file_descriptor
+               (_fun (port : _scheme) (fd : (_ptr o _long)) -> (not-error? : _bool) -> (values fd not-error?))))
+
+(require/typed (submod "." ffi)
+               [seashell_drop_permissions (-> Integer)]
+               [seashell_set_umask (-> Void)]
+               [seashell_signal_detach (-> Integer)]
+               [seashell_create_secret_file (-> Path Integer)]
+               [seashell_uw_check_remote_user (-> Integer)]
+               [seashell_get_username (-> String)]
+               [seashell_try_and_lock_file (-> Nonnegative-Integer Integer)]
+               [scheme_get_port_file_descriptor (-> Port (Values Nonnegative-Integer Boolean))])
 
 (provide seashell_drop_permissions
          seashell_create_secret_file
@@ -28,31 +68,13 @@
          seashell_signal_detach
          try-and-lock-file)
 
-(define-ffi-definer define-support
-                    (ffi-lib (read-config 'seashell-support)))
-(define-ffi-definer define-self 
-                    (ffi-lib #f))
-
-;; These functions return 0 on success and 1 on failure if they return anything.
-;; Manually check the result of these functions - as failure can indicate there's
-;; an underlying security issue that needs to be addressed.
-(define-support seashell_drop_permissions (_fun -> _int))
-(define-support seashell_set_umask (_fun -> _void))
-(define-support seashell_signal_detach (_fun -> _int))
-(define-support seashell_create_secret_file (_fun _path -> _int))
-(define-support seashell_uw_check_remote_user (_fun -> _int))
-(define-support seashell_get_username (_fun -> _string))
-(define-support seashell_try_and_lock_file (_fun _int -> _int))
-
-;; Underlying Racket support functions.
-(define-self scheme_get_port_file_descriptor
-             (_fun (port : _scheme) (fd : (_ptr o _long)) -> (not-error? : _bool) -> (values fd not-error?)))
-
 ;; try-and-lock-file port? -> bool?
 ;; Attempts to lock the file @ port using fcntl, returning #f if it could not,
 ;; #t otherwise.
+(: try-and-lock-file (-> Port Boolean))
 (define (try-and-lock-file port)
   (define-values (fd not-error?) (scheme_get_port_file_descriptor port))
   (cond
     [not-error? (= 0 (seashell_try_and_lock_file fd))]
     [else #f]))
+
