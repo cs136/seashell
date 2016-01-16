@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell collection
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,9 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/seashell-config
-         racket/contract
-         racket/match)
+(require (submod seashell/seashell-config typed))
 (provide logf make-port-logger standard-logger-setup format-stack-trace)
 
 (define logger (make-logger 'seashell))
@@ -26,7 +24,9 @@
 
 ;; log-ts-args
 ;; Generates a list of values to substitute into the logging string.
+(: log-ts-args (-> (Listof String)))
 (define (log-ts-args)
+  (: pad-left (-> Integer Number String))
   (define (pad-left z i)
     (string-append (make-string (- z (string-length (number->string i))) #\0)
                     (number->string i)))
@@ -43,11 +43,9 @@
 
 ;; logf: category format args... -> void?
 ;; Writes an entry into the logger.
-(define/contract (logf category format-string . args)
-  (->* ((or/c 'fatal 'error 'warning 'info 'debug) string?)
-       #:rest (listof any/c) 
-       void?)
-  (unless (read-config 'test-mode)
+(: logf (-> Log-Level String Any * Void))
+(define (logf category format-string . args)
+  (unless (read-config-boolean 'test-mode)
     (define block (make-semaphore))
     (log-message logger
                  category
@@ -58,19 +56,19 @@
                     ,@args))
                  (list (current-continuation-marks) block))
     ;; Don't block if debug and not debug mode.
-    (unless (and (eq? category 'debug) (not (read-config 'debug)))
+    (unless (and (eq? category 'debug) (not (read-config-boolean 'debug)))
       (semaphore-wait block)))
   (void))
 
-;; make-log-reader: type-regexp -> evt?
+;; make-log-reader: level -> log-receiver
 ;; Creates a log receiver that receives all messages at level or higher.
 ;;
 ;; Arguments:
 ;;  level - 'fatal, 'error, 'warning, 'info, 'debug
 ;; Returns:
 ;;  A log receiver.
-(define/contract (make-log-reader level)
-  (-> (or/c 'fatal 'error 'warning 'info 'debug) log-receiver?)
+(: make-log-reader (-> Log-Level Log-Receiver))
+(define (make-log-reader level)
   (make-log-receiver logger level))
 
 ;; format-stack-trace
@@ -80,34 +78,39 @@
 ;;  trace - Continuation mark set.
 ;; Returns:
 ;;  String representing a prettified stack trace.
-(define/contract (format-stack-trace trace)
-  (-> continuation-mark-set? string?)
+(: format-stack-trace (-> Continuation-Mark-Set String))
+(define (format-stack-trace trace)
   (apply string-append
-    `(,@(for/list ([item (in-list (continuation-mark-set->context trace))])
+    `(,@(for/list : (Listof String)
+                  ([item : (Pairof (U False Symbol) Any) (in-list (continuation-mark-set->context trace))])
          (format "~a at:\n  ~a\n"
                   (if (car item)
                       (car item)
                       "<unknown procedure>")
                   (if (cdr item)
-                      (format "line ~a, column ~a, in file ~a"
-                              (srcloc-line (cdr item))
-                              (srcloc-column (cdr item))
-                              (srcloc-source (cdr item)))
+                      (begin
+                        (assert (srcloc? (cdr item)))
+                        (format "line ~a, column ~a, in file ~a"
+                                (srcloc-line (cdr item))
+                                (srcloc-column (cdr item))
+                                (srcloc-source (cdr item))))
                       "<unknown location>"))))))
 
 ;; make-port-logger
 ;; Creates a thread that receives events at level or higher
 ;; and writes it to the specified port.
-(define/contract (make-port-logger level port)
-  (-> (or/c 'fatal 'error 'warning 'info 'debug) output-port? thread?)
+(: make-port-logger (-> Log-Level Output-Port Thread))
+(define (make-port-logger level port)
   (define reader (make-log-reader level))
   (thread
     (lambda ()
       (let loop ()
         (match (sync reader)
           [(vector level message (list marks block) _)
+           (assert (semaphore? block))
+           (assert (continuation-mark-set? marks))
            (cond
-             [(and (read-config 'debug) (or (equal? level 'fatal) (equal? level 'error)))
+             [(and (read-config-boolean 'debug) (or (equal? level 'fatal) (equal? level 'error)))
               (fprintf port "~a~n***Stacktrace follows***~n~a~n***End Stacktrace***~n" 
                        message
                        (format-stack-trace marks))]
@@ -123,7 +126,9 @@
 ;; Sets up the logger in a standard fashion - writing to standard error
 ;; all messages at >debug in regular mode, all messages at >=debug when
 ;; debugging.
+(: standard-logger-setup (-> Void))
 (define (standard-logger-setup)
-  (if (read-config 'debug)
+  (if (read-config-boolean 'debug)
     (make-port-logger 'debug (current-error-port))
-    (make-port-logger 'info (current-error-port))))
+    (make-port-logger 'info (current-error-port)))
+  (void))
