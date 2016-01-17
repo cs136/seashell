@@ -85,7 +85,9 @@
       (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
   (void))
 
-
+;; takes a list of file names and a url to a zip file,
+;; produces a hashtable, where the keys are the file names,
+;; the values are the file contents as Strings.
 (define/contract (read-files-from-zip zipfiles url)
    (-> (listof path-string?) url-string? hash?)
    (call-with-unzip
@@ -94,7 +96,7 @@
        (make-hash (map (lambda(file) `(,(string->symbol file) . ,(file->string (build-path dirpath file))))
                        zipfiles)))))
 
-   
+
 (define/contract (new-directory project dir)
   (-> (and/c project-name? is-project?) path-string? void?)
   (with-handlers

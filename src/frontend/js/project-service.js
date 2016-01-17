@@ -403,7 +403,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             var ls = fpaths.map(function(path) {
               var file = new SeashellFile(self, path, false);
               return self.root._placeInTree(file, undefined, false, response[self.name+'/'+path]);
-            })
+            });
             return $q.all(ls);
           });
         };
