@@ -29,7 +29,6 @@ file(GLOB_RECURSE seashell_racket_tests "${CMAKE_SOURCE_DIR}/src/tests/*.rkt")
 add_custom_target(seashell-racket-tests-copy
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/tests" "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src"
   SOURCES ${seashell_racket_tests})
-               
 
 # Install the configuration.
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
@@ -43,19 +42,19 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
 # Build the binaries.
 add_custom_command(OUTPUT seashell-main
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-main"
-                           ++lib seashell/backend/server ++lib seashell/login/login-gateway ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
+                           ++lib seashell/backend/server ++lib seashell/login/login-gateway "${CMAKE_CURRENT_BINARY_DIR}/seashell-main.rkt"
                            DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt
                                    ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                    seashell-src-copy)
 add_custom_command(OUTPUT seashell-cli
                    COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli"
-                           ++lib seashell/backend/server ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli.rkt"
+                           ++lib seashell/backend/server "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli.rkt"
                            DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli.rkt
                                    ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                    seashell-src-copy)
 add_custom_command(OUTPUT seashell-racket-test
                            COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l errortrace  -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test"
-                           ++lib errortrace ++lib seashell/compiler/place-main  "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src/run-tests.rkt"
+                           ++lib errortrace "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src/run-tests.rkt"
                            DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_SOURCE_DIR}/src/tests/run-tests.rkt 
                                    ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt ${seashell_racket_tests}
                                    seashell-src-copy seashell-racket-tests-copy)

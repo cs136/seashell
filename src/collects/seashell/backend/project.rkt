@@ -445,11 +445,11 @@
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place `(,@(read-config 'compiler-flags)
-                                      ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
-                                    '("-lm")
-                                    (remove-duplicates (cons (build-path base exe) c-files))
-                                    o-files))
+      (seashell-compile-files `(,@(read-config 'compiler-flags)
+                                ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+                                '("-lm")
+                                (remove-duplicates (cons (build-path base exe) c-files))
+                                o-files))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
