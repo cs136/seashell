@@ -296,7 +296,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
               });
             });}).then(function () {
-            /* If the project is listed as a skeleton on the server,
+            /* If the project is listed in the project skeleton on the server,
                set self.projectURL to the project directory url.
                set self.skel to the file skeleton url.
                eg. self.projectURL = "https://.....~cs136/assignments_skeleton/A0/";
@@ -728,9 +728,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
     
         
-        /* Return a list of file paths in the current project.
+        /* Returns a list of file paths in the current project skeleton.
            This method only send requests to the server once when it's initially called.
-           The server response is remembered for following calls.
+           The server response is remembered for future calls.
            
            Deffered return type: [String] -- list of file paths, relative to the project directory.
            eg. ["q1a/file.c", "q1a/tests/a.in","common/text.txt"]
@@ -751,9 +751,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self._listSkelFiles;
         }
         
-        /* Check if the project is listed in the skeleton on the server.
+        /* Checks if the project is listed in the skeleton on the server.
            This method only send requests to the server once when it's initially called.
-           The server response is remembered for following calls.
+           The server response is remembered for future calls.
 
            Deffered type: Bool
         */
@@ -767,13 +767,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self._inSkeleton;
         }
         
-        /* Returns a list of file missing in the local project,
-           comparing with the server project skeleton.
+        /* Returns a list of files missing in the local project,
+           by comparing with the server project skeleton.
            
            This function uses SeashellProject.prototype.listSkelFiles 
            to get a list of files on the server.
            
-           Deffered return type: [String] -- list of local missing file paths
+           Deffered return type: [String] -- list of missing local files
         */
         SeashellProject.prototype.missingSkelFiles = function() {
           var self = this;
@@ -808,9 +808,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return $q.when(ws.socket.getProjects());
       };
 
-      /* Show projects listed in PROJ_SKEL_URL
+      /* Returns projects listed in PROJ_SKEL_URL
          This method only send requests to the server once when it's initially called.
-         The server response is remembered for following calls.
+         The server response is remembered for future calls.
            
          Deffered object type: [String], a list of project names 
       */
