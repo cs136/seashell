@@ -29,6 +29,7 @@
          racket/match
          racket/contract
          racket/port
+         racket/string
          json)
 
 (provide conn-dispatch)
@@ -402,6 +403,14 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+         ('id id)
+         ('type "readFilesFromZip")
+         ('zipfiles zipfiles)
+         ('url url))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(read-files-from-zip zipfiles url)))]
       [(hash-table
         ('id id)
         ('type "newDirectory")

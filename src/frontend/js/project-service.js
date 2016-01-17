@@ -28,7 +28,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       "use strict";
       var self = this;
       var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
-      var CGI_URL = CS136_URL + "cgi-bin/"
+      var CGI_URL = CS136_URL + "cgi-bin/";
       var PROJ_SKEL_URL = CGI_URL + "skeleton_list.cgi";
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";
       // TODO: update with real template path.
@@ -297,12 +297,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               });
             });}).then(function () {
             /* If the project is listed in the project skeleton on the server,
-               set self.projectURL to the project directory url.
+               set self.projectZipURL to the project directory url.
                set self.skel to the file skeleton url.
-               eg. self.projectURL = "https://.....~cs136/assignments_skeleton/A0/";
+               eg. self.projectZipURL = "https://.....~cs136/assignments_skeleton/A0/";
               */
             self.inSkeleton().then(function(bool) {
-              self.projectURL = SKEL_ROOT_URL + self.name + "/";
+              self.projectZipURL = SKEL_ROOT_URL + self.name + "-seashell.zip";
               self.skelURL = CGI_URL + "skeleton_file_list.rkt?template=" + self.name;
               self.pullMissingSkelFiles();
             });
@@ -323,16 +323,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var restDirs = [self.root];
           while (restDirs.length > 0) {
             var dir = restDirs.pop();
-            dir.children.forEach(function(c) {
-              if (c.children) {
-                restDirs.push(c);
-              } else {
-                files.push(c.name.join('/'));
-              }
-            });
+            dir.children.forEach(helper);
+          }
+          function helper(c) {
+            if (c.children) {
+              restDirs.push(c);
+            } else {
+              files.push(c.name.join('/'));
+            }
           }
           return files.sort();
-        }
+        };
 
         /** SeashellProject.questions()
          *
@@ -387,21 +388,25 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         };
         
         
-        /* Download a plain text file from a url, and create it on the server.
+        /* Download files from a zip url, and create it on the server.
            Arguments:
-              fpath : String -- a path to save the file, relative to the project folder
-              url : a link to download the text file
+              fpath : [String] -- paths to save the files, relative to the project folder
+              url : a link to download the zip file
 
-           eg. self.createFileFromURL("q3a/test/file.in", "https://....")
+           eg. self.newFilesFromZip(["q3a/test/file.in", ], "https://..../*.zip")
         */
-        SeashellProject.prototype.createFileFromURL = function(fpath, url) {
+        SeashellProject.prototype.newFilesFromZip = function(fpaths, url) {
           var self = this;
-          $http.get(url).then(function(contents) {
+          var fpaths_fix = fpaths.map(function(p) {return self.name+'/'+p;});
+          return $q.when(ws.socket.readFilesFromZip(fpaths_fix, url)).then(function(response) {
             // var contents = "file-contents";
-            var file = new SeashellFile(self, fpath, false);
-            return self.root._placeInTree(file, undefined, false, contents);
-          })
-        }
+            var ls = fpaths.map(function(path) {
+              var file = new SeashellFile(self, path, false);
+              return self.root._placeInTree(file, undefined, false, response[self.name+'/'+path]);
+            })
+            return $q.all(ls);
+          });
+        };
 
         SeashellProject.prototype.createQuestion = function(question) {
           var self = this;
@@ -749,7 +754,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
           }
           return self._listSkelFiles;
-        }
+        };
         
         /* Checks if the project is listed in the skeleton on the server.
            This method only send requests to the server once when it's initially called.
@@ -765,7 +770,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
           }
           return self._inSkeleton;
-        }
+        };
         
         /* Returns a list of files missing in the local project,
            by comparing with the server project skeleton.
@@ -784,16 +789,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               return ! _.find(localFileList, function(localFile) {return localFile === serverFile;});
             });
           });
-        }
+        };
         
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
           return self.missingSkelFiles().then(function(missingFiles) {
-            missingFiles.forEach(function(file) {
-              self.createFileFromURL(file, self.projectURL + file);
-            });
+              if (missingFiles.length) {
+                return self.newFilesFromZip(missingFiles, self.projectZipURL);
+              }
           });
-        }
+        };
         
       return SeashellProject;})();
 
@@ -826,7 +831,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return self._listSkelProjects;
       };
       
-
 
       /**
        * Fetches new assignments.

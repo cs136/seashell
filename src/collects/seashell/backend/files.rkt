@@ -26,10 +26,13 @@
          racket/port
          racket/match
          racket/file
-         racket/path)
+         racket/path
+         file/unzip
+         net/url)
 
 (provide exn:project:file
          new-file
+         read-files-from-zip
          new-directory
          remove-file
          remove-directory
@@ -82,6 +85,16 @@
       (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
   (void))
 
+
+(define/contract (read-files-from-zip zipfiles url)
+   (-> (listof path-string?) url-string? hash?)
+   (call-with-unzip
+     (get-pure-port (string->url url))
+     (lambda(dirpath) 
+       (make-hash (map (lambda(file) `(,(string->symbol file) . ,(file->string (build-path dirpath file))))
+                       zipfiles)))))
+
+   
 (define/contract (new-directory project dir)
   (-> (and/c project-name? is-project?) path-string? void?)
   (with-handlers

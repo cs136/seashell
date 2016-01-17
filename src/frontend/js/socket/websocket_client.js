@@ -324,7 +324,7 @@ SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
 
 SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
   encoding, normalize, deferred) {
-  if (contents) 
+  if (contents) {
     return this.sendMessage({
       type : "newFile",
       project : name,
@@ -333,14 +333,24 @@ SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
       encoding : encoding || "raw",
       normalize : normalize},
       deferred);
-  else
+   } else {
     return this.sendMessage({
       type : "newFile",
       project : name,
       file : file_name,
       normalize : false},
       deferred);
+   }
 };
+
+SeashellWebsocket.prototype.readFilesFromZip = function(zipfiles, url) {
+   return this.sendMessage({
+      type: "readFilesFromZip",
+      zipfiles: zipfiles,
+      url: url
+   });
+};
+
 
 SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
   return this.sendMessage({
