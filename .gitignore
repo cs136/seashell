@@ -1,3 +1,5 @@
 *.o
 *.a
 *.aux
+.DS_Store
+._.DS_Store
