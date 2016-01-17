@@ -51,14 +51,14 @@
                (_fun (port : _scheme) (fd : (_ptr o _long)) -> (not-error? : _bool) -> (values fd not-error?))))
 
 (require/typed (submod "." ffi)
-               [seashell_drop_permissions (-> Integer)]
+               [seashell_drop_permissions (-> Fixnum)]
                [seashell_set_umask (-> Void)]
-               [seashell_signal_detach (-> Integer)]
-               [seashell_create_secret_file (-> Path Integer)]
-               [seashell_uw_check_remote_user (-> Integer)]
+               [seashell_signal_detach (-> Fixnum)]
+               [seashell_create_secret_file (-> Path Fixnum)]
+               [seashell_uw_check_remote_user (-> Fixnum)]
                [seashell_get_username (-> String)]
-               [seashell_try_and_lock_file (-> Nonnegative-Integer Integer)]
-               [scheme_get_port_file_descriptor (-> Port (Values Nonnegative-Integer Boolean))])
+               [seashell_try_and_lock_file (-> Nonnegative-Fixnum Fixnum)]
+               [scheme_get_port_file_descriptor (-> Port (Values Nonnegative-Fixnum Boolean))])
 
 (provide seashell_drop_permissions
          seashell_create_secret_file

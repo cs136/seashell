@@ -26,7 +26,7 @@
 ;; Generates a list of values to substitute into the logging string.
 (: log-ts-args (-> (Listof String)))
 (define (log-ts-args)
-  (: pad-left (-> Integer Number String))
+  (: pad-left (-> Nonnegative-Fixnum Number String))
   (define (pad-left z i)
     (string-append (make-string (- z (string-length (number->string i))) #\0)
                     (number->string i)))

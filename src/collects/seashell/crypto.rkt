@@ -122,7 +122,7 @@
 
 (require typed/json (submod "." data))
 (require/typed (submod "." ffi)
-               [RAND_bytes (-> Bytes Integer Any)]
+               [RAND_bytes (-> Bytes Fixnum Any)]
                [encrypt_aes128_gcm (->* (Bytes Bytes Bytes) ((U Bytes False)) (Values Bytes Bytes))]
                [decrypt_aes128_gcm (->* (Bytes Bytes Bytes Bytes) ((U Bytes False)) Bytes)])
 
