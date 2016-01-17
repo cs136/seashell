@@ -20,10 +20,11 @@
          vector-diff vector-lcs)
 
 ;; 2D Array Helpers
-(: offset (-> Integer Integer Integer Integer Integer))
+(: offset (-> Nonnegative-Integer Nonnegative-Integer Nonnegative-Integer Nonnegative-Integer 
+              Nonnegative-Integer))
 (define (offset M N i j)
   (+ j (* i M)))
-(: make-2d-vector (All (a) (-> Integer Integer a (Vectorof a))))
+(: make-2d-vector (All (a) (-> Nonnegative-Integer Nonnegative-Integer a (Vectorof a))))
 (define (make-2d-vector M N a)
   (make-vector (* M N) a))
 
@@ -38,8 +39,8 @@
   (define M (add1 (vector-length v1)))
   (define N (add1 (vector-length v2)))
   (define C (make-2d-vector M N 0))
-  (for ([i (in-range (sub1 M))])
-    (for ([j (in-range (sub1 N))])
+  (for ([i : Nonnegative-Integer (in-range (sub1 M))])
+    (for ([j : Nonnegative-Integer (in-range (sub1 N))])
       (cond
         [(equal? (vector-ref v1 i)
                  (vector-ref v2 j))
@@ -72,8 +73,8 @@
        (-> Integer Integer (Listof a)))
     (define (backtrack i j)
       (cond
-        [(= i -1) '()]
-        [(= j -1) '()]
+        [(< i 0) '()]
+        [(< j 0) '()]
         [(equal? (vector-ref v1 i) (vector-ref v2 j))
          (cons (vector-ref v1 i) (backtrack (sub1 i) (sub1 j)))]
         [(> (vector-ref C (offset M N (add1 i) j))
