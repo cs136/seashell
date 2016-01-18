@@ -124,12 +124,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             .then(function (checksum) {
               self.checksum = checksum;
               localfiles.writeFile(self.project.name, self.fullname(), data, self.checksum);
-            }).catch(function {
+            }).catch(function () {
               // error case: force an offline write
               console.log("[localfiles] Offline write");
               localfiles.writeFile(self.project.name, self.fullname(), data, false);  
             });
-          return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
         };
 
         /**
