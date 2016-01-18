@@ -517,6 +517,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             var self = this;
             return $q.when(ws.socket.getFileToRun(self.name, question))
                 .then(function (result) {
+                    self.fileToRun = result;
                     return result;
                 });
         };
@@ -529,7 +530,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
             var self = this;
-            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file));
+            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file))
+              .then(function() { self.fileToRun = file; });
         };
 
         /**
@@ -551,8 +553,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * test - boolean parameter, run with tests if true.
          */
-        SeashellProject.prototype.run = function(question, folder, filename,
-                                          io_callback, test_callback, data, test) {
+        SeashellProject.prototype.run = function(question, test, io_callback, test_callback) {
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
@@ -565,6 +566,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
           else if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
             var res = $q.defer();
+            var path = self._getPath(question, "question", self.fileToRun);
+            var file = self.root.find(path);
             if(!self.compiler) {
               self.compiler = new Worker("js/offline-compile.js");
             }
@@ -607,6 +610,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.kill = function(pid) {
           var self = this;
+          if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
+          }
           return $q.when(ws.socket.programKill(pid));
         };
 

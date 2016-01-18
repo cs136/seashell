@@ -383,7 +383,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, false)
+            self.project.run(self.question, false, self.console.IOCallback, self.console.testCallback)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -405,8 +405,7 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, "question", self.runnerFile,
-                self.console.IOCallback, self.console.testCallback, self.contents, true)
+            self.project.run(self.question, true, self.console.IOCallback, self.console.testCallback)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -426,7 +425,9 @@ angular.module('frontend-app')
 
         self.killProgram = function() {
           if(!self.console.PIDs) {
-            return $q.when();
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
           }
           var p = $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);

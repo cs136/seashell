@@ -69,12 +69,14 @@ self.onmessage = function(msg) {
       return { messages: diags,
                obj: obj,
                type: "result",
+               pid: -1,
                status: 'running' };
     }
     else {
       Module.seashell_compiler_free(cc);
       return { messages: diags,
                type: "result",
+               pid: -1,
                status: 'compile-failed' };
     }
   }
