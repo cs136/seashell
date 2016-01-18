@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project
+         seashell/backend/template
          seashell/seashell-config
          seashell/log
          net/uri-codec
@@ -28,11 +29,10 @@
          racket/file
          racket/path
          file/unzip
-         net/url)
+         openssl/md5)
 
 (provide exn:project:file
          new-file
-         read-files-from-zip
          new-directory
          remove-file
          remove-directory
@@ -40,6 +40,7 @@
          write-file
          list-files
          rename-file
+         restore-file-from-template
          read-settings
          write-settings)
 
@@ -84,17 +85,6 @@
       (display-lines-to-file (call-with-input-string (bytes->string/utf-8 to-write) port->lines) path #:exists 'error)
       (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
   (void))
-
-;; takes a list of file names and a url to a zip file,
-;; produces a hashtable, where the keys are the file names,
-;; the values are the file contents as Strings.
-(define/contract (read-files-from-zip zipfiles url)
-   (-> (listof path-string?) url-string? hash?)
-   (call-with-unzip
-     (get-pure-port (string->url url))
-     (lambda(dirpath) 
-       (make-hash (map (lambda(file) `(,(string->symbol file) . ,(file->string (build-path dirpath file))))
-                       zipfiles)))))
 
 
 (define/contract (new-directory project dir)
@@ -225,6 +215,39 @@
     (unless (equal? old-file new-file)
       (rename-file-or-directory (check-and-build-path proj-path old-file)
                                 (check-and-build-path proj-path new-file)))))
+
+;; (restore-file-from-template project file template)
+;; Restores a file from a skeleton/template.
+;;
+;; Args:
+;;  project - Project.
+;;  file - Path to file.
+;;  template - Path (possibly URL) to template.
+;; Returns:
+;;  MD5 hash of file.
+(define/contract (restore-file-from-template project file template)
+  (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
+  (define ok #f)
+  (define destination (check-and-build-path (build-project-path project) file))
+  (define source (explode-path file))
+  (call-with-template template
+                      (lambda (port)
+                        (unzip port
+                               (lambda (name _2 contents)
+                                 (define lname (explode-path (simplify-path (bytes->path name) #f)))
+                                 (when (and (not (null? lname))
+                                            (equal? source (cdr lname)))
+                                   (call-with-output-file destination
+                                                          (lambda (dport)
+                                                            (define-values (md5in md5out) (make-pipe))
+                                                            (copy-port contents dport md5out)
+                                                            (close-output-port md5out)
+                                                            (set! ok (md5 md5in)))
+                                                          #:exists 'replace))))))
+  (when (not ok)
+    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template))
+           (current-continuation-marks)))
+  ok)
 
 ;; (write-settings font-size editor-mode tab-width use-spaces)
 ;; Writes the user's seashell settings to ~/.seashell/settings.txt

@@ -404,14 +404,6 @@
               (success . #t)
               (result . #t))]
       [(hash-table
-         ('id id)
-         ('type "readFilesFromZip")
-         ('zipfiles zipfiles)
-         ('url url))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(read-files-from-zip zipfiles url)))]
-      [(hash-table
         ('id id)
         ('type "newDirectory")
         ('project project)
@@ -511,6 +503,15 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "restoreFileFrom")
+        ('project project)
+        ('file file)
+        ('template template))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(restore-file-from-template project file template)))]
       [(hash-table
         ('id id)
         ('type "getMostRecentlyUsed")

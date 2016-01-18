@@ -343,11 +343,12 @@ SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
    }
 };
 
-SeashellWebsocket.prototype.readFilesFromZip = function(zipfiles, url) {
+SeashellWebsocket.prototype.restoreFileFrom = function(projectName, fpath, url) {
    return this.sendMessage({
-      type: "readFilesFromZip",
-      zipfiles: zipfiles,
-      url: url
+      type: "restoreFileFrom",
+      project: projectName,
+      file: fpath,
+      template: url
    });
 };
 

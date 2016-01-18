@@ -33,6 +33,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
+      var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
      
       var SeashellProject = (function () { 
         /**
@@ -181,33 +182,32 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           contents, encoding, normalize) {
           var self = this;
           path = path ? path : file.name;
-          if(path.length == 1) {
-            if(!soft_place) {
-              if(file.is_dir)
+          if (path.length == 1) {
+            if (!soft_place) {
+              if(file.is_dir) {
                 return $q.when(ws.socket.newDirectory(file.project.name,
                   file.fullname())).then(function () {
                   self.children.push(file);
                 });
-              else
+              } else {
                 return $q.when(ws.socket.newFile(file.project.name,
                   file.fullname(), contents, encoding, normalize ? true : false))
                     .then(function () {
                       self.children.push(file);
                     });
+              }
             } else {
               self.children.push(file);
             }
-          }
-          else {
+          } else {
             var match = _.filter(self.children, function(c) {
               return path[0] == c.name[c.name.length-1];
             });
-            if(match.length>0)
+            if (match.length>0) {
               return match[0]._placeInTree(file, path.slice(1), soft_place,
                 contents, encoding, normalize);
-            else {
-              var dir = new SeashellFile(file.project,
-                file.name.slice(0,file.name.length-path.length+1).join('/'), true);
+            } else {
+              var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
               return (dir.fullname === "" ? $q.when() : 
                   $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
@@ -302,8 +302,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                eg. self.projectZipURL = "https://.....~cs136/assignments_skeleton/A0/";
               */
             self.inSkeleton().then(function(bool) {
-              self.projectZipURL = SKEL_ROOT_URL + self.name + "-seashell.zip";
-              self.skelURL = CGI_URL + "skeleton_file_list.rkt?template=" + self.name;
+              self.projectZipURL = sprintf(PROJ_ZIP_URL_TEMPLATE, self.name);
+              self.skelURL = sprintf(PROJ_FILE_LIST_URL_TEMPLATE, self.name);
               self.pullMissingSkelFiles();
             });
             return self;
@@ -387,26 +387,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self.root._placeInTree(file, false, false, contents, encoding, normalize);
         };
         
-        
-        /* Download files from a zip url, and create it on the server.
-           Arguments:
-              fpath : [String] -- paths to save the files, relative to the project folder
-              url : a link to download the zip file
-
-           eg. self.newFilesFromZip(["q3a/test/file.in", ], "https://..../*.zip")
-        */
-        SeashellProject.prototype.newFilesFromZip = function(fpaths, url) {
-          var self = this;
-          var fpaths_fix = fpaths.map(function(p) {return self.name+'/'+p;});
-          return $q.when(ws.socket.readFilesFromZip(fpaths_fix, url)).then(function(response) {
-            // var contents = "file-contents";
-            var ls = fpaths.map(function(path) {
-              var file = new SeashellFile(self, path, false);
-              return self.root._placeInTree(file, undefined, false, response[self.name+'/'+path]);
-            });
-            return $q.all(ls);
-          });
-        };
 
         SeashellProject.prototype.createQuestion = function(question) {
           var self = this;
@@ -791,11 +771,24 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           });
         };
         
+        
+        /* Calls SeashellProject.prototype.missingSkelFiles to get a list of
+           missing files, then requests the server to create them, then reads
+           the files from the server.
+        */
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
           return self.missingSkelFiles().then(function(missingFiles) {
               if (missingFiles.length) {
-                return self.newFilesFromZip(missingFiles, self.projectZipURL);
+                return $q.all(missingFiles.map(function(fpath) {
+                    return $q.when(ws.socket.restoreFileFrom(self.name, fpath, self.projectZipURL)).then(function() {
+                        // now soft create these files in the front end and read.
+                        var file = new SeashellFile(self, fpath, false);
+                        return file.read().then(function(contents) {
+                            return self.root._placeInTree(file, false, true, contents);
+                        });
+                    });
+                }));
               }
           });
         };
