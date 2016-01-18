@@ -26,7 +26,8 @@
          racket/port
          racket/match
          racket/file
-         racket/path)
+         racket/path
+         openssl/md5)
 
 (provide exn:project:file
          new-file
@@ -50,10 +51,13 @@
 ;;  file - name of new file.
 ;;  normalize - boolean, whether or not to convert newlines to Unix
 ;;
+;; Returns:
+;;  MD5 checksum of file written.
+;;
 ;; Raises:
 ;;  exn:project:file if file exists.
 (define/contract (new-file project file contents encoding normalize?)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? void?)
+  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
@@ -61,7 +65,7 @@
          (raise (exn:project
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (define to-write
+    (define data
       (with-input-from-bytes contents
         (lambda () 
           (cond
@@ -77,10 +81,14 @@
             [else
               ;; no-op (ignore port)
               contents]))))
-    (if normalize?
-      (display-lines-to-file (call-with-input-string (bytes->string/utf-8 to-write) port->lines) path #:exists 'error)
-      (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
-  (void))
+    (define to-write
+      (if normalize?
+        (with-output-to-bytes
+          (lambda ()
+            (display-lines (call-with-input-bytes data port->lines))))
+        data))
+    (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)
+    (call-with-input-bytes to-write md5)))
 
 (define/contract (new-directory project dir)
   (-> (and/c project-name? is-project?) path-string? void?)
@@ -138,25 +146,43 @@
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;  Contents of the file as a bytestring.
+;;  Contents of the file as a bytestring, and the MD5 checksum of the file.
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (check-and-build-path (build-project-path project) file)
-                        port->bytes))
+  (-> (and/c project-name? is-project?) path-string? (values bytes? string?))
+  (define data (with-input-from-file (check-and-build-path (build-project-path project) file)
+                                      port->bytes))
+  (values data (call-with-input-bytes data md5)))
 
-;; (write-file project file contents) -> void?
+;; (write-file project file contents) -> string?
 ;; Writes a file from a Racket bytestring.
 ;;
 ;; Arguments:
 ;;  project - project.
 ;;  file - name of file to write.
 ;;  contents - contents of file.
-(define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes? void?)
-  (with-output-to-file (check-and-build-path (build-project-path project) file)
-                       (lambda () (write-bytes contents))
-                       #:exists 'must-truncate)
-  (void))
+;;  tag - MD5 of expected contents before file write, or #f
+;;        to force write.
+;; Returns:
+;;  MD5 checksum of resulting file.
+(define/contract (write-file project file contents [tag #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes?)
+       ((or/c #f string?))
+       string?)
+  (define file-to-write (check-and-build-path (build-project-path project) file))
+  (call-with-file-lock/timeout file-to-write 'exclusive 
+                               (lambda ()
+                                 (when tag
+                                   (define expected-tag (call-with-input-file file-to-write md5))
+                                   (unless (equal? tag expected-tag)
+                                     (raise (exn:project (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                         (current-continuation-marks)))))
+                                 (with-output-to-file (check-and-build-path (build-project-path project) file)
+                                                      (lambda () (write-bytes contents))
+                                                      #:exists 'must-truncate))
+                               (lambda ()
+                                 (raise (exn:project (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                     (current-continuation-marks)))))
+  (call-with-input-bytes contents md5))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.
@@ -166,11 +192,15 @@
 ;;  dir - optional, subdirectory within project to start at.
 ;;      Mainly used for recursive calls.
 ;; Returns:
-;;  (listof string?) - Files and directories in project.
+;;  (listof (string? boolean? number? string?)) - Files and directories in a project
+;;            \------|--------|-------|---------  Name.
+;;                   \--------|-------|---------  Is directory?
+;;                            \-------|---------  Last modification time.
+;;                                    \---------  Checksum, if file.
 (define/contract (list-files project [dir #f])
   (->* ((and/c project-name? is-project?))
     ((or/c #f (and/c string? path-string?)))
-    (listof (list/c (and/c string? path-string?) boolean? number?)))
+    (listof (list/c (and/c string? path-string?) boolean? number? (or/c #f string?))))
   (define start-path (if dir (check-and-build-path
     (build-project-path project) dir) (build-project-path project)))
   (foldl (lambda (path rest)
@@ -178,16 +208,17 @@
     (define relative (if dir (build-path dir path) path))
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
-      [(and (directory-exists? current) (not (directory-hidden? current)))
-        (cons (list (some-system-path->string relative) #t modified) (append (list-files project
+      [(and (directory-exists? current) (not (path-hidden? current)))
+        (cons (list (some-system-path->string relative) #t modified #f) (append (list-files project
           relative) rest))]
-      [(file-exists? current)
-        (cons (list (some-system-path->string relative) #f modified) rest)]
+      [(and (file-exists? current) (not (path-hidden? current)))
+        (define checksum (call-with-input-file current md5))
+        (cons (list (some-system-path->string relative) #f modified checksum) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
-;; Determines if a directory is hidden (begins with a .)
-(define/contract (directory-hidden? path)
+;; Determines if a path is hidden (begins with a .)
+(define/contract (path-hidden? path)
   (-> path? boolean?)
   (define-values (_1 filename _2) (split-path (simplify-path path)))
   (string=? "." (substring (some-system-path->string filename) 0 1)))

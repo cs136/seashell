@@ -1,4 +1,4 @@
-/**
+/*
  * Angular bindings for the Seashell WebSocket client.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *

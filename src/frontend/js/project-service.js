@@ -17,14 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
+angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 'seashell-local-files'])
   /**
    * Project [factory] service.
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http', 'settings-service',
-    function($scope, $q, ws, marmoset, $http, settings) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', 'localfiles', '$http', 'settings-service',
+    function($scope, $q, ws, marmoset, localfiles, $http, settings) {
       "use strict";
       var self = this;
       var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/skeleton_list.cgi";
@@ -41,7 +41,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         function SeashellProject (name) {
           var self = this;
-
           self.name = name;
         }
 
@@ -54,8 +53,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * @param {String} contents - Complete file contents.
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
+         * @param {String} checksum - Checksum of file.
          */
-        function SeashellFile(project, name, contents, is_dir, last_saved) {
+        function SeashellFile(project, name, contents, is_dir, last_saved, checksum) {
           var self = this;
           self.name = name.split("/");
           var par = name.slice(0,name.length-2);
@@ -67,6 +67,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
+          self.checksum = checksum;
         }
 
         SeashellFile.prototype.toWorker = function() {
@@ -118,13 +119,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if(self.contents !== null) {  
             def.resolve(self.contents);
           }
-          else {
-            $q.when(ws.socket.readFile(self.project.name, self.fullname()))
-              .then(function (conts) {
-                self.contents = conts;
-                def.resolve(conts);
-              });
-          }
+          console.log(localfiles.readFile(self.project.name, self.fullname()));
+          $q.when(ws.socket.readFile(self.project.name, self.fullname()))
+            .then(function (conts) {
+              self.contents = conts;
+              def.resolve(conts);
+            });
           return def.promise;
         };
 
@@ -137,8 +137,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellFile.prototype.write = function(data) {
           var self = this;
           return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data))
-            .then(function() {
+            .then(function () {
               self.contents = data;
+              localfiles.writeFile(self.project.name, self.fullname(), data, false);
+            }).catch(function () {
+              // error case: force an offline write
+              console.log("[localfiles] Offline write");
+              localfiles.writeFile(self.project.name, self.fullname(), data, false);  
             });
         };
 
@@ -314,7 +319,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             .then(function(files) {
               self.root = new SeashellFile(self, "", null, true);
               _.map(files, function(f) {
-                self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2]), null, true);
+                self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
               });
             });});
           return result.then(function () {return self;});
