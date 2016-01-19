@@ -21,6 +21,7 @@
          racket/path
          racket/match)
 (provide read-config config-set! config-refresh! SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
+         SEASHELL_SOURCE_PATH
          SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
 
 ;; Versioning information.
@@ -29,6 +30,7 @@
 (define SEASHELL_COMMIT "@GIT_COMMIT_HASH@")
 (define SEASHELL_API_VERSION @SEASHELL_API_VERSION@)
 (define SEASHELL_BUILD_PATH "@CMAKE_BINARY_DIR@")
+(define SEASHELL_SOURCE_PATH "@CMAKE_SOURCE_DIR@")
 
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
