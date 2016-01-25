@@ -67,7 +67,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
-          self.checksum = checksum;
+          self.online_checksum = false;
+          self.offline_checksum = checksum;
         }
 
         SeashellFile.prototype.toWorker = function() {
@@ -119,12 +120,30 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           if(self.contents !== null) {  
             def.resolve(self.contents);
           }
-          console.log(localfiles.readFile(self.project.name, self.fullname()));
-          $q.when(ws.socket.readFile(self.project.name, self.fullname()))
-            .then(function (conts) {
-              self.contents = conts;
-              def.resolve(conts);
-            });
+          else {
+            $q.when(ws.socket.readFile(self.project.name, self.fullname()))
+              .then(function(conts) {
+                if(self.online_checksum != conts.checksum) {
+                  // TODO online file has changed since we saw it.. we should merge 
+                }
+                else if(self.offline_checksum != conts.checksum) {
+                  // TODO offline file differs from online and we are now connected..
+                  //   should update online file
+                  self.write(self.contents);
+                }
+                self.online_checksum = conts.checksum;
+                self.contents = conts.data;
+                def.resolve(conts.data);
+              })
+              .catch(function() {
+                localfiles.readFile(self.project.name, self.fullname()).then(function(conts) {
+                  self.offline_checksum = conts.offline_checksum;
+                  self.online_checksum = conts.online_checksum;
+                  self.contents = conts.contents;
+                  def.resolve(self.contents);
+                });
+              });
+          }
           return def.promise;
         };
 
@@ -136,14 +155,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
+          self.contents = data;
           return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data))
-            .then(function () {
-              self.contents = data;
-              localfiles.writeFile(self.project.name, self.fullname(), data, false);
+            .then(function(checksum) {
+              self.online_checksum = checksum;
+              localfiles.writeFile(self.project.name, self.fullname(), data, checksum);
             }).catch(function () {
               // error case: force an offline write
               console.log("[localfiles] Offline write");
-              localfiles.writeFile(self.project.name, self.fullname(), data, false);  
+              localfiles.writeFile(self.project.name, self.fullname(), data, self.online_checksum);  
             });
         };
 
