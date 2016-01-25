@@ -157,6 +157,9 @@
                   result))]
             [else
               #f]))
+
+        ;; Fix binaries taking up all the space in /var/tmp
+        (delete-file result-file)
         
         ;; Create the final diagnostics table:
         (define diags
