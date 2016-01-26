@@ -78,6 +78,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return obj;
         };
 
+        // for now, bundle everything together from question and common
+        SeashellFile.prototype.getDependencies = function() {
+          var self = this;
+          var deps = [];
+          var question = self.project.root.find(self.name.slice(2));
+          var common = self.project.root.find([self.name[0],"common"]);
+          deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
+          deps.concat(common.children);
+          return $q.all(_.map(deps, function(d) { return d.read(); }))
+            .then(function() { return deps; });
+        }
+
         /**
          * fullname()
          * Returns the full name of this file.
@@ -609,11 +621,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                 res.resolve(result.data);
               }
             };
-            self.compiler.postMessage({
-              files: [file.toWorker()],
-              tests: tests
+            return $q.when(file.getDependencies()).then(function(deps) {
+              self.compiler.postMessage({
+                files: _.map(deps, function(f) { return f.toWorker(); }),
+                tests: tests
+              });
+              return res.promise;
             });
-            return res.promise;
           } else {
             return $q.reject("Offline mode disabled while disconnected!");
           }

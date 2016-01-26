@@ -92,7 +92,9 @@ self.onmessage = function(msg) {
     var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
     FS.write(file, arr, 0, copied);
     FS.close(file);
-    sources.push(data.files[i].name);
+    var splitname = data.files[i].name[data.files[i].name.length-1].split(".");
+    if(splitname[splitname.length-1] == "c")
+      sources.push(data.files[i].name);
   }
 
   if(init) {
