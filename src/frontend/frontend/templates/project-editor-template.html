@@ -11,15 +11,12 @@
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.question_files">
                 <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
-              <a ng-repeat-start="file in group.files" ng-if="$first"
+              <a ng-repeat-start="file in group.files"
                 ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
                 class="file-link"
                 ui-sref-active="file-link-active"
                 ng-class="{'current-runner-file': group.isFileToRun}">
-                {{file}}</a><span ng-repeat-end ng-if="!$first">,<a
-                  ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
-                  class="file-link"
-                  ui-sref-active="file-link-active">{{file.split(".").pop()}}</a>
+                {{file}}</a><span ng-repeat-end>
               </span>
             </span> 
           </span>
