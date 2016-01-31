@@ -475,9 +475,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var path = self._getPath(question, folder, fname);
           return self.root._removeFromTree(path.split("/")).then(function() {
             return self.inSkeleton().then(function(bool) {
-               if (bool) {
-                  return self.pullMissingSkelFiles();
-               }
+               return bool && self.pullMissingSkelFiles();
             });
           });
         };
