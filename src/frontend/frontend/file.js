@@ -203,10 +203,27 @@ angular.module('frontend-app')
             self.loaded = true;
           });
           function updateColNums() {
+            // update column numbers
             $timeout(function() {
               self.col = self.editor.getCursor().ch + 1;
               self.line = self.editor.getCursor().line + 1;
             }, 0);
+            // set a css class to each line over 80 chars
+            self.editor.eachLine(function(line) {
+               var lineNum = self.editor.getLineNumber(line);
+               var lineStr = self.editor.getLine(lineNum);
+               var len = lineStr.length;
+               self.editor.findMarksAt(
+                  {line: lineNum, ch: 0}
+               ).forEach(function (m) {m.clear();});
+               if (len > 80) {
+                  self.editor.markText(
+                     {line: lineNum, ch: 0},
+                     {line: lineNum, ch: len},
+                     {className: "cm-line-too-long"}
+                  );
+               }
+            });
           }
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);

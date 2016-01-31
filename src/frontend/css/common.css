@@ -414,7 +414,12 @@ input::-ms-clear {
 }
 
 .col-too-long {
-  color: rgb(240, 0, 0);
+  color: #DB2D20; 
+}
+
+.cm-line-too-long {
+  background-color: #E91E63 !important; 
+  color: white !important;
 }
 
 /* navbar overrides */
