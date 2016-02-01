@@ -387,6 +387,7 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
+
   (define project-base (if is-cli name (build-project-path name)))
   (define project-common (if is-cli
     (build-path project-base (read-config 'common-subdirectory))
@@ -407,6 +408,8 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
+  
+  (match-define-values (_ question-dir-name _) (split-path base))
 
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
@@ -454,25 +457,28 @@
                     diagnostics)))))
       (values result parsed-messages output-path))
 
+   
+   
   (define (flatten-racket-files)
-    ;; Create a temporary directory and copy the files in the question and common folder into it
+    ;; Create a temporary directory
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
-    (for-each (lambda (filename)
-                (let ((src (check-and-build-path base filename)))
-                  (when (file-exists? src)
-                    (copy-file src (check-and-build-path temp-dir filename) #t))))
-              (directory-list base))
+    ;; copy the common folder to the temp dir -- for backward compatibility this term
+    (copy-directory/files project-common (build-path temp-dir "common"))
+    ;; copy the question folder to the temp dir
+    (copy-directory/files base (build-path temp-dir question-dir-name))
+    ;; copy all files in the common folder to the question folder
     (for-each (lambda (apath)
                 (match-define-values (_ filename _) (split-path apath))
-                (copy-file apath (check-and-build-path temp-dir filename) #t))
+                (copy-file apath (check-and-build-path temp-dir question-dir-name filename) #t))
               project-common-list)
     temp-dir)
+  
   (define racket-temp-dir (when (equal? lang 'racket) (flatten-racket-files)))
 
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket (values #t '() (check-and-build-path racket-temp-dir exe))]))
+      ['racket (values #t '() (check-and-build-path racket-temp-dir question-dir-name exe))]))
 
   (cond
     [(and result (empty? tests))
