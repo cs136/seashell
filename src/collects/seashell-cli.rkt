@@ -12,7 +12,7 @@
 (define RUN-TIMEOUT (make-parameter #f))
 (define-values (project-dir main-file test-name out-file err-file)
   (command-line
-    #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  30 means the program failed its test.\n  40 means the program passed its test."
+    #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  21 means the program failed an assert.\n  30 means the program failed its test.\n  40 means the program passed its test."
     #:once-each
     [("-t" "--timeout") timeout
                         "Override the default seashell timeout (seconds)."
@@ -72,9 +72,11 @@
       (write-outputs stdout stderr)
       (exit 40)]
      [(list pid _ "error" exit-code stderr)
-      (eprintf "Program crashed at runtime.\n")
+      (if (= exit-code 134)
+        (eprintf "Program failed an assertion.\n")
+        (eprintf "Program crashed at runtime.\n"))
       (write-outputs #f stderr)
-      (exit 20)]
+      (exit (if (= exit-code 134) 21 20))]
      [(list pid _ "no-expect" stdout stderr)
       (eprintf "No expect file for test; program did not crash.\n")
       (write-outputs stdout stderr)
