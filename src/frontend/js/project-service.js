@@ -291,24 +291,24 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
           return result.then(function () {
             return $q.when(ws.socket.listProject(self.name)).then(function(files) {
-              self.root = new SeashellFile(self, "", true);
-              _.map(files, function(f) {
-                self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
-              });
+               self.root = new SeashellFile(self, "", true);
+                  _.map(files, function(f) {
+                   self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
+               });
             });}).then(function () {
-            /* If the project is listed in the project skeleton on the server,
-               set self.projectZipURL to the project directory url.
-               set self.skel to the file skeleton url.
-               eg. self.projectZipURL = "https://.....~cs136/assignments_skeleton/A0/";
-              */
-            self.inSkeleton().then(function(bool) {
-              self.projectZipURL = sprintf(PROJ_ZIP_URL_TEMPLATE, self.name);
-              self.skelURL = sprintf(PROJ_FILE_LIST_URL_TEMPLATE, self.name);
-              self.pullMissingSkelFiles();
+               /* If the project is listed in the project skeleton on the server,
+                  set self.projectZipURL to the project directory url.
+                  set self.skel to the file skeleton url.
+                  eg. self.projectZipURL = "https://.....~cs136/assignments_skeleton/A0/";
+                 */
+               self.inSkeleton().then(function(bool) {
+                  if (! bool) {return;}
+                  self.projectZipURL = sprintf(PROJ_ZIP_URL_TEMPLATE, self.name);
+                  self.skelURL = sprintf(PROJ_FILE_LIST_URL_TEMPLATE, self.name);
+                  self.pullMissingSkelFiles();
+               });
+               return self;
             });
-            return self;
-          });
-            
         };
         
         /* List all file in this project.
@@ -474,7 +474,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           var path = self._getPath(question, folder, fname);
           return self.root._removeFromTree(path.split("/")).then(function() {
-            return self.pullMissingSkelFiles();
+            return self.inSkeleton().then(function(bool) {
+               return bool && self.pullMissingSkelFiles();
+            });
           });
         };
 
@@ -641,7 +643,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var target = newName; 
           if (self.root.find(path)) {
             return self.root.find(path).rename(target).then(function() {
-              return self.pullMissingSkelFiles();
+               return self.inSkeleton().then(function(bool) {
+                  return bool && self.pullMissingSkelFiles();
+               });
             });
           } else {
             return $q.reject("No file found!");
