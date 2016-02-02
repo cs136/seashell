@@ -2,8 +2,9 @@
 
 (require seashell/backend/project
          seashell/backend/files
-         rackunit
-         openssl/md5)
+         seashell/seashell-config
+         openssl/md5
+         rackunit)
 
 (define/provide-test-suite file-suite
   (test-suite "File test suite"
@@ -111,5 +112,18 @@
     (test-case "Delete a directory"
       (remove-directory "test" "boost")
       (check-false (directory-exists? (check-and-build-path (build-project-path "test") "boost"))))
-    
+
+    (test-case "Revert file"
+      (new-project-from "test-revert" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+      (check-true (file-exists? (build-path (build-project-path "test-revert") "default/main.c")))
+      (remove-file "test-revert" "default/main.c")
+      (check-false (file-exists? (build-path (build-project-path "test-revert") "default/main.c")))
+      (check-equal? (restore-file-from-template "test-revert" "default/main.c" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+                    "262b1c12d6e84a11da92b605e16ecfd4")
+      (remove-file "test-revert" "default/main.c")
+      (new-file "test-revert" "default/main.c" #"foo" 'raw #f)
+      (check-equal? (restore-file-from-template "test-revert" "default/main.c" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
+                    "262b1c12d6e84a11da92b605e16ecfd4")
+      (check-equal? (call-with-input-file (build-path (build-project-path "test-revert") "default/main.c") md5)
+                    "262b1c12d6e84a11da92b605e16ecfd4"))
     ))

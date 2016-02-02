@@ -267,6 +267,7 @@ div.tooltip .tooltip-inner {
 
 .file-text {
   font-family: monospace;
+  word-spacing: 2px;
 }
 .file-link {
 }
@@ -569,5 +570,5 @@ label {
 }
 
 .runner-icon {
-  margin-right: -3px;
+  margin-right: -6px;
 }

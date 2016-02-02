@@ -154,7 +154,7 @@ angular.module('frontend-app')
               _.forEach(self.console.errors,function(err) {
                 var error = err[0], file = err[1].split("/");
                 file = file[file.length-1];
-                var line = _.max([err[2] - 1, 0]), column = err[3];
+                var line = _.max([err[2] - 1, 0]), column = err[3] - 1;
                 var message = err[4];
                 console.log(err);
                 if (_.contains([self.file,

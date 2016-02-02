@@ -54,6 +54,7 @@
          seashell/seashell-config
          seashell/compiler
          seashell/backend/runner
+         seashell/backend/template
          net/url
          net/head
          json
@@ -121,15 +122,6 @@
   (check-path (build-path args ...)))
 
 
-;; (url-string? str) -> bool?
-;; Predicate for testing if a string is a valid URL
-(define/contract (url-string? str)
-  (-> string? boolean?)
-  (with-handlers
-    ([url-exception? (lambda (exn) #f)])
-    (string->url str)
-    #t))
-
 ;; (project-base-path)
 ;; Gets the base path where projects are located
 (define/contract (project-base-path)
@@ -188,8 +180,8 @@
 ;;
 ;; source is a string which can be the following:
 ;;  * A old project, in which we clone it directly.
-;;  * A URI, in which we clone the URI.  This is useful for setting up
-;;    the base files for a given CS 136 assignment question.
+;;  * A URL to a ZIP file.
+;;  * A path to a ZIP file.
 ;;
 ;; Arguments:
 ;;  name - Name of the new project.
@@ -198,7 +190,7 @@
 ;; Raises:
 ;;  exn:project if the project already exists.
 (define/contract (new-project-from name source)
-  (-> project-name? (or/c project-name? url-string?) void?)
+  (-> project-name? (or/c project-name? url-string? path-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
@@ -206,7 +198,7 @@
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
     (cond
-      [(url-string? source)
+      [(or (path-string? source) (url-string? source))
         (make-directory (build-project-path name))
         (with-handlers
           ([exn:fail?
@@ -214,26 +206,9 @@
                (delete-directory/files (build-project-path name) #:must-exist? #f)
                (raise exn))])
           (parameterize ([current-directory (build-project-path name)])
-            (define surl (string->url source))
-            (cond
-              [(equal? (url-scheme surl) "file")
-               (call/input-url surl get-pure-port
-                               (lambda (port)
-                                 (unzip port (make-filesystem-entry-reader #:strip-count 1))))]
-              [else
-               (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
-               (dynamic-wind
-                 (lambda () #f)
-                 (lambda ()
-                   (match-define (list _ status text headers) (regexp-match #rx"^HTTP/1\\.1 ([0-9][0-9][0-9]) ([^\n\r]*)(.*)" hdrs))
-                   (when (not (equal? status "200"))
-                     (raise (exn:project (format "Error when fetching template ~a for project ~a: ~a ~a." source name status text)
-                                         (current-continuation-marks))))
-                   (when (not (equal? (string-trim (extract-field "Content-Type" headers)) "application/zip"))
-                     (raise (exn:project (format "Error when fetching template ~a for project ~a: template was not a ZIP file." source name)
-                                         (current-continuation-marks))))
-                   (unzip port (make-filesystem-entry-reader #:strip-count 1)))
-                 (lambda () (close-input-port port)))])))]
+            (call-with-template source
+                                (lambda (port)
+                                  (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))
@@ -412,6 +387,7 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
+
   (define project-base (if is-cli name (build-project-path name)))
   (define project-common (if is-cli
     (build-path project-base (read-config 'common-subdirectory))
@@ -432,6 +408,8 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
+  
+  (match-define-values (_ question-dir-name _) (split-path base))
 
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
@@ -479,32 +457,52 @@
                     diagnostics)))))
       (values result parsed-messages output-path))
 
+   
+   
+  (define (flatten-racket-files)
+    ;; Create a temporary directory
+    (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
+    ;; copy the common folder to the temp dir -- for backward compatibility this term
+    (copy-directory/files project-common (build-path temp-dir "common"))
+    ;; copy the question folder to the temp dir
+    (copy-directory/files base (build-path temp-dir question-dir-name))
+    ;; copy all files in the common folder to the question folder
+    (for-each (lambda (apath)
+                (match-define-values (_ filename _) (split-path apath))
+                (copy-file apath (check-and-build-path temp-dir question-dir-name filename) #t))
+              project-common-list)
+    temp-dir)
+  
+  (define racket-temp-dir (when (equal? lang 'racket) (flatten-racket-files)))
+
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket (values #t '() (check-and-build-path project-base file))]))
+      ['racket (values #t '() (check-and-build-path racket-temp-dir question-dir-name exe))]))
 
   (cond
     [(and result (empty? tests))
       (define pid (run-program target base lang #f is-cli))
-      (when (equal? lang 'C)
-        (thread
-          (lambda ()
-            (sync (program-wait-evt pid))
-            (delete-directory/files target #:must-exist? #f))))
+      (thread
+        (lambda ()
+          (sync (program-wait-evt pid))
+          (match lang
+            ['C (delete-directory/files target #:must-exist? #f)]
+            ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
       (define pids (map
                      (lambda (test)
                        (run-program target base lang test is-cli))
                      tests))
-      (when (equal? lang 'C)
-        (thread
-          (lambda ()
-            (let loop ([evts (map program-wait-evt pids)])
-              (unless (empty? evts)
-                (loop (remove (apply sync evts) evts))))
-            (delete-directory/files target #:must-exist? #f))))
+      (thread
+        (lambda ()
+          (let loop ([evts (map program-wait-evt pids)])
+            (unless (empty? evts)
+              (loop (remove (apply sync evts) evts))))
+          (match lang
+            ['C (delete-directory/files target #:must-exist? #f)]
+            ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
       (eprintf "b2coutts: messages are ~s\n" messages)
