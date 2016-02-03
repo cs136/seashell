@@ -418,8 +418,13 @@ input::-ms-clear {
 }
 
 .cm-line-too-long {
-  background-color: #E91E63 !important; 
-  color: white !important;
+  background-color: #FCF8E3; 
+  background-color: rgba(252,248,227,0.8); 
+}
+
+.cm-s-3024-night
+.cm-line-too-long {
+   color: #795548 !important;
 }
 
 /* navbar overrides */
