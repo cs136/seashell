@@ -683,14 +683,29 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.currentMarmosetProject = function(question) {
           var self = this;
-          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]?$/i.test(question)) {
-            var guess = self.name.replace(/^a/i, "A") + question.replace(/^q/i, "P");
-            var extended = guess+"Extended";
+          // first test if the project/question is an assigment 
+          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]*$/i.test(question)) {
+            var withoutA = self.name.substr(1);    // eg. "A5" -> "5"
+            var withoutQ = question.substr(1);     // eg. "q3b" -> "3b"
+
+            // construct two case-insensitive regexes
+            // match several possibilities:
+            // - A2p5b
+            // - A5q5b
+            var regexFormat = sprintf("^a%s(q|p)%s", withoutA, withoutQ);
+            var guess = new RegExp(regexFormat, "i");                
+            var extended = new RegExp(regexFormat + "extended", "i"); 
             return marmoset.projects().then(function(projects) {
-              if(projects.indexOf(extended) >= 0)
-                return $q.when(extended);
-              if(projects.indexOf(guess) >= 0)
-                return $q.when(guess);
+              return $q.when(
+                // search for extended first
+                _.find(projects, function(p) {
+                  return extended.test(p); 
+                }) || 
+                // then search for non-extension
+                _.find(projects, function(p) {
+                  return guess.test(p); 
+                }) 
+              );
             });
           }
           return $q.when(false);
