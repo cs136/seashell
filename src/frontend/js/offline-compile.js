@@ -59,6 +59,7 @@ self.onmessage = function(msg) {
   function compile(sources) {
     var cc = Module.seashell_compiler_make();
     for(var i=0; i<sources.length; i++) {
+      console.log("Adding "+sources[i]+" to compiler");
       Module.seashell_compiler_add_file(cc, "/working/"+sources[i]);
     }
     var cres = Module.seashell_compiler_run(cc);

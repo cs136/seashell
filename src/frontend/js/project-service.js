@@ -86,10 +86,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellFile.prototype.getDependencies = function() {
           var self = this;
           var deps = [];
-          var question = self.project.root.find(self.name.slice(2));
-          var common = self.project.root.find([self.name[0],"common"]);
-          deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
-          deps.concat(common.children);
+          var question = self.project.root.find(self.name.slice(0,1));
+          var common = self.project.root.find("common");
+          deps = deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
+          deps = deps.concat(common.children);
           return $q.all(_.map(deps, function(d) { return d.read(); }))
             .then(function() { return deps; });
         }
@@ -153,6 +153,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               })
               .catch(function() {
                 localfiles.readFile(self.project.name, self.fullname()).then(function(conts) {
+                  if(conts === null) {
+                    def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                  }
                   self.offline_checksum = conts.offline_checksum;
                   self.online_checksum = conts.online_checksum;
                   self.contents = conts.contents;
@@ -268,10 +271,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             if (match.length>0) {
               return match[0]._placeInTree(file, path.slice(1), soft_place,
                 contents, encoding, normalize);
+            }
             else {
               var dir = new SeashellFile(file.project,
                 file.name.slice(0,file.name.length-path.length+1).join('/'), null, true);
-              return (dir.fullname === "" ? $q.when() : 
+              return (dir.fullname() === "" ? $q.when() : 
                   $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
@@ -354,7 +358,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
           return result.then(function () {
             return $q.when(ws.socket.listProject(self.name)).then(function(files) {
-               self.root = new SeashellFile(self, "", true);
+               self.root = new SeashellFile(self, "", null, true);
                   _.map(files, function(f) {
                    self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
                });
@@ -668,8 +672,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               }
             };
             return $q.when(file.getDependencies()).then(function(deps) {
+              var file_arr = _.map(deps, function(f) { return f.toWorker(); });
               self.compiler.postMessage({
-                files: _.map(deps, function(f) { return f.toWorker(); }),
+                files: file_arr,
                 tests: tests
               });
               return res.promise;
