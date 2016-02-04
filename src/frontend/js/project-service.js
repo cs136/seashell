@@ -154,7 +154,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               .catch(function() {
                 localfiles.readFile(self.project.name, self.fullname()).then(function(conts) {
                   if(conts === null) {
-                    def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                    return def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
                   }
                   self.offline_checksum = conts.offline_checksum;
                   self.online_checksum = conts.online_checksum;
