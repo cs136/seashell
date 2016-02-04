@@ -453,6 +453,19 @@
               (result . 
                       #hash((data . ,(bytes->string/utf-8 data))
                             (checksum . ,checksum))))]
+      ;; for getting contents of object files in offline mode..
+      ;;  should probably just combine this with above call
+      ;;  so the backend can deal with the 2 cases and send
+      ;;  another flag back
+      [(hash-table
+        ('id id)
+        ('type "readFileBytes")
+        ('project project)
+        ('file file))
+       (define-values (data _) (read-file project file))
+       #hash((id . ,id)
+             (success . #t)
+             (result . ,(bytes->list data)))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)

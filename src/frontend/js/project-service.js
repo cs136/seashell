@@ -102,13 +102,38 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
         SeashellFile.prototype.read = function() {
           var self = this;
-          console.log(localfiles.readFile(self.project.name, self.fullname()));
-          return $q.when(ws.socket.readFile(self.project.name, self.fullname()))
-            .then(function (conts) {
-              // TODO: should do something here if the checksum is not what we expect.
-              self.checksum = conts.checksum;
-              return conts.data;
-            });
+          var def = $q.defer();
+          if(self.contents !== null) {  
+            def.resolve(self.contents);
+          }
+          else {
+            $q.when(ws.socket.readFile(self.project.name, self.fullname()))
+              .then(function(conts) {
+                if(self.online_checksum != conts.checksum) {
+                  // TODO online file has changed since we saw it.. we should merge 
+                }
+                else if(self.offline_checksum != conts.checksum) {
+                  // TODO offline file differs from online and we are now connected..
+                  //   should update online file
+                  self.write(self.contents);
+                }
+                self.online_checksum = conts.checksum;
+                self.contents = conts.data;
+                def.resolve(conts.data);
+              })
+              .catch(function() {
+                localfiles.readFile(self.project.name, self.fullname()).then(function(conts) {
+                  if(conts === null) {
+                    return def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                  }
+                  self.offline_checksum = conts.offline_checksum;
+                  self.online_checksum = conts.online_checksum;
+                  self.contents = conts.contents;
+                  def.resolve(self.contents);
+                });
+              });
+          }
+          return def.promise;
         };
 
         /**
