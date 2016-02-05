@@ -228,7 +228,10 @@
 (define/contract (restore-file-from-template project file template)
   (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
   (define ok #f)
-  (define destination (check-and-build-path (build-project-path project) file))
+  (define-values (question-dir filename _) (split-path file))
+  (define dest-dir (check-and-build-path (build-project-path project) question-dir))
+  (make-directory* dest-dir)
+  (define destination (check-and-build-path dest-dir filename))
   (define source (explode-path file))
   (call-with-template template
                       (lambda (port)
