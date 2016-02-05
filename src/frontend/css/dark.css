@@ -127,6 +127,7 @@ a.question-link.ng-binding {
 /* file-text is the folder number of the question (file) currently open */
 .file-text {
   color: #ddd;
+  word-spacing: 2px;
 }
 
 .file-link {

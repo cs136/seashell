@@ -86,17 +86,12 @@ angular.module('frontend-app')
         /** Refreshes the controller [list of files, ...] */
         self.refresh = function () {
           function groupfiles(lof) {
-            function grpnm(nm) {
-              var lst = nm.split(".");
-              lst.pop();
-              return lst.join(".");
-            }
             lof.sort();
             var groups = [];
             for(var i=0; i<lof.length; i++) {
               groups.push([lof[i]]);
               var current_file = lof[i];
-              while(i<lof.length-1 && grpnm(lof[i+1]) == grpnm(lof[i])) {
+              while(i<lof.length-1 && lof[i+1] == lof[i]) {
                 groups[groups.length-1].push(lof[i+1]);
                 lof.splice(i+1, 1);
               }
