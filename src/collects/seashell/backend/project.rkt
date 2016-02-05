@@ -300,7 +300,7 @@
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
 ;; (get-co-files/rec main-file file-dir common-dir
-;; Produces a list of the user's header files included by c-files, recursively resolving
+;; Produces a list of the user's compilation files, recursively resolving
 ;; dependencies
 ;;
 ;; Arguments:
