@@ -501,7 +501,8 @@
     ;; Create a temporary directory
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
     ;; copy the common folder to the temp dir -- for backward compatibility this term
-    (copy-directory/files project-common (build-path temp-dir "common"))
+    (when (directory-exists? project-common)
+      (copy-directory/files project-common (build-path temp-dir "common")))
     ;; copy the question folder to the temp dir
     (copy-directory/files base (build-path temp-dir question-dir-name))
     ;; copy all files in the common folder to the question folder
