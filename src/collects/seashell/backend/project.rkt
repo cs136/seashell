@@ -66,7 +66,8 @@
          racket/match
          racket/string
          racket/list
-         racket/port)
+         racket/port
+         racket/set)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -298,24 +299,62 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (get-headers main-file)
-;; Produces a list of the local (i.e. the user's) header files included by a program, without .h
+;; (get-headers/rec main-file file-dir common-dir
+;; Produces a list of the user's header files included by c-files, recursively resolving
+;; dependencies
 ;;
 ;; Arguments:
-;;  main-file  - The .c file being compiled
+;;  c-files    - The .c files being compiled
 ;;  file-dir   - The directory containing main-file
 ;;  common-dir - The directory containing the common subdirectory
 ;;
 ;; Returns:
 ;;  A list of the .h files included by a program, with the .h extension stripped
+(define/contract (get-headers/rec c-files o-files file-dir common-dir depth)
+  (-> (listof path-string?) (listof path-string?) path? path? exact-nonnegative-integer? 
+      (values (listof path-string?) (listof path-string?)))
+
+  (logf 'debug "c-files is ~s\n" c-files)
+  (logf 'debug "o-files is ~s\n" o-files)
+
+  (define headers (get-headers c-files file-dir common-dir))
+  (logf 'debug "Header files are ~s." headers)
+
+  (define-values (found-c-files found-o-files) (get-co-files headers))
+  (logf 'debug ".c files are ~s." found-c-files)
+  (logf 'debug ".o files are ~s." found-o-files)
+
+  (cond
+    ;; TODO: off by one on depth? subset? works w.r.t. path-string? vs string?
+    [(or (> depth (read-config 'header-search-depth)) 
+         (and (subset? found-c-files c-files)
+              (subset? found-o-files o-files))) 
+     (values c-files o-files)]
+    [else 
+      (get-headers/rec (remove-duplicates (append c-files found-c-files)) 
+                       (remove-duplicates (append o-files found-o-files))
+                       file-dir common-dir (add1 depth))]))
+
+
+;; (get-headers c-files file-dir common-dir)
+;; Produces a list of the user's header files included by the files in c-files (without recursively
+;; resovling dependencies
+;;
+;; Arguments:
+;;  c-files    - The .c files being compiled
+;;  file-dir   - The directory containing main-file
+;;  common-dir - The directory containing the common subdirectory
+;;
+;; Returns:
+;;  A list of the .h files included by the files in c-files, with the .h extension stripped
 ;; Raises:
 ;;  exn:project if an included header is not a .h file
 ;; TODO: need to clean up the subprocess and ports?
-(define/contract (get-headers main-file file-dir common-dir)
-  (-> path-string? path? path? (listof path-string?))
+(define/contract (get-headers c-files file-dir common-dir)
+  (-> (listof path-string?) path? path? (listof path-string?))
   (define-values (clang clang-output clang-input clang-error)
     ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f #f (read-config 'system-linker) (list "-E" main-file "-I" common-dir)))
+    (apply subprocess #f #f #f (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
   (define files
     (remove-duplicates
       (filter values
@@ -348,6 +387,9 @@
 ;;  corresponding .o or .c file, or if a .h file has both a .c and .o file.
 (define/contract (get-co-files headers)
   (-> (listof path-string?) (values (listof path?) (listof path?)))
+
+  ;; TODO: object/c files must be in the same directory as the header
+  (logf 'debug "headers in get-co-files: ~s\n" headers)
   (for/fold ([c-files '()]
              [o-files '()])
             ([hdr headers])
@@ -387,7 +429,6 @@
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
-
   (define project-base (if is-cli name (build-project-path name)))
   (define project-common (if is-cli
     (build-path project-base (read-config 'common-subdirectory))
@@ -408,15 +449,12 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
-  
-  (match-define-values (_ question-dir-name _) (split-path base))
 
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
-    (define headers (get-headers (build-path base exe) base project-common))
-    (logf 'debug "Header files are ~s." headers)
+    (define-values (c-files o-files)
+      (get-headers/rec (list (build-path base exe)) '() base project-common 0))
 
-    (define-values (c-files o-files) (get-co-files headers))
     (logf 'debug ".c files are ~s." c-files)
     (logf 'debug ".o files are ~s." o-files)
 
@@ -457,8 +495,6 @@
                     diagnostics)))))
       (values result parsed-messages output-path))
 
-   
-   
   (define (flatten-racket-files)
     ;; Create a temporary directory
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
