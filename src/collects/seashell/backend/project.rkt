@@ -299,7 +299,7 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (get-headers/rec main-file file-dir common-dir
+;; (get-co-files/rec main-file file-dir common-dir
 ;; Produces a list of the user's header files included by c-files, recursively resolving
 ;; dependencies
 ;;
@@ -310,7 +310,7 @@
 ;;
 ;; Returns:
 ;;  A list of the .h files included by a program, with the .h extension stripped
-(define/contract (get-headers/rec c-files o-files file-dir common-dir depth)
+(define/contract (get-co-files/rec c-files o-files file-dir common-dir depth)
   (-> (listof path-string?) (listof path-string?) path? path? exact-nonnegative-integer? 
       (values (listof path-string?) (listof path-string?)))
 
@@ -331,7 +331,7 @@
               (subset? found-o-files o-files))) 
      (values c-files o-files)]
     [else 
-      (get-headers/rec (remove-duplicates (append c-files found-c-files)) 
+      (get-co-files/rec (remove-duplicates (append c-files found-c-files)) 
                        (remove-duplicates (append o-files found-o-files))
                        file-dir common-dir (add1 depth))]))
 
@@ -450,10 +450,12 @@
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
 
+  (match-define-values (_ question-dir-name _) (split-path base))
+
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
     (define-values (c-files o-files)
-      (get-headers/rec (list (build-path base exe)) '() base project-common 0))
+      (get-co-files/rec (list (build-path base exe)) '() base project-common 0))
 
     (logf 'debug ".c files are ~s." c-files)
     (logf 'debug ".o files are ~s." o-files)
