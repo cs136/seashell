@@ -9,7 +9,9 @@
 (define test-add-hdr "int add(int, int);\n")
 (define test-add-imp "#include \"add.h\"\nint add(int a, int b){ return a+b; }\n")
 (define test-mult-hdr "int mult(int, int);\n")
-(define test-mult-imp "#include \"multiply.h\"\nint mult(int a, int b){ return a*b; }\n")
+(define test-mult-imp "#include \"multiply.h\"\n#include \"mod2.h\"\nint mult(int a, int b){ noop(); return a*b; }\n")
+(define test-mod2-hdr "void noop(void);\n")
+(define test-mod2-imp "#include \"mod2.h\"\nvoid noop(void){}\n")
 (define test-main-file #<<HERE
 #include <stdio.h>
 #include "add.h"
@@ -80,12 +82,14 @@ HERE
       (for ([file '("main.c"
                     "add.h" "add.c"
                     "common/multiply.h" "common/multiply.c"
+                    "common/mod2.h" "common/mod2.c"
                     "tests/pass.in" "tests/pass.expect"
                     "tests/fail.in" "tests/fail.expect"
                     "tests/crash.in" "tests/crash.expect")]
             [contents (list test-main-file
                             test-add-hdr test-add-imp
                             test-mult-hdr test-mult-imp
+                            test-mod2-hdr test-mod2-imp
                             "3\n4\n" "7\n"
                             "4\n5\n" "2\n"
                             "0\n0\n" "0\n")])
