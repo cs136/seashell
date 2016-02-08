@@ -853,54 +853,44 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  to clone, or a error message.
       */
       self.fetch = function() {
-        return self.list()
-            .then(function (projects) {
-              return $http({url: PROJ_SKEL_URL})
-                .catch(function () {
-                  return $q.reject("Could not fetch list of skeletons!");
-                })
-                .then(function (results) {
-                  // expects a list of project (assignment) names : (listof String)
-                  var skels = results.data;
-                  var new_projects = _.filter(skels,
-                      function (skel) {
-                        var index = -1;
-                        var len = projects.length;
-                        for(var i = 0; i < len; i++){
-                          index = projects[i].indexOf(skel);
-                          if(index != -1){
-                            return false;
-                          }
-                        }
-                        return true;
-                      });
-                  var failed_projects = [];
-                  var start = $q.when();
-                  return _.foldl(new_projects,
-                      function(in_continuation, template) {
-                        function clone(failed) {
-                          return $q.when(ws.socket.newProjectFrom(template,
-                             sprintf(PROJ_ZIP_URL_TEMPLATE,
-                              template)))
-                           .then(function () {
-                             if (failed) {
-                               return $q.reject("Propagating failure...");
-                             }
-                           })
-                           .catch(function (info) {
-                             failed_projects.push(template);
-                             return $q.reject("Propagating failure...");
-                           });
-                        }
-                        return in_continuation.then(
-                           function () {return clone(false);},
-                           function () {return clone(true);}); 
-                      },
-                      start)
-                    .then(function() {return (new_projects);})
-                    .catch(function() {return $q.reject(failed_projects);});
-                });
+         return self.list().then(function (projects) {
+            return $http({url: PROJ_SKEL_URL}).catch(function () {
+               return $q.reject("Could not fetch list of skeletons!");
+            }).then(function (results) {
+               // expects a list of project (assignment) names : (listof String)
+               var skels = results.data;
+               var new_projects = _.filter(skels,
+                   function (skel) {
+                     var index = -1;
+                     var len = projects.length;
+                     for(var i = 0; i < len; i++){
+                       index = projects[i].indexOf(skel);
+                       if(index != -1){
+                         return false;
+                       }
+                     }
+                     return true;
+                   });
+               var failed_projects = [];
+               var start = $q.when();
+               return _.foldl(new_projects, function(in_continuation, template) {
+                  function clone(failed) {
+                     return $q.when(ws.socket.newProjectFrom(template, 
+                        sprintf(PROJ_ZIP_URL_TEMPLATE, template))).then(function () {
+                           if (failed) {
+                              return $q.reject("Propagating failure...");
+                           }
+                        }).catch(function (info) {
+                          failed_projects.push(template);
+                          return $q.reject("Propagating failure...");
+                        });
+                     }
+                     return in_continuation.then(function () {return clone(false);},
+                                                 function () {return clone(true);}); 
+               }, start).then(function() {return (new_projects);})
+                        .catch(function() {return $q.reject(failed_projects);});
             });
+         });
       };
 
       /**
