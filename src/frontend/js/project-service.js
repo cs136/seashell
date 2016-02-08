@@ -861,7 +861,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
          }
          return self._userWhitelist;
-      }
+      };
  
        /* Returns a list of projects in the whitelist. 
          This method only send requests to the server once when it's initially called.
@@ -879,7 +879,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
          }
          return self._projectWhitelist;
-      }
+      };
 
       /**
        * Fetches new assignments.
@@ -894,7 +894,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             return $http({url: PROJ_SKEL_URL}).catch(function () {
                return $q.reject("Could not fetch list of skeletons!");
             }).then(function (results) {
-               var localProjects = projects.map(function(v, k) {return v[0]}).sort();
+               var localProjects = projects.map(function(v, k) {return v[0];}).sort();
                // expects a list of project (assignment) names : (listof String)
                var skels = results.data.sort();
                var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
