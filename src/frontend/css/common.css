@@ -419,7 +419,17 @@ input::-ms-clear {
 }
 
 .col-too-long {
-  color: rgb(240, 0, 0);
+  color: #DB2D20; 
+}
+
+.cm-line-too-long {
+  background-color: #FCF8E3; 
+  background-color: rgba(252,248,227,0.8); 
+}
+
+.cm-s-3024-night
+.cm-line-too-long {
+   color: #795548 !important;
 }
 
 /* navbar overrides */
