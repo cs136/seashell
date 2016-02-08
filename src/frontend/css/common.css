@@ -24,6 +24,11 @@ body {
   padding: 2px;
 }
 
+/* Button Color */
+#toolbar-set-runner:disabled {
+    color: #6f7f8c;
+}
+
 /** Height-manipulation */
 .disconnected {
 }
