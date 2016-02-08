@@ -898,7 +898,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                // expects a list of project (assignment) names : (listof String)
                var skels = results.data.sort();
                var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
-               self.userWhitelist().then(function(usernames) {
+               return self.userWhitelist().then(function(usernames) {
                   if (_.contains(usernames, user)) {
                      return self.projectWhitelist().then(function(more) {
                         skels = skels.concat(more);
@@ -922,7 +922,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                         }
                         return in_continuation.then(function () {return clone(false);},
                                                     function () {return clone(true);}); 
-                  }, start).then(function() {return (new_projects);})
+                  }, start).then(function() {return new_projects;})
                            .catch(function() {return $q.reject(failed_projects);});
                });
             });
