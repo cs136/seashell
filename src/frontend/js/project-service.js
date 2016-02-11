@@ -601,12 +601,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * question settings file.
          */
         SeashellProject.prototype.getFileToRun = function (question) {
-            var self = this;
-            return $q.when(ws.socket.getFileToRun(self.name, question))
-                .then(function (result) {
-                    self.fileToRun = result;
-                    return result;
-                });
+          var self = this;
+          return $q.when(ws.socket.getFileToRun(self.name, question))
+            .then(function (result) {
+                self.fileToRun = result;
+                return result;
+            })
+            .catch(function() {
+              return localfiles.getRunnerFile(self.name, question);
+            });
         };
 
 
@@ -616,9 +619,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * Modify the settings file to set which file to run.
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
-            var self = this;
-            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file))
-              .then(function() { self.fileToRun = file; });
+          var self = this;
+          return $q.when([ws.socket.setFileToRun(self.name, question, folder, file),
+                          localfiles.setRunnerFile(self.name, question, folder, file)])
+            .then(function() { self.fileToRun = file; });
         };
 
         /**
