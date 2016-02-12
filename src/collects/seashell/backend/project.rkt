@@ -352,9 +352,10 @@
 ;; TODO: need to clean up the subprocess and ports?
 (define/contract (get-headers c-files file-dir common-dir)
   (-> (listof path-string?) path? path? (listof path-string?))
-  (define-values (clang clang-output clang-input clang-error)
+  (define clang-error (open-output-file "/dev/null" #:exists 'truncate))
+  (define-values (clang clang-output clang-input fake-error)
     ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f #f (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
+    (apply subprocess #f #f clang-error (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
   (define files
     (remove-duplicates
       (filter values
@@ -370,8 +371,8 @@
                 [else #f])]
             [#f #f])))))
   (close-input-port clang-output)
-  (close-input-port clang-error)
   (close-output-port clang-input)
+  (close-output-port clang-error)
   files)
 
 ;; (get-co-files headers)
