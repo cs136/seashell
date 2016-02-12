@@ -23,8 +23,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http',
-    function($scope, $q, ws, marmoset, $http) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http', '$cookies',
+    function($scope, $q, ws, marmoset, $http, $cookies) {
       "use strict";
       var self = this;
       var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
@@ -34,6 +34,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
+      var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
+      var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
      
       var SeashellProject = (function () { 
         /**
@@ -843,6 +845,41 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return self._listSkelProjects;
       };
       
+      /* Returns a list of user names in the whitelist. 
+         This method only send requests to the server once when it's initially called.
+         The server response is remembered for future calls.
+         
+         Deffered type: [String]
+      */
+      self.userWhitelist = function() {
+         if (! self._userWhitelist) {
+            self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
+               return result.data;
+            }).catch(function(err) {
+               console.warn("Could not access the user whitelist. Assuming it's empty. Received:", err);
+               return [];
+            });
+         }
+         return self._userWhitelist;
+      };
+ 
+       /* Returns a list of projects in the whitelist. 
+         This method only send requests to the server once when it's initially called.
+         The server response is remembered for future calls.
+         
+         Deffered type: [String], eg ["A1", "A2"]
+      */     
+      self.projectWhitelist = function() {
+         if (! self._projectWhitelist) {
+            self._projectWhitelist = $http.get(PROJ_WHITE_LIST_URL).then(function(result) {
+               return result.data;
+            }).catch(function(err) {
+               console.warn("Could not access the project whitelist. Assuming it's empty. Received:", err);
+               return [];
+            });
+         }
+         return self._projectWhitelist;
+      };
 
       /**
        * Fetches new assignments.
@@ -853,54 +890,43 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  to clone, or a error message.
       */
       self.fetch = function() {
-        return self.list()
-            .then(function (projects) {
-              return $http({url: PROJ_SKEL_URL})
-                .catch(function () {
-                  return $q.reject("Could not fetch list of skeletons!");
-                })
-                .then(function (results) {
-                  // expects a list of project (assignment) names : (listof String)
-                  var skels = results.data;
-                  var new_projects = _.filter(skels,
-                      function (skel) {
-                        var index = -1;
-                        var len = projects.length;
-                        for(var i = 0; i < len; i++){
-                          index = projects[i].indexOf(skel);
-                          if(index != -1){
-                            return false;
-                          }
-                        }
-                        return true;
-                      });
+         return self.list().then(function (projects) {
+            return $http({url: PROJ_SKEL_URL}).catch(function () {
+               return $q.reject("Could not fetch list of skeletons!");
+            }).then(function (results) {
+               var localProjects = projects.map(function(v, k) {return v[0];}).sort();
+               // expects a list of project (assignment) names : (listof String)
+               var skels = results.data.sort();
+               var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
+               return self.userWhitelist().then(function(usernames) {
+                  if (_.contains(usernames, user)) {
+                     return self.projectWhitelist().then(function(more) {
+                        skels = skels.concat(more);
+                     });
+                  }
+               }).finally(function() {
+                  var new_projects = _.difference(skels, localProjects);
                   var failed_projects = [];
                   var start = $q.when();
-                  return _.foldl(new_projects,
-                      function(in_continuation, template) {
-                        function clone(failed) {
-                          return $q.when(ws.socket.newProjectFrom(template,
-                             sprintf(PROJ_ZIP_URL_TEMPLATE,
-                              template)))
-                           .then(function () {
-                             if (failed) {
-                               return $q.reject("Propagating failure...");
-                             }
-                           })
-                           .catch(function (info) {
+                  return _.foldl(new_projects, function(in_continuation, template) {
+                     function clone(failed) {
+                        return $q.when(ws.socket.newProjectFrom(template, 
+                           sprintf(PROJ_ZIP_URL_TEMPLATE, template))).then(function () {
+                              if (failed) {
+                                 return $q.reject("Propagating failure...");
+                              }
+                           }).catch(function (info) {
                              failed_projects.push(template);
                              return $q.reject("Propagating failure...");
                            });
                         }
-                        return in_continuation.then(
-                           function () {return clone(false);},
-                           function () {return clone(true);}); 
-                      },
-                      start)
-                    .then(function() {return (new_projects);})
-                    .catch(function() {return $q.reject(failed_projects);});
-                });
+                        return in_continuation.then(function () {return clone(false);},
+                                                    function () {return clone(true);}); 
+                  }, start).then(function() {return new_projects;})
+                           .catch(function() {return $q.reject(failed_projects);});
+               });
             });
+         });
       };
 
       /**

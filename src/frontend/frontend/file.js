@@ -290,6 +290,15 @@ angular.module('frontend-app')
               "Cmd-S": function() { },
               "Tab": betterTab,
               "Shift-Tab": negTab,
+              // font size decrease/increase shortcuts
+              "Ctrl-,": function() {
+                settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
+                settings.save();
+              },
+              "Ctrl-.": function() {
+                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
+                settings.save();
+              },
             }
           };
           self.consoleOptions = {
@@ -323,6 +332,7 @@ angular.module('frontend-app')
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
+              if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               self.runFile();
             }
           }, {
@@ -331,6 +341,7 @@ angular.module('frontend-app')
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
+              if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               self.testFile();
             }
           }];
