@@ -29,6 +29,7 @@
          racket/match
          racket/contract
          racket/port
+         racket/string
          json)
 
 (provide conn-dispatch)
@@ -521,6 +522,15 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "restoreFileFrom")
+        ('project project)
+        ('file file)
+        ('template template))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(restore-file-from-template project file template)))]
       [(hash-table
         ('id id)
         ('type "getMostRecentlyUsed")
