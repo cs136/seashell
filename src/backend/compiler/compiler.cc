@@ -163,6 +163,20 @@ struct seashell_compiler {
   seashell_compiler();
 };
 
+struct seashell_preprocessor {
+  /** Flags to the compiler */
+  std::vector<std::string> compiler_flags;
+
+  /** Preprocessor messages */
+  std::vector<seashell_diag> messages;
+
+  /** Main file to begin preprocessing from */
+  std::string main_file;
+
+  /** Produced list of sources */
+  std::vector<std::string> sources;
+};
+
 seashell_compiler::seashell_compiler() :
   context(),
   module("seashell-compiler-output", context) {
@@ -937,6 +951,214 @@ static int compile_module (seashell_compiler* compiler,
     /* Success. */
     return 0;
     #undef PUSH_DIAGNOSTIC
+}
+
+/** seashell_preprocessor methods */
+
+/**
+ * seashell_preprocessor_make(void)
+ * Creates a new instance of the Seashell preprocessor.
+ *
+ * Returns:
+ *  A new instance.
+ *
+ * Notes:
+ *  It might be worthwhile to assign seashell_preprocessor_free as
+ *  the cleanup function for garbage collection in the Racket FFI.
+ */
+extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void) {
+  struct seashell_preprocessor *r = new seashell_preprocessor;
+#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
+  printf("[preprocessor] Allocating new preprocessor object at %p\n", r);
+#endif
+  return r;
+}
+
+/**
+ * seashell_preprocessor_free(struct seashell_preprocessor *preprocessor)
+ * Deletes an instance of the Seashell compiler.
+ *
+ * Arguments:
+ *  preprocessor - A Seashell preprocessor instance.
+ */
+extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor) {
+#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
+  printf("[preprocessor] De-Allocating new preprocessor object at %p\n", preprocessor);
+#endif
+  delete preprocessor;
+}
+
+/**
+ * seashell_preprocessor_set_main_file(struct seashell_preprocessor* preprocessor, const char* file)
+ * Sets the main file to begin running the preprocessor on
+ *
+ * Arguments:
+ *  preprocessor - A Seashell preprocessor instance.
+ *  file - Pathname of file to add.
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char* file) {
+#else
+void seashell_preprocessor_add_file(struct seashell_preprocessor *preprocessor, std::string file) {
+#endif
+  preprocessor->main_file = file;
+}
+
+/**
+ * seashell_preprocessor_get_include_count(struct seashell_preprocessor* preprocessor)
+ * Gets the number of include dependencies the preprocessor found
+ *
+ * Arguments:
+ *  preprocessor - A Seashell preprocessor instance.
+ */
+extern "C" int seashell_preprocessor_get_include_count(struct seashell_preprocessor* preprocessor) {
+  return preprocessor->sources.size();
+}
+
+static int preprocess_file(struct seashell_preprocessor *, const char *);
+
+/**
+ * seashell_preprocessor_run(struct seashell_preprocessor *preprocessor)
+ * Runs the Seashell preprocessor instance.
+ *
+ * Arguments:
+ *  preprocessor - A Seashell preprocessor instance.
+ *
+ * Returns
+ *  0 if everything went OK, nonzero otherwise.
+ *
+ * Notes:
+ *  May output some additional error information to stderr.
+ *  seashell_llvm_setup must be called before this function.
+ */
+extern "C" int seashell_preprocessor_run(struct seashell_preprocessor* preprocessor) {
+  return preprocess_file(preprocessor, preprocessor->main_file.c_str());
+}
+
+class PPCallbacks : public clang::PPCallbacks {
+  
+  clang::SourceManager &_sm;
+
+public:
+  PPCallbacks(clang::SourceManager &sm) : _sm(sm) { }
+
+  void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
+    clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
+    const clang::FileEntry *File, clang::StringRef SearchPath, clang::StringRef RelativePath,
+    const clang::Module *Imported) {
+    // TODO implement include handling
+  }
+};
+
+/**
+ * preprocess_file(seashell_preprocessor* preprocessor, const char* src_path)
+ *
+ * Compiles a given source file, links it into a module.
+ *
+ * Arguments:
+ *  preprocessor - the Seashell preprocessor object in use
+ *  src_path - Main file to preprocess.
+ *
+ * Returns:
+ *  1 on error, 0 otherwise.
+ */
+static int preprocess_file(struct seashell_preprocessor* preprocessor, const char* src_path)
+{
+#ifndef NDEBUG
+  fprintf(stderr, "[preprocessor] Preprocessing file: %s\n", src_path);
+#endif
+
+  std::string Error;
+  bool Success;
+  std::vector<const char*> args;
+  size_t index;
+
+  std::vector<seashell_diag>& pp_messages = preprocessor->messages;
+
+  #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
+  /** Set up compilation arguments. */
+  for(std::vector<std::string>::iterator p = preprocessor->compiler_flags.begin();
+        p != preprocessor->compiler_flags.end();
+        ++p)
+  {
+    args.push_back(p->c_str());
+  }
+  args.push_back(src_path);
+  
+  /** Parse Diagnostic Arguments */
+  clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
+
+  /* Invoke clang to compile file to LLVM IR. */
+  SeashellDiagnosticClient diag_client(&*diag_opts);
+
+  clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_ID(new clang::DiagnosticIDs());
+  clang::DiagnosticsEngine CI_Diags(diag_ID, &*diag_opts, &diag_client, false);
+  clang::FileManager CI_FM((clang::FileSystemOptions()));
+  clang::SourceManager CI_SM(CI_Diags, CI_FM);
+
+  clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+
+
+  Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
+  if (!Success) {
+    PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInvocation::CreateFromArgs() failed.");
+    std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                std::back_inserter(pp_messages));
+    return 1;
+  }
+
+  clang::CompilerInstance Clang;
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
+  Clang.setInvocation(CI.get());
+#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
+  Clang.setInvocation(CI.getPtr());
+#endif
+  Clang.createDiagnostics(&diag_client, false);
+  Clang.createFileManager();
+  Clang.createSourceManager(Clang.getFileManager());
+
+  if (!Clang.hasDiagnostics()) {
+    PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
+    std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                std::back_inserter(pp_messages));
+    return 1;
+  }
+
+  /** Add compiler-specific headers. */
+#ifndef __EMSCRIPTEN__
+  if (!IS_INSTALLED() && access (BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", F_OK) != -1) {
+    Clang.getHeaderSearchOpts().AddPath(BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", clang::frontend::System, false, true);
+  } else {
+    Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
+  } 
+  /** NOTE: this will have to change for different platforms */
+#ifdef MULTIARCH_PLATFORM
+  Clang.getHeaderSearchOpts().AddPath("/usr/include/" MULTIARCH_PLATFORM, clang::frontend::System, false, true);
+#endif
+  /** Set up the default (generic) headers */
+  Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
+#else
+  Clang.getHeaderSearchOpts().AddPath("/clang-include/", clang::frontend::System, false, true);
+  Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
+#endif
+
+  /** Run the static analysis pass. */
+  clang::ento::AnalysisAction Analyze;
+  Success = Clang.ExecuteAction(Analyze);
+  if (!Success) {
+    PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(AnalysisAction) failed.");
+    std::copy(diag_client.messages.begin(), diag_client.messages.end(),
+                std::back_inserter(pp_messages));
+    return 1;
+  }
+
+  clang::Preprocessor &pp(Clang.getPreprocessor());
+  PPCallbacks *ppc = new PPCallbacks(CI_SM);
+  pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
+
+  /* Success. */
+  return 0;
+  #undef PUSH_DIAGNOSTIC
 }
 
 #ifdef __EMSCRIPTEN__
