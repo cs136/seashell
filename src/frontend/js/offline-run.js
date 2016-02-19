@@ -46,7 +46,7 @@ function runObj(obj) {
     Module._RT_stdin_buffer += obj.data;
     if(!running)
       run_loop();
-  }
+  };
 
   function run_loop() {
     running = true;
