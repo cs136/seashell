@@ -9,14 +9,19 @@ angular.module('seashell-local-files', [])
       var self = this;
 
       self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
+      // set up localforage to have a per-user store
+      // note that this doesn't actually secure anything:
+      // it only prevents name conflicts
+      localforage.config({
+        name: 'SeashellStorage', // "database name"
+        storeName: self.user     // "table name"
+      }); 
 
       /*
        * Returns the path to where this file is stored.
-       * For now we will simply prepend the username to create
-       * a unique namespace for each user
        */
       self._path = function(project, file) {
-        return self.user + "/" + project + file;
+        return project + file;
       };
 
       /*
