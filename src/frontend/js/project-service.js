@@ -681,6 +681,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.when(file.getDependencies()).then(function(deps) {
               var file_arr = _.map(deps, function(f) { return f.toWorker(); });
               self.compiler.postMessage({
+                runnerFile: self.fileToRun,
                 files: file_arr,
                 tests: tests
               });
