@@ -218,146 +218,194 @@ angular.module('seashell-websocket', ['ngCookies'])
       };
 
 
-      /** The following functions are wrappers around sendMessage.
-       *  Consult dispatch.rkt for a full list of functions.
-       *  These functions take in arguments as specified in server.rkt
-       *  and return a JQuery Deferred object. */
+      // Functions that are prefixed with offline or online
+      //   have that functionality only. Functions with no
+      //   prefix have offline and online functionality.
+      //   That way, functions that have need special cases for 
+      //   online/offline be called separately, whereas the trivial
+      //   cases can be handled in here.
+     
       self.ping = function(deferred) {
+        // TODO: is this even used?
         return self._socket.ping(deferred);
       };
 
       self.compileAndRunProject = function(project, question, test, deferred) {
+        // TODO: offline runner
         return self._socket.compileAndRunProject(project, question, test, deferred);
       };
 
       self.programKill = function(pid, deferred) {
+        // TODO: offline runner
         return self._socket.programKill(pid, deferred);
       };
 
       self.sendEOF = function(pid, deferred) {
+        // TODO: offline runner
         return self._socket.sendEOF(pid, deferred);
       };
 
       self.compileProject = function(project, file, deferred) {
+        // TODO: offline runner
         return self._socket.compileProject(project, file, deferred);
       };
 
       self.saveProject = function(project, message, deferred) {
+        // TODO: offline mode (easy)
         return self._socket.saveProject(project, message, deferred);
       };
 
       self.getProjects = function(deferred) {
+        // TODO: offline mode (store tree in storage-service) 
         return self._socket.getProjects(deferred);
       };
 
       self.listProject = function(name, deferred) {
+        // TODO: disable in offline mode? (used for refreshing from skel)
         return self._socket.listProject(name, deferred);
       };
 
       self.newProject = function(name, deferred) {
+        // TODO: offline mode (tree in storage-service) 
         return self._socket.newProject(name, deferred);
       };
 
       self.newProjectFrom = function(name, src_url, deferred) {
+        // TODO: offline mode (tree in storage-service) 
         return self._socket.newProjectFrom(name, src_url, deferred);
       };
 
       self.deleteProject = function(name, deferred) {
+        // TODO: offline mode (tree in storage-service) 
         return self._socket.deleteProject(name, deferred);
       };
 
       self.lockProject = function(name, deferred) {
+        // TODO: offline mode?
         return self._socket.lockProject(name, deferred);
       };
 
       self.forceLockProject = function(name, deferred) {
+        // TODO: offline mode?
         return self._socket.forceLockProject(name, deferred);
       };
 
       self.unlockProject = function(name, deferred) {
+        // TODO: offline mode?
         return self._socket.unlockProject(name, deferred);
       };
 
-      self.readFile = function(name, file_name, deferred) {
+
+      // These two functions are provided separately
+      // because code for handling online/offline stuff
+      // is compilcated and needs to be dealt with in project-service
+      self.onlineReadFile = function(name, file_name, deferred) {
         return self._socket.readFile(name, file_name, deferred);
       };
 
+      self.offlineReadFile = function(name, file_name, deferred) {
+        return localfiles.readFile(name, file_name);
+      };
+
       self.newFile = function(name, file_name, contents,
+        // TODO: offline mode 
         encoding, normalize, deferred) {
         return self._socket.newFile(name, file_name, contents,
           encoding, normalize, deferred);
       };
 
       self.restoreFileFrom = function(projectName, fpath, url) {
+        // TODO: disable in offline mode
         return self._socket.restoreFileFrom(projectName, fpath, url);
       };
 
 
       self.newDirectory = function(name, dir_name, deferred) {
+        // TODO: offline mode (tree in storage-service) 
         return self._socket.newDirectory(name, dir_name, deferred);
       };
 
+
+      // Contrasting to readFile above, writeFile is simple:
+      // 1. always write to the offline store
+      // 2. attempt to write to the backend if online
       self.writeFile = function(name, file_name, file_content, deferred) {
+        // TODO: offline/online stuff
         return self._socket.writeFile(name, file_name, file_content, deferred);
       };
 
       self.deleteFile = function(name, file_name, deferred) {
+        localfiles.deleteFile(name, file_name);
         return self._socket.deleteFile(name, file_name, deferred);
       };
 
       self.deleteDirectory = function(name, dir_name, deferred) {
+        // TODO: offline mode (tree in storage-service) 
         return self._socket.deleteDirectory(name, dir_name, deferred);
       };
 
       self.programInput = function(pid, contents, deferred) {
+        // TODO: offline runner
         return self._socket.programInput(pid, contents, deferred);
       };
 
       self.getExportToken = function(project, deferred) {
+        // TODO: just disable this for offline mode?
         return self._socket.getExportToken(project, deferred);
       };
 
       self.getUploadFileToken = function(project, file, deferred) {
+        // TODO: just disable this for offline mode
         return self._socket.getUploadFileToken(project, file, deferred);
       };
 
       self.renameFile = function(project, oldName, newName, deferred) {
+        // TODO: rename in offline mode too
         return self._socket.renameFile(project, oldName, newName, deferred);
       };
 
       self.getMostRecentlyUsed = function(project, directory, deferred) {
+        // TODO: offline mode
         return self._socket.getMostRecentlyUsed(project, directory, deferred);
       };
 
       self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
+        // TODO: offline mode
         return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
       };
 
       self.saveSettings = function(settings, deferred) {
+        // TODO: offline mode
         return self._socket.saveSettings(settings, deferred);
       };
 
       self.getSettings = function(deferred) {
+        // TODO: offline mode
         return self._socket.getSettings(deferred);
       };
 
       self.marmosetSubmit = function(project, assn, subdir, deferred) {
+        // TODO: disable for offline mode
         return self._socket.marmosetSubmit(project, assn, subdir, deferred);
       };
 
       self.startIO = function(project, pid, deferred) {
+        //  TODO: offline runner
         return self._socket.startIO(project, pid, deferred);
       };
 
       self.archiveProjects = function(deferred) {
+        // TODO: disable for offline mode
         return self._socket.archiveProjects(deferred);
       };
 
       self.getFileToRun = function(project, question, deferred) {
+        // TODO: offline mode
         return self._socket.getFileToRun(project, question, deferred);
       };
 
       self.setFileToRun = function(project, question, folder, file, deferred) {
+        // TODO: offline mode
         return self._socket.setFileToRun(project, question, folder, file, deferred);
       };
     }
