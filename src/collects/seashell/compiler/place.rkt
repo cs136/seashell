@@ -29,14 +29,14 @@
 ;; seashell-compile-files/place 
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
-(define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
-  (-> (listof string?) (listof string?) (listof path?) (listof path?)
+(define/contract (seashell-compile-files/place user-cflags user-ldflags runnerFile objects)
+  (-> (listof string?) (listof string?) path-string? (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   (cond
     [(and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
       (define-values (read-end write-end) (place-channel))
       (place-channel-put compiler-place 
-                         (list write-end user-cflags user-ldflags sources objects))
+                         (list write-end user-cflags user-ldflags runnerFile objects))
       (match-define 
         (list exn? result data)
         (place-channel-get read-end))

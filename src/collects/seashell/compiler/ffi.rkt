@@ -39,7 +39,14 @@
          seashell_compiler_get_object
          seashell_clang_version
          seashell_compiler_object_arch
-         seashell_compiler_object_os)
+         seashell_compiler_object_os
+
+         seashell_preprocessor_make
+         seashell_preprocessor_free
+         seashell_preprocessor_set_main_file
+         seashell_preprocessor_get_include_count
+         seashell_preprocessor_get_include
+         seashell_preprocessor_run)
 
 (define-ffi-definer define-clang
                     (ffi-lib (read-config 'seashell-clang)))
@@ -89,3 +96,17 @@
                         (memcpy result address size)
                         result]
                       [else #f])))))
+
+(define _seashell_preprocessor-ptr (_cpointer 'seashell-preprocessor))
+(define-clang seashell_preprocessor_free (_fun _seashell_preprocessor-ptr -> _void)
+              #:wrap (deallocator))
+(define-clang seashell_preprocessor_make (_fun -> _seashell_preprocessor-ptr)
+              #:wrap (allocator seashell_preprocessor_free))
+(define-clang seashell_preprocessor_set_main_file
+              (_fun _seashell_preprocessor-ptr _string/utf-8 -> _void))
+(define-clang seashell_preprocessor_get_include_count
+              (_fun _seashell_preprocessor-ptr -> _int))
+(define-clang seashell_preprocessor_get_include
+              (_fun _seashell_preprocessor-ptr _int -> _string/utf-8))
+(define-clang seashell_preprocessor_run
+              (_fun _seashell_preprocessor-ptr -> _int))

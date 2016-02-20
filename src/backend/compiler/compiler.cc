@@ -175,7 +175,7 @@ struct seashell_preprocessor {
   std::string main_file;
 
   /** Produced set of sources */
-  std::set<std::string> sources;
+  std::vector<std::string> sources;
 };
 
 seashell_compiler::seashell_compiler() :
@@ -1016,6 +1016,18 @@ extern "C" int seashell_preprocessor_get_include_count(struct seashell_preproces
   return preprocessor->sources.size();
 }
 
+/**
+ * seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n)
+ * Gets the path of the included source file indexed by n
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
+#else
+std::string *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
+#endif
+  return preprocessor->sources[n].c_str();
+}
+
 static int preprocess_file(struct seashell_preprocessor *, const char *);
 
 /**
@@ -1052,15 +1064,17 @@ public:
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
-      const char *path = realpath(File->getName(), NULL);
+      std::string path = realpath(File->getName(), NULL);
       if(path == NULL) {
         fprintf(stderr, "NULL path encountered.\n");
       }
       else {
+        // TODO this is a quick hack, do this more securely later
+        path[path.length()-1]='c';
         std::pair<std::set<std::string>::iterator, bool> res =_deps.insert(path);
         // if file is a new dependency, add it to worklist
         if(res.second) {
-          fprintf(stderr, "Adding dependency: %s\n", path);
+          fprintf(stderr, "Adding dependency: %s\n", path.c_str());
           _wl.push_back(path);
         }
       }
@@ -1086,16 +1100,19 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
   fprintf(stderr, "[preprocessor] Preprocessing file: %s\n", src_path);
 #endif
 
-  std::string Error;
-  bool Success;
-  std::vector<const char*> args;
-  size_t index;
+  std::set<std::string> sources;
+  sources.insert(src_path);
   std::list<std::string> worklist(1, src_path);
 
   std::vector<seashell_diag>& pp_messages = preprocessor->messages;
 #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
 
   while(worklist.size() > 0) {
+    std::string Error;
+    bool Success;
+    std::vector<const char*> args;
+    size_t index;
+
     /** Set up compilation arguments. */
     for(std::vector<std::string>::iterator p = preprocessor->compiler_flags.begin();
           p != preprocessor->compiler_flags.end();
@@ -1103,10 +1120,15 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     {
       args.push_back(p->c_str());
     }
-    args.push_back(src_path);
+    args.push_back(worklist.front().c_str());
+    worklist.pop_front();
+
+    fprintf(stderr, "[preprocessor] Entering file: %s\n", args.back());
     
     /** Parse Diagnostic Arguments */
     clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
+
+    fprintf(stderr, "bloop\n");
 
     /* Invoke clang to compile file to LLVM IR. */
     SeashellDiagnosticClient diag_client(&*diag_opts);
@@ -1118,6 +1140,7 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
 
     clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
+    fprintf(stderr, "bloop2\n");
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -1126,6 +1149,8 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
                   std::back_inserter(pp_messages));
       return 1;
     }
+
+    fprintf(stderr, "bloop3\n");
 
     clang::CompilerInstance Clang;
 #if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
@@ -1136,6 +1161,10 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
+    fprintf(stderr, "bloop3.5\n");
+    Clang.createPreprocessor(clang::TU_Module);
+
+    fprintf(stderr, "bloop3.75\n");
 
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
@@ -1144,37 +1173,13 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
       return 1;
     }
 
-    /** Add compiler-specific headers. */
-#ifndef __EMSCRIPTEN__
-    if (!IS_INSTALLED() && access (BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", F_OK) != -1) {
-      Clang.getHeaderSearchOpts().AddPath(BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", clang::frontend::System, false, true);
-    } else {
-      Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
-    } 
-    /** NOTE: this will have to change for different platforms */
-#ifdef MULTIARCH_PLATFORM
-    Clang.getHeaderSearchOpts().AddPath("/usr/include/" MULTIARCH_PLATFORM, clang::frontend::System, false, true);
-#endif
-    /** Set up the default (generic) headers */
-    Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
-#else
-    Clang.getHeaderSearchOpts().AddPath("/clang-include/", clang::frontend::System, false, true);
-    Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
-#endif
-
-    /** Run the static analysis pass. */
-    clang::ento::AnalysisAction Analyze;
-    Success = Clang.ExecuteAction(Analyze);
-    if (!Success) {
-      PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(AnalysisAction) failed.");
-      std::copy(diag_client.messages.begin(), diag_client.messages.end(),
-                  std::back_inserter(pp_messages));
-      return 1;
-    }
+    fprintf(stderr, "bloop4\n");
 
     clang::Preprocessor &pp(Clang.getPreprocessor());
-    PPCallbacks *ppc = new PPCallbacks(preprocessor->sources, worklist);
+    PPCallbacks *ppc = new PPCallbacks(sources, worklist);
     pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
+
+    fprintf(stderr, "bloop5\n");
 
     clang::Token token;
     pp.EnterMainSourceFile();
@@ -1182,6 +1187,9 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
       pp.Lex(token);
     } while(token.isNot(clang::tok::eof));
   }
+
+  // convert accumulated set into vector
+  preprocessor->sources = std::vector<std::string>(sources.begin(), sources.end());
 
   /* Success. */
   return 0;

@@ -30,6 +30,16 @@
  seashell-compile-files
  (struct-out seashell-diagnostic))
 
+;; (seashell-resolve-dependencies runnerFile)
+;; Invokes the internal preprocessor to resolve dependencies
+(define/contract (seashell-resolve-dependencies runnerFile)
+  (-> path-string? (listof path?))
+  (define pp (seashell_preprocessor_make))
+  (seashell_preprocessor_set_main_file pp runnerFile)
+  (seashell_preprocessor_run pp)
+  (build-list (seashell_preprocessor_get_include_count pp)
+    (lambda (n) (seashell_preprocessor_get_include pp n))))
+
 ;; Diagnostic structure.  Self-explanatory.
 (struct seashell-diagnostic (error? file line column message) #:prefab)
 
@@ -53,9 +63,11 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(define/contract (seashell-compile-files user-cflags user-ldflags sources objects)
-  (-> (listof string?) (listof string?) (listof path?) (listof path?)
+(define/contract (seashell-compile-files user-cflags user-ldflags runnerFile objects)
+  (-> (listof string?) (listof string?) path-string? (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
+
+  (define sources (seashell-resolve-dependencies runnerFile))
   
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
