@@ -8,14 +8,21 @@ angular.module('seashell-local-files', [])
       "use strict";
       var self = this;
 
-      self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
-      // set up localforage to have a per-user store
-      // note that this doesn't actually secure anything:
-      // it only prevents name conflicts
-      localforage.config({
-        name: 'SeashellStorage', // "database name"
-        storeName: self.user     // "table name"
-      }); 
+      self.user = null;
+      self.store = null;
+
+      // Must call this before using anything
+      self.init = function() {
+        self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
+
+        // set up localforage to have a per-user store
+        // note that this doesn't actually secure anything:
+        // it only prevents name conflicts
+        self.store = localforage.createInstance({
+          name: self.user
+        });
+      };
+
 
       /*
        * Returns the path to where this file is stored.
@@ -36,48 +43,65 @@ angular.module('seashell-local-files', [])
         var offline_checksum = md5(file_content);
         var online_checksum;
         var path = self._path(name, file_name);
-          
+
         // checksum is false when we're doing an offline write
         if (checksum === false) {
-          $q.when(localforage.getItem(path)).then(
-              function (contents) {
-                  online_checksum = contents.online_checksum;
-              }
+          $q.when(self.store.getItem(path)).then(
+            function(contents) {
+              online_checksum = contents.online_checksum;
+            }
           );
         }
 
-        var to_write = { 
-          data: file_content, 
-          online_checksum: checksum || online_checksum, 
-          offline_checksum: offline_checksum 
-        }; 
-        console.log("[localfiles] Writing: ", to_write);
-        return $q.when(localforage.setItem(path, to_write));
+        var to_write = {
+          data: file_content,
+          online_checksum: checksum || online_checksum,
+          offline_checksum: offline_checksum
+        };
+        console.log("[storage-service] Writing: ", to_write);
+        return $q.when(self.store.setItem(path, to_write));
       };
 
       self.readFile = function(name, file_name) {
-        return $q.when(localforage.getItem(self._path(name, file_name))).then(
-          function (contents) {
-            console.log("[localfiles] Reading", contents); 
-            return contents; 
+        return $q.when(self.store.getItem(self._path(name, file_name))).then(
+          function(contents) {
+            console.log("[storage-service] Reading", contents);
+            return contents;
           });
       };
 
+
+      self.renameFile = function(project, old_name, new_name) {
+        self.readFile(project, old_name)
+          .then(
+            function(contents) {
+              self.writeFile(project, new_name, contents.data, contents.online_checksum);
+            })
+          .then(
+            function() {
+              self.deleteFile(project, old_name);
+            });
+      };
+
       self.deleteFile = function(name, file_name) {
-        return $q.when(localforage.removeItem(self._path(name, file_name)));
+        console.log("[storage-service] deleteFile");
+        return $q.when(self.store.removeItem(self._path(name, file_name)));
       };
 
       self.getRunnerFile = function(name, question) {
-        return $q.when(localforage.getItem(self._path(name, question) + "//runnerFile"))
+        return self.store.getItem(self._path(name, question) + "//runnerFile")
           .then(function(contents) {
+            console.log("[storage-service] getRunnerFile", contents);
             return contents;
           });
       };
 
       self.setRunnerFile = function(name, question, folder, file) {
-        if(folder=="common" || folder=="tests")
+        if (folder == "common" || folder == "tests")
           return $q.reject("Runner file must be in question directory.");
-        return $q.when(localforage.setItem(self._path(name, question) + "//runnerFile"), file);
+        console.log("[storage-service] setRunnerFile");
+        return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile"), file);
       };
 
-  }]);
+    }
+  ]);

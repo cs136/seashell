@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('seashell-websocket', ['ngCookies'])
+angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
   /**
    * WebSocket service:
    *  provides:
@@ -28,8 +28,8 @@ angular.module('seashell-websocket', ['ngCookies'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$rootScope', '$q', '$interval', '$cookies', '$timeout',
-    function($scope, $q, $interval, $cookies, $timeout) {
+  .service('socket', ['$rootScope', '$q', '$interval', '$cookies', '$timeout', 'localfiles',
+    function($scope, $q, $interval, $cookies, $timeout, localfiles) {
       "use strict";
       var self = this;
 
@@ -152,6 +152,8 @@ angular.module('seashell-websocket', ['ngCookies'])
                   });
               }, 0);
             });
+          // initialize localfiles so that it can get the user cookie
+          localfiles.init();
         } catch (e) {
           self.failed = true;
           $timeout(function() {
@@ -251,8 +253,12 @@ angular.module('seashell-websocket', ['ngCookies'])
       };
 
       self.saveProject = function(project, message, deferred) {
-        // TODO: offline mode (easy)
-        return self._socket.saveProject(project, message, deferred);
+        // TODO: is this even used? 
+        if (self.connected) {
+          return self._socket.saveProject(project, message, deferred);
+        } else {
+          return $q.resolve(false); // noop 
+        }
       };
 
       self.getProjects = function(deferred) {
@@ -261,7 +267,7 @@ angular.module('seashell-websocket', ['ngCookies'])
       };
 
       self.listProject = function(name, deferred) {
-        // TODO: disable in offline mode? (used for refreshing from skel)
+        // TODO: tree stuff
         return self._socket.listProject(name, deferred);
       };
 
@@ -325,13 +331,15 @@ angular.module('seashell-websocket', ['ngCookies'])
         return self._socket.newDirectory(name, dir_name, deferred);
       };
 
-
-      // Contrasting to readFile above, writeFile is simple:
-      // 1. always write to the offline store
-      // 2. attempt to write to the backend if online
       self.writeFile = function(name, file_name, file_content, deferred) {
-        // TODO: offline/online stuff
-        return self._socket.writeFile(name, file_name, file_content, deferred);
+        var offlineWrite = function(checksum) {
+          localfiles.writeFile(name, file_name, file_content, checksum);
+          return checksum;
+        };
+
+        return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
+          .then(offlineWrite)  // get checksum from backend and write
+          .catch(function () { offlineWrite(false); }); // force write
       };
 
       self.deleteFile = function(name, file_name, deferred) {
@@ -356,21 +364,30 @@ angular.module('seashell-websocket', ['ngCookies'])
 
       self.getUploadFileToken = function(project, file, deferred) {
         // TODO: just disable this for offline mode
-        return self._socket.getUploadFileToken(project, file, deferred);
+        if (self.connected) {
+          return self._socket.getUploadFileToken(project, file, deferred);
+        } else {
+          return $q.reject("Functionality not available offline");
+        }
       };
 
       self.renameFile = function(project, oldName, newName, deferred) {
-        // TODO: rename in offline mode too
-        return self._socket.renameFile(project, oldName, newName, deferred);
+        var offlineResult = localfiles.renameFile(project, oldName, newName);
+        if (self.connected) {
+          var onlineResult = self._socket.renameFile(project, oldName, newName, deferred);
+          return $q.all([onlineResult, offlineResult]);
+        } else {
+          return $q.all([offlineResult]);
+        }
       };
 
       self.getMostRecentlyUsed = function(project, directory, deferred) {
-        // TODO: offline mode
+        // TODO: offline mode 
         return self._socket.getMostRecentlyUsed(project, directory, deferred);
       };
 
       self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
-        // TODO: offline mode
+        // TODO: offline mode (see renameFile for pattern to use here)
         return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
       };
 
@@ -400,13 +417,29 @@ angular.module('seashell-websocket', ['ngCookies'])
       };
 
       self.getFileToRun = function(project, question, deferred) {
-        // TODO: offline mode
-        return self._socket.getFileToRun(project, question, deferred);
+        var offlineResult = localfiles.getRunnerFile(project, question);
+        if (self.connected) {
+          var onlineResult = self._socket.getFileToRun(project, question, deferred);
+          return $q.all([onlineResult, offlineResult]).catch(
+            function(error) {
+              // TODO: what if one of them doesn't resolve?
+            });
+        } else {
+          return $q.all([offlineResult]);
+        }
       };
 
       self.setFileToRun = function(project, question, folder, file, deferred) {
-        // TODO: offline mode
-        return self._socket.setFileToRun(project, question, folder, file, deferred);
+        var offlineResult = localfiles.setRunnerFile(project, question, folder, file);
+        if (self.connected) {
+          var onlineResult = self._socket.setFileToRun(project, question, folder, file, deferred);
+          return $q.all([onlineResult, offlineResult]).catch(
+            function(error) {
+              // TODO: what if one of them doesn't resolve?
+            });
+        } else {
+          return $q.all([offlineResult]);
+        }
       };
     }
   ]);

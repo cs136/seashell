@@ -356,6 +356,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.when(ws.listProject(self.name)).then(function(files) {
                self.root = new SeashellFile(self, "", null, true);
                   _.map(files, function(f) {
+                   console.log("SeashellFile", f);
                    self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
                });
             });}).then(function () {
@@ -601,10 +602,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return $q.when(ws.getFileToRun(self.name, question))
             .then(function (result) {
                 self.fileToRun = result;
-                return result;
-            })
-            .catch(function() {
-              return localfiles.getRunnerFile(self.name, question);
+                return result[0];
             });
         };
 
