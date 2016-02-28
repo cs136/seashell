@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's compiler system.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
