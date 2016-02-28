@@ -42,10 +42,10 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
 # Precompile the Racket sources...
 add_custom_target(seashell-racket-compile
   COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main make -j ${PROCESSOR_COUNT}
-  # Make sure entry-points are all compiled here.
-  seashell-main.rkt seashell-cli.rkt
-  backend/server.rkt login/login-gateway.rkt
-  compiler/place-main.rkt
+    # Make sure entry-points are all compiled here.
+    seashell-main.rkt seashell-cli.rkt
+    seashell/backend/server.rkt seashell/login/login-gateway.rkt
+    seashell/compiler/place-main.rkt
   SOURCES ${seashell_racket_tests} ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
   DEPENDS seashell-src-copy)
 add_custom_target(seashell-test-racket-compile
