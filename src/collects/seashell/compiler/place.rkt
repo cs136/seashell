@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,28 +16,27 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler
-         racket/contract
-         racket/match
-         racket/place
-         racket/bool
-         racket/serialize
-         seashell/compiler/ffi)
+(require seashell/compiler/compiler)
 (provide seashell-compile-files/place)
 
+(require/typed racket/serialize
+               [deserialize (-> Any Any)])
+(: compiler-place (U False Place))
 (define compiler-place #f)
+
 ;; seashell-compile-files/place
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
-(define/contract (seashell-compile-files/place user-cflags user-ldflags sources objects)
-  (-> (listof string?) (listof string?) (listof path?) (listof path?)
-      (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
+(: seashell-compile-files/place (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
+                                    (Values (U Bytes False) Seashell-Diagnostic-Table)))
+(define (seashell-compile-files/place user-cflags user-ldflags sources objects)
   (unless compiler-place
     (seashell-compile-place/init))
   (cond
-    [(and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))
+    [(and (place? compiler-place)
+          (not (sync/timeout 0 (place-dead-evt (cast compiler-place Place)))))
       (define-values (read-end write-end) (place-channel))
-      (place-channel-put compiler-place
+      (place-channel-put (cast compiler-place Place)
                          (list write-end user-cflags user-ldflags sources objects))
       (match-define
         (list exn? result data)
@@ -45,7 +44,8 @@
       (when exn?
             (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
                              (current-continuation-marks))))
-      (values result data)]
+      (values (cast result (U False Bytes))
+              (cast data Seashell-Diagnostic-Table))]
     [else (values #f (make-hash))]))
 
 ;; seashell-compile-place/init
@@ -58,5 +58,6 @@
                     'seashell-compiler-place
                     #:out (current-error-port)
                     #:err (current-error-port)))
+  (assert (port? in))
   (set! compiler-place place)
   (close-output-port in))
