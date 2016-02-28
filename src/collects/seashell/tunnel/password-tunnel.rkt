@@ -55,7 +55,7 @@
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
-                (read-config-string 'tunnel-binary)
+                (read-config-path 'tunnel-binary)
                 user
                 host
                 (format "~a ~a"

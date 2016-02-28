@@ -54,7 +54,7 @@
   ;; Launch the process
   (define-values (process in out error)
     (subprocess #f #f #f
-                (read-config-string 'ssh-binary)
+                (read-config-path 'ssh-binary)
                 "-x"
                 "-o" "PreferredAuthentications hostbased"
                 "-o" (format "GlobalKnownHostsFile ~a" (read-config-string 'seashell-known-hosts))
