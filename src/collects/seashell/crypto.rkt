@@ -22,17 +22,10 @@
   seashell-crypt-make-token
   exn:crypto?)
 
-;; Exception Submodule
-(module data typed/racket
-  (provide (struct-out exn:crypto))
-  (struct exn:crypto exn:fail:user ()))
-
 ;; FFI layer
 (module ffi racket/base
-  (require (prefix-in contract: racket/contract))
-  (require (submod ".." data))
   (require ffi/unsafe
-           ffi/unsafe/define 
+           ffi/unsafe/define
            ffi/unsafe/alloc
            openssl/libcrypto
            openssl/libssl
@@ -43,11 +36,14 @@
                       #:default-make-fail make-not-available)
   (define-ffi-definer define-ssl libssl
                       #:default-make-fail make-not-available)
-  (provide encrypt_aes128_gcm decrypt_aes128_gcm RAND_bytes) 
+  (provide encrypt_aes128_gcm decrypt_aes128_gcm RAND_bytes)
+
+  (provide (struct-out exn:crypto))
+  (struct exn:crypto exn:fail:user ())
 
   ;; Constants
-  (define EVP_CTRL_GCM_GET_TAG 16) 
-  (define EVP_CTRL_GCM_SET_TAG 17) 
+  (define EVP_CTRL_GCM_GET_TAG 16)
+  (define EVP_CTRL_GCM_SET_TAG 17)
 
   ;; Error Handling Functions
   (define-crypto ERR_get_error (_fun -> _long))
@@ -85,13 +81,11 @@
   ;; encrypt_aes128_gcm (key:16) (iv:12) text (aad/optional) -> (values encrypted (tag:16))
   ;;
   ;; Encrypts and Authenticates.
-  (contract:define/contract (encrypt_aes128_gcm key iv text [aad #f])
-    (contract:->* (bytes? bytes? bytes?) ((contract:or/c bytes? #f)) (values bytes? bytes?))
+  (define (encrypt_aes128_gcm key iv text [aad #f])
     (define CTX (EVP_CIPHER_CTX_new))
     (EVP_EncryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
     (when aad
       (EVP_EncryptUpdate CTX #f aad (bytes-length aad)))
-    
     (define buffer (make-bytes (+ 128 (bytes-length text))))
     (define tag (make-bytes 16))
 
@@ -104,15 +98,13 @@
   ;; decrypt_aes128_gcm (key:16) (iv:12) (tag:16) encrypted (aad/optional) -> text
   ;;
   ;; Decrypts and verifies.
-  (contract:define/contract (decrypt_aes128_gcm key iv tag text [aad #f])
-    (contract:->* (bytes? bytes? bytes? bytes?) ((contract:or/c bytes? #f)) bytes?)
+  (define (decrypt_aes128_gcm key iv tag text [aad #f])
     (define CTX (EVP_CIPHER_CTX_new))
     (EVP_DecryptInit_ex CTX (EVP_aes_128_gcm) #f key iv)
     (EVP_CIPHER_CTX_ctrl CTX EVP_CTRL_GCM_SET_TAG 16 tag)
 
     (when aad
       (EVP_DecryptUpdate CTX #f aad (bytes-length aad)))
-    
     (define buffer (make-bytes (+ 128 (bytes-length text))))
 
     (define first-len (EVP_DecryptUpdate CTX buffer text (bytes-length text)))
@@ -120,8 +112,9 @@
 
     (subbytes buffer 0 (+ first-len second-len))))
 
-(require typed/json (submod "." data))
+(require typed/json)
 (require/typed (submod "." ffi)
+               [#:struct (exn:crypto exn:fail:user) ()]
                [RAND_bytes (-> Bytes Fixnum Any)]
                [encrypt_aes128_gcm (->* (Bytes Bytes Bytes) ((U Bytes False)) (Values Bytes Bytes))]
                [decrypt_aes128_gcm (->* (Bytes Bytes Bytes Bytes) ((U Bytes False)) Bytes)])
