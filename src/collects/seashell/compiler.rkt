@@ -16,5 +16,5 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler)
-(provide (all-from-out seashell/compiler/compiler))
+(require seashell/compiler/compiler seashell/compiler/place)
+(provide (all-from-out seashell/compiler/compiler seashell/compiler/place))

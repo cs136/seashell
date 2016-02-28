@@ -1,7 +1,8 @@
 #lang racket
 
 (require seashell/seashell-config
-         seashell/backend/project)
+         seashell/backend/project
+         seashell/compiler)
 
 (provide setup-test-environment
          teardown-test-environment)
