@@ -234,6 +234,12 @@ angular.module('frontend-app')
                      $scope.inputError = 'Please avoid using a filename that exists in the "common/" directory. Could not create: "' + filename + '".';
                      return false;
                   }
+                  // Disallow creating a file outside the question 
+                  if (! filename.match(/^[^.\s\/\\][^\s\/\\]*$/)) {
+                     $scope.inputError = 'Illegal filename: "' + filename + '".';
+                     return false;
+                  }
+                  
                   // Check passes
                   var extension = filename.split('.').pop();
                   var result = null;
@@ -278,14 +284,19 @@ angular.module('frontend-app')
                         $scope.question = question;
                         $scope.inputError = false;
                         $scope.newTest = function () {
+                           var filename = $scope.new_file_name;
+                           // Disallow creating a file outside the test directory
+                           if (! filename.match(/^[^.\s\/\\][^\s\/\\]*$/)) {
+                              $scope.inputError = 'Illegal test file name: "' + filename + '".';
+                              return false;
+                           }
                            // three cases:
                            // a .in or .expect file, which we create normally
                            // a file without an extension, for which we create a pair 
                            // an invalid extension
-                           var filename = $scope.new_file_name;
                            var extension = filename.split('.').pop();
                            var results = [];
-                             if (extension === 'in' || extension === 'expect') {
+                           if (extension === 'in' || extension === 'expect') {
                                results.push(project.createFile("tests", question, filename));
                            } else if (filename.split('.').length < 2) {
                                // no extension
@@ -299,7 +310,7 @@ angular.module('frontend-app')
                                result.then(function () { 
                                    notify(false, true, project, question, $scope.new_file_folder, filename); 
                                }).catch(function (error) {
-                                   notify(false, false, project, question, $scope_new_file_folder, filename);
+                                   notify(false, false, project, question, $scope.new_file_folder, filename);
                                });
                            });
                            $scope.$close();
