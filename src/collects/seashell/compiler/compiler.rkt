@@ -22,66 +22,20 @@
                [file-position (case-lambda
                                 (-> Port Exact-Nonnegative-Integer)
                                 (-> Port (U Integer EOF) Void))])
-(require/typed racket/serialize
-               [serialize   (-> Any Any)]
-               [deserialize (-> Any Any)])
-
 (provide
  Seashell-Diagnostic
  Seashell-Diagnostic-Table
  seashell-compile-files
- seashell-diagnostic->bytes
- bytes->seashell-diagnostic
- seashell-diagnostic-table->bytes
- bytes->seashell-diagnostic-table
  (struct-out seashell-diagnostic))
 
-;; Diagnostic structure.  Self-explanatory.
-(struct seashell-diagnostic ([error? : Boolean] [file : String] [line : Index] [column : Index] [message : String]) #:transparent)
+(module untyped racket/base
+  (require racket/serialize)
+  (provide (all-defined-out))
+  (serializable-struct seashell-diagnostic (error? file line column message) #:transparent))
+(require/typed (submod "." untyped)
+               [#:struct seashell-diagnostic ([error? : Boolean] [file : String] [line : Index] [column : Index] [message : String])])
 (define-type Seashell-Diagnostic seashell-diagnostic)
 (define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
-
-;; Helper functions for loading/storing diagnostic structures.
-;; (seashell-diagnostic/{-table}->bytes d)
-;; Converts d to a bytestring which can be sent between places.
-;;
-;; Arguments:
-;;  d - Diagnostic/Table of Diagnostics.
-;; Returns
-;;  Bytestring representing d.  This bytestring is not portable between Racket versions.
-(: seashell-diagnostic->bytes (-> Seashell-Diagnostic Bytes))
-(define (seashell-diagnostic->bytes d)
-  (match-define (seashell-diagnostic error? file line column message) d)
-  (with-output-to-bytes (lambda () (write (serialize (list error? file line column message))))))
-(: seashell-diagnostic-table->bytes (-> Seashell-Diagnostic-Table Bytes))
-(define (seashell-diagnostic-table->bytes t)
-  (with-output-to-bytes
-    (lambda ()
-      (write (serialize
-               (hash-map t
-                (lambda ([k : Path] [v : (Listof Seashell-Diagnostic)])
-                (cons k (map seashell-diagnostic->bytes v)))))))))
-
-;; (bytes->seashell-diagnostic/{-table} b)
-;; Converts b to a Seashell-Diagnostic.
-;;
-;; Arguments:
-;;  b - Bytestring reprentation of a Seashell-Diagnostic/Table of Diagnostics.
-;; Returns
-;;  Seashell-Diagnostic/{-Table}
-(: bytes->seashell-diagnostic (-> Bytes Seashell-Diagnostic))
-(define (bytes->seashell-diagnostic b)
-  (match-define (list #{error? : Boolean} #{file : String} #{line : Index} #{column : Index} #{message : String})
-    (cast (call-with-input-bytes b (compose deserialize read)) (List Boolean String Index Index String)))
-  (seashell-diagnostic error? file line column message))
-(: bytes->seashell-diagnostic-table (-> Bytes Seashell-Diagnostic-Table))
-(define (bytes->seashell-diagnostic-table b)
-  (define data (cast (call-with-input-bytes b (compose deserialize read)) (Listof (Pair Path (Listof Bytes)))))
-  (make-immutable-hash
-   (map
-    (lambda ([p : (Pair Path (Listof Bytes))]) : (Pair Path (Listof Seashell-Diagnostic))
-      (cons (car p) (map bytes->seashell-diagnostic (cdr p))))
-    data)))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -208,7 +162,7 @@
             [else
               #f]))
         ;; Fix binaries taking up all the space in /var/tmp
-        (delete-file result-file)
+        (delete-directory/files result-file #:must-exist? #f)
         ;; Create the final diagnostics table:
         (define diags
           (foldl

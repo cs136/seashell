@@ -156,7 +156,7 @@ angular.module('frontend-app')
                 file = file[file.length-1];
                 var line = _.max([err[2] - 1, 0]), column = err[3] - 1;
                 var message = err[4];
-                console.log(err);
+                console.error(err);
                 if (_.contains([self.file,
                                 'final-link-result'],
                                file))
@@ -203,11 +203,46 @@ angular.module('frontend-app')
             self.loaded = true;
           });
           function updateColNums() {
+            // update column numbers
             $timeout(function() {
               self.col = self.editor.getCursor().ch + 1;
               self.line = self.editor.getCursor().line + 1;
             }, 0);
           }
+          // check and set a css class to the line if over 80 chars
+          function warnLineLength(lineNum) {
+               var lineStr = self.editor.getLine(lineNum);
+               var len = lineStr.length;
+               self.editor.findMarksAt(
+                  {line: lineNum, ch: 0}
+               ).forEach(function (m) {m.clear();});
+               if (len > 80) {
+                  self.editor.markText(
+                     {line: lineNum, ch: 0},
+                     {line: lineNum, ch: len},
+                     {className: "cm-line-too-long"}
+                  );
+               }
+          }
+          // check and set a css class to each line over 80 chars
+          function warnAllLength() {
+            self.editor.eachLine(function(line) {
+               var lineNum = self.editor.getLineNumber(line);
+               warnLineLength(lineNum);
+            });
+          }
+          // check and set a css class to cursor line if over 80 chars
+          function warnCurrentLength() {
+            var lineNum = self.editor.getCursor().line;
+            warnLineLength(lineNum);
+          }
+          // check all lines only when initially loaded
+          self.editor.on("change", function(editor, changeObj) {
+            if (changeObj.origin === "setValue" || changeObj.origin === "paste") {
+               warnAllLength();
+            }
+          });
+          self.editor.on("change", warnCurrentLength);
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
@@ -255,6 +290,15 @@ angular.module('frontend-app')
               "Cmd-S": function() { },
               "Tab": betterTab,
               "Shift-Tab": negTab,
+              // font size decrease/increase shortcuts
+              "Ctrl-,": function() {
+                settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
+                settings.save();
+              },
+              "Ctrl-.": function() {
+                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
+                settings.save();
+              },
             }
           };
           self.consoleOptions = {
@@ -288,6 +332,7 @@ angular.module('frontend-app')
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
+              if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               self.runFile();
             }
           }, {
@@ -296,6 +341,7 @@ angular.module('frontend-app')
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
+              if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
               self.testFile();
             }
           }];
