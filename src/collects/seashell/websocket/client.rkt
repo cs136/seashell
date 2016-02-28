@@ -19,6 +19,9 @@
 
 ;; This file was modified from net/websocket/client.rkt frm Racket 5.3.6
 (require racket/tcp
+         racket/contract
+         racket/list
+         racket/port
          net/url
          web-server/http/response
          web-server/http/request
@@ -45,7 +48,7 @@
 ;; ws-connect url [#headers]
 ;; Connects to the specified websocket url.
 (define/contract (ws-connect url
-                             #:headers [headers empty])
+                             #:headers [headers '()])
   (->* (ws-url?)
        (#:headers (listof header?))
        ws-connection?)
@@ -55,7 +58,7 @@
   (define port (url-port url))
   (define upath (url-path url))
   (define the-path
-    (if (empty? upath)
+    (if (null? upath)
         "/"
         (let ([pre-path
                (add-between
