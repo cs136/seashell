@@ -44,11 +44,13 @@ angular.module('login-app', ['ngCookies', 'seashell-websocket'])
                   console.log(self.error);
                 } else if (data.port !== undefined) {
                   $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure: true});
+                  console.assert($cookies.getObject(SEASHELL_CREDS_COOKIE), "You are probably not using https.");
                   console.log("All done login!");
                   ws.connect().then(function () {
                     $window.top.location = "frontend.html";
-                  }).catch(function () {
+                  }).catch(function (e) {
                     self.error = "Could not connect to the websocket!";
+                    console.error(self.error, e);
                   });
                 } else {
                   self.error = "An internal error occurred: " + textStatus;
