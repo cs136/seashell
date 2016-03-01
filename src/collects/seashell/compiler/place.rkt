@@ -21,8 +21,8 @@
 
 (require/typed racket/serialize
                [deserialize (-> Any Any)])
-(: compiler-place (U False Place))
-(define compiler-place #f)
+(: global-compiler-place (U False Place))
+(define global-compiler-place #f)
 
 ;; seashell-compile-files/place
 ;; Invokes seashell-compile-files in a separate place,
@@ -30,13 +30,14 @@
 (: seashell-compile-files/place (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
                                     (Values (U Bytes False) Seashell-Diagnostic-Table)))
 (define (seashell-compile-files/place user-cflags user-ldflags sources objects)
-  (unless compiler-place
+  (unless global-compiler-place
     (seashell-compile-place/init))
+  (define compiler-place global-compiler-place)
   (cond
     [(and (place? compiler-place)
-          (not (sync/timeout 0 (place-dead-evt (cast compiler-place Place)))))
+          (not (sync/timeout 0 (place-dead-evt compiler-place))))
       (define-values (read-end write-end) (place-channel))
-      (place-channel-put (cast compiler-place Place)
+      (place-channel-put compiler-place
                          (list write-end user-cflags user-ldflags sources objects))
       (match-define
         (list exn? result data)
@@ -59,5 +60,5 @@
                     #:out (current-error-port)
                     #:err (current-error-port)))
   (assert (port? in))
-  (set! compiler-place place)
+  (set! global-compiler-place place)
   (close-output-port in))
