@@ -56,6 +56,14 @@ if(NOT DEFINED PROCESSOR_COUNT)
   endif()
 endif()
 
+# Option for controlling how the binaries are built
+option(ENABLE_LIGHTWEIGHT_LAUNCHERS "Enable lightweight launcher binaries" OFF)
+if (ENABLE_LIGHTWEIGHT_LAUNCHERS)
+  set(SEASHELL_LIGHTWEIGHT_LAUNCHERS 1)
+else ()
+  set(SEASHELL_LIGHTWEIGHT_LAUNCHERS 0)
+endif (ENABLE_LIGHTWEIGHT_LAUNCHERS)
+
 # Components
 add_subdirectory(backend)
 add_subdirectory(collects)
