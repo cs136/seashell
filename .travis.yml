@@ -10,7 +10,7 @@ addons:
       - g++-4.8
       - ca-certificates
 env:
-  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.3 NODE_PATH=/usr/local/lib/node_modules
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.4 NODE_PATH=/usr/local/lib/node_modules
 before_install:
   # Get Racket
   - git clone https://github.com/greghendershott/travis-racket.git >/dev/null
