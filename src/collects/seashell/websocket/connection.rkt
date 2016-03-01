@@ -48,7 +48,8 @@
 (require typed/racket/async-channel
          seashell/log
          typed/web-server/http
-         typed/net/url)
+         typed/net/url
+         seashell/utils)
 
 (provide ws-connection?
          make-ws-connection
