@@ -295,15 +295,6 @@
           (close-output-port (ws-connection-out-port conn))
           (void))))))
 
-;; Handy syntax rule for EOF checking
-(: check-eof (All (X) (-> (U EOF X) X)))
-(define (check-eof x)
-  (cond
-    [(eof-object? x)
-      (raise (exn:websocket (format "read-frame: Unexpected end of file!")
-                            (current-continuation-marks)))]
-    [else
-      x]))
 ;; (mask data key) -> bytes?
 ;; Masks/Unmasks data from a WebSocket connection.
 ;;
