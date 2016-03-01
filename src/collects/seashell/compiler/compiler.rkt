@@ -33,8 +33,8 @@
   (provide (all-defined-out))
   (serializable-struct seashell-diagnostic (error? file line column message) #:transparent))
 (require/typed (submod "." untyped)
-               [#:struct seashell-diagnostic ([error? : Boolean] [file : String] [line : Index] [column : Index] [message : String])])
-(define-type Seashell-Diagnostic seashell-diagnostic)
+               [#:struct seashell-diagnostic ([error? : Boolean] [file : String] [line : Index] [column : Index] [message : String])
+                #:type-name Seashell-Diagnostic])
 (define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
 
 ;; (seashell-compile-files cflags ldflags source)

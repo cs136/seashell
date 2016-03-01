@@ -69,8 +69,7 @@
 ;; Internal data structure for a WebSocket frame.
 (struct ws-frame
   ([final? : Boolean] [rsv : Integer] [opcode : Integer] [data : Bytes])
-  #:transparent)
-(define-type Websocket-Frame ws-frame)
+  #:transparent #:type-name Websocket-Frame)
 
 ;; Type of Control Function
 (define-type Websocket-Control (-> Websocket-Connection (U Websocket-Frame exn) Any))
@@ -81,7 +80,6 @@
 ;;  bytes? - Regular websocket frame.
 ;;  eof-object? - End of file/Websocket closed.
 ;;  <raised exception> - error.
-(define-type Websocket-Connection ws-connection)
 (struct ws-connection
   ([closed-semaphore : Semaphore]
    [in-thread : (U Thread False)]
@@ -96,6 +94,7 @@
    [close-semaphore : Semaphore])
   #:transparent
   #:mutable
+  #:type-name Websocket-Connection
   #:property prop:evt
   (lambda ([conn : Websocket-Connection])
     (choice-evt
