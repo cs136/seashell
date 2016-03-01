@@ -67,7 +67,8 @@
 (define SEASHELL_INSTALLED
   (let
     ([base (simple-form-path SEASHELL_INSTALL_PATH)]
-     [current (simple-form-path (find-executable-path (find-system-path 'run-file)))])
+     [current (simple-form-path (or (find-executable-path (find-system-path 'run-file))
+                                    (find-executable-path (find-system-path 'exec-file))))])
     (not (member 'up (explode-path (find-relative-path base current))))))
 
 ;; Generates a new (fresh) configuration populated only with default values.
