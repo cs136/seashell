@@ -20,13 +20,6 @@
 #ifndef _SEASHELL_H_
 #define _SEASHELL_H_
 
-#include <string.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdio.h>
-
 /** Common definitions. **/
 #define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@
 #define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
@@ -40,6 +33,24 @@
  *  has everything installed to /bin */
 #define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 #define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
+
+#if SEASHELL_LIGHTWEIGHT_LAUNCHERS
+#ifdef __linux__
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <dlfcn.h>
+#else
+/** TODO Other platforms. */
+#endif
+#endif
+
+#include <string.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
 
 static const char copyright[] = (
 "Seashell @SEASHELL_VERSION@ (@GIT_BRANCH@-@GIT_COMMIT_HASH@) (API version @SEASHELL_API_VERSION@) - a C Development Environment.\r\n"
@@ -78,9 +89,19 @@ static int IS_INSTALLED() {
     perror("[warning]: realpath");
     return 0;
   }
-
   ret = strncmp(INSTALL_PREFIX, linkname, strlen(INSTALL_PREFIX)) == 0;
   free(linkname);
+
+#if SEASHELL_LIGHTWEIGHT_LAUNCHERS
+  // Some extra work is needed if we're a launcher.
+  if (!ret) {
+    Dl_info info;
+    if (dladdr((void*)IS_INSTALLED, &info)) {
+      ret = strncmp(INSTALL_PREFIX, info.dli_fname, strlen(INSTALL_PREFIX)) == 0;
+    }
+  }
+#endif
+
   resolved = 1;
   return ret;
 #else
