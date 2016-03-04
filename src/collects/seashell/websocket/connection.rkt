@@ -48,8 +48,7 @@
 (require typed/racket/async-channel
          seashell/log
          typed/web-server/http
-         typed/net/url
-         seashell/utils)
+         typed/net/url)
 
 (provide ws-connection?
          make-ws-connection
@@ -65,6 +64,16 @@
 ;; exn:websocket
 ;; Internal websocket exception structure.
 (struct exn:websocket exn:fail:user ())
+
+;; Internal check-eof that produces exn:websocket
+(: check-eof (All (X) (-> (U EOF X) X)))
+(define (check-eof x)
+  (cond
+    [(eof-object? x)
+      (raise (exn:websocket (format "read: Unexpected end of file!")
+                            (current-continuation-marks)))]
+    [else
+      x]))
 
 ;; ws-frame
 ;; Internal data structure for a WebSocket frame.
