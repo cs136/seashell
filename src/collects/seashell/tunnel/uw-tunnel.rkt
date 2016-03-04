@@ -48,35 +48,36 @@
 ;;  exn:tunnel on tunnel error.
 (: tunnel-launch (->* () (#:target (U String False) #:args (U String False) #:host (U String False)) Tunnel))
 (define (tunnel-launch #:target [target #f] #:args [args #f] #:host [_host #f])
+  (define tunnel-custodian (make-custodian))
+  (parameterize ([current-custodian tunnel-custodian])
+    ;; Randomly select a host
+    (define host (if _host _host (first (shuffle (read-config-strings 'host)))))
+    ;; Launch the process
+    (define-values (process in out error)
+      (subprocess #f #f #f
+                  (read-config-path 'ssh-binary)
+                  "-x"
+                  "-o" "PreferredAuthentications hostbased"
+                  "-o" (format "GlobalKnownHostsFile ~a" (read-config-string 'seashell-known-hosts))
+                  host
+                  (format "~a ~a"
+                          (if target target (read-config-string 'seashell-backend-remote))
+                          (if args args ""))))
 
-  ;; Randomly select a host
-  (define host (if _host _host (first (shuffle (read-config-strings 'host)))))
-  ;; Launch the process
-  (define-values (process in out error)
-    (subprocess #f #f #f
-                (read-config-path 'ssh-binary)
-                "-x"
-                "-o" "PreferredAuthentications hostbased"
-                "-o" (format "GlobalKnownHostsFile ~a" (read-config-string 'seashell-known-hosts))
-                host
-                (format "~a ~a"
-                        (if target target (read-config-string 'seashell-backend-remote))
-                        (if args args ""))))
+    ;; And the logger thread
+    (define status-thread
+      (thread
+       (lambda ()
+         (let loop ()
+           (define line (read-line error))
+           (when (not (eof-object? line))
+             (logf 'debug "tunnel stderr (~a@~a): ~a" (getenv "USER") host line)
+             (loop)))
+         ;; EOF received - die.
+         (close-input-port error))))
 
-  ;; And the logger thread
-  (define status-thread
-    (thread
-     (lambda ()
-       (let loop ()
-         (define line (read-line error))
-         (when (not (eof-object? line))
-           (logf 'debug "tunnel stderr (~a@~a): ~a" (getenv "USER") host line)
-           (loop)))
-       ;; EOF received - die.
-       (close-input-port error))))
+    ;; Set unbuffered mode for the ports, so nothing funny happens.
+    (file-stream-buffer-mode out 'none)
 
-  ;; Set unbuffered mode for the ports, so nothing funny happens.
-  (file-stream-buffer-mode out 'none)
-
-  ;; All good.
-  (tunnel process in out status-thread host))
+    ;; All good.
+    (tunnel process in out status-thread host tunnel-custodian)))

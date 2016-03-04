@@ -23,7 +23,8 @@
   Tunnel)
 
 (struct tunnel ([process : Subprocess] [in : Input-Port] [out : Output-Port] [status-thread : Thread]
-                [hostname : String]) #:type-name Tunnel)
+                [hostname : String]
+                [custodian : Custodian]) #:type-name Tunnel)
 (struct exn:tunnel exn:fail:user ([status-code : (U False Exact-Nonnegative-Integer)]))
 
 ;; (tunnel-close tunnel)
@@ -33,6 +34,5 @@
 ;;  tunnel - Tunnel to close.
 (: tunnel-close (-> Tunnel Void))
 (define (tunnel-close tunnel)
-  (close-input-port (tunnel-in tunnel))
-  (close-output-port (tunnel-out tunnel))
+  (custodian-shutdown-all (tunnel-custodian tunnel))
   (void))
