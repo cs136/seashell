@@ -305,14 +305,13 @@
              request-logging-dispatcher
              (filter:make #rx"^/$" (make-websocket-dispatcher 
                                     (lambda (conn state)
-                                      (conn-dispatch keepalive-sema conn state))))
+                                      (conn-dispatch keepalive-sema conn state))
+                                    #:conn-headers (lambda (method url headers)
+                                                     (values #t '() #t))))
              (filter:make #rx"^/export/" project-export-dispatcher)
              (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
-          
-          ;; Start our places.
-          (seashell-compile-place/init)
-          
+
           ;; Start the server.
           (define conf-chan  (make-async-channel))
           (set! shutdown-server

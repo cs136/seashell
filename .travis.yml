@@ -10,7 +10,7 @@ addons:
       - g++-4.8
       - ca-certificates
 env:
-  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.3 NODE_PATH=/usr/local/lib/node_modules
+  - RACKET_DIR=$HOME/racket RACKET_VERSION=6.4 NODE_PATH=/usr/local/lib/node_modules
 before_install:
   # Get Racket
   - git clone https://github.com/greghendershott/travis-racket.git >/dev/null
@@ -33,7 +33,7 @@ before_install:
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
-  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install .. >/dev/null
+  - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DPROCESSOR_COUNT=1 .. >/dev/null
   - make
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - ../src/tests/frontend-tests/node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js

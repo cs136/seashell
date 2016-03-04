@@ -31,6 +31,7 @@
 (define SEASHELL_API_VERSION @SEASHELL_API_VERSION@)
 (define SEASHELL_BUILD_PATH "@CMAKE_BINARY_DIR@")
 (define SEASHELL_SOURCE_PATH "@CMAKE_SOURCE_DIR@")
+(define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@)
 
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
@@ -66,14 +67,15 @@
 (define SEASHELL_INSTALLED
   (let
     ([base (simple-form-path SEASHELL_INSTALL_PATH)]
-     [current (simple-form-path (find-executable-path (find-system-path 'exec-file)))])
+     [current (simple-form-path (or (find-executable-path (find-system-path 'run-file))
+                                    (find-executable-path (find-system-path 'exec-file))))])
     (not (member 'up (explode-path (find-relative-path base current))))))
 
 ;; Generates a new (fresh) configuration populated only with default values.
 (define (make-config)
   ;; Default configuration values
-  (define config-hash 
-    (make-hash 
+  (define config-hash
+    (make-hash
      (list
       ;; These flags cannot be overridden by any configuration file.
       ;; Note: In a debug build, prefer locations in BUILD_DIR over INSTALL_DIR if exists.
@@ -168,7 +170,7 @@
                                             "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic" "-Werror=incompatible-pointer-types"
                                             ;; Compilation flags.
                                             "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
-                                            ;; Need this to detect global buffer overflow 
+                                            ;; Need this to detect global buffer overflow
                                             "-fno-common"
                                             ;; Standard compilation mode
                                             "-std=c99"
@@ -261,4 +263,55 @@
                                   [(list key val) (config-set! key val)]
                                   [e (error (format 'load-config "~a: element `~s' is not a key-value pair" config-file e))]))
                     cfg)
-               (void)])))))
+               (void)]))))
+  (void))
+
+;; Typed Racket Bindings.
+(module* typed typed/racket
+  (require/typed (submod "." "..")
+                 [config-refresh! (-> Void)]
+                 [read-config (-> Symbol (U String (Listof String) Number Boolean Path))]
+                 [SEASHELL_VERSION String]
+                 [SEASHELL_BRANCH String]
+                 [SEASHELL_COMMIT String]
+                 [SEASHELL_API_VERSION Integer]
+                 [SEASHELL_SOURCE_PATH String]
+                 [SEASHELL_BUILD_PATH String]
+                 [SEASHELL_DEBUG Boolean]
+                 [SEASHELL_INSTALLED Boolean]
+                 [SEASHELL_INSTALL_PATH String])
+  (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
+           read-config-integer read-config-optional-path
+           SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
+           SEASHELL_SOURCE_PATH
+           SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
+
+  (: read-config-string (-> Symbol String))
+  (define (read-config-string symbol)
+    (define result (read-config symbol))
+    (cast result String))
+  (: read-config-strings (-> Symbol (Listof String)))
+  (define (read-config-strings symbol)
+    (define result (read-config symbol))
+    (cast result (Listof String)))
+  (: read-config-number (-> Symbol Number))
+  (define (read-config-number symbol)
+    (define result (read-config symbol))
+    (cast result Number))
+  (: read-config-integer (-> Symbol Integer))
+  (define (read-config-integer symbol)
+    (define result (read-config symbol))
+    (cast result Integer))
+  (: read-config-boolean (-> Symbol Boolean))
+  (define (read-config-boolean symbol)
+    (define result (read-config symbol))
+    (cast result Boolean))
+  (: read-config-path (-> Symbol Path))
+  (define (read-config-path symbol)
+    (define result (read-config symbol))
+    (cast result Path))
+  (: read-config-optional-path (-> Symbol (U Path False)))
+  (define (read-config-optional-path symbol)
+    (define result (read-config symbol))
+    (cast result (U Path False)))
+  )

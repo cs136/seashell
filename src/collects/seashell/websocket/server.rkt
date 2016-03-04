@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,23 +16,12 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require racket/contract
-         racket/unit
-         racket/tcp
-         net/tcp-sig
-         net/url
-         (prefix-in raw: net/tcp-unit)
-         web-server/web-server
-         web-server/dispatchers/dispatch
-         web-server/http/request-structs
-         web-server/http/response
-         web-server/private/connection-manager
-         web-server/private/timer
-         racket/async-channel
+(require typed/net/url
+         seashell/overrides/typed-web-server
          seashell/websocket/connection
          seashell/websocket/handshake)
 
-(provide ws-serve make-websocket-dispatcher)
+(provide make-websocket-dispatcher)
 
 ;; make-websocket-dispatcher -> dispatcher/c
 ;; Makes a RFC 6455 websocket dispatcher.
@@ -41,96 +30,74 @@
 ;;   Consult http://docs.racket-lang.org/net/ws.html
 ;; Returns:
 ;;   Dispatcher function.
-(define/contract (make-websocket-dispatcher
+(: make-websocket-dispatcher (All (X)
+                                  (->* ((-> Websocket-Connection X Any)
+                                        #:conn-headers (-> Bytes URL (Listof Header)
+                                                           (Values (U Boolean String) (Listof Header) X)))
+                                       ()
+                                       Dispatcher)))
+(define (make-websocket-dispatcher
                    dispatch
-                   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values '() (void)))])
-  (->* ((-> ws-connection? any/c any/c))
-       (#:conn-headers
-        (bytes? url? (listof header?) . -> . (values (listof header?) any/c)))
-       dispatcher/c)
-  (lambda (connection request)
+                   #:conn-headers pre-conn-dispatch)
+  (lambda ([connection : Connection] [request : Request])
     ;; Grab the in/out ports.
     (define ip (connection-i-port connection))
     (define op (connection-o-port connection))
     ;; Get the headers.
     (define headers (request-headers/raw request))
-    
+
     ;; Get WebSocket negotiation.
-    (define keyh (headers-assq* #"Sec-WebSocket-Key" headers))
-    (unless keyh (next-dispatcher))
+    (define keyh (let
+                   ([x : (U False Header) (headers-assq* #"Sec-WebSocket-Key" headers)])
+                   (cond
+                     [(not x) (next-dispatcher)]
+                     [else x])))
     ;; Get the key.
     (define key (header-value keyh))
-    
+
     ;; Compute custom headers.  This function also handles subprotocols.
-    (define-values (conn-headers state) (pre-conn-dispatch (request-method request)
-                                                           (request-uri request)
-                                                           headers))
+    (define-values (ok? conn-headers state) (pre-conn-dispatch (request-method request)
+                                                               (request-uri request)
+                                                               headers))
 
     ;; Write headers.
-    (fprintf op "HTTP/1.1 101 Switching Protocols\r\n")
-    (print-headers
-     op
-     (list* (make-header #"Upgrade" #"WebSocket")
-            (make-header #"Connection" #"Upgrade")
-            (make-header #"Server" #"Seashell/WebSocket")
-            (make-header #"Sec-Websocket-Accept" (handshake-solution-server key))
-            conn-headers))
+    (cond
+      [(or (string? ok?) (not ok?))
+        (fprintf op "HTTP/1.1 500 Internal Server Error\r\n")
+        (print-headers op
+          (list* (header #"Server" #"Seashell/WebSocket")
+                  conn-headers))
+        (fprintf op "\r\n")
+        (when (string? ok?)
+          (fprintf op "~a" ok?))
+        (flush-output op)
+        (void)]
+      [else
+        (fprintf op "HTTP/1.1 101 Switching Protocols\r\n")
+        (print-headers
+         op
+         (list* (header #"Upgrade" #"WebSocket")
+                (header #"Connection" #"Upgrade")
+                (header #"Server" #"Seashell/WebSocket")
+                (header #"Sec-Websocket-Accept" (handshake-solution-server key))
+                conn-headers))
 
-    ;; Flush headers out before:
-    (flush-output op)
+        ;; Flush headers out before:
+        (flush-output op)
 
-    ;; Kill the connection timer.
-    (cancel-timer! (connection-timer connection))
+        ;; Kill the connection timer.
+        (cancel-timer! (connection-timer connection))
 
-    ;; Starting output.
-    (define ws-conn
-      (make-ws-connection
-        ip op
-        (make-ws-control)
-        (request-method request)
-        (request-uri request)
-        (request-headers/raw request)
-        #f))
+        ;; Starting output.
+        (define ws-conn
+          (make-ws-connection
+            ip op
+            (make-ws-control)
+            (request-method request)
+            (request-uri request)
+            (request-headers/raw request)
+            #f))
 
-    ;; Drop to the real dispatch function.
-    (dispatch ws-conn state)))
-
-;; (ws-serve conn-dispatch ...)
-;; Starts a dispatching WebSocket server compliant with
-;; RFC 6455.
-;;
-;; Arguments:
-;;   Consult http://docs.racket-lang.org/net/ws.html
-;; Returns:
-;;   A lambda () when invoked stops the Dispatching Server.
-(define/contract
-  (ws-serve
-   conn-dispatch
-   #:conn-headers [pre-conn-dispatch (lambda (method uri hs) (values '() (void)))]
-   #:tcp@ [tcp@ raw:tcp@]
-   #:port [port 80]
-   #:listen-ip [listen-ip #f]
-   #:max-waiting [max-waiting 4]
-   #:timeout [initial-connection-timeout (* 60 60)]
-   #:confirmation-channel [confirm-ch #f])
-  (->* ((any/c any/c . -> . void))
-       (#:conn-headers
-        (bytes? url? (listof header?) . -> . (values (listof header?) any/c))
-        #:tcp@
-        (unit/c (import) (export tcp^))
-        #:port
-        listen-port-number?
-        #:listen-ip
-        (or/c string? false/c)
-        #:max-waiting
-        integer?
-        #:confirmation-channel
-        (or/c false/c async-channel?))
-       (-> void))
-  (serve 
-    #:dispatch (make-websocket-dispatcher conn-dispatch #:conn-headers pre-conn-dispatch)
-    #:confirmation-channel confirm-ch
-    #:tcp@ tcp@
-    #:port port
-    #:listen-ip listen-ip
-    #:max-waiting max-waiting))
+        ;; Drop to the real dispatch function.
+        (dispatch ws-conn state)
+        (void)])))

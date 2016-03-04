@@ -20,23 +20,37 @@
 #ifndef _SEASHELL_H_
 #define _SEASHELL_H_
 
+/** Common definitions. **/
+#define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@
+#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+#define BUILD_DIR "@CMAKE_BINARY_DIR@"
+#define SEASHELL_DEBUG @SEASHELL_DEBUG@
+#define SEASHELL_VERSION "@SEASHELL_VERSION@"
+#define SEASHELL_BRANCH "@GIT_BRANCH@"
+#define SEASHELL_COMMIT_HASH "@GIT_COMMIT_HASH@"
+#define SEASHELL_API_VERSION @SEASHELL_API_VERSION@
+/** Note: adjust these values depending on platform/launcher status.  Currently the only platform we're on
+ *  has everything installed to /bin */
+#define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
+#define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
+
+#if SEASHELL_LIGHTWEIGHT_LAUNCHERS
+#ifdef __linux__
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <dlfcn.h>
+#else
+/** TODO Other platforms. */
+#endif
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
-
-/** Common definitions. **/
-#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
-#define BUILD_DIR "@CMAKE_BINARY_DIR@"
-#define SEASHELL_DEBUG @SEASHELL_DEBUG@
-#define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
-#define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
-#define SEASHELL_VERSION "@SEASHELL_VERSION@"
-#define SEASHELL_BRANCH "@GIT_BRANCH@"
-#define SEASHELL_COMMIT_HASH "@GIT_COMMIT_HASH@"
-#define SEASHELL_API_VERSION @SEASHELL_API_VERSION@
 
 static const char copyright[] = (
 "Seashell @SEASHELL_VERSION@ (@GIT_BRANCH@-@GIT_COMMIT_HASH@) (API version @SEASHELL_API_VERSION@) - a C Development Environment.\r\n"
@@ -45,14 +59,14 @@ static const char copyright[] = (
 "This program is free software: you can redistribute it and/or modify \r\n"
 "it under the terms of the GNU General Public License as published by \r\n"
 "the Free Software Foundation, either version 3 of the License, or    \r\n"
-"(at your option) any later version.                                  \r\n"  
+"(at your option) any later version.                                  \r\n"
 "                                                                     \r\n"
 "See also 'ADDITIONAL TERMS' at the end of the included LICENSE file. \r\n"
 "                                                                     \r\n"
 "This program is distributed in the hope that it will be useful,      \r\n"
 "but WITHOUT ANY WARRANTY; without even the implied warranty of       \r\n"
 "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        \r\n"
-"GNU General Public License for more details.                         \r\n" 
+"GNU General Public License for more details.                         \r\n"
 "                                                                     \r\n"
 "You should have received a copy of the GNU General Public License    \r\n"
 "along with this program.  If not, see <http://www.gnu.org/licenses/>.\r\n");
@@ -75,11 +89,21 @@ static int IS_INSTALLED() {
     perror("[warning]: realpath");
     return 0;
   }
-  
   ret = strncmp(INSTALL_PREFIX, linkname, strlen(INSTALL_PREFIX)) == 0;
   free(linkname);
+
+#if SEASHELL_LIGHTWEIGHT_LAUNCHERS
+  // Some extra work is needed if we're a launcher.
+  if (!ret) {
+    Dl_info info;
+    if (dladdr((void*)IS_INSTALLED, &info)) {
+      ret = strncmp(INSTALL_PREFIX, info.dli_fname, strlen(INSTALL_PREFIX)) == 0;
+    }
+  }
+#endif
+
   resolved = 1;
-  return ret; 
+  return ret;
 #else
 #error Write platform specific code to test if Seashell is installed.
 #endif
