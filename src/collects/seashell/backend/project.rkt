@@ -650,6 +650,7 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
+              (copy-directory/files common-dir (check-and-build-path tmpdir "common"))
               (copy-from! common-dir))
             (with-output-to-file
               tmpzip
