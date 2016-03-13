@@ -152,8 +152,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                   });
               }, 0);
             });
-          // initialize localfiles so that it can get the user cookie
-          localfiles.init();
         } catch (e) {
           self.failed = true;
           $timeout(function() {

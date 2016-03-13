@@ -19,7 +19,8 @@ angular.module('seashell-local-files', [])
         // note that this doesn't actually secure anything:
         // it only prevents name conflicts
         self.store = localforage.createInstance({
-          name: self.user
+          name: self.user,
+          version: 1.0
         });
       };
 
@@ -28,7 +29,7 @@ angular.module('seashell-local-files', [])
        * Returns the path to where this file is stored.
        */
       self._path = function(project, file) {
-        return project + file;
+        return sprintf("%s/%s", project, file); 
       };
 
       /*
@@ -100,7 +101,7 @@ angular.module('seashell-local-files', [])
         if (folder == "common" || folder == "tests")
           return $q.reject("Runner file must be in question directory.");
         console.log("[storage-service] setRunnerFile");
-        return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile"), file);
+        return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
       };
 
     }

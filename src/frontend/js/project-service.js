@@ -37,6 +37,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
+
+      localfiles.init();
      
       var SeashellProject = (function () { 
         /**
@@ -649,7 +651,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.reject("No tests for question!");
 
           if(ws.connected && settings.settings.offline_mode !== 2) {
-            return $q.when(ws.compileAndRunProject(self.name, file.fullname(), tests));
+            return $q.when(ws.compileAndRunProject(self.name, question, tests));
           }
           else if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
             var res = $q.defer();
