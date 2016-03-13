@@ -222,7 +222,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             }
             self.children = split[1] || [];
             if (!soft_delete) {
-              localfiles.deleteFile(self.project.name, split[0][0].fullname());
               return $q.when(ws.deleteFile(self.project.name, split[0][0].fullname()));
             }
           }
@@ -616,8 +615,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
           var self = this;
-          return $q.when([ws.setFileToRun(self.name, question, folder, file),
-                          localfiles.setRunnerFile(self.name, question, folder, file)])
+          return $q.when([ws.setFileToRun(self.name, question, folder, file)])
             .then(function() { self.fileToRun = file; });
         };
 
