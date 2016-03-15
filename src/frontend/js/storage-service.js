@@ -109,6 +109,17 @@ angular.module('seashell-local-files', [])
       // Paths are all relative to project
       // eg. "q3/tests/mytest.in" is a file
       // eg. "q3/tests/" is a directory 
+      
+      self._getTree = function() {
+        return self.store.getItem("//tree")
+        .then(function(tree) {
+          return tree || {};
+        });
+      };
+
+      self._setTree = function(tree) {
+        return $q.when(self.store.setItem("//tree", tree));
+      };
 
       // Creates a node. A node is either a file or a directory.
       self._newNode = function(project, path, is_dir) {
