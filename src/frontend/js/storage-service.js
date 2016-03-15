@@ -104,5 +104,46 @@ angular.module('seashell-local-files', [])
         return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
       };
 
+      // Root is indexed by project
+      // Projects are a flat list of directories and files
+      // Paths are all relative to project
+      // eg. "q3/tests/mytest.in" is a file
+      // eg. "q3/tests/" is a directory 
+
+      // Creates a node. A node is either a file or a directory.
+      self._newNode = function(project, path, is_dir) {
+        // TODO
+        return {}; 
+      };
+
+      self.newDirectory = function(name, dir_path) {
+        self._getTree()
+        .then(function(tree) {
+          tree[name].children.push(self._newNode(name, dir_path, true));
+        });
+      };
+
+      self.newFile = function(name, file_name, contents,
+        encoding, normalize) {
+        // TODO: decoding 
+        // name: project name
+        // file_name: relative path under project
+        self._getTree()
+        .then(function(tree) {
+          tree[name].children.push(self._newNode(name, file_name, false)); 
+          self._setTree(tree);
+          self.writeFile(self.path(name, file_name), contents);
+        }); 
+      };
+
+      self.getProjects = function() {
+        return self._getTree()
+        .then(function(tree) {
+          return _.map(Object.keys(tree), function(project) {
+            return [project, 0]; // TODO: timestamp?
+          }); 
+        });
+      };
+
     }
   ]);
