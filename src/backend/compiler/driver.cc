@@ -36,5 +36,10 @@ int main( int argc, char* argv[] ) {
     seashell_compiler_add_file(compiler, argv[1]);
     seashell_compiler_run(compiler);
     seashell_compiler_free(compiler);
+
+    struct seashell_preprocessor *pp = seashell_preprocessor_make();
+    seashell_preprocessor_set_main_file(pp, argv[1]);
+    seashell_preprocessor_run(pp);
+    seashell_preprocessor_free(pp);
   }
 }

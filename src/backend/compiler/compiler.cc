@@ -46,6 +46,7 @@
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/LLVM.h>
 #include <clang/Basic/SourceManager.h>
+#include <clang/Basic/TargetInfo.h>
 #include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Driver/Compilation.h>
 #include <clang/Driver/Driver.h>
@@ -1104,6 +1105,8 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
   sources.insert(src_path);
   std::list<std::string> worklist(1, src_path);
 
+  seashell_llvm_setup();
+
   std::vector<seashell_diag>& pp_messages = preprocessor->messages;
 #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
 
@@ -1161,10 +1164,6 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     Clang.createDiagnostics(&diag_client, false);
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
-    fprintf(stderr, "bloop3.5\n");
-    Clang.createPreprocessor(clang::TU_Module);
-
-    fprintf(stderr, "bloop3.75\n");
 
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
@@ -1172,6 +1171,14 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
                   std::back_inserter(pp_messages));
       return 1;
     }
+
+    clang::TargetOptions CI_TOpts;
+    CI_TOpts.Triple = llvm::sys::getDefaultTargetTriple();
+    std::shared_ptr<clang::TargetOptions> TOpts_ptr(&CI_TOpts);
+    clang::TargetInfo *CI_TI = clang::TargetInfo::CreateTargetInfo(CI_Diags, TOpts_ptr);
+    Clang.setTarget(CI_TI);
+
+    Clang.createPreprocessor(clang::TU_Prefix);
 
     fprintf(stderr, "bloop4\n");
 
