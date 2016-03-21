@@ -37,8 +37,8 @@
   (define pp (seashell_preprocessor_make))
   (seashell_preprocessor_set_main_file pp runnerFile)
   (seashell_preprocessor_run pp)
-  (build-list (seashell_preprocessor_get_include_count pp)
-    (lambda (n) (seashell_preprocessor_get_include pp n))))
+  (map string->path (build-list (seashell_preprocessor_get_include_count pp)
+    (lambda (n) (seashell_preprocessor_get_include pp n)))))
 
 ;; Diagnostic structure.  Self-explanatory.
 (struct seashell-diagnostic (error? file line column message) #:prefab)

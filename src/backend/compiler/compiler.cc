@@ -55,6 +55,7 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/FrontendDiagnostic.h>
+#include <clang/Frontend/FrontendOptions.h>
 #include <clang/Frontend/TextDiagnostic.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
@@ -848,7 +849,7 @@ static int compile_module (seashell_compiler* compiler,
       args.push_back(p->c_str());
     }
     args.push_back(src_path);
-    
+
     /** Parse Diagnostic Arguments */
     clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
 
@@ -1083,6 +1084,35 @@ public:
   }
 };
 
+class FrontendAction : public clang::FrontendAction {
+  clang::CompilerInstance *_ci;
+  std::set<std::string> &_deps;
+  std::list<std::string> &_wl;
+  
+public:
+  FrontendAction(std::set<std::string> &deps, std::list<std::string> &wl) : _deps(deps), _wl(wl) { }
+
+  virtual bool usesPreprocessorOnly() const {
+    return false;
+  }
+
+  std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &ci, clang::StringRef) {
+    _ci = &ci;
+    return std::unique_ptr<clang::ASTConsumer>(new clang::ASTConsumer);
+  }
+
+  virtual void ExecuteAction() {
+    PPCallbacks *ppc = new PPCallbacks(_deps, _wl);
+    clang::Preprocessor &pp(_ci->getPreprocessor());
+    pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
+    clang::Token token;
+    pp.EnterMainSourceFile();
+    do {
+      pp.Lex(token);
+    } while(token.isNot(clang::tok::eof));
+  }
+};
+
 /**
  * preprocess_file(seashell_preprocessor* preprocessor, const char* src_path)
  *
@@ -1131,8 +1161,6 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     /** Parse Diagnostic Arguments */
     clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
 
-    fprintf(stderr, "bloop\n");
-
     /* Invoke clang to compile file to LLVM IR. */
     SeashellDiagnosticClient diag_client(&*diag_opts);
 
@@ -1142,8 +1170,6 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
     clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
-
-    fprintf(stderr, "bloop2\n");
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -1165,6 +1191,36 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     Clang.createFileManager();
     Clang.createSourceManager(Clang.getFileManager());
 
+    
+    /** Add compiler-specific headers. */
+#ifndef __EMSCRIPTEN__
+    if (!IS_INSTALLED() && access (BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", F_OK) != -1) {
+      Clang.getHeaderSearchOpts().AddPath(BUILD_DIR "/lib/llvm/lib/clang/" CLANG_VERSION_STRING "/include/", clang::frontend::System, false, true);
+    } else {
+      Clang.getHeaderSearchOpts().AddPath(INSTALL_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include", clang::frontend::System, false, true);
+    } 
+    /** NOTE: this will have to change for different platforms */
+#ifdef MULTIARCH_PLATFORM
+    Clang.getHeaderSearchOpts().AddPath("/usr/include/" MULTIARCH_PLATFORM, clang::frontend::System, false, true);
+#endif
+    /** Set up the default (generic) headers */
+    Clang.getHeaderSearchOpts().AddPath("/usr/include", clang::frontend::System, false, true);
+#else
+    Clang.getHeaderSearchOpts().AddPath("/clang-include/", clang::frontend::System, false, true);
+    Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
+#endif
+    //Clang.getSourceManager().setMainFileID(fid);
+
+    const clang::FileEntry *file = Clang.getFileManager().getFile(src_path, true);
+    if(!file) fprintf(stderr, "nuckin futs\n");
+
+    // initialize input file
+    /*clang::FrontendInputFile fif(src_path, clang::IK_C, false);
+    fprintf(stderr, "bloop3.5\n");
+    clang::DependencyOutputOptions doo;
+    clang::FrontendOptions feo;
+    Clang.InitializeSourceManager(fif, Clang.getDiagnostics(), Clang.getFileManager(), Clang.getSourceManager(), feo);*/
+
     if (!Clang.hasDiagnostics()) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::createDiagnostics() failed.");
       std::copy(diag_client.messages.begin(), diag_client.messages.end(),
@@ -1172,13 +1228,20 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
       return 1;
     }
 
+    FrontendAction act(sources, worklist);
+    Clang.ExecuteAction(act);
+
+
+    // create target
+    /*
     clang::TargetOptions CI_TOpts;
     CI_TOpts.Triple = llvm::sys::getDefaultTargetTriple();
     std::shared_ptr<clang::TargetOptions> TOpts_ptr(&CI_TOpts);
     clang::TargetInfo *CI_TI = clang::TargetInfo::CreateTargetInfo(CI_Diags, TOpts_ptr);
     Clang.setTarget(CI_TI);
 
-    Clang.createPreprocessor(clang::TU_Prefix);
+    // finally create preprocessor
+    Clang.createPreprocessor(clang::TU_Module);
 
     fprintf(stderr, "bloop4\n");
 
@@ -1186,13 +1249,13 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     PPCallbacks *ppc = new PPCallbacks(sources, worklist);
     pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
 
-    fprintf(stderr, "bloop5\n");
+    fprintf(stderr, "%s\n", src_path);
 
     clang::Token token;
     pp.EnterMainSourceFile();
     do {
       pp.Lex(token);
-    } while(token.isNot(clang::tok::eof));
+    } while(token.isNot(clang::tok::eof));*/
   }
 
   // convert accumulated set into vector
