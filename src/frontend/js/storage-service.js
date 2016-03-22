@@ -10,6 +10,7 @@ angular.module('seashell-local-files', [])
 
       self.user = null;
       self.store = null;
+      self.projects = [];
 
       // Must call this before using anything
       self.init = function() {
@@ -22,6 +23,11 @@ angular.module('seashell-local-files', [])
           name: self.user,
           version: 1.0
         });
+
+        self.store.getItem("//projects")
+        .then(function(projs) {
+          self.projects = projs || [];
+        }); 
       };
 
 
@@ -109,51 +115,44 @@ angular.module('seashell-local-files', [])
       // Paths are all relative to project
       // eg. "q3/tests/mytest.in" is a file
       // eg. "q3/tests/" is a directory 
+
+      // Store an entire SeashellProject tree into the offline store
+      self._dumpProject = function(project) {
+        console.log("[localfiles] dumping project", project);
+        return $q.when(self.store.setItem(sprintf("//projects/%s", project.name), project.root));
+      };
       
-      self._getTree = function() {
-        return self.store.getItem("//tree")
-        .then(function(tree) {
-          return tree || {};
-        });
-      };
-
-      self._setTree = function(tree) {
-        return $q.when(self.store.setItem("//tree", tree));
-      };
-
-      // Creates a node. A node is either a file or a directory.
-      self._newNode = function(project, path, is_dir) {
-        // TODO
-        return {}; 
+      self.listProject = function(name) {
+        // return the entire SeashellProject tree
+        return $q.when(self.store.getItem(sprintf("//projects/%s", name)));
       };
 
       self.newDirectory = function(name, dir_path) {
-        self._getTree()
-        .then(function(tree) {
-          tree[name].children.push(self._newNode(name, dir_path, true));
-        });
+        console.log("[localfiles] newDirectory", name, dir_path);
+        // do nothing, since dumpProject will take care of this
       };
 
       self.newFile = function(name, file_name, contents,
         encoding, normalize) {
+        console.log("[localfiles] newFile", name, file_name, contents);
         // TODO: decoding 
         // name: project name
         // file_name: relative path under project
-        self._getTree()
-        .then(function(tree) {
-          tree[name].children.push(self._newNode(name, file_name, false)); 
-          self._setTree(tree);
-          self.writeFile(self.path(name, file_name), contents);
-        }); 
+        self.writeFile(self.path(name, file_name), contents);
+      };
+
+      self.newProject = function(name) {
+        console.log("[localfiles] newProject", name);
+        self.projects.push(name);
+        return $q.when(self.store.setItem("//projects", self.projects));
       };
 
       self.getProjects = function() {
-        return self._getTree()
-        .then(function(tree) {
-          return _.map(Object.keys(tree), function(project) {
-            return [project, 0]; // TODO: timestamp?
-          }); 
-        });
+        console.log("[localfiles] getProjects", self.projects);
+        return $q.when(_.map(self.projects,
+            // mimic the backend but return 0 for timestamp
+            function(project) { return [project, 0]; }
+        ));
       };
 
     }

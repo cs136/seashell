@@ -260,22 +260,41 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getProjects = function(deferred) {
-        // TODO: offline mode (store tree in storage-service) 
-        return self._socket.getProjects(deferred);
+        if (self.connected) {
+          return self._socket.getProjects(deferred);
+        }
+        else { 
+          return localfiles.getProjects();
+        }
       };
 
       self.listProject = function(name, deferred) {
-        // TODO: tree stuff
-        return self._socket.listProject(name, deferred);
+        if (self.connected) {
+          localfiles.listProject(name).then(
+              function(tree) {
+                console.log("[websocket] offline listProject", tree);
+              });
+          return self._socket.listProject(name, deferred);
+        } else {
+          return localfiles.listProject(name).then(
+             function(tree) {
+               // project-service checks for this
+               // if this is set, then it will simply assign the tree
+               tree.isOffline = true; 
+               return tree;
+             }
+          ); 
+        }
       };
 
       self.newProject = function(name, deferred) {
         // TODO: offline mode (tree in storage-service) 
+        localfiles.newProject(name);
         return self._socket.newProject(name, deferred);
       };
 
       self.newProjectFrom = function(name, src_url, deferred) {
-        // TODO: offline mode (tree in storage-service) 
+        // TODO: disable? 
         return self._socket.newProjectFrom(name, src_url, deferred);
       };
 
@@ -312,8 +331,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.newFile = function(name, file_name, contents,
-        // TODO: offline mode 
         encoding, normalize, deferred) {
+        localfiles.newFile(name, file_name, contents, encoding, normalize);
         return self._socket.newFile(name, file_name, contents,
           encoding, normalize, deferred);
       };
@@ -326,6 +345,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.newDirectory = function(name, dir_name, deferred) {
         // TODO: offline mode (tree in storage-service) 
+        localfiles.newDirectory(name, dir_name);
         return self._socket.newDirectory(name, dir_name, deferred);
       };
 
