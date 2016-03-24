@@ -30,7 +30,7 @@
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
 (define/contract (seashell-compile-files/place user-cflags user-ldflags runnerFile objects)
-  (-> (listof string?) (listof string?) path-string? (listof path?)
+  (-> (listof string?) (listof string?) path? (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
   (cond
     [(and compiler-place (not (sync/timeout 0 (place-dead-evt compiler-place))))

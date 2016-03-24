@@ -33,12 +33,13 @@
 ;; (seashell-resolve-dependencies runnerFile)
 ;; Invokes the internal preprocessor to resolve dependencies
 (define/contract (seashell-resolve-dependencies runnerFile)
-  (-> path-string? (listof path?))
+  (-> path? (listof path?))
   (define pp (seashell_preprocessor_make))
-  (seashell_preprocessor_set_main_file pp runnerFile)
+  (seashell_preprocessor_set_main_file pp (path->string runnerFile))
   (seashell_preprocessor_run pp)
-  (map string->path (build-list (seashell_preprocessor_get_include_count pp)
-    (lambda (n) (seashell_preprocessor_get_include pp n)))))
+  (define srcs (build-list (seashell_preprocessor_get_include_count pp)
+    (lambda (n) (seashell_preprocessor_get_include pp n))))
+  (map string->path srcs))
 
 ;; Diagnostic structure.  Self-explanatory.
 (struct seashell-diagnostic (error? file line column message) #:prefab)
@@ -64,7 +65,7 @@
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
 (define/contract (seashell-compile-files user-cflags user-ldflags runnerFile objects)
-  (-> (listof string?) (listof string?) path-string? (listof path?)
+  (-> (listof string?) (listof string?) path? (listof path?)
       (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
 
   (define sources (seashell-resolve-dependencies runnerFile))
