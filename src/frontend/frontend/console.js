@@ -48,6 +48,7 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
+      console.warn("ASAN output:", contents);
       var traced_main = false;
       var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
       var addrpatt = /0x[0-9a-f]+/;
