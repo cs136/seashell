@@ -312,7 +312,8 @@
                   ;; Behaviour is inconsistent if we just exec directly.
                   ;; This seems to work.  (why: who knows?)
                   (putenv "ASAN_OPTIONS"
-                          "detect_leaks=1:
+                          "allocator_may_return_null=1:
+                           detect_leaks=1:
                            detect_stack_use_after_return=1:
                            stack_trace_format='{\"frame\": %n, \"module\": \"%m\", \"offset\": \"%o\", \"function\": \"%f\", \"function_offset\": \"%q\", \"file\": \"%s\", \"line\": %l, \"column\": %c}'")
                   (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
