@@ -261,7 +261,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getProjects = function(deferred) {
         if (self.connected) {
-          return self._socket.getProjects(deferred);
+          return self._socket.getProjects(deferred)
+          .then(function(projects) {
+            localfiles.setProjects(projects);
+            return projects;
+          });
         }
         else { 
           return localfiles.getProjects();
@@ -276,14 +280,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
               });
           return self._socket.listProject(name, deferred);
         } else {
-          return localfiles.listProject(name).then(
-             function(tree) {
-               // project-service checks for this
-               // if this is set, then it will simply assign the tree
-               tree.isOffline = true; 
-               return tree;
-             }
-          ); 
+          return localfiles.listProject(name);
         }
       };
 

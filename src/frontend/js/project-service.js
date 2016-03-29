@@ -361,16 +361,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
           return result.then(function () {
             return $q.when(ws.listProject(self.name)).then(function(files) {
-               // if offline, assign self.root to files
-               if (files.isOffline) {
-                 self.root = files;
-               } else {
-                 self.root = new SeashellFile(self, "", null, true);
-                    _.map(files, function(f) {
-                     console.log("SeashellFile", f);
-                     self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
-                 });
-               }
+               self.root = new SeashellFile(self, "", null, true);
+                  _.map(files, function(f) {
+                   console.log("SeashellFile", f);
+                   self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
+               });
+               
             });}).then(function () {
                /* If the project is listed in the project skeleton on the server,
                   set self.projectZipURL to the project directory url.
