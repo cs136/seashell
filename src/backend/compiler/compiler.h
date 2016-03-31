@@ -36,6 +36,7 @@ std::string seashell_compiler_object_arch(struct seashell_compiler* compiler);
 std::string seashell_compiler_object_os (struct seashell_compiler* compiler);
 
 void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, std::string file);
+std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
 std::string seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
 #else
 extern "C" const char* seashell_clang_version();
@@ -49,6 +50,7 @@ extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* 
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler);
 
 extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char *file);
+extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
 extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
 #endif
 
