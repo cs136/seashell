@@ -352,9 +352,10 @@
 ;; TODO: need to clean up the subprocess and ports?
 (define/contract (get-headers c-files file-dir common-dir)
   (-> (listof path-string?) path? path? (listof path-string?))
-  (define-values (clang clang-output clang-input clang-error)
+  (define clang-error (open-output-file "/dev/null" #:exists 'truncate))
+  (define-values (clang clang-output clang-input fake-error)
     ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f #f (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
+    (apply subprocess #f #f clang-error (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
   (define files
     (remove-duplicates
       (filter values
@@ -370,8 +371,8 @@
                 [else #f])]
             [#f #f])))))
   (close-input-port clang-output)
-  (close-input-port clang-error)
   (close-output-port clang-input)
+  (close-output-port clang-error)
   files)
 
 ;; (get-co-files headers)
@@ -463,11 +464,12 @@
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place `(,@(read-config 'compiler-flags)
-                                      ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
-                                    '("-lm")
-                                    (remove-duplicates (cons (build-path base exe) c-files))
-                                    o-files))
+      (seashell-compile-files/place
+        `(,@(read-config 'compiler-flags)
+          ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+          '("-lm")
+           (remove-duplicates (cons (build-path base exe) c-files))
+           o-files))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
@@ -544,7 +546,6 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
-      (eprintf "b2coutts: messages are ~s\n" messages)
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 
@@ -649,7 +650,7 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
-              (copy-from! common-dir))
+              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))

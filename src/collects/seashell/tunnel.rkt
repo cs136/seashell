@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's authentication and communications backend.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -21,6 +21,7 @@
          (prefix-in uw: seashell/tunnel/uw-tunnel))
 (provide
   tunnel?
+  Tunnel
   (struct-out exn:tunnel)
   tunnel-close
   password:tunnel-launch

@@ -62,8 +62,9 @@ target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGe
                               clangTooling clangParse clangSema clangAnalysis
                               clangEdit clangAST clangLex clangBasic
                               clangStaticAnalyzerFrontend
-                              ${REQ_LLVM_LIBRARIES})
+                              ${REQ_LLVM_LIBRARIES}
+                              ${CMAKE_DL_LIBS})
 add_executable(seashell-test-clang driver.cc)
-target_link_libraries(seashell-test-clang seashell-clang)
+target_link_libraries(seashell-test-clang seashell-clang ${CMAKE_DL_LIBS})
 INSTALL(TARGETS seashell-clang LIBRARY DESTINATION lib)
 INSTALL(TARGETS seashell-test-clang RUNTIME DESTINATION bin)

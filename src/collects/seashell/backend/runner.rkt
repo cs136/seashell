@@ -36,7 +36,7 @@
                           raw-stdin raw-stdout raw-stderr
                           handle control exit-status
                           destroyed-semaphore
-                          _mode) #:transparent #:mutable)
+                          _mode custodian) #:transparent #:mutable)
 (struct exn:program:run exn:fail:user ())
 
 (define program-table (make-hash))
@@ -45,7 +45,7 @@
 
 ;; (program-control-test-thread program)
 ;; Control thread helper for running a program with a test file.
-;; 
+;;
 ;; Arguments:
 ;;  program - Program structure.
 ;;  test-name - Name of test.
@@ -59,7 +59,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore mode)
+                         destroyed-semaphore mode custodian)
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
@@ -92,7 +92,9 @@
   (define (close)
     (close-input-port raw-stdout)
     (close-input-port raw-stderr)
-    (close-output-port out-stdout))
+    (close-output-port out-stdout)
+    (custodian-shutdown-all custodian)
+    (void))
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
@@ -131,7 +133,7 @@
       [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
        (set-program-exit-status! pgrm 255)
-       ;; Kill copy-threads before killing program 
+       ;; Kill copy-threads before killing program
        (kill-thread stderr-thread)
        (kill-thread stdout-thread)
        (subprocess-kill handle #t)
@@ -162,7 +164,7 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore mode)
+                         destroyed-semaphore mode custodian)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -180,6 +182,7 @@
       (close-output-port out-stderr))
     (unless (port-closed? out-stdout)
       (close-output-port out-stdout))
+    (custodian-shutdown-all custodian)
     (void))
 
   ;; Deal with receiving signals,
@@ -283,81 +286,85 @@
 (define/contract (run-program binary directory lang test is-cli)
   (-> path-string? path-string? (or/c 'C 'racket) (or/c #f string?) boolean? integer?)
   (define test-path (if is-cli (build-path ".") (build-path directory (read-config 'tests-subdirectory))))
-  (call-with-semaphore
-    program-new-semaphore
-    (lambda ()
-      (with-handlers
-          [(exn:fail:filesystem?
-            (lambda (exn)
-              (raise (exn:program:run
-                      (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
-                      (current-continuation-marks)))))]
-        (if test
-          (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
-          (logf 'info "Running file ~a with language ~a" binary lang))
+  (define run-custodian (make-custodian))
 
-        (define-values (handle raw-stdout raw-stdin raw-stderr)
-          (parameterize
-            ([current-directory directory]
-             [current-environment-variables (environment-variables-copy (current-environment-variables))])
-            (match lang
-              ['C
-                ;; Behaviour is inconsistent if we just exec directly.
-                ;; This seems to work.  (why: who knows?)
-                (putenv "ASAN_OPTIONS"
-                        "detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\" 
-                          detect_stack_use_after_return=1")
-                (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
-                (subprocess #f #f #f binary)]
-              ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
-                                   "-t" 
-                                    (some-system-path->string (read-config 'seashell-racket-runtime-library))
-                                   "-u" binary)])))
+  (parameterize ([current-custodian run-custodian]
+                 [current-subprocess-custodian-mode 'interrupt])
+    (call-with-semaphore
+      program-new-semaphore
+      (lambda ()
+        (with-handlers
+            [(exn:fail:filesystem?
+              (lambda (exn)
+                (raise (exn:program:run
+                        (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
+                        (current-continuation-marks)))))]
+          (if test
+            (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
+            (logf 'info "Running file ~a with language ~a" binary lang))
 
-            ;; Construct the I/O ports.
-            (define (make-io-pipe)
-              (if test (make-pipe) (make-pipe (read-config 'io-buffer-size))))
+          (define-values (handle raw-stdout raw-stdin raw-stderr)
+            (parameterize
+              ([current-directory directory]
+               [current-environment-variables (environment-variables-copy (current-environment-variables))])
+              (match lang
+                ['C
+                  ;; Behaviour is inconsistent if we just exec directly.
+                  ;; This seems to work.  (why: who knows?)
+                  (putenv "ASAN_OPTIONS"
+                          "allocator_may_return_null=1:detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"
+                            detect_stack_use_after_return=1")
+                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config 'llvm-symbolizer)))
+                  (subprocess #f #f #f binary)]
+                ['racket (subprocess #f #f #f (read-config 'racket-interpreter)
+                                     "-t"
+                                      (some-system-path->string (read-config 'seashell-racket-runtime-library))
+                                     "-u" binary)])))
 
-            (define-values (in-stdout out-stdout) (make-io-pipe))
-            (define-values (in-stdin out-stdin) (make-io-pipe))
-            (define-values (in-stderr out-stderr) (make-io-pipe))
-            ;; Set buffering modes
-            (file-stream-buffer-mode raw-stdin 'none)
-            ;; Construct the destroyed-semaphore
-            (define destroyed-semaphore (make-semaphore 0))
-            ;; Construct the control structure.
-            (define result (program in-stdin in-stdout in-stderr
-                                    out-stdin out-stdout out-stderr
-                                    raw-stdin raw-stdout raw-stderr
-                                    handle #f #f destroyed-semaphore
-                                    (if test 'test 'run)))
-            (define control-thread
-              (thread
-                (lambda ()
-                  (if test
-                    (program-control-test-thread result
-                                                 test
-                                                 (file->bytes (build-path test-path (string-append test ".in")))
-                                                 (with-handlers
-                                                   ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                   (file->bytes (build-path test-path (string-append test ".expect")))))
-                    (program-control-thread result)))))
-            (set-program-control! result control-thread)
-            ;; Install it in the hash-table
-            (define pid (subprocess-pid handle))
-            ;; Block if there's still a PID in there.  This is to prevent
-            ;; nasty race-conditions in which a process which is started
-            ;; has the same PID as a process which is just about to be destroyed.
-            (define block-semaphore
-              (call-with-semaphore
-                program-destroy-semaphore
-                (lambda ()
-                  (define handle (hash-ref program-table pid #f))
-                  (if handle (program-destroy-semaphore handle) #f))))
-            (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
-            (hash-set! program-table pid result)
-            (logf 'info "Binary ~a running as PID ~a." binary pid)
-            pid))))
+              ;; Construct the I/O ports.
+              (define (make-io-pipe)
+                (if test (make-pipe) (make-pipe (read-config 'io-buffer-size))))
+
+              (define-values (in-stdout out-stdout) (make-io-pipe))
+              (define-values (in-stdin out-stdin) (make-io-pipe))
+              (define-values (in-stderr out-stderr) (make-io-pipe))
+              ;; Set buffering modes
+              (file-stream-buffer-mode raw-stdin 'none)
+              ;; Construct the destroyed-semaphore
+              (define destroyed-semaphore (make-semaphore 0))
+              ;; Construct the control structure.
+              (define result (program in-stdin in-stdout in-stderr
+                                      out-stdin out-stdout out-stderr
+                                      raw-stdin raw-stdout raw-stderr
+                                      handle #f #f destroyed-semaphore
+                                      (if test 'test 'run) run-custodian))
+              (define control-thread
+                (thread
+                  (lambda ()
+                    (if test
+                      (program-control-test-thread result
+                                                   test
+                                                   (file->bytes (build-path test-path (string-append test ".in")))
+                                                   (with-handlers
+                                                     ([exn:fail:filesystem? (lambda (exn) #f)])
+                                                     (file->bytes (build-path test-path (string-append test ".expect")))))
+                      (program-control-thread result)))))
+              (set-program-control! result control-thread)
+              ;; Install it in the hash-table
+              (define pid (subprocess-pid handle))
+              ;; Block if there's still a PID in there.  This is to prevent
+              ;; nasty race-conditions in which a process which is started
+              ;; has the same PID as a process which is just about to be destroyed.
+              (define block-semaphore
+                (call-with-semaphore
+                  program-destroy-semaphore
+                  (lambda ()
+                    (define handle (hash-ref program-table pid #f))
+                    (if handle (program-destroy-semaphore handle) #f))))
+              (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
+              (hash-set! program-table pid result)
+              (logf 'info "Binary ~a running as PID ~a." binary pid)
+              pid)))))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
@@ -459,7 +466,7 @@
                              out-stdin out-stdout out-stderr
                              raw-stdin raw-stdout raw-stderr
                              handle control exit-status
-                             destroyed-semaphore mode)
+                             destroyed-semaphore mode custodian)
         pgrm)
 
       ;; Note: ports are Racket pipes and therefore GC'd.

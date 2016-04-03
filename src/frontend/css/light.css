@@ -35,6 +35,10 @@
   border-top-color: #eee;
 }
 
+#toolbar-set-runner:disabled {
+    color: #6f7f8c;
+}
+
 .question-link {
   opacity: 0.5;
 }

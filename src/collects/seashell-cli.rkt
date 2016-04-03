@@ -51,7 +51,6 @@
   (format "~a:~a:~a: error: ~a\n" file line column errstr))
 
 (standard-logger-setup)
-(seashell-compile-place/init)
 (define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t))
 (match info 
   [(hash-table ('messages msgs) ('status "compile-failed"))
