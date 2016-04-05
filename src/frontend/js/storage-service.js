@@ -111,12 +111,6 @@ angular.module('seashell-local-files', [])
         return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
       };
 
-      // Root is indexed by project
-      // Projects are a flat list of directories and files
-      // Paths are all relative to project
-      // eg. "q3/tests/mytest.in" is a file
-      // eg. "q3/tests/" is a directory 
-
       // Flatten the project tree into a list of nodes
       // to be stored offline.
       // When this is read out again, project-service will
@@ -163,7 +157,7 @@ angular.module('seashell-local-files', [])
         // TODO: decoding 
         // name: project name
         // file_name: relative path under project
-        self.writeFile(self.path(name, file_name), contents);
+        self.writeFile(self._path(name, file_name), contents);
       };
 
 
