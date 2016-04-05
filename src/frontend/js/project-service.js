@@ -163,7 +163,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                   }
                   self.offline_checksum = conts.offline_checksum;
                   self.online_checksum = conts.online_checksum;
-                  self.contents = conts.contents;
+                  self.contents = conts.data;
                   def.resolve(self.contents);
                 });
               });

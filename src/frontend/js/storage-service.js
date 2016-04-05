@@ -49,31 +49,34 @@ angular.module('seashell-local-files', [])
        */
       self.writeFile = function(name, file_name, file_content, checksum) {
         var offline_checksum = md5(file_content);
-        var online_checksum;
         var path = self._path(name, file_name);
 
         // checksum is false when we're doing an offline write
         if (checksum === false) {
-          $q.when(self.store.getItem(path)).then(
+          // read and write back
+          return $q.when(self.store.getItem(path)).then(
             function(contents) {
-              online_checksum = contents.online_checksum;
+              contents = contents || {};
+              contents.data = file_content;
+              contents.offline_checksum = offline_checksum;
+              return self.store.setItem(path, contents);
             }
           );
+        } else {
+          var to_write = {
+            data: file_content,
+            online_checksum: checksum,
+            offline_checksum: offline_checksum
+          };
+          console.log("[localfiles] Writing: ", to_write);
+          return $q.when(self.store.setItem(path, to_write));
         }
-
-        var to_write = {
-          data: file_content,
-          online_checksum: checksum || online_checksum,
-          offline_checksum: offline_checksum
-        };
-        console.log("[storage-service] Writing: ", to_write);
-        return $q.when(self.store.setItem(path, to_write));
       };
 
       self.readFile = function(name, file_name) {
         return $q.when(self.store.getItem(self._path(name, file_name))).then(
           function(contents) {
-            console.log("[storage-service] Reading", contents);
+            console.log("[localfiles] Reading", contents);
             return contents;
           });
       };
@@ -92,14 +95,14 @@ angular.module('seashell-local-files', [])
       };
 
       self.deleteFile = function(name, file_name) {
-        console.log("[storage-service] deleteFile");
+        console.log("[localfiles] deleteFile");
         return $q.when(self.store.removeItem(self._path(name, file_name)));
       };
 
       self.getRunnerFile = function(name, question) {
         return self.store.getItem(self._path(name, question) + "//runnerFile")
           .then(function(contents) {
-            console.log("[storage-service] getRunnerFile", contents);
+            console.log("[localfiles] getRunnerFile", contents);
             return contents;
           });
       };
@@ -107,7 +110,7 @@ angular.module('seashell-local-files', [])
       self.setRunnerFile = function(name, question, folder, file) {
         if (folder == "common" || folder == "tests")
           return $q.reject("Runner file must be in question directory.");
-        console.log("[storage-service] setRunnerFile");
+        console.log("[localfiles] setRunnerFile");
         return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
       };
 
