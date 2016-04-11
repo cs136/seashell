@@ -60,7 +60,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           confirm("Archive Projects",
             "Are you sure you want to archive all of your projects? If you do this, you will no longer be able to retrieve them through Seashell, but they will be accessible from your student.cs Linux account.")
             .then(function() {
-              $q.when(ws.socket.archiveProjects())
+              $q.when(ws.archiveProjects())
                 .then(function() {
                   // look at all these callbacks
                   $location.path("/");
