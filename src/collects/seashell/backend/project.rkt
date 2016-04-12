@@ -531,6 +531,7 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
+      (eprintf "about to test\n")
       (define pids (map
                      (lambda (test)
                        (run-program target base lang test is-cli))

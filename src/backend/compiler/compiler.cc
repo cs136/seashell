@@ -1126,7 +1126,8 @@ class PPCallbacks : public clang::PPCallbacks {
   struct seashell_preprocessor *_pp;
 
 public:
-  PPCallbacks(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { }
+  static int iter;
+  PPCallbacks(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { iter++; }
 
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
     clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
@@ -1135,10 +1136,11 @@ public:
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
+      //if(iter==3) exit(1);
       std::string path = FileName.str();
       std::string result = resolve_include(_pp, path);
       if(result.length()) {
-        std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result);
+        std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
         if(res.second) {
           fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
           _wl.push_back(result);
@@ -1152,6 +1154,8 @@ public:
   }
 };
 
+int PPCallbacks::iter = 0;
+
 class PPAction : public clang::FrontendAction {
   clang::CompilerInstance *_ci;
   std::set<std::string> &_deps;
@@ -1159,7 +1163,8 @@ class PPAction : public clang::FrontendAction {
   struct seashell_preprocessor *_pp;
   
 public:
-  PPAction(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { }
+  static int iter;
+  PPAction(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { iter++; }
 
   virtual bool usesPreprocessorOnly() const {
     return false;
@@ -1179,8 +1184,11 @@ public:
     do {
       pp.Lex(token);
     } while(token.isNot(clang::tok::eof));
+    //if(iter==3) exit(1);
   }
 };
+
+int PPAction::iter = 0;
 
 static void print_sources(struct seashell_preprocessor *preprocessor) {
   fprintf(stderr, "Sources:\n");
@@ -1214,10 +1222,10 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
   std::vector<seashell_diag>& pp_messages = preprocessor->messages;
 #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
 
-  int i=0;
+  PPAction::iter = 0;
+  PPCallbacks::iter = 0;
+
   while(worklist.size() > 0) {
-    i++;
-    fprintf(stderr, "worklist loop\n");
     std::string Error;
     bool Success;
     std::vector<const char*> args;
@@ -1231,10 +1239,7 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
       args.push_back(p->c_str());
     }
     args.push_back(worklist.front().c_str());
-    if(i==3) break;
 
-    fprintf(stderr, "[preprocessor] Entering file: %s\n", args.back());
-    
     /** Parse Diagnostic Arguments */
     clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
 
@@ -1306,7 +1311,6 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     std::copy(diag_client.messages.begin(), diag_client.messages.end(),
       std::back_inserter(pp_messages));
 
-    fprintf(stderr, "worklist size: %zd\n", worklist.size());
   }
 
   // convert accumulated set into vector
