@@ -337,7 +337,7 @@ angular.module('frontend-app')
       self.running = !testing;
       self.PIDs = PIDs;
       _.each(self.PIDs, function (pid) {
-        socket.socket.startIO(projectName, questionName, pid);
+        socket.startIO(projectName, questionName, pid);
       });
     };
     self.clear = function() {
