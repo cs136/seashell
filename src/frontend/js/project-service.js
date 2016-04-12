@@ -62,9 +62,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * @param {String} contents - Complete file contents.
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
-         * @param {String} checksum - Checksum of file.
          */
-        function SeashellFile(project, name, contents, is_dir, last_saved, checksum) {
+        function SeashellFile(project, name, contents, is_dir, last_saved) {
           var self = this;
           self.name = name.split("/");
           var par = name.slice(0,name.length-2);
@@ -76,8 +75,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
-          self.online_checksum = false;
-          self.offline_checksum = checksum;
         }
 
         SeashellFile.prototype.toWorker = function() {
@@ -138,26 +135,38 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellFile.prototype.read = function() {
           var self = this;
           var def = $q.defer();
+
+
           if(self.contents !== null) {  
             def.resolve(self.contents);
           }
           else {
+            // we always need to do an offline read
+            var offlineRead = function() {
+              return ws.offlineReadFile(self.project.name, self.fullname());
+            }; 
+
             $q.when(ws.onlineReadFile(self.project.name, self.fullname()))
               .then(function(conts) {
-                if(self.online_checksum != conts.checksum) {
-                  // TODO online file has changed since we saw it.. we should merge 
-                }
-                else if(self.offline_checksum != conts.checksum) {
-                  // TODO offline file differs from online and we are now connected..
-                  //   should update online file
-                  self.write(self.contents);
-                }
-                self.online_checksum = conts.checksum;
-                self.contents = conts.data;
-                def.resolve(conts.data);
+                offlineRead().then(function(offlineData) {
+                  if(offlineData.online_checksum != conts.checksum) {
+                    // TODO online file has changed since we saw it.. we should merge 
+                    console.log("Need to merge");
+                  }
+                  else if(offlineData.offline_checksum != conts.checksum) {
+                    // TODO offline file differs from online and we are now connected..
+                    //   should update online file
+                    console.log("need to update");
+                    self.write(offlineData.data);
+                    self.contents = offlineData.data;
+                  } else {
+                    self.contents = conts.data;
+                  }
+                  def.resolve(self.contents);
+                });
               })
               .catch(function() {
-                ws.offlineReadFile(self.project.name, self.fullname()).then(function(conts) {
+                offlineRead().then(function(conts) {
                   if(conts === null) {
                     return def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
                   }

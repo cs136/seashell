@@ -38,6 +38,7 @@ angular.module('frontend-app')
 
         function notifyChanges () {
           _.forEach(self.notify, function (fn) {fn();});
+          ws.forceOfflineMode(self.settings.offline_mode === 2); 
         }
 
         /** Adds and removes watchers on the settings service. */
@@ -85,4 +86,6 @@ angular.module('frontend-app')
               };}]
             });
         };
+
+
       }]);

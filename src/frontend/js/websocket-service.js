@@ -28,8 +28,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$rootScope', '$q', '$interval', '$cookies', '$timeout', 'localfiles',
-    function($scope, $q, $interval, $cookies, $timeout, localfiles) {
+  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 
+    function($q, $interval, $cookies, $timeout, localfiles) {
       "use strict";
       var self = this;
 
@@ -43,6 +43,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.connected = false;
       self.failed = false;
+      self.forceOffline = false;
 
       var timeout_count = 0;
       var timeout_interval = null;
@@ -260,7 +261,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getProjects = function(deferred) {
-        if (self.connected) {
+        if (self.connected && !self.forceOffline) {
           return self._socket.getProjects(deferred)
           .then(function(projects) {
             localfiles.setProjects(projects);
@@ -273,7 +274,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.listProject = function(name, deferred) {
-        if (self.connected) {
+        if (self.connected && !self.forceOffline) {
           localfiles.listProject(name).then(
               function(tree) {
                 console.log("[websocket] offline listProject", tree);
@@ -320,6 +321,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       // because code for handling online/offline stuff
       // is compilcated and needs to be dealt with in project-service
       self.onlineReadFile = function(name, file_name, deferred) {
+        if (self.forceOffline) return $q.reject();
         return self._socket.readFile(name, file_name, deferred);
       };
 
@@ -351,6 +353,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           localfiles.writeFile(name, file_name, file_content, checksum);
           return checksum;
         };
+
+        if (self.forceOffline) return $q.when(offlineWrite(false));
 
         return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
           .then(offlineWrite)  // get checksum from backend and write
@@ -388,7 +392,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.renameFile = function(project, oldName, newName, deferred) {
         var offlineResult = localfiles.renameFile(project, oldName, newName);
-        if (self.connected) {
+        if (self.connected && !self.forceOffline) {
           var onlineResult = self._socket.renameFile(project, oldName, newName, deferred);
           return $q.all([onlineResult, offlineResult]);
         } else {
@@ -433,7 +437,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getFileToRun = function(project, question, deferred) {
         var offlineResult = localfiles.getRunnerFile(project, question);
-        if (self.connected) {
+        if (self.connected && !self.forceOffline) {
           var onlineResult = self._socket.getFileToRun(project, question, deferred);
           return $q.all([onlineResult, offlineResult]).catch(
             function(error) {
@@ -446,7 +450,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.setFileToRun = function(project, question, folder, file, deferred) {
         var offlineResult = localfiles.setRunnerFile(project, question, folder, file);
-        if (self.connected) {
+        if (self.connected && !self.forceOffline) {
           var onlineResult = self._socket.setFileToRun(project, question, folder, file, deferred);
           return $q.all([onlineResult, offlineResult]).catch(
             function(error) {
@@ -455,6 +459,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         } else {
           return $q.all([offlineResult]);
         }
+      };
+
+      self.forceOfflineMode = function(force) {
+        self.forceOffline = force;
       };
     }
   ]);
