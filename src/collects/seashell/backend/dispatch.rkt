@@ -109,7 +109,15 @@
             (program-kill pid)
             (program-destroy-handle pid)]
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
-            (send-message connection `#hash((id . -4) (success . #t)
+            ;; check for asan error message in "{project}/{question}/.asan.{pid}"
+            ;; this file path is set in runner.rkt
+            (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
+            (define asan
+              (if (file-exists? asan-outpath)
+                  (format-asan-error (file->string asan-outpath))
+                  #f))
+            (when (file-exists? asan-outpath) (delete-file asan-outpath))
+            (send-message connection `#hash((id . -4) (success . #t) (sanitizerMsg . ,asan)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
            [(list pid test-name "error" exit-code stderr)
             (send-message connection `#hash((id . -4) (success . #t)
@@ -214,6 +222,7 @@
                       (if (file-exists? asan-outpath)
                           (format-asan-error (file->string asan-outpath))
                           #f))
+                    (when (file-exists? asan-outpath) (delete-file asan-outpath))
                     ;; Program quit
                     (define message
                       `#hash((id . -3)
