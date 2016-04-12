@@ -32,7 +32,7 @@
          racket/string
          racket/file
          json
-         "asan-error-message.rkt")
+         "asan-error-parse.rkt")
 
 (require (only-in "project.rkt" project-base-path))
 
@@ -212,8 +212,8 @@
                     (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
                     (define asan
                       (if (file-exists? asan-outpath)
-                          (file->string asan-outpath)
-                          (path->string asan-outpath)))
+                          (format-asan-error (file->string asan-outpath))
+                          #f))
                     ;; Program quit
                     (define message
                       `#hash((id . -3)
