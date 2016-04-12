@@ -48,6 +48,7 @@ angular.module('frontend-app')
 
     // contents is an array of lines of address sanitizer output
     function parse_asan_output(contents) {
+      console.warn("ASAN output:", contents);
       var traced_main = false;
       var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
       var addrpatt = /0x[0-9a-f]+/;
@@ -213,45 +214,51 @@ angular.module('frontend-app')
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
         ind = io.message.indexOf("\n");
-        if(ind > -1) {
+        if (ind > -1) {
           spl = io.message.split("\n");
           self._write(self.stdout);
-          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          while (spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stdout = spl[0];
         }
-        else
+        else {
           self.stdout += io.message;
+        }
       }
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
-        if(ind > -1) {
-          if(!self.asan_parse)
+        if (ind > -1) {
+          if (!self.asan_parse) {
             self._write(self.stderr);
-          else
+          } else {
             io.message = self.stderr + io.message;
+          }
           spl = io.message.split("\n");
-          while(spl.length>1) {
-            if(!self.asan_parse && /^=+$/.test(spl[0])) {
+          while (spl.length>1) {
+            if (!self.asan_parse && /^=+$/.test(spl[0])) {
               self.asan_parse = true;
             }
-            else if(!self.asan_parse)
+            else if (!self.asan_parse) {
               self._write(spl.shift() + "\n");
-            else
+            } else {
               asan_contents.push(spl.shift());
+            }
           }
           self.stderr = spl[0];
-        }
-        else
+        } else {
           self.stderr += io.message;
+        }
       }
-      else if(io.type == "done") {
+      else if (io.type == "done") {
         self._write(self.stdout);
         self._write(self.stderr);
         self.stdout = self.stderr = "";
-        if(self.asan_parse) {
+        if (self.asan_parse) {
           parse_asan_output(asan_contents);
           self.asan_parse = false;
           asan_contents = [];
+        }
+        if (io.sanitizerMsg) {
+         self.write(io.sanitizerMsg);
         }
         self.write("Program finished with exit code "+io.status);
         if(io.status !== 0 && return_codes[io.status]) {
@@ -284,47 +291,53 @@ angular.module('frontend-app')
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s passed.\n", res.test_name));
       }
       else if(res.result==="failed") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s failed.\n", res.test_name));
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('\n'); 
         // need to print a newline so that it matches up with printExpectedFromDiff
-        self.write('=================\n');
-
+        self.write('---\n');
         self.write('Expected output (stdout):\n');
         printExpectedFromDiff(res);   
-        self.write('=================\n');
-
+        self.write('---\n');
         self.write('Produced errors (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
       } else if(res.result==="error") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
+        self.write('---\n');
+        self.write(res.sanitizerMsg);
       } else if(res.result==="no-expect") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s produced output (stdout):\n", res.test_name));
         self.write(res.stdout);
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
       } else if(res.result==="timeout") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s timed out.\n", res.test_name));
       }
       else if(res.result==="killed") {
+        self.write('----------------------------------\n');
         self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
     });
 
-    self.setRunning = function(project, PIDs, testing) {
+    self.setRunning = function(projectName, questionName, PIDs, testing) {
       self.running = !testing;
       self.PIDs = PIDs;
       _.each(self.PIDs, function (pid) {
-        socket.startIO(project.name, pid);
+        socket.startIO(projectName, questionName, pid);
       });
     };
     self.clear = function() {

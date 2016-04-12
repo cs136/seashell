@@ -47,8 +47,7 @@
          set-file-to-run
          read-project-settings 
          write-project-settings
-         write-project-settings/key
-         )
+         write-project-settings/key)
 
 (require seashell/log
          seashell/seashell-config

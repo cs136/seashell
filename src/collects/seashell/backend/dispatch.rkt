@@ -30,7 +30,11 @@
          racket/contract
          racket/port
          racket/string
-         json)
+         racket/file
+         json
+         "asan-error-parse.rkt")
+
+(require (only-in "project.rkt" project-base-path))
 
 (provide conn-dispatch)
 
@@ -64,10 +68,10 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread representing the communication backend.
-  (define (start-pid-io project pid)
+  (define (start-pid-io project question pid)
     (if (equal? 'test (program-mode pid))
-      (project-test-thread project pid)
-      (project-runner-thread project pid)))
+      (project-test-thread project question pid)
+      (project-runner-thread project question pid)))
 
   ;; (project-test-thread project pid)
   ;; Helper thread for dealing with output from running tests.
@@ -76,7 +80,7 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread that is running the I/O.
-  (define (project-test-thread project pid)
+  (define (project-test-thread project question pid)
     (thread (lambda ()
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
@@ -108,10 +112,21 @@
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
            [(list pid test-name "error" exit-code stderr)
+            ;; check for asan error message in "{project}/{question}/.asan.{pid}"
+            ;; this file path is set in runner.rkt
+            (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
+            (define asan
+              (if (file-exists? asan-outpath)
+                  (format-asan-error (file->string asan-outpath))
+                  #f))
+            (when (file-exists? asan-outpath) (delete-file asan-outpath))
             (send-message connection `#hash((id . -4) (success . #t)
-                                           (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
-                                                                        (exit_code . ,exit-code)
-                                                                        (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
+                                           (result . #hash((pid . ,pid) 
+                                                           (test_name . ,test-name) 
+                                                           (result . "error")
+                                                           (sanitizerMsg . ,asan)
+                                                           (exit_code . ,exit-code)
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
            [(list pid test-name "no-expect" stdout stderr)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
@@ -141,7 +156,7 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread that is running the I/O processing.
-  (define (project-runner-thread project pid)
+  (define (project-runner-thread project question pid)
     ;; These ports do not need to be closed; they
     ;; are Racket pipes and automatically garbage collected.
     (define stdout (program-stdout pid))
@@ -203,6 +218,14 @@
                     (program-kill pid)
                     (program-destroy-handle pid)]
                    [(? (lambda (evt) (eq? evt wait-evt)))
+                    ;; check for asan error message in "{project}/{question}/.asan.{pid}"
+                    ;; this file path is set in runner.rkt
+                    (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
+                    (define asan
+                      (if (file-exists? asan-outpath)
+                          (format-asan-error (file->string asan-outpath))
+                          #f))
+                    (when (file-exists? asan-outpath) (delete-file asan-outpath))
                     ;; Program quit
                     (define message
                       `#hash((id . -3)
@@ -210,6 +233,7 @@
                              (result . 
                                #hash((type . "done")
                                      (pid . ,pid)
+                                     (sanitizerMsg . ,asan)
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.
@@ -306,9 +330,10 @@
          ('id id)
          ('type "startIO")
          ('project project)
+         ('question question)
          ('pid pid))
-       (start-pid-io project pid)
-       `#hash((id . ,id) (success . #t))] 
+       (start-pid-io project question pid)
+       `#hash((id . ,id) (success . #t))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)
