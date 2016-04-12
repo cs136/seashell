@@ -70,7 +70,7 @@
   ;;  Thread representing the communication backend.
   (define (start-pid-io project question pid)
     (if (equal? 'test (program-mode pid))
-      (project-test-thread project pid)
+      (project-test-thread project question pid)
       (project-runner-thread project question pid)))
 
   ;; (project-test-thread project pid)
@@ -80,7 +80,7 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread that is running the I/O.
-  (define (project-test-thread project pid)
+  (define (project-test-thread project question pid)
     (thread (lambda ()
       ;; These ports do not need to be closed; they
       ;; are Racket pipes and automatically garbage collected.
@@ -109,6 +109,9 @@
             (program-kill pid)
             (program-destroy-handle pid)]
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
+            (send-message connection `#hash((id . -4) (success . #t)
+                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
+           [(list pid test-name "error" exit-code stderr)
             ;; check for asan error message in "{project}/{question}/.asan.{pid}"
             ;; this file path is set in runner.rkt
             (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
@@ -117,13 +120,13 @@
                   (format-asan-error (file->string asan-outpath))
                   #f))
             (when (file-exists? asan-outpath) (delete-file asan-outpath))
-            (send-message connection `#hash((id . -4) (success . #t) (sanitizerMsg . ,asan)
-                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
-           [(list pid test-name "error" exit-code stderr)
             (send-message connection `#hash((id . -4) (success . #t)
-                                           (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
-                                                                        (exit_code . ,exit-code)
-                                                                        (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
+                                           (result . #hash((pid . ,pid) 
+                                                           (test_name . ,test-name) 
+                                                           (result . "error")
+                                                           (sanitizerMsg . ,asan)
+                                                           (exit_code . ,exit-code)
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
            [(list pid test-name "no-expect" stdout stderr)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
