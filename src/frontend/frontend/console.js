@@ -214,45 +214,51 @@ angular.module('frontend-app')
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
         ind = io.message.indexOf("\n");
-        if(ind > -1) {
+        if (ind > -1) {
           spl = io.message.split("\n");
           self._write(self.stdout);
-          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          while (spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stdout = spl[0];
         }
-        else
+        else {
           self.stdout += io.message;
+        }
       }
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
-        if(ind > -1) {
-          if(!self.asan_parse)
+        if (ind > -1) {
+          if (!self.asan_parse) {
             self._write(self.stderr);
-          else
+          } else {
             io.message = self.stderr + io.message;
+          }
           spl = io.message.split("\n");
-          while(spl.length>1) {
-            if(!self.asan_parse && /^=+$/.test(spl[0])) {
+          while (spl.length>1) {
+            if (!self.asan_parse && /^=+$/.test(spl[0])) {
               self.asan_parse = true;
             }
-            else if(!self.asan_parse)
+            else if (!self.asan_parse) {
               self._write(spl.shift() + "\n");
-            else
+            } else {
               asan_contents.push(spl.shift());
+            }
           }
           self.stderr = spl[0];
-        }
-        else
+        } else {
           self.stderr += io.message;
+        }
       }
-      else if(io.type == "done") {
+      else if (io.type == "done") {
         self._write(self.stdout);
         self._write(self.stderr);
         self.stdout = self.stderr = "";
-        if(self.asan_parse) {
+        if (self.asan_parse) {
           parse_asan_output(asan_contents);
           self.asan_parse = false;
           asan_contents = [];
+        }
+        if (io.sanitizerMsg) {
+         self.write(io.sanitizerMsg);
         }
         self.write("Program finished with exit code "+io.status);
         if(io.status !== 0 && return_codes[io.status]) {

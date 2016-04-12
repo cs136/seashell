@@ -221,7 +221,7 @@
                              (result . 
                                #hash((type . "done")
                                      (pid . ,pid)
-                                     (sanitizer-msg . ,asan)
+                                     (sanitizerMsg . ,asan)
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.

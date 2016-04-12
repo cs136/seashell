@@ -24,9 +24,10 @@
            (match x
              [(? string?) x]
              [(StackFrame frame file ln func)
-              (format "frame ~a, file ~a, line ~a, function ~a" frame file ln func)]))
+              (format "frame ~a, file \"~a\", line ~a, function \"~a\"" frame file ln func)]))
          x) 
-    "\n"))
+    "\n"
+    #:after-last "\n"))
 
 ;; The main parser function. Use the error message as the argument.
 (: asan-error-parse (String -> ASANError))
