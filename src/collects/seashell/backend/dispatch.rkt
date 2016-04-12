@@ -64,7 +64,7 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread representing the communication backend.
-  (define (start-pid-io project pid)
+  (define (start-pid-io project question pid)
     (if (equal? 'test (program-mode pid))
       (project-test-thread project pid)
       (project-runner-thread project pid)))
@@ -306,9 +306,10 @@
          ('id id)
          ('type "startIO")
          ('project project)
+         ('question question)
          ('pid pid))
-       (start-pid-io project pid)
-       `#hash((id . ,id) (success . #t))] 
+       (start-pid-io project question pid)
+       `#hash((id . ,id) (success . #t))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)

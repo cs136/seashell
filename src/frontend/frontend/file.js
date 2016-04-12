@@ -432,7 +432,7 @@ angular.module('frontend-app')
             self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
-                self.console.setRunning(self.project, [res.pid], false);
+                self.console.setRunning(self.project.name, self.question, [res.pid], false);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
@@ -453,7 +453,7 @@ angular.module('frontend-app')
             self.console.clear();
             self.project.run(self.question, true)
               .then(function(res) {
-                self.console.setRunning(self.project, res.pids, true);
+                self.console.setRunning(self.project.name, self.question, res.pids, true);
                 handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
               })

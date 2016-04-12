@@ -458,10 +458,11 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, def
     deferred);
 };
 
-SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
+SeashellWebsocket.prototype.startIO = function(project, question, pid, deferred) {
   return this.sendMessage({
     type : "startIO",
     project : project,
+    question : question,
     pid : pid},
     deferred);
 };
