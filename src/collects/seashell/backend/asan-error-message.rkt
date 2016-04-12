@@ -1,22 +1,34 @@
 #lang typed/racket
 
-;; Use the function "asan-error-parser" to reads the asan error message
+;; Use the function "asan-error-parse" to reads the asan error message
 ;; and procude a parsed structure
-(provide asan-error-parser
-         ASANError
-         StackFrame)
+(provide format-asan-error)
 
 (struct StackFrame ([frame : Integer]
-                    [func : String]
                     [file : String]
-                    [ln : Integer])
+                    [ln : Integer]
+                    [func : String])
   #:transparent)
 (define-type ErrorComponent (U String StackFrame))
 (define-type ASANError (Listof ErrorComponent))
 
+(: format-asan-error (String -> String))
+(define (format-asan-error x)
+  (ASANError->string (asan-error-parse x)))
+
+;; format ASANError in a friendly manner
+(: ASANError->string (ASANError -> String))
+(define (ASANError->string x)
+  (apply string-append (map (lambda ([x : ErrorComponent])
+         (match x
+           [(? string?) x]
+           [(StackFrame frame file ln func)
+            (format "frame %a, file %a, line %a, function %a" frame file ln func)]))
+       x)))
+
 ;; The main parser function. Use the error message as the argument.
-(: asan-error-parser (String -> ASANError))
-(define (asan-error-parser contents)
+(: asan-error-parse (String -> ASANError))
+(define (asan-error-parse contents)
   (define lines : (Listof String) 
     (filter-map (lambda ([x : String])
                   (match (string-trim x)
@@ -84,9 +96,9 @@
            (? string? file)
            (? string? ln))
      (StackFrame (str->int frame)
-                 func
                  file
-                 (str->int ln))]
+                 (str->int ln)
+                 func)]
     [else #f]))
 
 (: str->int (String -> Integer))

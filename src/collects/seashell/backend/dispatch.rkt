@@ -30,7 +30,11 @@
          racket/contract
          racket/port
          racket/string
-         json)
+         racket/file
+         json
+         "asan-error-message.rkt")
+
+(require (only-in "project.rkt" project-base-path))
 
 (provide conn-dispatch)
 
@@ -67,7 +71,7 @@
   (define (start-pid-io project question pid)
     (if (equal? 'test (program-mode pid))
       (project-test-thread project pid)
-      (project-runner-thread project pid)))
+      (project-runner-thread project question pid)))
 
   ;; (project-test-thread project pid)
   ;; Helper thread for dealing with output from running tests.
@@ -141,7 +145,7 @@
   ;;  pid - PID of process
   ;; Returns:
   ;;  Thread that is running the I/O processing.
-  (define (project-runner-thread project pid)
+  (define (project-runner-thread project question pid)
     ;; These ports do not need to be closed; they
     ;; are Racket pipes and automatically garbage collected.
     (define stdout (program-stdout pid))
@@ -203,6 +207,13 @@
                     (program-kill pid)
                     (program-destroy-handle pid)]
                    [(? (lambda (evt) (eq? evt wait-evt)))
+                    ;; check for asan error message in "{project}/{question}/.asan.{pid}"
+                    ;; this file path is set in runner.rkt
+                    (define asan-outpath (build-path (project-base-path) project question (string-append ".asan." (number->string pid))))
+                    (define asan
+                      (if (file-exists? asan-outpath)
+                          (file->string asan-outpath)
+                          (path->string asan-outpath)))
                     ;; Program quit
                     (define message
                       `#hash((id . -3)
@@ -210,6 +221,7 @@
                              (result . 
                                #hash((type . "done")
                                      (pid . ,pid)
+                                     (sanitizer-msg . ,asan)
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.
