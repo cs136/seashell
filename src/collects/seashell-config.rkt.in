@@ -281,7 +281,7 @@
                  [SEASHELL_INSTALLED Boolean]
                  [SEASHELL_INSTALL_PATH String])
   (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
-           read-config-integer read-config-optional-path
+           read-config-integer read-config-optional-path read-config-nonnegative-real
            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
            SEASHELL_SOURCE_PATH
            SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
@@ -298,6 +298,10 @@
   (define (read-config-number symbol)
     (define result (read-config symbol))
     (cast result Number))
+  (: read-config-nonnegative-real (-> Symbol Nonnegative-Real))
+  (define (read-config-nonnegative-real symbol)
+    (define result (read-config symbol))
+    (cast result Nonnegative-Real))
   (: read-config-integer (-> Symbol Integer))
   (define (read-config-integer symbol)
     (define result (read-config symbol))
