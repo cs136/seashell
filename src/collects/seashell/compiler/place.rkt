@@ -19,8 +19,18 @@
 (require seashell/compiler/compiler)
 (provide seashell-compile-files/place)
 
+(module untyped racket/base
+  (require ffi/unsafe ffi/unsafe/define)
+  (define libmz (ffi-lib #f))
+  (define-ffi-definer define-mzscheme libmz)
+  (define-mzscheme scheme_make_custodian (_fun _pointer -> _scheme))
+  (provide scheme_make_custodian))
+
 (require/typed racket/serialize
                [deserialize (-> Any Any)])
+(require/typed (submod "." untyped)
+               [scheme_make_custodian (-> (U False Custodian) Custodian)])
+
 (: global-compiler-place (U False Place))
 (define global-compiler-place #f)
 
@@ -52,13 +62,15 @@
 ;; seashell-compile-place/init
 ;; Sets up the place for compilation.
 (define (seashell-compile-place/init)
-  ;; Make sure that we don't use current-output-port
-  ;; or the detach will fail.
-  (define-values (place in out err)
-    (dynamic-place* 'seashell/compiler/place-main
-                    'seashell-compiler-place
-                    #:out (current-error-port)
-                    #:err (current-error-port)))
-  (assert (port? in))
-  (set! global-compiler-place place)
-  (close-output-port in))
+  ;; Set this up in the root custodian so we don't fail.
+  (parameterize ([current-custodian (scheme_make_custodian #f)])
+    ;; Make sure that we don't use current-output-port
+    ;; or the detach will fail.
+    (define-values (place in out err)
+      (dynamic-place* 'seashell/compiler/place-main
+                      'seashell-compiler-place
+                      #:out (current-error-port)
+                      #:err (current-error-port)))
+    (assert (port? in))
+    (set! global-compiler-place place)
+    (close-output-port in)))
