@@ -406,7 +406,7 @@
                                           hdrname hdrname hdrname)
                                    (current-continuation-marks)))])))
 
-;; (compile-and-run-project name file tests is-cli)
+;; (compile-and-run-project name file tests is-cli [question #f])
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
@@ -414,6 +414,8 @@
 ;;  file - Full path and name of file we are compiling from
 ;;  test - Name of test, or empty to denote no test.
 ;;  is-cli - if #t, assumes all paths are relative to the current directory
+;;  question - Optional string to indicate the question (ex "q1"). When running
+;;             files in the common folder, the question can be passed in here.
 ;;
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
@@ -423,9 +425,9 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests is-cli)
-  (-> path-string? (or/c #f path-string?) (listof path-string?) boolean?
-      (values boolean? hash?))
+(define/contract (compile-and-run-project name file tests is-cli [question #f])
+  (->* (path-string? (or/c #f path-string?) (listof path-string?) boolean?) ((or/c #f string?))
+       (values boolean? hash?))
   (when (and (not is-cli) (not (is-project? name)))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
@@ -434,6 +436,12 @@
   (define project-common (if is-cli
     (build-path project-base (read-config 'common-subdirectory))
     (check-and-build-path project-base (read-config 'common-subdirectory))))
+  ;; valid only if the question parameter is set
+  (define question-base
+    (cond [(and question is-cli)
+           (build-path project-base question)]
+          [question (check-and-build-path project-base question)]
+          [else #f]))
 
   (define project-common-list
     (if (directory-exists? project-common)
@@ -466,7 +474,8 @@
     (define-values (result messages)
       (seashell-compile-files/place
         `(,@(read-config 'compiler-flags)
-          ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+          ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '())
+          ,@(if (and question (directory-exists? question-base)) `("-I" ,(some-system-path->string question-base)) '()))
           '("-lm")
            (remove-duplicates (cons (build-path base exe) c-files))
            o-files))
@@ -502,16 +511,13 @@
   (define (flatten-racket-files)
     ;; Create a temporary directory
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
-    ;; copy the common folder to the temp dir -- for backward compatibility this term
-    (when (directory-exists? project-common)
-      (copy-directory/files project-common (build-path temp-dir "common")))
-    ;; copy the question folder to the temp dir
-    (copy-directory/files base (build-path temp-dir question-dir-name))
-    ;; copy all files in the common folder to the question folder
+    ;; copy all files in the common and question folder to the temp folder
     (for-each (lambda (apath)
                 (match-define-values (_ filename _) (split-path apath))
-                (copy-file apath (check-and-build-path temp-dir question-dir-name filename) #t))
-              project-common-list)
+                (when (file-exists? apath)
+                    (copy-file apath (check-and-build-path temp-dir filename) #t)))
+              (append project-common-list
+                      (if (and question (directory-exists? question-base)) (directory-list question-base #:build? #t) '())))
     temp-dir)
   
   (define racket-temp-dir (when (equal? lang 'racket) (flatten-racket-files)))
@@ -519,7 +525,7 @@
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket (values #t '() (check-and-build-path racket-temp-dir question-dir-name exe))]))
+      ['racket (values #t '() (check-and-build-path racket-temp-dir exe))]))
 
   (cond
     [(and result (empty? tests))
@@ -534,7 +540,9 @@
     [result
       (define pids (map
                      (lambda (test)
-                       (run-program target base lang test is-cli))
+                       (if question
+                       (run-program target base lang test is-cli (build-path question-base (read-config 'tests-subdirectory)))
+                       (run-program target base lang test is-cli)))
                      tests))
       (thread
         (lambda ()
@@ -565,7 +573,7 @@
   (if (string=? file-to-run "")
     (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
                         (current-continuation-marks)))
-    (compile-and-run-project name (build-path question file-to-run) tests #f)))
+    (compile-and-run-project name file-to-run tests #f question)))
 
  
 ;; (export-project name) -> bytes?
@@ -826,7 +834,6 @@
         (hash-ref settings-hash 
                   (string->symbol (string-append question "-runner"))))
       (if (not (file-exists? (build-path (build-project-path project)
-                                          question
                                           file-to-run)))
         (raise (exn:project (format "File ~a does not exist." file-to-run)
                             (current-continuation-marks)))
@@ -851,13 +858,15 @@
 ;;   Nothing
 (define/contract (set-file-to-run project question folder file)
   (-> (and/c project-name? is-project?) path-string? path-string? path-string? void)
-  (if (or (string=? folder (read-config 'tests-subdirectory))
-          (string=? folder (read-config 'common-subdirectory)))
+  (if (string=? folder (read-config 'tests-subdirectory))
     (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
                         (current-continuation-marks)))
     (write-project-settings/key project
                                 (string->symbol (string-append question "-runner"))
-                                file)))
+                                (path->string (build-path (if (string=? folder (read-config 'common-subdirectory))
+                                                              (read-config 'common-subdirectory)
+                                                              question)
+                                                          file)))))
   
 
 

@@ -266,7 +266,7 @@
        (check-signals loop)]))
   (void))
 
-;; (run-program binary directory lang test is-cli)
+;; (run-program binary directory lang test is-cli [test-folder #f])
 ;;  Runs a program.
 ;;
 ;; Arguments:
@@ -280,14 +280,19 @@
 ;;   is-cli    - if #t, assumes seashell was run from CLI; treats test as a
 ;;               relative path, rather than searching for it in the project's
 ;;               tests/ directory
+;;   test-folder - You can set this to the folder containing the *.in and *.expect
+;;                 files.
 ;;
 ;; Returns:
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(: run-program (-> Path-String Path-String (U 'C 'racket) (U False String) Boolean Integer))
-(define (run-program binary directory lang test is-cli)
-  (define test-path (if is-cli (build-path ".") (build-path directory (read-config-string 'tests-subdirectory))))
+(: run-program (->* (Path-String Path-String (U 'C 'racket) (U False String) Boolean) ((U False Path-String)) Integer))
+(define (run-program binary directory lang test is-cli [test-folder #f])
+  (define test-path
+    (cond [test-folder test-folder]
+          [is-cli (build-path ".")]
+          [else (build-path directory (read-config-string 'tests-subdirectory))]))
   (define run-custodian (make-custodian))
 
   (parameterize ([current-custodian run-custodian]
