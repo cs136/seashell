@@ -1,24 +1,66 @@
 angular.module('seashell-local-files', [])
   /**
    * Local file storage service, using localforage.js
-   * Interface is pretty much the same as websocket_client.js
+   * Must call init before using!
    */
   .service('localfiles', ['$q', '$cookies',
     function($q, $cookies) {
       "use strict";
       var self = this;
 
-      self.user = null;
-      self.store = null;
-      self.projects = [];
+      self.user = null;   // username
+      self.store = null;  // localForage instance
+      self.projects = []; // offline storage of all project trees
+      self.offlineChangelog = []; // paths of files that have changed only offline 
+      self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
+
+
+      /* Constructor for an OfflineChange
+       * It stores information about a file that has changed offline
+       *   but not online, so that it can be updated when the user goes 
+       *   back online.
+       */
+      var OfflineChange = function(project, path) {
+        var self = this;
+        self.project = project;
+        self.path = path;
+      };
+
+      // Getter for project name. Returns a string.
+      OfflineChange.prototype.getProject = function() {
+        var self = this;
+        return self.project;
+      };
+
+
+      // Getter for path. Returns a string.
+      OfflineChange.prototype.getPath = function() {
+        var self = this;
+        return self.path;
+      };
+
+      // Add a change to the offline changelog.
+      // Does nothing if the change is already logged.
+      self._addOfflineChange = function(project, path) {
+        var self = this;
+        var key = project + path;
+        if (!(key in self.offlineChangelogSet)) {
+          self.offlineChangelogSet[key] = true;
+          self.offlineChangelog.push(new OfflineChange(project, path));
+          return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+        } else {
+          return $q.when();
+        }
+      };
 
       // Must call this before using anything
       self.init = function() {
+        var self = this;
         self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
 
         // set up localforage to have a per-user store
-        // note that this doesn't actually secure anything:
-        // it only prevents name conflicts
+        //   note that this doesn't actually secure anything:
+        //   it only prevents name conflicts
         self.store = localforage.createInstance({
           name: self.user,
           version: 1.0
@@ -59,6 +101,7 @@ angular.module('seashell-local-files', [])
               contents = contents || {};
               contents.data = file_content;
               contents.offline_checksum = offline_checksum;
+              self._addOfflineChange(name, file_name);
               return self.store.setItem(path, contents);
             }
           );

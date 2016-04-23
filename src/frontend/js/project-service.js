@@ -66,7 +66,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         function SeashellFile(project, name, contents, is_dir, last_saved) {
           var self = this;
           self.name = name.split("/");
-          var par = name.slice(0,name.length-2);
+          var par = self.name.slice(0,self.name.length-1).join('/');
           if(par.length>0) {
             self.parent = project.root.find(par);
           }
@@ -132,48 +132,93 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             });
         };
 
-        SeashellFile.prototype.read = function() {
+        /**
+         * sync()
+         * Synchronizes the file between online and offline stores
+         * Assumes that we are connected.
+         */
+        SeashellFile.prototype.sync = function() {
           var self = this;
           var def = $q.defer();
 
+          // Assumes that we are already connected.
+          var offlineRead = function() {
+            return ws.offlineReadFile(self.project.name, self.fullname());
+          }; 
+
+          $q.when(ws.onlineReadFile(self.project.name, self.fullname()))
+            .then(function(conts) {
+              offlineRead().then(function(offlineData) {
+                // offline file doesn't exist -- update
+                if (!offlineData) {
+                  self.write(conts.data);
+                  self.contents = conts.data;
+                }
+                // Online file has changed: need to resolve conflict
+                // Just write a new file and let the user do it
+                else if(offlineData.online_checksum != conts.checksum) {
+                  console.log("Need to merge");
+                  var question = self.name[0];
+                  var folder = self.parent.name[self.parent.name.length - 1];
+                  var encoding; // TODO? everything else leaves this undefined
+                  self.project.createFile(
+                    folder,
+                    question,
+                    sprintf("%s.conflict"),
+                    offlineData.data,
+                    encoding,
+                    false
+                  );
+                  self.contents = conts.data;
+                }
+                // Back online, online checksum matches, so
+                //   just overwrite the online file
+                else if(offlineData.offline_checksum != conts.checksum) {
+                  console.log("need to update");
+                  self.write(offlineData.data);
+                  self.contents = offlineData.data;
+                } 
+                else {
+                  self.contents = conts.data;
+                }
+                def.resolve(true);
+              });
+            });
+          
+          return def.promise;
+        };
+
+        /**
+         * read()
+         * Reads the file and returns a deferred that will resolve to its contents.
+         * If offline, it will attempt to read the offline store.
+         * This function does not attempt to do any synchronization (see sync instead).
+         */
+        SeashellFile.prototype.read = function() {
+          var self = this;
+          var def = $q.defer();
 
           if(self.contents !== null) {  
             def.resolve(self.contents);
           }
           else {
-            // we always need to do an offline read
             var offlineRead = function() {
               return ws.offlineReadFile(self.project.name, self.fullname());
             }; 
 
             $q.when(ws.onlineReadFile(self.project.name, self.fullname()))
               .then(function(conts) {
-                offlineRead().then(function(offlineData) {
-                  if(offlineData.online_checksum != conts.checksum) {
-                    // TODO online file has changed since we saw it.. we should merge 
-                    console.log("Need to merge");
-                  }
-                  else if(offlineData.offline_checksum != conts.checksum) {
-                    // TODO offline file differs from online and we are now connected..
-                    //   should update online file
-                    console.log("need to update");
-                    self.write(offlineData.data);
-                    self.contents = offlineData.data;
-                  } else {
-                    self.contents = conts.data;
-                  }
+                  self.contents = conts.data;
                   def.resolve(self.contents);
-                });
               })
               .catch(function() {
                 offlineRead().then(function(conts) {
                   if(conts === null) {
                     return def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                  } else {
+                    self.contents = conts.data;
+                    def.resolve(self.contents);
                   }
-                  self.offline_checksum = conts.offline_checksum;
-                  self.online_checksum = conts.online_checksum;
-                  self.contents = conts.data;
-                  def.resolve(self.contents);
                 });
               });
           }

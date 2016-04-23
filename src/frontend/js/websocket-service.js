@@ -218,6 +218,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
+      self.isConnected = function() {
+        return self.connected;
+      };
+
 
       // Functions that are prefixed with offline or online
       //   have that functionality only. Functions with no
