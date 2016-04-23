@@ -1,8 +1,8 @@
 #lang racket
 
 (require seashell/seashell-config
-         seashell/compiler/place
-         seashell/backend/project)
+         seashell/backend/project
+         seashell/compiler)
 
 (provide setup-test-environment
          teardown-test-environment)
@@ -19,10 +19,7 @@
   (make-directory test-dir)
   (config-set! 'seashell test-dir)
   (config-set! 'test-mode #t)
-  (init-projects)
-  
-  ;; Start places. (note: with default config here)
-  (seashell-compile-place/init))
+  (init-projects))
 
 (define (teardown-test-environment)
   (delete-directory/files (read-config 'seashell)))

@@ -558,7 +558,7 @@ angular.module('frontend-app')
         });
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
-            self.contents = conts;
+            self.contents = conts.data;
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);

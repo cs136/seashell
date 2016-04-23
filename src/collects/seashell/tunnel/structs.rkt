@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's authentication and communications backend.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,22 +16,23 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require racket/contract
-         racket/port)
 (provide
   (struct-out tunnel)
   (struct-out exn:tunnel)
-  tunnel-close)
+  tunnel-close
+  Tunnel)
 
-(struct tunnel (process in out status-thread hostname))
-(struct exn:tunnel exn:fail:user (status-code))
+(struct tunnel ([process : Subprocess] [in : Input-Port] [out : Output-Port] [status-thread : Thread]
+                [hostname : String]
+                [custodian : Custodian]) #:type-name Tunnel)
+(struct exn:tunnel exn:fail:user ([status-code : (U False Exact-Nonnegative-Integer)]))
 
 ;; (tunnel-close tunnel)
 ;; Closes a tunnel.
 ;;
 ;; Arguments:
 ;;  tunnel - Tunnel to close.
-(define/contract (tunnel-close tunnel)
-  (-> tunnel? void?)
-  (close-input-port (tunnel-in tunnel))
-  (close-output-port (tunnel-out tunnel)))
+(: tunnel-close (-> Tunnel Void))
+(define (tunnel-close tunnel)
+  (custodian-shutdown-all (tunnel-custodian tunnel))
+  (void))

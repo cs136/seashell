@@ -546,7 +546,6 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
-      (eprintf "b2coutts: messages are ~s\n" messages)
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 
@@ -651,7 +650,7 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
-              (copy-from! common-dir))
+              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))
