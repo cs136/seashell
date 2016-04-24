@@ -1,5 +1,5 @@
 /*
- * Angular bindings for Seashell projects.
+/* Angular bindings for Seashell projects.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
 
-      localfiles.init();
+      localfiles.init().then(function () { 
+
+      });
      
       var SeashellProject = (function () { 
         /**
@@ -134,7 +136,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
         /**
          * sync()
-         * Synchronizes the file between online and offline stores
+         * Synchronizes the file between online and offline stores.
+         * Clearly, this only works if the file already exists online.
          * Assumes that we are connected.
          */
         SeashellFile.prototype.sync = function() {
@@ -458,7 +461,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               files.push(c.name.join('/'));
             }
           }
-          return files.sort();
+          return files;
         };
 
         /** SeashellProject.questions()
@@ -990,13 +993,21 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
       /**
        * Lists projects available.
-       *
+       * @param {Boolean} Whether or not to use the cached result, if present
        * @returns {Angular.$q -> [String]/?} Deferred object that will resolve
        *  to the list of projects available to be opened.
        */
-      self.list = function() {
-        return $q.when(ws.getProjects());
+      var list = function(use_cache) {
+        if (use_cache && self._list) {
+          return $q.resolve(self._list);
+        }
+        return $q.when(ws.getProjects())
+        .then(function (projects) {
+          self._list = projects;
+          return projects; 
+        });
       };
+      self.list = list;
 
       /* Returns projects listed in PROJ_SKEL_URL
          This method only send requests to the server once when it's initially called.
@@ -1137,5 +1148,90 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
        */
       self.open = function(name, lock) {
         return (new SeashellProject(name)).init(lock);
+      };
+
+
+      /**
+       * Sync an entire project with the offline store. 
+       * Only files that already exist online will be synced, 
+       * so this function is more useful for dumping into the offline store.
+       * @param {String} project name
+       * @returns {Angular.$q -> true}
+       *  Angular deferred that resolves to to true when the project is stored.
+       */
+      self.syncProject = function(name) {
+        console.log("Syncing project: ", name);
+        return self.open(name, "lock") // no lock since we are only reading
+          .then(function (project) {
+            var syncer = function (seashellFile) {
+              if (!seashellFile.is_dir) {
+                seashellFile.sync();
+              } else {
+                _.each(seashellFile.list(), syncer);
+              }
+            };
+
+            _.each(project.root.list(), syncer);
+            return true;
+          })
+          .catch(function (err) {
+            console.log(sprintf("Syncing %s encountered an error!", name));
+            console.log("Syncing ", err);
+          }); 
+      };
+
+      /**
+       * Sync all projects into the offline store.
+       * Only files that exist online will be synced.
+       * NOTE: this takes several seconds on a good machine with a good connection,
+       *   so we should only do this on first-run or something.
+       * @returns Angular deferred that resolves to true when the sync is done.
+       */
+      self.syncAll = function() {
+        var self = this;
+        var promises;
+        console.log("Syncing all projects");
+        return self.list(true)
+        .then(function (projects) {
+          return $q.all(_.map(projects, function (project) {
+             return self.syncProject(project[0]);
+          })); 
+        })
+        .then(function (res) {
+          console.log("Finished syncing all projects");
+          console.log(res);
+          return true;
+        });
+      };
+
+      /**
+       * Sync only the offline changes, from the offlineChangelog.
+       * If new files were created offline-only, they will now be synced by creating them
+       * on the server.
+       * @returns Promise that resolves to true when the sync is done. 
+       */
+      self.syncOfflineChanges = function() {
+        if (ws.isConnected()) {
+          // sync the offline changes
+          console.log("Syncing offline changes");
+          var offlineChangelog = localfiles.getOfflineChangelog();
+          _.mapObject(offlineChangelog, function(paths, projectName) {
+            var project = self.open(projectName, "lock");
+            return $q.all(_.map(paths, function(path) {
+              var file = seashellProject.root.find(path);
+              if (file) {
+                return file.sync();
+              } else {
+                // file does not exist online: create new file online
+                return ws.offlineReadFile(projectName, path).then(function (offlineData) {
+                  var contents = offlineData.contents || ""; // TODO: error out?
+                  var encoding; // leave undefined so that backend can make assumptions
+                  return ws.onlineNewFile(projectName, path, contents, encoding, false);  
+                });
+              }
+            }))
+            .then(function () { return true; });
+          });
+        }
       };
     }]);

@@ -336,8 +336,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.newFile = function(name, file_name, contents,
         encoding, normalize, deferred) {
         localfiles.newFile(name, file_name, contents, encoding, normalize);
-        return self._socket.newFile(name, file_name, contents,
-          encoding, normalize, deferred);
+        return self.onlineNewFile(name, file_name, contents, encoding, normalize, deferred);
+      };
+
+      self.onlineNewFile = function(name, file_name, contents, encoding, normalize, deferred) {
+        return self._socket.newFile(name, file_name, contents, encoding, normalize, deferred);
       };
 
       self.restoreFileFrom = function(projectName, fpath, url) {
@@ -363,6 +366,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
           .then(offlineWrite)  // get checksum from backend and write
           .catch(function () { offlineWrite(false); }); // force write
+      };
+
+
+      self.offlineWriteFile = function(name, file_name, file_content, checksum) {
+        localfiles.writeFile(name, file_name, file_content, checksum);
       };
 
       self.deleteFile = function(name, file_name, deferred) {
@@ -468,5 +476,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.forceOfflineMode = function(force) {
         self.forceOffline = force;
       };
+
     }
   ]);

@@ -11,8 +11,9 @@ angular.module('seashell-local-files', [])
       self.user = null;   // username
       self.store = null;  // localForage instance
       self.projects = []; // offline storage of all project trees
-      self.offlineChangelog = []; // paths of files that have changed only offline 
+      self.offlineChangelog = []; // array of OfflineChange objects 
       self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
+      self.isSynced = false;
 
 
       /* Constructor for an OfflineChange
@@ -32,11 +33,26 @@ angular.module('seashell-local-files', [])
         return self.project;
       };
 
-
       // Getter for path. Returns a string.
       OfflineChange.prototype.getPath = function() {
         var self = this;
         return self.path;
+      };
+
+
+      // Returns the offline changelog as a dictionary (object)
+      //   of projects (keys) to paths (values), grouped by project. 
+      // Eg. {"A1": ["foo/bar/baz.txt", "foo/bar/bar.txt"]} 
+      self.getOfflineChangelog = function () {
+        var self = this;
+        var result = _.chain(self.offlineChangelog)
+          .groupBy(function(oc) { return oc.getProject(); })
+          .mapObject(function(paths, project) {
+            return _.map(paths, function (oc) { 
+              return oc.getPath(); 
+            }); 
+          });
+        return result;
       };
 
       // Add a change to the offline changelog.
@@ -54,6 +70,7 @@ angular.module('seashell-local-files', [])
       };
 
       // Must call this before using anything
+      // Returns a deferred that resolves when initialization is complete.
       self.init = function() {
         var self = this;
         self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
@@ -66,7 +83,7 @@ angular.module('seashell-local-files', [])
           version: 1.0
         });
 
-        self.store.getItem("//projects")
+        return self.store.getItem("//projects")
         .then(function(projs) {
           self.projects = projs || [];
           console.log("[localfiles] projects", self.projects);
