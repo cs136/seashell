@@ -195,12 +195,10 @@ angular.module('seashell-local-files', [])
 
       // Store an entire SeashellProject tree into the offline store
       self._dumpProject = function(project) {
-        console.log("[localfiles] dumping project", project);
         // manually (trivially) serialize the project,
         // stripping away things we don't need
         // NOTE: exclude the root!
         var serialized = self._serializeChildren(project.root.children); 
-        console.log("localfiles] serialized project", serialized);
         return $q.when(self.store.setItem(sprintf("//projects/%s", project.name), serialized));
       };
       

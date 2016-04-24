@@ -154,6 +154,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               offlineRead().then(function(offlineData) {
                 // offline file doesn't exist -- update
                 if (!offlineData) {
+                  console.log("Need to write offline");
                   self.write(conts.data);
                   self.contents = conts.data;
                 }
@@ -167,7 +168,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                   self.project.createFile(
                     folder,
                     question,
-                    sprintf("%s.conflict"),
+                    sprintf("%s.conflict", self.name[self.name.length - 1]),
                     offlineData.data,
                     encoding,
                     false
@@ -420,7 +421,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.when(ws.listProject(self.name)).then(function(files) {
                self.root = new SeashellFile(self, "", null, true);
                   _.map(files, function(f) {
-                   console.log("SeashellFile", f);
                    self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
                });
                
@@ -1161,18 +1161,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
        */
       self.syncProject = function(name) {
         console.log("Syncing project: ", name);
-        return self.open(name, "lock") // no lock since we are only reading
+        return self.open(name, "lock")
           .then(function (project) {
             var syncer = function (seashellFile) {
               if (!seashellFile.is_dir) {
-                seashellFile.sync();
+                return seashellFile.sync();
               } else {
-                _.each(seashellFile.list(), syncer);
+                return $q.all(_.map(seashellFile.list(), syncer));
               }
             };
 
-            _.each(project.root.list(), syncer);
-            return true;
+            return $q.all(_.map(project.root.list(), syncer))
+              .then(function () { 
+                console.log("Done syncing project: ", name);
+                return project.close()
+                  .then(function () { return true; });
+              });
           })
           .catch(function (err) {
             console.log(sprintf("Syncing %s encountered an error!", name));
@@ -1194,7 +1198,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         return self.list(true)
         .then(function (projects) {
           return $q.all(_.map(projects, function (project) {
-             return self.syncProject(project[0]);
+             return self.syncProject(project[0])
+               .then(function () { return true; });
           })); 
         })
         .then(function (res) {
