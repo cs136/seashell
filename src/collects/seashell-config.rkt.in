@@ -42,7 +42,7 @@
 ;; Can we override these flags?
 (define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
                                'seashell-known-hosts 'seashell-runtime-library 'seashell-runtime-racket-library
-                               'seashell-install 'server-memory-limit 'request-memory-limit)))
+                               'seashell-install 'server-memory-limit 'request-memory-limit 'project-settings-filename)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
@@ -163,6 +163,8 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Project settings filename.
+      (cons 'project-settings-filename     (string->path ".project-settings.txt"))
 
       ;; These flags can be overridden by the configuration file.
       ;; Default compiler flags.
@@ -235,7 +237,6 @@
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
-      (cons 'project-settings-filename     (string->path "project-settings.txt"))
       )))
   config-hash)
 
