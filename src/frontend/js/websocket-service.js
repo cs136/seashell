@@ -257,7 +257,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.saveProject = function(project, message, deferred) {
         // TODO: is this even used? 
-        if (self.connected) {
+        if (self.isOnline()) {
           return self._socket.saveProject(project, message, deferred);
         } else {
           return $q.resolve(false); // noop 
@@ -306,18 +306,29 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.lockProject = function(name, deferred) {
-        // TODO: offline mode?
-        return self._socket.lockProject(name, deferred);
+        // locking only makes sense when we're online
+        if (self.isOnline()) {
+          return self._socket.lockProject(name, deferred);
+        } else {
+          return $q.when();
+        }
       };
 
       self.forceLockProject = function(name, deferred) {
-        // TODO: offline mode?
-        return self._socket.forceLockProject(name, deferred);
+        if (self.isOnline()) {
+          return self._socket.forceLockProject(name, deferred);
+        } else {
+          return $q.when();
+        }
       };
 
       self.unlockProject = function(name, deferred) {
-        // TODO: offline mode?
-        return self._socket.unlockProject(name, deferred);
+        // locking only makes sense when we're online
+        if (self.isOnline()) {
+          return self._socket.unlockProject(name, deferred);
+        } else {
+          return $q.when();
+        }
       };
 
 
@@ -344,13 +355,15 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.restoreFileFrom = function(projectName, fpath, url) {
-        // TODO: disable in offline mode
-        return self._socket.restoreFileFrom(projectName, fpath, url);
+        if (self.isOnline()) {
+          return self._socket.restoreFileFrom(projectName, fpath, url);
+        } else {
+          return self._rejectOffline();
+        }
       };
 
 
       self.newDirectory = function(name, dir_name, deferred) {
-        // TODO: offline mode (tree in storage-service) 
         localfiles.newDirectory(name, dir_name);
         return self._socket.newDirectory(name, dir_name, deferred);
       };
@@ -379,7 +392,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.deleteDirectory = function(name, dir_name, deferred) {
-        // TODO: offline mode (tree in storage-service) 
+        // TODO: is this even used? 
         return self._socket.deleteDirectory(name, dir_name, deferred);
       };
 
@@ -389,22 +402,24 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getExportToken = function(project, deferred) {
-        // TODO: just disable this for offline mode?
-        return self._socket.getExportToken(project, deferred);
+        if (!self.isOnline) {
+          return self._rejectOffline(); 
+        } else {
+          return self._socket.getExportToken(project, deferred);
+        }
       };
 
       self.getUploadFileToken = function(project, file, deferred) {
-        // TODO: just disable this for offline mode
-        if (self.connected) {
-          return self._socket.getUploadFileToken(project, file, deferred);
+        if (!self.isOnline()) {
+          return self._rejectOffline(); 
         } else {
-          return $q.reject("Functionality not available offline");
+          return self._socket.getUploadFileToken(project, file, deferred);
         }
       };
 
       self.renameFile = function(project, oldName, newName, deferred) {
         var offlineResult = localfiles.renameFile(project, oldName, newName);
-        if (self.connected && !self.forceOffline) {
+        if (self.isOnline()) {
           var onlineResult = self._socket.renameFile(project, oldName, newName, deferred);
           return $q.all([onlineResult, offlineResult]);
         } else {
@@ -433,8 +448,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.marmosetSubmit = function(project, assn, subdir, deferred) {
-        // TODO: disable for offline mode
-        return self._socket.marmosetSubmit(project, assn, subdir, deferred);
+        if (!self.isOnline()) {
+          return self._socket.marmosetSubmit(project, assn, subdir, deferred);
+        } else {
+          return self._rejectOffline();
+        }
       };
 
       self.startIO = function(project, pid, deferred) {
@@ -443,13 +461,16 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.archiveProjects = function(deferred) {
-        // TODO: disable for offline mode
-        return self._socket.archiveProjects(deferred);
+        if (!self.isOnline()) {
+          return self._rejectOffline();
+        } else {
+          return self._socket.archiveProjects(deferred);
+        }
       };
 
       self.getFileToRun = function(project, question, deferred) {
         var offlineResult = localfiles.getRunnerFile(project, question);
-        if (self.connected && !self.forceOffline) {
+        if (self.isOnline()) {
           var onlineResult = self._socket.getFileToRun(project, question, deferred);
           return $q.all([onlineResult, offlineResult]).catch(
             function(error) {
@@ -462,7 +483,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.setFileToRun = function(project, question, folder, file, deferred) {
         var offlineResult = localfiles.setRunnerFile(project, question, folder, file);
-        if (self.connected && !self.forceOffline) {
+        if (self.isOnline()) {
           var onlineResult = self._socket.setFileToRun(project, question, folder, file, deferred);
           return $q.all([onlineResult, offlineResult]).catch(
             function(error) {
@@ -475,6 +496,14 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.forceOfflineMode = function(force) {
         self.forceOffline = force;
+      };
+
+      self.isOnline = function() {
+        return (self.connected && !self.forceOffline);
+      };
+
+      self._rejectOffline = function() {
+        return $q.reject("Functionality not available in offline mode.");
       };
 
     }

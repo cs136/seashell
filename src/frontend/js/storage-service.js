@@ -13,7 +13,6 @@ angular.module('seashell-local-files', [])
       self.projects = []; // offline storage of all project trees
       self.offlineChangelog = []; // array of OfflineChange objects 
       self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
-      self.isSynced = false;
 
 
       /* Constructor for an OfflineChange
@@ -52,14 +51,14 @@ angular.module('seashell-local-files', [])
               return oc.getPath(); 
             }); 
           });
-        return result;
+        return result.value();
       };
 
       // Add a change to the offline changelog.
       // Does nothing if the change is already logged.
       self._addOfflineChange = function(project, path) {
         var self = this;
-        var key = project + path;
+        var key = sprintf("%s/%s", project, path);
         if (!(key in self.offlineChangelogSet)) {
           self.offlineChangelogSet[key] = true;
           self.offlineChangelog.push(new OfflineChange(project, path));
@@ -69,8 +68,18 @@ angular.module('seashell-local-files', [])
         }
       };
 
+
+      // Sync offline changes. The argument should be a function
+      //   that accepts one parameter: the value of getOfflineChangelog()
+      self.syncOfflineChanges = function(syncFunction) {
+        syncFunction(self.getOfflineChangelog());
+        self.offlineChangelog = [];
+        self.offlineChangelogSet = {};
+        return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+      };
+
       // Must call this before using anything
-      // Returns a deferred that resolves when initialization is complete.
+      // Returns a deferred that resolves to true when initialization is complete.
       self.init = function() {
         var self = this;
         self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
@@ -83,13 +92,32 @@ angular.module('seashell-local-files', [])
           version: 1.0
         });
 
-        return self.store.getItem("//projects")
-        .then(function(projs) {
-          self.projects = projs || [];
-          console.log("[localfiles] projects", self.projects);
-        }); 
-      };
+        var getProjects = 
+          self.store.getItem("//projects")
+          .then(function(projs) {
+            self.projects = projs || [];
+            console.log("[localfiles] projects", self.projects);
+          });
 
+        var getOfflineChanges = 
+          self.store.getItem("//offlineChangelog")
+          .then(function(data) {
+            self.offlineChangelog = [];
+            self.offlineChangelogSet = {};
+            for (var id in data) {
+              var oc = data[id];
+              var offlineChange = new OfflineChange(oc.project, oc.path);
+              var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
+              self.offlineChangelog.push(offlineChange);
+              self.offlineChangelogSet[key] = true;
+            }
+            console.log("offlineChangelog", self.offlineChangelog);
+            console.log("offlineChangelogSet", self.offlineChangelogSet);
+          });
+
+        return $q.all([getProjects, getOfflineChanges])
+          .then(function () { return true; });
+      };
 
       /*
        * Returns the path to where this file is stored.
@@ -109,6 +137,7 @@ angular.module('seashell-local-files', [])
       self.writeFile = function(name, file_name, file_content, checksum) {
         var offline_checksum = md5(file_content);
         var path = self._path(name, file_name);
+        var def = $q.defer();
 
         // checksum is false when we're doing an offline write
         if (checksum === false) {
@@ -119,6 +148,7 @@ angular.module('seashell-local-files', [])
               contents.data = file_content;
               contents.offline_checksum = offline_checksum;
               self._addOfflineChange(name, file_name);
+              console.log("[localfiles] Offline Write", contents);
               return self.store.setItem(path, contents);
             }
           );

@@ -39,7 +39,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
 
       localfiles.init().then(function () { 
-
+        ws.register_callback("connected", function () {
+          var self = this;
+          if (ws.isOnline()) {
+            localfiles.syncOfflineChanges(self.syncOfflineChanges);          
+          }
+        }, true);
       });
      
       var SeashellProject = (function () { 
@@ -1215,26 +1220,28 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
        * on the server.
        * @returns Promise that resolves to true when the sync is done. 
        */
-      self.syncOfflineChanges = function() {
+      self.syncOfflineChanges = function(offlineChangelog) {
         if (ws.isConnected()) {
           // sync the offline changes
           console.log("Syncing offline changes");
-          var offlineChangelog = localfiles.getOfflineChangelog();
+          console.log(offlineChangelog);
           _.mapObject(offlineChangelog, function(paths, projectName) {
-            var project = self.open(projectName, "lock");
-            return $q.all(_.map(paths, function(path) {
-              var file = seashellProject.root.find(path);
-              if (file) {
-                return file.sync();
-              } else {
-                // file does not exist online: create new file online
-                return ws.offlineReadFile(projectName, path).then(function (offlineData) {
-                  var contents = offlineData.contents || ""; // TODO: error out?
-                  var encoding; // leave undefined so that backend can make assumptions
-                  return ws.onlineNewFile(projectName, path, contents, encoding, false);  
-                });
-              }
-            }))
+            self.open(projectName, "lock")
+            .then(function (project) {
+              return $q.all(_.map(paths, function(path) {
+                var file = project.root.find(path);
+                if (file) {
+                  return file.sync();
+                } else {
+                  // file does not exist online: create new file online
+                  return ws.offlineReadFile(projectName, path).then(function (offlineData) {
+                    var contents = offlineData.contents || ""; // TODO: error out?
+                    var encoding; // leave undefined so that backend can make assumptions
+                    return ws.onlineNewFile(projectName, path, contents, encoding, false);  
+                  });
+                }
+              }));
+            })
             .then(function () { return true; });
           });
         }
