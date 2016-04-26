@@ -265,7 +265,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getProjects = function(deferred) {
-        if (self.connected && !self.forceOffline) {
+        if (self.isOnline()) {
           return self._socket.getProjects(deferred)
           .then(function(projects) {
             localfiles.setProjects(projects);
@@ -278,7 +278,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.listProject = function(name, deferred) {
-        if (self.connected && !self.forceOffline) {
+        if (self.isOnline()) {
           localfiles.listProject(name).then(
               function(tree) {
                 console.log("[websocket] offline listProject", tree);
@@ -387,8 +387,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.deleteFile = function(name, file_name, deferred) {
-        localfiles.deleteFile(name, file_name);
-        return self._socket.deleteFile(name, file_name, deferred);
+        var offlineResult = localfiles.deleteFile(name, file_name);
+        if (self.isOnline()) {
+          return self._socket.deleteFile(name, file_name, deferred);
+        } else {
+          return offlineResult;
+        }
       };
 
       self.deleteDirectory = function(name, dir_name, deferred) {
