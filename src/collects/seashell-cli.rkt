@@ -8,10 +8,16 @@
          racket/serialize
          racket/cmdline)
 
+(define flags (vector->list (current-command-line-arguments)))
+(when (empty? flags)
+  (printf "seashell-cli <tool>; possible tools are:~n")
+  (printf "  marmtest: Marmoset test runner.~n")
+  (exit 1))
 
 (define RUN-TIMEOUT (make-parameter #f))
 (define-values (project-dir main-file test-name out-file err-file)
   (command-line
+    #:argv (rest flags)
     #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  21 means the program failed an assert.\n  30 means the program failed its test.\n  40 means the program passed its test."
     #:once-each
     [("-t" "--timeout") timeout
