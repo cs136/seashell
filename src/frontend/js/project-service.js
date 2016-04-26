@@ -40,7 +40,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
       localfiles.init().then(function () { 
         ws.register_callback("connected", function () {
-          var self = this;
           if (ws.isOnline()) {
             localfiles.syncOfflineChanges(self.syncOfflineChanges);          
           }
