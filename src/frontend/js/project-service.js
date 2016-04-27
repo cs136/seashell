@@ -997,21 +997,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
       /**
        * Lists projects available.
-       * @param {Boolean} Whether or not to use the cached result, if present
        * @returns {Angular.$q -> [String]/?} Deferred object that will resolve
        *  to the list of projects available to be opened.
        */
-      var list = function(use_cache) {
-        if (use_cache && self._list) {
-          return $q.resolve(self._list);
-        }
-        return $q.when(ws.getProjects())
-        .then(function (projects) {
-          self._list = projects;
-          return projects; 
-        });
+      self.list = function() {
+        return $q.when(ws.getProjects());
       };
-      self.list = list;
 
       /* Returns projects listed in PROJ_SKEL_URL
          This method only send requests to the server once when it's initially called.
@@ -1178,8 +1169,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.all(_.map(project.root.list(), syncer))
               .then(function () { 
                 console.log("Done syncing project: ", name);
-                return project.close()
-                  .then(function () { return true; });
+                return project.close();
+              })
+              .then(function () {
+                return true;  
               });
           })
           .catch(function (err) {
@@ -1199,16 +1192,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         var self = this;
         var promises;
         console.log("Syncing all projects");
-        return self.list(true)
+        return self.list()
         .then(function (projects) {
           return $q.all(_.map(projects, function (project) {
-             return self.syncProject(project[0])
-               .then(function () { return true; });
+             return self.syncProject(project[0]);
           })); 
         })
         .then(function (res) {
           console.log("Finished syncing all projects");
-          console.log(res);
           return true;
         });
       };

@@ -24,9 +24,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', '$cookies', '$window',
-    'settings-service', '$location', '$css',
+    'settings-service', '$location', '$css', 'projects',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        $cookies, $window, settings, $location, $css) {
+        $cookies, $window, settings, $location, $css, projects) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -68,6 +68,17 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
                  }).catch(function(err) {
                    self.errors.report(err, "Failed to archive projects.");
                  });
+            });
+        };
+        // Sync all
+        self.syncAll = function() {
+          confirm("Sync all projects",
+              "Confirming will download all files for use in offline mode. You should only have to do this once per browser.")
+            .then(function() {
+              $q.when(projects.syncAll())
+                .catch(function (err) {
+                  self.errors.report(err, "Failed to sync all projects.");
+                });
             });
         };
         // Logout
