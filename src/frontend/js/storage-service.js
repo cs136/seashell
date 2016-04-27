@@ -72,10 +72,12 @@ angular.module('seashell-local-files', [])
       // Sync offline changes. The argument should be a function
       //   that accepts one parameter: the value of getOfflineChangelog()
       self.syncOfflineChanges = function(syncFunction) {
-        syncFunction(self.getOfflineChangelog());
-        self.offlineChangelog = [];
-        self.offlineChangelogSet = {};
-        return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+        return $q.when(syncFunction(self.getOfflineChangelog()))
+          .then(function () {
+            self.offlineChangelog = [];
+            self.offlineChangelogSet = {};
+            return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+          });
       };
 
       // Must call this before using anything

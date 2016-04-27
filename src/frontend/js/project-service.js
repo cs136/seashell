@@ -1215,7 +1215,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           // sync the offline changes
           console.log("Syncing offline changes");
           console.log(offlineChangelog);
-          _.mapObject(offlineChangelog, function(paths, projectName) {
+          return _.mapObject(offlineChangelog, function(paths, projectName) {
             self.open(projectName, "lock")
             .then(function (project) {
               return $q.all(_.map(paths, function(path) {
