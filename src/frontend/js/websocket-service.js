@@ -290,19 +290,29 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.newProject = function(name, deferred) {
-        // TODO: offline mode (tree in storage-service) 
-        localfiles.newProject(name);
-        return self._socket.newProject(name, deferred);
+        // TODO: offline mode 
+        if (self.isOnline()) {
+          return self._socket.newProject(name, deferred);
+        } else {
+          return self._rejectOffline();
+        }
       };
 
       self.newProjectFrom = function(name, src_url, deferred) {
-        // TODO: disable? 
-        return self._socket.newProjectFrom(name, src_url, deferred);
+        if (self.isOnline()) {
+          return self._socket.newProjectFrom(name, src_url, deferred);
+        } else {
+          return self._rejectOffline();
+        }
       };
 
       self.deleteProject = function(name, deferred) {
-        // TODO: offline mode (tree in storage-service) 
-        return self._socket.deleteProject(name, deferred);
+        // TODO: offline mode
+        if (self.isOnline()) {
+          return self._socket.deleteProject(name, deferred);
+        } else {
+          return self._rejectOffline();
+        }
       };
 
       self.lockProject = function(name, deferred) {
@@ -435,22 +445,38 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getMostRecentlyUsed = function(project, directory, deferred) {
         // TODO: offline mode 
-        return self._socket.getMostRecentlyUsed(project, directory, deferred);
+        if (self.isOnline()) {
+          return self._socket.getMostRecentlyUsed(project, directory, deferred);
+        } else {
+          return $q.when(false);
+        }
       };
 
       self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
-        // TODO: offline mode (see renameFile for pattern to use here)
-        return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
+        // TODO: store this in offline mode 
+        if (self.isOnline()) {
+          return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
+        } else {
+          return $q.when();
+        }
       };
 
       self.saveSettings = function(settings, deferred) {
         // TODO: offline mode
-        return self._socket.saveSettings(settings, deferred);
+        if (self.isOnline()) {
+          return self._socket.saveSettings(settings, deferred);
+        } else {
+          return $q.when();
+        }
       };
 
       self.getSettings = function(deferred) {
         // TODO: offline mode
-        return self._socket.getSettings(deferred);
+        if (self.isOnline()) {
+          return self._socket.getSettings(deferred);
+        } else {
+          return $q.when();
+        }
       };
 
       self.marmosetSubmit = function(project, assn, subdir, deferred) {
