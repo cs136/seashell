@@ -40,9 +40,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
       localfiles.init().then(function () { 
         ws.register_callback("connected", function () {
-          if (ws.isOnline()) {
-            localfiles.syncOfflineChanges(self.syncOfflineChanges);          
-          }
+          settings.load() // need to load so that we can determine if we are forceOffline
+            .then(function () { 
+              if (ws.isOnline()) {
+                localfiles.syncOfflineChanges(self.syncOfflineChanges);          
+              }
+            });
         }, true);
       });
      
@@ -1207,7 +1210,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       /**
        * Sync only the offline changes, from the offlineChangelog.
        * If new files were created offline-only, they will now be synced by creating them
-       * on the server.
+       * on the server. If files were deleted offline-only, they will be deleted on the server.
        * @returns Promise that resolves to true when the sync is done. 
        */
       self.syncOfflineChanges = function(offlineChangelog) {
@@ -1215,21 +1218,34 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           // sync the offline changes
           console.log("Syncing offline changes");
           console.log(offlineChangelog);
-          return _.mapObject(offlineChangelog, function(paths, projectName) {
+          return _.mapObject(offlineChangelog, function(ocs, projectName) {
             self.open(projectName, "lock")
             .then(function (project) {
-              return $q.all(_.map(paths, function(path) {
-                var file = project.root.find(path);
+              return $q.all(_.map(ocs, function(oc) {
+                var def;
+                var file = project.root.find(oc.getPath());
                 if (file) {
-                  return file.sync();
+                  if (oc.isDeleted()) {
+                    var question = file.name[0]; 
+                    var folder = file.parent.name[file.parent.name.length - 1];
+                    var fname = file.name[file.name.length - 1];
+                    def = project.deleteFile(question, folder, fname);
+                  } else {
+                    def = file.sync();
+                  }
                 } else {
                   // file does not exist online: create new file online
-                  return ws.offlineReadFile(projectName, path).then(function (offlineData) {
-                    var contents = offlineData.contents || ""; // TODO: error out?
-                    var encoding; // leave undefined so that backend can make assumptions
-                    return ws.onlineNewFile(projectName, path, contents, encoding, false);  
-                  });
+                  if (!oc.isDeleted()) {
+                    def = ws.offlineReadFile(projectName, oc.getPath()).then(function (offlineData) {
+                      var contents = (offlineData && offlineData.data) || ""; // TODO: error out?
+                      var encoding; // leave undefined so that backend can make assumptions
+                      return ws.onlineNewFile(projectName, oc.getPath(), contents, encoding, false);  
+                    });
+                  } else {
+                    def = $q.when();
+                  }
                 }
+                return def.then(function () { project.close(); });
               }));
             })
             .then(function () { return true; });

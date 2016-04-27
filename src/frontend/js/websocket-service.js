@@ -347,7 +347,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.newFile = function(name, file_name, contents,
         encoding, normalize, deferred) {
         localfiles.newFile(name, file_name, contents, encoding, normalize);
-        return self.onlineNewFile(name, file_name, contents, encoding, normalize, deferred);
+        if (self.isOnline()) {
+          return self.onlineNewFile(name, file_name, contents, encoding, normalize, deferred);
+        }
       };
 
       self.onlineNewFile = function(name, file_name, contents, encoding, normalize, deferred) {

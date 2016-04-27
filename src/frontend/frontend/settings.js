@@ -31,14 +31,18 @@ angular.module('frontend-app')
           tab_width  : 2,
           use_space : true,
           force_narrow : false,
-          theme : "dark"
+          theme : "dark",
+          offline_mode : "0"
         };
         self.notify = {};
+        self.needToLoad = true;
         var nKey = 0;
 
         function notifyChanges () {
           _.forEach(self.notify, function (fn) {fn();});
-          ws.forceOfflineMode(self.settings.offline_mode === 2); 
+          // Notify of offline/online changes 
+          if (self.settings.offline_mode === "2")
+          ws.forceOfflineMode(self.settings.offline_mode === "2"); 
         }
 
         /** Adds and removes watchers on the settings service. */
@@ -52,7 +56,12 @@ angular.module('frontend-app')
         };
 
         self.load = function () {
+          // do nothing if we haven't written anything
+          if (!self.needToLoad) {
+            return $q.when();
+          }
           return $q.when(ws.getSettings()).then(function (settings) {
+            self.needToLoad = false;
             if (settings)
               for (var k in settings)
                 self.settings[k] = settings[k];
@@ -67,6 +76,7 @@ angular.module('frontend-app')
         };
 
         self.save = function () {
+          self.needToLoad = true;
           return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 

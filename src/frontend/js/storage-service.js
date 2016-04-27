@@ -13,6 +13,7 @@ angular.module('seashell-local-files', [])
       self.projects = []; // offline storage of all project trees
       self.offlineChangelog = []; // array of OfflineChange objects 
       self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
+      self.offlineDeletedFiles = {}; // set of files that have been deleted
 
 
       /* Constructor for an OfflineChange
@@ -20,22 +21,29 @@ angular.module('seashell-local-files', [])
        *   but not online, so that it can be updated when the user goes 
        *   back online.
        */
-      var OfflineChange = function(project, path) {
+      var OfflineChange = function(project, path, isDeleted) {
         var self = this;
-        self.project = project;
-        self.path = path;
+        self._project = project;
+        self._path = path;
+        self._isDeleted = !!isDeleted;
       };
 
       // Getter for project name. Returns a string.
       OfflineChange.prototype.getProject = function() {
         var self = this;
-        return self.project;
+        return self._project;
       };
 
       // Getter for path. Returns a string.
       OfflineChange.prototype.getPath = function() {
         var self = this;
-        return self.path;
+        return self._path;
+      };
+
+      // Returns true if the change was a deletion.
+      OfflineChange.prototype.isDeleted = function() {
+        var self = this;
+        return self._isDeleted;
       };
 
 
@@ -45,13 +53,16 @@ angular.module('seashell-local-files', [])
       self.getOfflineChangelog = function () {
         var self = this;
         var result = _.chain(self.offlineChangelog)
-          .groupBy(function(oc) { return oc.getProject(); })
-          .mapObject(function(paths, project) {
-            return _.map(paths, function (oc) { 
-              return oc.getPath(); 
-            }); 
-          });
-        return result.value();
+          .groupBy(function(oc) { return oc.getProject(); }).value();
+        
+        for (var key in self.offlineDeletedFiles) {
+          var project = self.offlineDeletedFiles[key].getProject();
+          if (!result[project]) {
+            result[project] = [];
+          }
+          result[project].push(self.offlineDeletedFiles[key]);
+        }
+        return result;
       };
 
       // Add a change to the offline changelog.
@@ -59,10 +70,46 @@ angular.module('seashell-local-files', [])
       self._addOfflineChange = function(project, path) {
         var self = this;
         var key = sprintf("%s/%s", project, path);
+
+        var promises = [];
+
+        delete self.offlineDeletedFiles[key];
         if (!(key in self.offlineChangelogSet)) {
-          self.offlineChangelogSet[key] = true;
+          self.offlineChangelogSet[key] = true; 
           self.offlineChangelog.push(new OfflineChange(project, path));
-          return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+          return $q.all([
+            $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog)),
+            $q.when(self.store.setItem("//offlineDeletedFiles", self.offlineDeletedFiles))
+            ]);
+        } else {
+          return $q.when();
+        }
+      };
+
+      // Add a file to the offline delete log.
+      // Does nothing if the change has already been logged.
+      self._addOfflineDelete = function(project, path) {
+        var self = this;
+        var key = sprintf("%s/%s", project, path);
+
+        var promises = [];
+
+        // remove from offlineChangelog
+        // since we won't be deleting often, this is acceptable
+        if (key in self.offlineChangelogSet) {
+          console.log("Removing from offlineChangelog because we deleted");
+          delete self.offlineChangelogSet[key];
+          self.offlineChangelog = _.reject(self.offlineChangelog,
+            function(oc) {
+              return oc.getProject() === project && oc.getPath() == path; 
+            });
+          promises.push($q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog)));
+        } 
+
+        if (!(key in self.offlineDeletedFiles)) {
+          self.offlineDeletedFiles[key] = new OfflineChange(project, path, true); 
+          promises.push($q.when(self.store.setItem("//offlineDeletedFiles", self.offlineDeletedFiles)));
+          return $q.all(promises);
         } else {
           return $q.when();
         }
@@ -76,7 +123,11 @@ angular.module('seashell-local-files', [])
           .then(function () {
             self.offlineChangelog = [];
             self.offlineChangelogSet = {};
-            return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
+            self.offlineDeletedFiles = {};
+            return $q.all([
+              self.store.removeItem("//offlineChangelog"),
+              self.store.removeItem("//offlineDeletedFiles")
+            ]);
           });
       };
 
@@ -108,7 +159,7 @@ angular.module('seashell-local-files', [])
             self.offlineChangelogSet = {};
             for (var id in data) {
               var oc = data[id];
-              var offlineChange = new OfflineChange(oc.project, oc.path);
+              var offlineChange = new OfflineChange(oc._project, oc._path, oc._isDeleted);
               var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
               self.offlineChangelog.push(offlineChange);
               self.offlineChangelogSet[key] = true;
@@ -117,7 +168,20 @@ angular.module('seashell-local-files', [])
             console.log("offlineChangelogSet", self.offlineChangelogSet);
           });
 
-        return $q.all([getProjects, getOfflineChanges])
+        var getOfflineDeletedFiles =
+          self.store.getItem("//offlineDeletedFiles")
+          .then(function(data) {
+            data = data || {};
+            self.offlineDeletedFiles = {};
+            for (var id in data) {
+              var oc = data[id];
+              var offlineChange = new OfflineChange(oc._project, oc._path, oc._isDeleted);
+              var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
+              self.offlineDeletedFiles[key] = offlineChange;
+            }
+          });
+
+        return $q.all([getProjects, getOfflineChanges, getOfflineDeletedFiles])
           .then(function () { return true; });
       };
 
@@ -188,6 +252,7 @@ angular.module('seashell-local-files', [])
 
       self.deleteFile = function(name, file_name) {
         console.log("[localfiles] deleteFile");
+        self._addOfflineDelete(name, file_name);
         return $q.when(self.store.removeItem(self._path(name, file_name)));
       };
 
