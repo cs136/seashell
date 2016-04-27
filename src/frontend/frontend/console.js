@@ -260,6 +260,8 @@ angular.module('frontend-app')
         self.write(".\n");
         self.PIDs = null;
         self.running = false;
+        socket.unregister_callbacks('io');
+        socket.unregister_callbacks('test');
       }
       self.flush();
     };

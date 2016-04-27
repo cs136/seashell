@@ -68,14 +68,20 @@ angular.module('seashell-websocket', ['ngCookies'])
         }
         return key++;
       };
+
       self.unregister_callback = function(key) {
         delete callbacks[key];
       };
 
+      self.unregister_callbacks = function(type) {
+        callbacks = _.filter(callbacks, function(item) { return item && item.type == type; });
+        key = callbacks.length;
+      }
+
       /** Helper function to invoke the I/O callback. */
       function io_cb(ignored, message) {
         _.each(_.map(_.filter(callbacks, function(x) {
-              return x.type === 'io';
+              return x && x.type === 'io';
             }),
             function(x) {
               return x.cb;
