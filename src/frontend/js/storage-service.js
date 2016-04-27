@@ -248,7 +248,7 @@ angular.module('seashell-local-files', [])
         // TODO: decoding 
         // name: project name
         // file_name: relative path under project
-        self.writeFile(self._path(name, file_name), contents);
+        self.writeFile(name, file_name, contents, false);
       };
 
 
