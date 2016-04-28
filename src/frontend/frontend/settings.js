@@ -32,7 +32,7 @@ angular.module('frontend-app')
           use_space : true,
           force_narrow : false,
           theme : "dark",
-          offline_mode : "0"
+          offline_mode : 1 /** Valid options: 0 - disabled, 1 - enabled, 2 - forced */
         };
         self.notify = {};
         self.needToLoad = true;

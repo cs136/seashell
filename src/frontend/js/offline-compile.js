@@ -56,12 +56,39 @@ self.onmessage = function(msg) {
     return res;
   }
 
+<<<<<<< HEAD
   function compile(sources) {
     var cc = Module.seashell_compiler_make();
     for(var i=0; i<sources.length; i++) {
       console.log("Adding "+sources[i]+" to compiler");
       Module.seashell_compiler_add_file(cc, "/working/"+sources[i]);
     }
+=======
+  function compile(runnerFile) {
+    console.log("compile called");
+    var pp = Module.seashell_preprocessor_make();
+    Module.seashell_preprocessor_set_main_file(pp, runnerFile);
+    console.log("Running preprocessor...");
+    var pres = Module.seashell_preprocessor_run(pp);
+    console.log("Preprocessor finished.");
+    // TODO handle this error case better.. return an actual message
+    if(pres !== 0) {
+      Module.seashell_preprocessor_free(pp);
+      return { messages: [],
+               type: "result",
+               pid: -1,
+               status: "compile-failed" };
+    }
+    var cc = Module.seashell_compiler_make();
+    var numDeps = Module.seashell_preprocessor_get_include_count(pp);
+    for(var ind = 0; ind < numDeps; ind++) {
+      var source = Module.seashell_preprocessor_get_include(pp, ind);
+      console.log("Adding "+source+" to compiler");
+      Module.seashell_compiler_add_file(cc, "/working/"+source);
+    }
+    Module.seashell_preprocessor_free(pp);
+
+>>>>>>> kaleb/offline-compile
     var cres = Module.seashell_compiler_run(cc);
     var diags = diagnostics(cc, sources);
     if(cres === 0) {
@@ -85,7 +112,11 @@ self.onmessage = function(msg) {
   try {
     FS.mkdir("/working");
   } catch(e) { }
+<<<<<<< HEAD
   var sources = [];
+=======
+  var rf = data.runnerFile;
+>>>>>>> kaleb/offline-compile
   for(var i=0; i<data.files.length; i++) {
     var file = FS.open("/working/"+data.files[i].name, 'w');
     var len = lengthBytesUTF8(data.files[i].contents)+1;
@@ -93,6 +124,7 @@ self.onmessage = function(msg) {
     var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
     FS.write(file, arr, 0, copied);
     FS.close(file);
+<<<<<<< HEAD
     var splitname = data.files[i].name[data.files[i].name.length-1].split(".");
     if(splitname[splitname.length-1] == "c")
       sources.push(data.files[i].name);
@@ -100,11 +132,21 @@ self.onmessage = function(msg) {
 
   if(init) {
     var res = compile(sources);
+=======
+  }
+
+  if(init) {
+    var res = compile(rf);
+>>>>>>> kaleb/offline-compile
     postMessage(res);
   }
   else {
     init_queue.push(function() {
+<<<<<<< HEAD
       var res = compile(sources);
+=======
+      var res = compile(rf);
+>>>>>>> kaleb/offline-compile
       postMessage(res);
     });
   }

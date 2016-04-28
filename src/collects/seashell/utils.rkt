@@ -16,5 +16,14 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler seashell/compiler/place)
-(provide (all-from-out seashell/compiler/compiler seashell/compiler/place))
+(provide check-eof)
+
+;; Handy syntax rule for EOF checking
+(: check-eof (All (X) (-> (U EOF X) X)))
+(define (check-eof x)
+  (cond
+    [(eof-object? x)
+      (raise (exn:fail (format "read: Unexpected end of file!")
+                               (current-continuation-marks)))]
+    [else
+      x]))

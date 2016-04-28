@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -23,30 +23,28 @@
 ;;  key - Client's handshake.
 ;; Returns:
 ;;  Handshake response.
-(require net/base64
-         openssl/sha1
-         racket/contract
-         racket/port)
+(require typed/net/base64
+         typed/openssl/sha1)
 
 (provide handshake-solution-server
          handshake-solution-ok?
          make-handshake)
 
-(define/contract (make-handshake)
-  (-> bytes?)
+(: make-handshake (-> Bytes))
+(define (make-handshake)
   (base64-encode
-   (apply bytes (for/list ([i (in-range 16)]) (random 256))) #""))
+   (apply bytes (for/list : (Listof Integer) ([i : Integer (in-range 16)]) (random 256))) #""))
 
-(define/contract (handshake-solution-server key)
-  (-> bytes? bytes?)
+(: handshake-solution-server (-> Bytes Bytes))
+(define (handshake-solution-server key)
   (base64-encode
    (with-input-from-bytes
     (bytes-append key #"258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-    (lambda() (sha1-bytes (current-input-port))))
+    (lambda () (sha1-bytes (current-input-port))))
    #""))
 
-(define/contract (handshake-solution-ok? key result)
-  (-> bytes? bytes? boolean?)
+(: handshake-solution-ok? (-> Bytes Bytes Boolean))
+(define (handshake-solution-ok? key result)
   (equal? result (handshake-solution-server key)))
 
 

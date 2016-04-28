@@ -467,7 +467,7 @@
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm")
-                                    (remove-duplicates (cons (build-path base exe) c-files))
+                                    (check-and-build-path project-base file)
                                     o-files))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
@@ -531,6 +531,7 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
+      (eprintf "about to test\n")
       (define pids (map
                      (lambda (test)
                        (run-program target base lang test is-cli))
@@ -545,7 +546,6 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
     [else
-      (eprintf "b2coutts: messages are ~s\n" messages)
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 
@@ -650,7 +650,7 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
-              (copy-from! common-dir))
+              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))

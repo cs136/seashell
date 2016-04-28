@@ -16,35 +16,58 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler
-         seashell/log
-         seashell/seashell-config
-         racket/place)
-(provide seashell-compiler-place)
+(module typed-place typed/racket
+  (require seashell/compiler/compiler
+           (submod seashell/seashell-config typed)
+           seashell/log
+           racket/place)
+  (require/typed racket/serialize
+                 [serialize (-> Any Any)])
 
-;; (seashell-compiler-place/thread write-end . args)
-;; Thread that actually processes the compilation request.
-(define (seashell-compiler-place/thread write-end . args)
-  (thread
-    (lambda ()
+  (provide seashell-compiler-place/typed)
+
+  ;; (seashell-compiler-place/thread write-end . args)
+  ;; Thread that actually processes the compilation request.
+  (: seashell-compiler-place/thread (-> Place-Channel (Listof String) (Listof String) Path (Listof Path) Thread))
+  (define (seashell-compiler-place/thread write-end cflags ldflags runnerFile objects)
+    (thread
+      (lambda ()
+        (with-handlers
+          ([exn:fail?
+            (lambda ([exn : exn]) (place-channel-put write-end (serialize (list #t #f (exn-message exn)))))])
+          (define-values (result data)
+            (seashell-compile-files cflags ldflags runnerFile objects))
+          (place-channel-put write-end (serialize (list #f result data)))))))
+
+
+  ;; (seashell-compiler-place channel)
+  ;; Invokes seashell-compile-files in a separate place,
+  ;; preserving parallelism in Racket.
+  ;;
+  ;; This is the main function for the place.
+  (: seashell-compiler-place/typed (-> Place-Channel Any))
+  (define (seashell-compiler-place/typed channel)
+    ;; These two things should not fail.
+    (config-refresh!)
+    (standard-logger-setup)
+    (let loop : Any ()
       (with-handlers
         ([exn:fail?
-          (lambda (exn) (place-channel-put write-end (list #t #f (exn-message exn))))])
-        (define-values (result data) (apply seashell-compile-files args))
-        (place-channel-put write-end (list #f result data))))))
-       
-;; (seashell-compiler-place channel)
-;; Invokes seashell-compile-files in a separate place,
-;; preserving parallelism in Racket.
-;;
-;; This is the main function for the place.
+          (lambda ([exn : exn])
+            (logf 'error "Compiler place got error: ~a~n" (exn-message exn))
+            (place-channel-put channel (list #t #f (exn-message exn))))])
+        (match-define
+          (list write-end cflags ldflags runnerFile objects) (place-channel-get channel))
+        (seashell-compiler-place/thread
+          (cast write-end Place-Channel)
+          (cast cflags (Listof String))
+          (cast ldflags (Listof String))
+          (cast runnerFile Path)
+          (cast objects (Listof Path))))
+      (loop))))
+
+
+(require (submod "." typed-place))
+(provide seashell-compiler-place)
 (define (seashell-compiler-place channel)
-  ;; These two things should not fail.
-  (config-refresh!)
-  (standard-logger-setup)
-  (let loop ()
-    (with-handlers
-      ([exn:fail?
-        (lambda (exn) (place-channel-put channel (list #t #f (exn-message exn))))])
-      (apply seashell-compiler-place/thread (place-channel-get channel)))
-    (loop)))
+  (seashell-compiler-place/typed channel))

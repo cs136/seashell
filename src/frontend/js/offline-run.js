@@ -46,7 +46,11 @@ function runObj(obj) {
     Module._RT_stdin_buffer += obj.data;
     if(!running)
       run_loop();
+<<<<<<< HEAD
   };
+=======
+  }
+>>>>>>> kaleb/offline-compile
 
   function run_loop() {
     running = true;

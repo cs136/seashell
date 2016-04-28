@@ -58,16 +58,16 @@ angular.module('frontend-app')
          *  the socket exists in the first place, this is
          *  fine for now. */
         var cbC_key = ws.register_callback('connected', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", false);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", false);
         }, true);
         var cbF_key = ws.register_callback('failed', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", true);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", true);
         }, true);
         var cbD_key = ws.register_callback('disconnected', function () {
-          if (self.editor)
-            self.editor.setOption("readOnly", true);
+          //if (self.editor)
+            //self.editor.setOption("readOnly", true);
         }, true);
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
@@ -268,7 +268,7 @@ angular.module('frontend-app')
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
-            readOnly: !self.ready || self.isBinaryFile,
+            readOnly: self.isBinaryFile,
             mode: mime,
             theme: theme,
             tabSize: parseInt(settings.settings.tab_width),
@@ -430,7 +430,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, false)
+            self.project.run(self.question, false, self.console.IOCallback, self.console.testCallback)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
@@ -452,7 +452,7 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, true)
+            self.project.run(self.question, true, self.console.IOCallback, self.console.testCallback)
               .then(function(res) {
                 self.console.setRunning(self.project, res.pids, true);
                 handleCompileErr(res.messages, true);
@@ -472,7 +472,9 @@ angular.module('frontend-app')
 
         self.killProgram = function() {
           if(!self.console.PIDs) {
-            return $q.when();
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
           }
           var p = $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);
@@ -556,7 +558,7 @@ angular.module('frontend-app')
         });
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
-            self.contents = conts;
+            self.contents = conts.data;
             self.ready = true;
             if (conts.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);

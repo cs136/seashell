@@ -244,7 +244,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
+<<<<<<< HEAD
           self.contents = data;
+=======
+>>>>>>> kaleb/offline-compile
           return $q.when(ws.writeFile(self.project.name, self.fullname(), data));
         };
 
@@ -338,11 +341,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             if (match.length>0) {
               return match[0]._placeInTree(file, path.slice(1), soft_place,
                 contents, encoding, normalize);
+<<<<<<< HEAD
             }
             else {
               var dir = new SeashellFile(file.project,
                 file.name.slice(0,file.name.length-path.length+1).join('/'), null, true);
               return (dir.fullname() === "" ? $q.when() : 
+=======
+            } else {
+              var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
+              return (dir.fullname === "" ? $q.when() : 
+>>>>>>> kaleb/offline-compile
                   $q.when(ws.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
@@ -427,7 +436,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return result.then(function () {
             return $q.when(ws.listProject(self.name)).then(function(files) {
                self.root = new SeashellFile(self, "", null, true);
-                  _.map(files, function(f) {
+                 _.map(files, function(f) {
                    self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
                });
                
@@ -670,12 +679,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * question settings file.
          */
         SeashellProject.prototype.getFileToRun = function (question) {
+<<<<<<< HEAD
           var self = this;
           return $q.when(ws.getFileToRun(self.name, question))
             .then(function (result) {
                 self.fileToRun = result;
                 return result[0];
             });
+=======
+            var self = this;
+            return $q.when(ws.getFileToRun(self.name, question))
+                .then(function (result) {
+                    return result;
+                });
+>>>>>>> kaleb/offline-compile
         };
 
 
@@ -685,9 +702,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * Modify the settings file to set which file to run.
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
+<<<<<<< HEAD
           var self = this;
           return $q.when([ws.setFileToRun(self.name, question, folder, file)])
             .then(function() { self.fileToRun = file; });
+=======
+            var self = this;
+            return $q.when(ws.setFileToRun(self.name, question, folder, file));
+>>>>>>> kaleb/offline-compile
         };
 
         /**
@@ -713,12 +735,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
+<<<<<<< HEAD
           var path = self._getPath(question, "question", self.fileToRun);
           var file = self.root.find(path);
+=======
+          if(io_callback)
+            ws.register_callback('io', io_callback);
+          if(test_callback)
+            ws.register_callback('test', test_callback);
+>>>>>>> kaleb/offline-compile
 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
+<<<<<<< HEAD
           if(ws.connected && settings.settings.offline_mode !== 2) {
             return $q.when(ws.compileAndRunProject(self.name, question, tests));
           }
@@ -751,6 +781,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           } else {
             return $q.reject("Offline mode disabled while disconnected!");
           }
+=======
+          return $q.when(ws.compileAndRunProject(self.name, question, tests));
+>>>>>>> kaleb/offline-compile
         };
 
         /** 
@@ -769,11 +802,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.kill = function(pid) {
           var self = this;
+<<<<<<< HEAD
           if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
             var def = $q.defer();
             def.resolve();
             return def.promise;
           }
+=======
+>>>>>>> kaleb/offline-compile
           return $q.when(ws.programKill(pid));
         };
 
@@ -899,6 +935,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
+<<<<<<< HEAD
           // handle offline mode:
           if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
             self.runner.postMessage(message);
@@ -906,6 +943,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             def.resolve();
             return def.promise;
           }
+=======
+>>>>>>> kaleb/offline-compile
           return $q.when(ws.programInput(pid, message));
         };
 

@@ -210,7 +210,7 @@ angular.module('frontend-app')
       }
     }
 
-    socket.register_callback("io", function(io) {
+    self.IOCallback = function(io) {
       if(io.type == "stdout") {
         ind = io.message.indexOf("\n");
         if(ind > -1) {
@@ -260,9 +260,11 @@ angular.module('frontend-app')
         self.write(".\n");
         self.PIDs = null;
         self.running = false;
+        socket.unregister_callbacks('io');
+        socket.unregister_callbacks('test');
       }
       self.flush();
-    });
+    };
 
     function printExpectedFromDiff(res) {
         // res.diff is an array of (string || Array)
@@ -319,12 +321,14 @@ angular.module('frontend-app')
         self.write(sprintf("Test %s was killed.\n", res.test_name));
       }
     });
+    socket.register_callback("test", self.testCallback);
 
     self.setRunning = function(project, PIDs, testing) {
       self.running = !testing;
       self.PIDs = PIDs;
       _.each(self.PIDs, function (pid) {
-        socket.startIO(project.name, pid);
+        if(pid > 0)
+          socket.startIO(project.name, pid);
       });
     };
     self.clear = function() {

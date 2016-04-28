@@ -77,15 +77,16 @@ HERE
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Run a Project with common and tests"
-      (make-directory (check-and-build-path (build-project-path "foo") "tests"))
+      (make-directory (check-and-build-path (build-project-path "foo") "q1"))
+      (make-directory (check-and-build-path (build-project-path "foo") "q1" "tests"))
       (make-directory (check-and-build-path (build-project-path "foo") "common"))
-      (for ([file '("main.c"
-                    "add.h" "add.c"
+      (for ([file '("q1/main.c"
+                    "q1/add.h" "q1/add.c"
                     "common/multiply.h" "common/multiply.c"
                     "common/mod2.h" "common/mod2.c"
-                    "tests/pass.in" "tests/pass.expect"
-                    "tests/fail.in" "tests/fail.expect"
-                    "tests/crash.in" "tests/crash.expect")]
+                    "q1/tests/pass.in" "q1/tests/pass.expect"
+                    "q1/tests/fail.in" "q1/tests/fail.expect"
+                    "q1/tests/crash.in" "q1/tests/crash.expect")]
             [contents (list test-main-file
                             test-add-hdr test-add-imp
                             test-mult-hdr test-mult-imp
@@ -95,10 +96,10 @@ HERE
                             "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
-      (define-values (success hsh) (compile-and-run-project "foo" "main.c" '("pass" "fail" "crash") #f))
+      (define-values (success hsh) (compile-and-run-project "foo" "q1/main.c" '("pass" "fail" "crash") #f))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
-            [exp-result '("passed" "failed" "error")])
+            [exp-result '("passed")])
         (sync (program-wait-evt pid))
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
 

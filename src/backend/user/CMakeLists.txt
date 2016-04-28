@@ -19,6 +19,8 @@
 # Main library: seashell-user-backend, seashell-user-launcher
 add_executable(seashell-user-backend user.c)
 add_library(seashell-support SHARED security.c user-child.c support.c)
+target_link_libraries(seashell-user-backend ${CMAKE_DL_LIBS})
+target_link_libraries(seashell-support ${CMAKE_DL_LIBS})
 
 install(TARGETS seashell-user-backend RUNTIME DESTINATION bin)
 install(TARGETS seashell-support LIBRARY DESTINATION lib)

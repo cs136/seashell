@@ -53,12 +53,19 @@
       </select>
     </div>
     <div class="form-group">
-      <label for="tab_width">Offline Mode:</label>
-      <select id="tab_width" ng-model="temp.offline_mode" class="form-control">
-        <option value="0" selected>Off</option>
-        <option value="2">Forced</option>
-      </select>
-    </div>
+      <label>Offline mode: </label>
+      <label class="radio-inline">
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="0">
+        Disabled
+      </label>
+      <label class="radio-inline">
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="1">
+        Enabled
+      </label>
+      <label class="radio-inline">
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="2">
+        Forced
+      </label>
 </div>
 <div class="modal-footer">
   <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>

@@ -69,14 +69,20 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         }
         return key++;
       };
+
       self.unregister_callback = function(key) {
         delete callbacks[key];
       };
 
+      self.unregister_callbacks = function(type) {
+        callbacks = _.filter(callbacks, function(item) { return item && item.type == type; });
+        key = callbacks.length;
+      }
+
       /** Helper function to invoke the I/O callback. */
       function io_cb(ignored, message) {
         _.each(_.map(_.filter(callbacks, function(x) {
-              return x.type === 'io';
+              return x && x.type === 'io';
             }),
             function(x) {
               return x.cb;
@@ -218,20 +224,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
-      self.isConnected = function() {
-        return self.connected;
-      };
 
-
-      // Functions that are prefixed with offline or online
-      //   have that functionality only. Functions with no
-      //   prefix have offline and online functionality.
-      //   That way, functions that have need special cases for 
-      //   online/offline be called separately, whereas the trivial
-      //   cases can be handled in here.
-     
+      /** The following functions are wrappers around sendMessage.
+       *  Consult dispatch.rkt for a full list of functions.
+       *  These functions take in arguments as specified in server.rkt
+       *  and return a JQuery Deferred object. */
       self.ping = function(deferred) {
-        // TODO: is this even used?
         return self._socket.ping(deferred);
       };
 
@@ -537,6 +535,5 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self._rejectOffline = function() {
         return $q.reject("Functionality not available in offline mode.");
       };
-
     }
   ]);
