@@ -56,14 +56,6 @@ self.onmessage = function(msg) {
     return res;
   }
 
-<<<<<<< HEAD
-  function compile(sources) {
-    var cc = Module.seashell_compiler_make();
-    for(var i=0; i<sources.length; i++) {
-      console.log("Adding "+sources[i]+" to compiler");
-      Module.seashell_compiler_add_file(cc, "/working/"+sources[i]);
-    }
-=======
   function compile(runnerFile) {
     console.log("compile called");
     var pp = Module.seashell_preprocessor_make();
@@ -88,7 +80,6 @@ self.onmessage = function(msg) {
     }
     Module.seashell_preprocessor_free(pp);
 
->>>>>>> kaleb/offline-compile
     var cres = Module.seashell_compiler_run(cc);
     var diags = diagnostics(cc, sources);
     if(cres === 0) {
@@ -112,11 +103,7 @@ self.onmessage = function(msg) {
   try {
     FS.mkdir("/working");
   } catch(e) { }
-<<<<<<< HEAD
-  var sources = [];
-=======
   var rf = data.runnerFile;
->>>>>>> kaleb/offline-compile
   for(var i=0; i<data.files.length; i++) {
     var file = FS.open("/working/"+data.files[i].name, 'w');
     var len = lengthBytesUTF8(data.files[i].contents)+1;
@@ -124,29 +111,15 @@ self.onmessage = function(msg) {
     var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
     FS.write(file, arr, 0, copied);
     FS.close(file);
-<<<<<<< HEAD
-    var splitname = data.files[i].name[data.files[i].name.length-1].split(".");
-    if(splitname[splitname.length-1] == "c")
-      sources.push(data.files[i].name);
-  }
-
-  if(init) {
-    var res = compile(sources);
-=======
   }
 
   if(init) {
     var res = compile(rf);
->>>>>>> kaleb/offline-compile
     postMessage(res);
   }
   else {
     init_queue.push(function() {
-<<<<<<< HEAD
-      var res = compile(sources);
-=======
       var res = compile(rf);
->>>>>>> kaleb/offline-compile
       postMessage(res);
     });
   }
