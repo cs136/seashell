@@ -55,6 +55,7 @@
          seashell/compiler
          seashell/backend/runner
          seashell/backend/template
+         seashell/utils
          net/url
          net/head
          json
@@ -406,15 +407,22 @@
                                           hdrname hdrname hdrname)
                                    (current-continuation-marks)))])))
 
-;; (compile-and-run-project name file tests is-cli)
+;; (compile-and-run-project name file tests full-path test-location)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
 ;;  name - Name of project.
 ;;  file - Full path and name of file we are compiling from
 ;;  test - Name of test, or empty to denote no test.
-;;  is-cli - if #t, assumes all paths are relative to the current directory
-;;
+;;  full-path - If #f, looks for the project in the standard project location.
+;;                 #t, assumes name is the full path to the project directory.
+;;    By default, #f.
+;;  test-location - One of:
+;;    'tree - Look for the tests in <directory containing file>/test.
+;;    'flat - Look for the tests in <directory containing file>.
+;;    'current-directory - Look for the tests in <current-directory>
+;;    path-string? - Look for the tests in <project-dir>/<test-loc>.
+;;    By default, 'tree.
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
 ;;  A hash-map, with the following bindings:
@@ -423,15 +431,17 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests is-cli)
-  (-> path-string? (or/c #f path-string?) (listof path-string?) boolean?
-      (values boolean? hash?))
-  (when (and (not is-cli) (not (is-project? name)))
+(define/contract (compile-and-run-project name file tests [full-path #f] [test-location 'tree])
+  (->* (path-string? (or/c #f path-string?) (listof path-string?))
+       (boolean? (or/c path-string? 'tree 'flat 'current-directory))
+       (values boolean? hash?))
+  (when (or (and (not full-path) (not (is-project? name)))
+            (and full-path (not (directory-exists? name))))
     (raise (exn:project (format "Project ~a does not exist!" name)
                         (current-continuation-marks))))
 
-  (define project-base (if is-cli name (build-project-path name)))
-  (define project-common (if is-cli
+  (define project-base (if full-path name (build-project-path name)))
+  (define project-common (if full-path
     (build-path project-base (read-config 'common-subdirectory))
     (check-and-build-path project-base (read-config 'common-subdirectory))))
 
@@ -439,7 +449,12 @@
     (if (directory-exists? project-common)
       (directory-list project-common #:build? #t)
       '()))
-
+  ;; Figure out the real test location.
+  (define real-test-location
+    (cond
+      [(path-string? test-location)
+       (check-and-build-path project-base test-location)]
+      [else test-location]))
   ;; Figure out which language to run with
   (define lang
     (match (filename-extension file)
@@ -450,8 +465,6 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
-
-  (match-define-values (_ question-dir-name _) (split-path base))
 
   (define (compile-c-files)
     ;; Get the .c and .o files needed to compile file
@@ -502,28 +515,32 @@
   (define (flatten-racket-files)
     ;; Create a temporary directory
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
-    ;; copy the common folder to the temp dir -- for backward compatibility this term
+    ;; Copy the common folder to the temp dir -- for backward compatibility this term
     (when (directory-exists? project-common)
       (copy-directory/files project-common (build-path temp-dir "common")))
-    ;; copy the question folder to the temp dir
-    (copy-directory/files base (build-path temp-dir question-dir-name))
-    ;; copy all files in the common folder to the question folder
-    (for-each (lambda (apath)
-                (match-define-values (_ filename _) (split-path apath))
-                (copy-file apath (check-and-build-path temp-dir question-dir-name filename) #t))
-              project-common-list)
-    temp-dir)
-  
-  (define racket-temp-dir (when (equal? lang 'racket) (flatten-racket-files)))
+    ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
+    (match-define-values (_ question-dir-name _) (split-path base))
+    ;; Copy the files over from the question
+    (merge-directory/files base (build-path temp-dir question-dir-name))
+    ;; Copy all files in the common folder to the question folder
+    (when (directory-exists? project-common)
+      (merge-directory/files project-common (build-path temp-dir question-dir-name)))
+    (values (build-path temp-dir) (build-path temp-dir question-dir-name)))
+
+  (define-values (racket-temp-dir
+                  racket-target-dir)
+    (if (equal? lang 'racket)
+      (flatten-racket-files)
+      (values (build-path ".") (build-path "."))))
 
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket (values #t '() (check-and-build-path racket-temp-dir question-dir-name exe))]))
+      ['racket (values #t '() (check-and-build-path racket-target-dir exe))]))
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base lang #f is-cli))
+      (define pid (run-program target base lang #f real-test-location))
       (thread
         (lambda ()
           (sync (program-wait-evt pid))
@@ -534,7 +551,7 @@
     [result
       (define pids (map
                      (lambda (test)
-                       (run-program target base lang test is-cli))
+                       (run-program target base lang test real-test-location))
                      tests))
       (thread
         (lambda ()
@@ -552,10 +569,10 @@
 ;; (compile-and-run-project/use-runner name tests)
 ;; is a wrapper around compile-and-run-project, supplying the file
 ;; from the project settings file.
-;; 
+;;
 ;; Arguments:
 ;;  name: Name of project (eg. "A10")
-;;  question: Name of the question (eg. "q1") 
+;;  question: Name of the question (eg. "q1")
 ;;  tests: Tests for the project.
 (define/contract (compile-and-run-project/use-runner name question tests)
   (-> project-name? string? (listof path-string?)
@@ -565,9 +582,9 @@
   (if (string=? file-to-run "")
     (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
                         (current-continuation-marks)))
-    (compile-and-run-project name (build-path question file-to-run) tests #f)))
+    (compile-and-run-project name (build-path question file-to-run) tests)))
 
- 
+
 ;; (export-project name) -> bytes?
 ;; Exports a project to a ZIP file.
 ;;
