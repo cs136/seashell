@@ -240,6 +240,8 @@
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
+      ;; Default logfile path for logging login issues.
+      (cons 'seashell-login-logfile        #f)
       )))
   config-hash)
 
