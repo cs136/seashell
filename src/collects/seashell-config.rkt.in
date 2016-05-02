@@ -240,6 +240,8 @@
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
+      ;; Default logfile path for logging login issues.
+      (cons 'seashell-login-logfile        #f)
       )))
   config-hash)
 
@@ -274,7 +276,7 @@
 (module* typed typed/racket
   (require/typed (submod "." "..")
                  [config-refresh! (-> Void)]
-                 [read-config (-> Symbol (U String (Listof String) Number Boolean Path))]
+                 [read-config (-> Symbol (U String (Listof String) Number Boolean Path-String))]
                  [SEASHELL_VERSION String]
                  [SEASHELL_BRANCH String]
                  [SEASHELL_COMMIT String]
@@ -314,12 +316,12 @@
   (define (read-config-boolean symbol)
     (define result (read-config symbol))
     (cast result Boolean))
-  (: read-config-path (-> Symbol Path))
+  (: read-config-path (-> Symbol Path-String))
   (define (read-config-path symbol)
     (define result (read-config symbol))
-    (cast result Path))
-  (: read-config-optional-path (-> Symbol (U Path False)))
+    (cast result Path-String))
+  (: read-config-optional-path (-> Symbol (U Path-String False)))
   (define (read-config-optional-path symbol)
     (define result (read-config symbol))
-    (cast result (U Path False)))
+    (cast result (U Path-String False)))
   )
