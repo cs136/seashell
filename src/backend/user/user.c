@@ -75,7 +75,7 @@ int main() {
     }
 
 #ifndef NDEBUG
-    putenv("PLTSTDERR=debug");
+    // putenv("PLTSTDERR=debug");
 #endif
 
     // Prefer build directory if debug build.
