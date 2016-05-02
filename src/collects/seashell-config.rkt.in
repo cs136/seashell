@@ -32,6 +32,7 @@
 (define SEASHELL_BUILD_PATH "@CMAKE_BINARY_DIR@")
 (define SEASHELL_SOURCE_PATH "@CMAKE_SOURCE_DIR@")
 (define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@)
+(define SEASHELL_RACKET "@SEASHELL_RACKET@")
 
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
@@ -230,7 +231,9 @@
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
       ;; Racket interpreter
-      (cons 'racket-interpreter            (string->path "/usr/bin/racket"))
+      (cons 'racket-interpreter            (if (file-exists? "/usr/bin/racket")
+                                             (string->path "/usr/bin/racket")
+                                             (string->path SEASHELL_RACKET)))
       ;; diff program
       (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
