@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide check-eof)
+(provide check-eof merge-directory/files)
 
 ;; Handy syntax rule for EOF checking
 (: check-eof (All (X) (-> (U EOF X) X)))
@@ -27,3 +27,40 @@
                                (current-continuation-marks)))]
     [else
       x]))
+
+(: raise-not-a-file-or-directory (-> Any Path-String Nothing))
+(define (raise-not-a-file-or-directory who path)
+  (raise
+   (make-exn:fail:filesystem
+    (format "~a: encountered path that is neither file nor directory\n  path: ~a"
+            who
+            path)
+    (current-continuation-marks))))
+
+(: merge-directory/files (->* (Path-String Path-String)
+                              (#:keep-modify-seconds? Boolean
+                               #:preserve-links? Boolean)
+                              Any))
+(define (merge-directory/files src dest
+                              #:keep-modify-seconds? [keep-modify-seconds? #f]
+                              #:preserve-links? [preserve-links? #f])
+  (let loop ([src src] [dest dest])
+    (cond [(and preserve-links?
+                (link-exists? src))
+           (make-file-or-directory-link
+            (resolve-path src)
+            dest)]
+          [(file-exists? src)
+           (copy-file src dest)
+           (when keep-modify-seconds?
+             (file-or-directory-modify-seconds
+              dest
+              (file-or-directory-modify-seconds src)))]
+          [(directory-exists? src)
+           (when (not (directory-exists? dest))
+            (make-directory dest))
+           (for-each (lambda ([e : Path])
+                       (loop (build-path src e)
+                             (build-path dest e)))
+                     (directory-list src))]
+          [else (raise-not-a-file-or-directory 'merge-directory/files src)])))
