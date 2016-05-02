@@ -8,10 +8,17 @@
          racket/serialize
          racket/cmdline)
 
+(define flags (vector->list (current-command-line-arguments)))
+(when (empty? flags)
+  (printf "seashell-cli <tool>; possible tools are:~n")
+  (printf "  marmtest: Marmoset test runner.~n")
+  (exit 1))
 
 (define RUN-TIMEOUT (make-parameter #f))
 (define-values (project-dir main-file test-name out-file err-file)
   (command-line
+    #:program "seashell-cli marmtest"
+    #:argv (rest flags)
     #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  21 means the program failed an assert.\n  30 means the program failed its test.\n  40 means the program passed its test."
     #:once-each
     [("-t" "--timeout") timeout
@@ -33,12 +40,12 @@
 (define/contract (write-outputs stdout stderr)
   (-> (or/c bytes? #f) (or/c bytes? #f) void?)
   (when stdout
-    (eprintf "Writing program stdout to ~s\n" out-file)
+    (eprintf "Writing program stdout to ~s.~n" out-file)
     (with-output-to-file out-file (thunk
       (write-bytes stdout))
       #:exists 'truncate))
   (when stderr
-    (eprintf "Writing program stderr to ~s\n" err-file)
+    (eprintf "Writing program stderr to ~s.~n" err-file)
     (with-output-to-file err-file (thunk
       (write-bytes stderr))
       #:exists 'truncate))
@@ -47,49 +54,48 @@
 ;; nicely formats a compiler message to be output to the user
 (define/contract (format-message msg)
   (-> list? string?)
-  (match-define (list _ file line column errstr) msg)
-  (format "~a:~a:~a: error: ~a\n" file line column errstr))
+  (match-define (list error? file line column errstr) msg)
+  (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
 
 (standard-logger-setup)
-(seashell-compile-place/init)
-(define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t))
-(match info 
+(define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t 'current-directory))
+(match info
   [(hash-table ('messages msgs) ('status "compile-failed"))
-    (eprintf "Compilation failed. Compiler errors:\n")
+    (eprintf "Compilation failed. Compiler errors:~n")
     (define compiler-errors (apply string-append (map format-message msgs)))
     (eprintf compiler-errors)
     (write-outputs #f (string->bytes/utf-8 compiler-errors))
     (exit 10)]
   [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
-    (eprintf "Waiting for program to finish...\n")
+    (eprintf "Waiting for program to finish...~n")
     (sync (program-wait-evt pid))
 
     ;; TODO: separate this block into its own function?
     (define stdout (program-stdout pid))
-    (match (sync (wrap-evt stdout (compose deserialize read)))
+    (match (sync/timeout 0 (wrap-evt stdout (compose deserialize read)))
      [(and result (list pid _ (and test-res (or "timeout" "killed" "passed")) stdout stderr))
       (eprintf "Program passed the test.\n")
       (write-outputs stdout stderr)
       (exit 40)]
      [(list pid _ "error" exit-code stderr)
       (if (= exit-code 134)
-        (eprintf "Program failed an assertion.\n")
-        (eprintf "Program crashed at runtime.\n"))
+        (eprintf "Program failed an assertion.~n")
+        (eprintf "Program crashed at runtime.~n"))
       (write-outputs #f stderr)
       (exit (if (= exit-code 134) 21 20))]
      [(list pid _ "no-expect" stdout stderr)
-      (eprintf "No expect file for test; program did not crash.\n")
+      (eprintf "No expect file for test; program did not crash.~n")
       (write-outputs stdout stderr)
       (exit 99)]
      [(list pid _ "failed" diff stderr stdout)
-      (eprintf "Test failed the test (but did not crash)\n")
+      (eprintf "Test failed the test (but did not crash)~n")
       (write-outputs stdout stderr)
       (exit 30)]
      [(list pid _ "timeout")
-      (eprintf "Test timed out (but did not crash)\n")
+      (eprintf "Test timed out (but did not crash)~n")
       (exit 50)]
      [x
-      (eprintf "Unknown error occurred: ~a" x)
+      (eprintf "Unknown error occurred: ~a~n" x)
       (exit 98)]
      )]
-  [x (error (format "Seashell failed: compile-and-run-project returned ~s" x))])
+  [x (error (format "Seashell failed: compile-and-run-project returned ~s.~n" x))])

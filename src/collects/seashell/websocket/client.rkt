@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's websocket library.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -18,48 +18,50 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; This file was modified from net/websocket/client.rkt frm Racket 5.3.6
-(require racket/tcp
-         net/url
-         web-server/http/response
-         web-server/http/request
-         web-server/http/request-structs
+(require typed/net/url
+         typed/web-server/http
          seashell/websocket/connection
          seashell/websocket/handshake
-         openssl)
+         typed/openssl
+         seashell/overrides/typed-web-server
+         seashell/utils)
+(require/typed web-server/http/response
+               [print-headers (-> Output-Port (Listof Header) Void)])
+(require/typed web-server/http/request
+               [read-headers (-> Input-Port (Listof Header))])
 
 ;; wss-url? u
 ;; Is u a Secure WebSockets URL?
-(define/contract (wss-url? u)
-  (-> any/c boolean?)
+(: wss-url? (-> Any Boolean))
+(define (wss-url? u)
   (and (url? u)
        (equal? (url-scheme u) "wss")))
 
 ;; ws-url?
 ;; Is u a WebSockets URL?
+(: ws-url? (-> Any Boolean))
 (define (ws-url? u)
-  (-> any/c boolean?)
   (and (url? u)
        (or (equal? (url-scheme u) "ws")
            (wss-url? u))))
 
 ;; ws-connect url [#headers]
 ;; Connects to the specified websocket url.
-(define/contract (ws-connect url
-                             #:headers [headers empty])
-  (->* (ws-url?)
-       (#:headers (listof header?))
-       ws-connection?)
-
+(: ws-connect (->* (URL) (#:headers (Listof Header)) Websocket-Connection))
+(define (ws-connect url #:headers [headers '()])
+  (unless (ws-url? url)
+    (raise (exn:fail:contract "ws-connect: was not passed ws(s):// URL."
+                              (current-continuation-marks))))
   ;; Grab the absolute path / host / port.
-  (define host (url-host url))
-  (define port (url-port url))
+  (define host (cast (url-host url) String))
+  (define port (cast (url-port url) Positive-Integer))
   (define upath (url-path url))
   (define the-path
-    (if (empty? upath)
+    (if (null? upath)
         "/"
         (let ([pre-path
                (add-between
-                (map (λ (pp)
+                (map (λ ([pp : path/param])
                        (define p (path/param-path pp))
                        (case p
                          [(up) ".."]
@@ -73,24 +75,24 @@
                             pre-path)
                      pre-path)))))
   ;; Connect
-  (define connect (if (wss-url? url) ssl-connect tcp-connect))
+  (define connect #{(if (wss-url? url) ssl-connect tcp-connect) :: (-> String Positive-Integer (Values Input-Port Output-Port))})
   (define-values (ip op) (connect host port))
   ;; Handshake (client)
   (define handshake (make-handshake))
   (write-bytes (call-with-output-bytes
-                (λ (op)
+                (λ ([op : Output-Port])
                   (fprintf op "GET ~a HTTP/1.1\r\n" the-path)
                   (print-headers
                    op
-                   (list* (make-header #"Host" (string->bytes/utf-8 host))
-                          (make-header #"Connection" #"Upgrade")
-                          (make-header #"Upgrade" #"WebSocket")
-                          (make-header #"Sec-WebSocket-Key" handshake)
+                   (list* (header #"Host" (string->bytes/utf-8 host))
+                          (header #"Connection" #"Upgrade")
+                          (header #"Upgrade" #"WebSocket")
+                          (header #"Sec-WebSocket-Key" handshake)
                           headers))))
                op)
   (flush-output op)
   ;; Handshake (server).
-  (define sresponse (read-bytes-line ip 'any))
+  (define sresponse (check-eof (read-bytes-line ip 'any)))
   (unless (and sresponse (regexp-match #"HTTP/1.1 101 .*" sresponse))
     (raise (exn:websocket
             (format "Invalid server response line.  Got ~e." sresponse)
@@ -107,4 +109,4 @@
   (make-ws-connection
         ip op
         (make-ws-control)
-        #"" rheaders #t))
+        #"GET" url rheaders #t))

@@ -28,10 +28,10 @@ angular.module('frontend-app')
           font : "Consolas",
           font_size  : 12,
           editor_mode  : "standard",
-          tab_width  : 2,
+          tab_width  : "2",
           use_space : true,
           force_narrow : false,
-          theme : "dark"
+          theme_style : "light"
         };
         self.notify = {};
         var nKey = 0;
@@ -51,7 +51,7 @@ angular.module('frontend-app')
         };
 
         self.load = function () {
-          return $q.when(ws.socket.getSettings()).then(function (settings) {
+          return $q.when(ws.getSettings()).then(function (settings) {
             if (settings)
               for (var k in settings)
                 self.settings[k] = settings[k];
@@ -66,7 +66,7 @@ angular.module('frontend-app')
         };
 
         self.save = function () {
-          return $q.when(ws.socket.saveSettings(self.settings)).then(notifyChanges);
+          return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 
         self.dialog = function () {

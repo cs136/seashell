@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's Clang interface.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -17,21 +17,25 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/compiler/ffi
-         seashell/seashell-config
-         racket/contract
-         racket/list
-         racket/path
-         racket/file
-         racket/port
-         racket/string
-         racket/bool)
-
+         (submod seashell/seashell-config typed))
+(require/typed racket/base
+               [file-position (case-lambda
+                                (-> Port Exact-Nonnegative-Integer)
+                                (-> Port (U Integer EOF) Void))])
 (provide
+ Seashell-Diagnostic
+ Seashell-Diagnostic-Table
  seashell-compile-files
  (struct-out seashell-diagnostic))
 
-;; Diagnostic structure.  Self-explanatory.
-(struct seashell-diagnostic (error? file line column message) #:prefab)
+(module untyped racket/base
+  (require racket/serialize)
+  (provide (all-defined-out))
+  (serializable-struct seashell-diagnostic (error? file line column message) #:transparent))
+(require/typed (submod "." untyped)
+               [#:struct seashell-diagnostic ([error? : Boolean] [file : String] [line : Index] [column : Index] [message : String])
+                #:type-name Seashell-Diagnostic])
+(define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -53,10 +57,9 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(define/contract (seashell-compile-files user-cflags user-ldflags sources objects)
-  (-> (listof string?) (listof string?) (listof path?) (listof path?)
-      (values (or/c bytes? false?) (hash/c path? (listof seashell-diagnostic?))))
-  
+(: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
+                              (Values (U Bytes False) Seashell-Diagnostic-Table)))
+(define (seashell-compile-files user-cflags user-ldflags sources objects)
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
   (cond
@@ -70,15 +73,15 @@
        (list*
         "-fsanitize=address"
         user-cflags))
-     
+
      ;; Set up the compiler instance.
      (define compiler (seashell_compiler_make))
      (define file-vec (list->vector sources))
      (seashell_compiler_clear_files compiler)
      (seashell_compiler_clear_compile_flags compiler)
-     (for-each (lambda (flag) (seashell_compiler_add_compile_flag compiler flag)) cflags)
-     (for-each (lambda (file) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
-     
+     (for-each (lambda ([flag : String]) (seashell_compiler_add_compile_flag compiler flag)) cflags)
+     (for-each (lambda ([file : String]) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
+
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler))
      ;; Grab the results of running the intermediate code generation step.
@@ -86,41 +89,42 @@
      ;; Generate our diagnostics:
      (define compiler-diags
        (foldl
-        (lambda (message table)
+        (lambda ([message : (Pair Path Seashell-Diagnostic)]
+                 [table : (HashTable Path (Listof Seashell-Diagnostic))])
           (if (not (equal? "" (seashell-diagnostic-message (cdr message))))
               (hash-set table (car message)
                         (cons (cdr message)
-                              (hash-ref table (car message) '())))
+                              (hash-ref table (car message) (lambda () '()))))
               table))
-        (make-immutable-hash)
+        #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
         (list*
          `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
-         (for*/list ([i (in-range 0 (length sources))]
-                     [j (in-range 0 (seashell_compiler_get_diagnostic_count compiler i))])
+         (for*/list : (Listof (Pair Path Seashell-Diagnostic))
+                    ([i : Index #{(in-range (length sources)) :: (Sequenceof Index)}]
+                     [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
            `(,(vector-ref file-vec i) .
                                       ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
                                                             (seashell_compiler_get_diagnostic_file compiler i j)
                                                             (seashell_compiler_get_diagnostic_line compiler i j)
                                                             (seashell_compiler_get_diagnostic_column compiler i j)
                                                             (seashell_compiler_get_diagnostic_message compiler i j)))))))
-     
+     ;; Grab the object - note that it may not exist yet.
+     (define object (seashell_compiler_get_object compiler))
      (cond
-       [(zero? compiler-res)
+       [(and (bytes? object) (zero? compiler-res))
         ;; Set up the linker flags.
         (define ldflags user-ldflags)
-        
-        ;; Invoke the final link step on the object file - if it exists.
-        (define object (seashell_compiler_get_object compiler))
         ;; Write it to a temporary file, invoke cc -Wl,$ldflags -o <result_file> <object_file>
         (define object-file (make-temporary-file "seashell-object-~a.o"))
         (define result-file (make-temporary-file "seashell-result-~a"))
         (with-output-to-file object-file
           (lambda () (write-bytes object))
           #:exists 'truncate)
+        (: append-linker-flag (-> String String))
         (define (append-linker-flag flag)
-          (string-append (read-config 'linker-flag-prefix) flag))
+          (string-append (read-config-string 'linker-flag-prefix) flag))
         (define-values (linker linker-output linker-input linker-error)
-          (apply subprocess #f #f #f (read-config 'system-linker)
+          (apply subprocess #f #f #f (read-config-path 'system-linker)
                  `("-o" ,(some-system-path->string result-file)
                    ,(some-system-path->string object-file)
                    ,@(map some-system-path->string objects)
@@ -128,7 +132,7 @@
                    ,@(map
                        append-linker-flag
                        (list "--whole-archive"
-                             (some-system-path->string (read-config 'seashell-runtime-library))
+                             (some-system-path->string (build-path (read-config-path 'seashell-runtime-library)))
                              "--no-whole-archive"))
                    ,@(map append-linker-flag ldflags))))
         ;; Close unused port.
@@ -141,14 +145,14 @@
         (define linker-res (subprocess-status (sync linker)))
         ;; Remove the object file.
         (delete-file object-file)
-        
+
         ;; Read the result:
         (define linker-result
           (cond
-            [(zero? linker-res)
+            [(equal? 0 linker-res)
               (call-with-input-file
                 result-file
-                (lambda (port)
+                (lambda ([port : Input-Port])
                   (file-position port eof)
                   (define size (file-position port))
                   (file-position port 0)
@@ -157,28 +161,26 @@
                   result))]
             [else
               #f]))
-
         ;; Fix binaries taking up all the space in /var/tmp
-        (when (file-exists? result-file)
-          (delete-file result-file))
-        
+        (delete-directory/files result-file #:must-exist? #f)
         ;; Create the final diagnostics table:
         (define diags
           (foldl
-           (lambda (message table)
+           (lambda ([message : (Pairof Path String)]
+                    [table : (HashTable Path (Listof Seashell-Diagnostic))])
              (if (not (equal? "" (cdr message)))
                  (hash-set table (car message)
-                           (cons (seashell-diagnostic (not (zero? linker-res)) "" 0 0 (cdr message))
-                                 (hash-ref table (car message) '())))
+                           (cons (seashell-diagnostic (not (equal? 0 linker-res)) "" 0 0 (cdr message))
+                                 (hash-ref table (car message) (lambda () '()))))
                  table))
            compiler-diags
            ;; Create list of linker diagnostics:
            (list*
-            (map (lambda (message)
+            (map (lambda ([message : String])
                    (cons (string->path "final-link-result") message))
                  (string-split linker-messages #px"\n")))))
-        
-        (if (and (zero? compiler-res) (zero? linker-res))
+
+        (if (and (zero? compiler-res) (equal? 0 linker-res))
             (values linker-result diags)
             (values #f diags))]
        [else

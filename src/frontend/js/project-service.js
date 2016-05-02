@@ -23,8 +23,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http',
-    function($scope, $q, ws, marmoset, $http) {
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http', '$cookies',
+    function($scope, $q, ws, marmoset, $http, $cookies) {
       "use strict";
       var self = this;
       var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
@@ -34,6 +34,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
+      var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
+      var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
      
       var SeashellProject = (function () { 
         /**
@@ -93,7 +95,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.rename = function(name) {
           var self = this;
-          return $q.when(ws.socket.renameFile(self.project.name, self.fullname(), name))
+          return $q.when(ws.renameFile(self.project.name, self.fullname(), name))
             .then(function() {
               var oldname = self.name.join("/");
               self.project.root._removeFromTree(oldname.split("/"), true);
@@ -104,7 +106,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellFile.prototype.read = function() {
           var self = this;
-          return $q.when(ws.socket.readFile(self.project.name, self.fullname()))
+          return $q.when(ws.readFile(self.project.name, self.fullname()))
             .then(function (conts) {
               return conts;
             });
@@ -118,7 +120,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
-          return $q.when(ws.socket.writeFile(self.project.name, self.fullname(), data));
+          return $q.when(ws.writeFile(self.project.name, self.fullname(), data));
         };
 
         /**
@@ -160,7 +162,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             }
             self.children = split[1] || [];
             if (!soft_delete) {
-              return $q.when(ws.socket.deleteFile(self.project.name, split[0][0].fullname()));
+              return $q.when(ws.deleteFile(self.project.name, split[0][0].fullname()));
             }
           }
           else {
@@ -185,12 +187,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if (path.length == 1) {
             if (!soft_place) {
               if(file.is_dir) {
-                return $q.when(ws.socket.newDirectory(file.project.name,
+                return $q.when(ws.newDirectory(file.project.name,
                   file.fullname())).then(function () {
                   self.children.push(file);
                 });
               } else {
-                return $q.when(ws.socket.newFile(file.project.name,
+                return $q.when(ws.newFile(file.project.name,
                   file.fullname(), contents, encoding, normalize ? true : false))
                     .then(function () {
                       self.children.push(file);
@@ -209,7 +211,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             } else {
               var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
               return (dir.fullname === "" ? $q.when() : 
-                  $q.when(ws.socket.newDirectory(dir.project.name, dir.fullname())))
+                  $q.when(ws.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
                   return self._placeInTree(file, path, soft_place, contents,
@@ -282,15 +284,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
           var result = null;
           if (lock === "lock") {
-            result = $q.when(ws.socket.lockProject(self.name));
+            result = $q.when(ws.lockProject(self.name));
           } else if (lock === "force-lock") {
-            result = $q.when(ws.socket.forceLockProject(self.name));
+            result = $q.when(ws.forceLockProject(self.name));
           } else {
             result = $q.when();
           }
 
           return result.then(function () {
-            return $q.when(ws.socket.listProject(self.name)).then(function(files) {
+            return $q.when(ws.listProject(self.name)).then(function(files) {
                self.root = new SeashellFile(self, "", true);
                   _.map(files, function(f) {
                    self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
@@ -450,7 +452,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if (self.lock === "none") {
             return $q.when();
           }
-          return $q.when(ws.socket.unlockProject(self.name));
+          return $q.when(ws.unlockProject(self.name));
         };
 
         /**
@@ -490,7 +492,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.mostRecentlyUsed = function (question) {
           var self = this;
-          return $q.when(ws.socket.getMostRecentlyUsed(self.name, (question && self._getPath(question)) || false))
+          return $q.when(ws.getMostRecentlyUsed(self.name, (question && self._getPath(question)) || false))
             .then(function (recent) {
               if (recent) {
                 if (question && self.hasFile(question, recent.part, recent.file)) {
@@ -519,11 +521,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             var path = self._getPath(question, part, file);
             qpath = self._getPath(question);
 
-            return $q.all([ws.socket.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question),
-                           ws.socket.updateMostRecentlyUsed(self.name, qpath, ["fexists", path], {part: part, file: file})]);
+            return $q.all([ws.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question),
+                           ws.updateMostRecentlyUsed(self.name, qpath, ["fexists", path], {part: part, file: file})]);
           } else if (question) {
             qpath = self._getPath(question);
-            return ws.socket.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question);
+            return ws.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question);
           }
         };
 
@@ -535,7 +537,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.getFileToRun = function (question) {
             var self = this;
-            return $q.when(ws.socket.getFileToRun(self.name, question))
+            return $q.when(ws.getFileToRun(self.name, question))
                 .then(function (result) {
                     return result;
                 });
@@ -549,7 +551,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
             var self = this;
-            return $q.when(ws.socket.setFileToRun(self.name, question, folder, file));
+            return $q.when(ws.setFileToRun(self.name, question, folder, file));
         };
 
         /**
@@ -560,7 +562,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.remove = function() {
           var self = this;
           return self.close().then(function() {
-            return $q.when(ws.socket.deleteProject(self.name));
+            return $q.when(ws.deleteProject(self.name));
           });
         };
 
@@ -579,7 +581,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
-          return $q.when(ws.socket.compileAndRunProject(self.name, question, tests));
+          return $q.when(ws.compileAndRunProject(self.name, question, tests));
         };
 
         /** 
@@ -588,7 +590,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.save = function(message) {
           var self = this;
-          return $q.when(ws.socket.saveProject(self.name, message));
+          return $q.when(ws.saveProject(self.name, message));
         };
 
         /**
@@ -598,7 +600,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.kill = function(pid) {
           var self = this;
-          return $q.when(ws.socket.programKill(pid));
+          return $q.when(ws.programKill(pid));
         };
 
         /**
@@ -608,7 +610,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.getUploadToken = function(question, folder, filename) {
           var self = this;
-          return $q.when(ws.socket.getUploadFileToken(self.name, self._getPath(question, folder, filename)));
+          return $q.when(ws.getUploadFileToken(self.name, self._getPath(question, folder, filename)));
         };
 
         /**
@@ -629,7 +631,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.getDownloadToken = function() {
           var self = this;
-          return $q.when(ws.socket.getExportToken(self.name));
+          return $q.when(ws.getExportToken(self.name));
         };
 
         /**
@@ -718,17 +720,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.submit = function(question, project) {
           var self = this;
-          return $q.when(ws.socket.marmosetSubmit(self.name, project, question));
+          return $q.when(ws.marmosetSubmit(self.name, project, question));
         };
 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
-          return $q.when(ws.socket.programInput(pid, message));
+          return $q.when(ws.programInput(pid, message));
         };
 
         SeashellProject.prototype.sendEOF = function(pid) {
           var self = this;
-          return $q.when(ws.socket.sendEOF(pid));
+          return $q.when(ws.sendEOF(pid));
         };
     
         
@@ -800,7 +802,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return self.missingSkelFiles().then(function(missingFiles) {
               if (missingFiles.length) {
                 return $q.all(missingFiles.map(function(fpath) {
-                    return $q.when(ws.socket.restoreFileFrom(self.name, fpath, self.projectZipURL)).then(function() {
+                    return $q.when(ws.restoreFileFrom(self.name, fpath, self.projectZipURL)).then(function() {
                         // now soft create these files in the front end and read.
                         var file = new SeashellFile(self, fpath, false);
                         return file.read().then(function(contents) {
@@ -822,7 +824,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  to the list of projects available to be opened.
        */
       self.list = function() {
-        return $q.when(ws.socket.getProjects());
+        return $q.when(ws.getProjects());
       };
 
       /* Returns projects listed in PROJ_SKEL_URL
@@ -843,6 +845,41 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return self._listSkelProjects;
       };
       
+      /* Returns a list of user names in the whitelist. 
+         This method only send requests to the server once when it's initially called.
+         The server response is remembered for future calls.
+         
+         Deffered type: [String]
+      */
+      self.userWhitelist = function() {
+         if (! self._userWhitelist) {
+            self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
+               return result.data;
+            }).catch(function(err) {
+               console.warn("Could not access the user whitelist. Assuming it's empty. Received:", err);
+               return [];
+            });
+         }
+         return self._userWhitelist;
+      };
+ 
+       /* Returns a list of projects in the whitelist. 
+         This method only send requests to the server once when it's initially called.
+         The server response is remembered for future calls.
+         
+         Deffered type: [String], eg ["A1", "A2"]
+      */     
+      self.projectWhitelist = function() {
+         if (! self._projectWhitelist) {
+            self._projectWhitelist = $http.get(PROJ_WHITE_LIST_URL).then(function(result) {
+               return result.data;
+            }).catch(function(err) {
+               console.warn("Could not access the project whitelist. Assuming it's empty. Received:", err);
+               return [];
+            });
+         }
+         return self._projectWhitelist;
+      };
 
       /**
        * Fetches new assignments.
@@ -853,54 +890,43 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  to clone, or a error message.
       */
       self.fetch = function() {
-        return self.list()
-            .then(function (projects) {
-              return $http({url: PROJ_SKEL_URL})
-                .catch(function () {
-                  return $q.reject("Could not fetch list of skeletons!");
-                })
-                .then(function (results) {
-                  // expects a list of project (assignment) names : (listof String)
-                  var skels = results.data;
-                  var new_projects = _.filter(skels,
-                      function (skel) {
-                        var index = -1;
-                        var len = projects.length;
-                        for(var i = 0; i < len; i++){
-                          index = projects[i].indexOf(skel);
-                          if(index != -1){
-                            return false;
-                          }
-                        }
-                        return true;
-                      });
+         return self.list().then(function (projects) {
+            return $http({url: PROJ_SKEL_URL}).catch(function () {
+               return $q.reject("Could not fetch list of skeletons!");
+            }).then(function (results) {
+               var localProjects = projects.map(function(v, k) {return v[0];}).sort();
+               // expects a list of project (assignment) names : (listof String)
+               var skels = results.data.sort();
+               var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
+               return self.userWhitelist().then(function(usernames) {
+                  if (_.contains(usernames, user)) {
+                     return self.projectWhitelist().then(function(more) {
+                        skels = skels.concat(more);
+                     });
+                  }
+               }).finally(function() {
+                  var new_projects = _.difference(skels, localProjects);
                   var failed_projects = [];
                   var start = $q.when();
-                  return _.foldl(new_projects,
-                      function(in_continuation, template) {
-                        function clone(failed) {
-                          return $q.when(ws.socket.newProjectFrom(template,
-                             sprintf(PROJ_ZIP_URL_TEMPLATE,
-                              template)))
-                           .then(function () {
-                             if (failed) {
-                               return $q.reject("Propagating failure...");
-                             }
-                           })
-                           .catch(function (info) {
+                  return _.foldl(new_projects, function(in_continuation, template) {
+                     function clone(failed) {
+                        return $q.when(ws.newProjectFrom(template, 
+                           sprintf(PROJ_ZIP_URL_TEMPLATE, template))).then(function () {
+                              if (failed) {
+                                 return $q.reject("Propagating failure...");
+                              }
+                           }).catch(function (info) {
                              failed_projects.push(template);
                              return $q.reject("Propagating failure...");
                            });
                         }
-                        return in_continuation.then(
-                           function () {return clone(false);},
-                           function () {return clone(true);}); 
-                      },
-                      start)
-                    .then(function() {return (new_projects);})
-                    .catch(function() {return $q.reject(failed_projects);});
-                });
+                        return in_continuation.then(function () {return clone(false);},
+                                                    function () {return clone(true);}); 
+                  }, start).then(function() {return new_projects;})
+                           .catch(function() {return $q.reject(failed_projects);});
+               });
             });
+         });
       };
 
       /**
@@ -910,7 +936,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        * the project is deleted.
        */
       self.delete = function (name) {
-        return $q.when(ws.socket.deleteProject(name));
+        return $q.when(ws.deleteProject(name));
       };
 
       /**
@@ -923,7 +949,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
        *  (or a error message on error)
        */
       self.create = function (name, return_project) {
-        return $q.when(ws.socket.newProject(name)).
+        return $q.when(ws.newProject(name)).
           then(function () {
             if (return_project)
               return (new SeashellProject(name)).init();

@@ -19,6 +19,7 @@
  */
 #define _POSIX_C_SOURCE 199309L
 #define _XOPEN_SOURCE 500
+#include "seashell-config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -28,7 +29,6 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <signal.h>
-#include "seashell-config.h"
 
 /** 
  * Dummy signal handler that does nothing.
@@ -75,7 +75,7 @@ int main() {
     }
 
 #ifndef NDEBUG
-    putenv("PLTSTDERR=debug");
+    // putenv("PLTSTDERR=debug");
 #endif
 
     // Prefer build directory if debug build.
