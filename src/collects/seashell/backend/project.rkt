@@ -519,7 +519,13 @@
     (when (directory-exists? project-common)
       (copy-directory/files project-common (build-path temp-dir "common")))
     ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
-    (match-define-values (_ question-dir-name _) (split-path base))
+    (define question-dir-name
+      (let
+        ([simple-file (simplify-path file #f)])
+        (match-define-values (possible-question _ _) (split-path simple-file))
+        (cond
+          [(path? possible-question) possible-question]
+          [else (build-path ".")])))
     ;; Copy the files over from the question
     (merge-directory/files base (build-path temp-dir question-dir-name))
     ;; Copy all files in the common folder to the question folder
