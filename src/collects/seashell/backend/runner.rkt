@@ -325,11 +325,11 @@
                   (putenv "ASAN_OPTIONS"
                           "allocator_may_return_null=1:detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"
                             detect_stack_use_after_return=1")
-                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config-path 'llvm-symbolizer)))
+                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
                   (subprocess #f #f #f binary)]
                 ['racket (subprocess #f #f #f (read-config-path 'racket-interpreter)
                                      "-t"
-                                      (some-system-path->string (read-config-path 'seashell-racket-runtime-library))
+                                      (some-system-path->string (build-path (read-config-path 'seashell-racket-runtime-library)))
                                      "-u" binary)])))
 
               ;; Construct the I/O ports.

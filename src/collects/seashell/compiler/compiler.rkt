@@ -132,7 +132,7 @@
                    ,@(map
                        append-linker-flag
                        (list "--whole-archive"
-                             (some-system-path->string (read-config-path 'seashell-runtime-library))
+                             (some-system-path->string (build-path (read-config-path 'seashell-runtime-library)))
                              "--no-whole-archive"))
                    ,@(map append-linker-flag ldflags))))
         ;; Close unused port.
