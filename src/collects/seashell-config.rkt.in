@@ -295,7 +295,7 @@
   (: read-config-string (-> Symbol String))
   (define (read-config-string symbol)
     (define result (read-config symbol))
-    (cond [(path? result) (path->string result)]
+    (cond [(path? result) (some-system-path->string result)]
           [else (cast result String)]))
   (: read-config-strings (-> Symbol (Listof String)))
   (define (read-config-strings symbol)
