@@ -67,4 +67,5 @@
     (test-case-type path ssh-binary)
     (test-case-type string ssh-binary)
     (test-case-type string linker-flag-prefix)
-    (test-case-type optional-path seashell-login-logfile)))
+    (test-case-type optional-path seashell-login-logfile)
+    (test-case-type nonnegative-real compiler-ttl)))
