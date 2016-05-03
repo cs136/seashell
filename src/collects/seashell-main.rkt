@@ -17,7 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/seashell-config)
-(require racket/cmdline racket/match)
+(require racket/cmdline racket/match racket/path)
 
 (begin
   (define mode (make-parameter 'version))
@@ -31,7 +31,7 @@
   (match (mode)
          ['version (printf "Seashell ~a (~a-~a) (API version ~a) multi-tool binary.~n"
                            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION)
-                   (printf "Executable path: ~a.~n" (path->string (find-executable-path (find-system-path 'run-file))))
+                   (printf "Executable path: ~a.~n" (some-system-path->string (find-executable-path (find-system-path 'run-file))))
                    (printf "Build directory: ~a.~n" SEASHELL_BUILD_PATH)
                    (printf "Build type: ~a.~n" (if SEASHELL_DEBUG "Debug" "Release"))
                    (printf "Installation status: ~a.~n" (if SEASHELL_INSTALLED (format "Installed in ~a" SEASHELL_INSTALL_PATH) "Not installed"))]
