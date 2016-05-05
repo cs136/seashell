@@ -1,6 +1,6 @@
 /*!
     localForage -- Offline Storage, Improved
-    Version 1.3.0
+    Version 1.4.0
     https://mozilla.github.io/localForage
     (c) 2013-2015 Mozilla, Apache License 2.0
 */
@@ -749,7 +749,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	(function () {
+	var localForage = (function (globalObject) {
 	    'use strict';
 
 	    // Custom drivers are stored here when `defineDriver()` is called.
@@ -777,39 +777,46 @@ return /******/ (function(modules) { // webpackBootstrap
 	        version: 1.0
 	    };
 
-	    // Check to see if IndexedDB is available and if it is the latest
-	    // implementation; it's our preferred backend library. We use "_spec_test"
-	    // as the name of the database because it's not the one we'll operate on,
-	    // but it's useful to make sure its using the right spec.
-	    // See: https://github.com/mozilla/localForage/issues/128
 	    var driverSupport = (function (self) {
-	        // Initialize IndexedDB; fall back to vendor-prefixed versions
-	        // if needed.
-	        var indexedDB = indexedDB || self.indexedDB || self.webkitIndexedDB || self.mozIndexedDB || self.OIndexedDB || self.msIndexedDB;
-
 	        var result = {};
 
-	        result[DriverType.WEBSQL] = !!self.openDatabase;
+	        // Check to see if IndexedDB is available and if it is the latest
+	        // implementation; it's our preferred backend library. We use "_spec_test"
+	        // as the name of the database because it's not the one we'll operate on,
+	        // but it's useful to make sure its using the right spec.
+	        // See: https://github.com/mozilla/localForage/issues/128
 	        result[DriverType.INDEXEDDB] = !!(function () {
-	            // We mimic PouchDB here; just UA test for Safari (which, as of
-	            // iOS 8/Yosemite, doesn't properly support IndexedDB).
-	            // IndexedDB support is broken and different from Blink's.
-	            // This is faster than the test case (and it's sync), so we just
-	            // do this. *SIGH*
-	            // http://bl.ocks.org/nolanlawson/raw/c83e9039edf2278047e9/
-	            //
-	            // We test for openDatabase because IE Mobile identifies itself
-	            // as Safari. Oh the lulz...
-	            if (typeof self.openDatabase !== 'undefined' && self.navigator && self.navigator.userAgent && /Safari/.test(self.navigator.userAgent) && !/Chrome/.test(self.navigator.userAgent)) {
-	                return false;
-	            }
 	            try {
+	                // Initialize IndexedDB; fall back to vendor-prefixed versions
+	                // if needed.
+	                var indexedDB = indexedDB || self.indexedDB || self.webkitIndexedDB || self.mozIndexedDB || self.OIndexedDB || self.msIndexedDB;
+	                // We mimic PouchDB here; just UA test for Safari (which, as of
+	                // iOS 8/Yosemite, doesn't properly support IndexedDB).
+	                // IndexedDB support is broken and different from Blink's.
+	                // This is faster than the test case (and it's sync), so we just
+	                // do this. *SIGH*
+	                // http://bl.ocks.org/nolanlawson/raw/c83e9039edf2278047e9/
+	                //
+	                // We test for openDatabase because IE Mobile identifies itself
+	                // as Safari. Oh the lulz...
+	                if (typeof self.openDatabase !== 'undefined' && self.navigator && self.navigator.userAgent && /Safari/.test(self.navigator.userAgent) && !/Chrome/.test(self.navigator.userAgent)) {
+	                    return false;
+	                }
+
 	                return indexedDB && typeof indexedDB.open === 'function' &&
 	                // Some Samsung/HTC Android 4.0-4.3 devices
 	                // have older IndexedDB specs; if this isn't available
 	                // their IndexedDB is too old for us to use.
 	                // (Replaces the onupgradeneeded test.)
 	                typeof self.IDBKeyRange !== 'undefined';
+	            } catch (e) {
+	                return false;
+	            }
+	        })();
+
+	        result[DriverType.WEBSQL] = !!(function () {
+	            try {
+	                return self.openDatabase;
 	            } catch (e) {
 	                return false;
 	            }
@@ -824,7 +831,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        })();
 
 	        return result;
-	    })(this);
+	    })(globalObject);
 
 	    var isArray = Array.isArray || function (arg) {
 	        return Object.prototype.toString.call(arg) === '[object Array]';
@@ -1151,10 +1158,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return LocalForage;
 	    })();
 
-	    var localForage = new LocalForage();
-
-	    exports['default'] = localForage;
-	}).call(typeof window !== 'undefined' ? window : self);
+	    return new LocalForage();
+	})(typeof window !== 'undefined' ? window : self);
+	exports['default'] = localForage;
 	module.exports = exports['default'];
 
 /***/ },
@@ -1166,12 +1172,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	exports.__esModule = true;
-	(function () {
+	var asyncStorage = (function (globalObject) {
 	    'use strict';
 
-	    var globalObject = this;
 	    // Initialize IndexedDB; fall back to vendor-prefixed versions if needed.
-	    var indexedDB = indexedDB || this.indexedDB || this.webkitIndexedDB || this.mozIndexedDB || this.OIndexedDB || this.msIndexedDB;
+	    var indexedDB = indexedDB || globalObject.indexedDB || globalObject.webkitIndexedDB || globalObject.mozIndexedDB || globalObject.OIndexedDB || globalObject.msIndexedDB;
 
 	    // If IndexedDB isn't available, we get outta here!
 	    if (!indexedDB) {
@@ -1284,6 +1289,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    });
 	                };
 	            };
+	            txn.onerror = txn.onabort = reject;
 	        })['catch'](function () {
 	            return false; // error, so assume unsupported
 	        });
@@ -1327,6 +1333,61 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return value && value.__local_forage_encoded_blob;
 	    }
 
+	    // Specialize the default `ready()` function by making it dependent
+	    // on the current database operations. Thus, the driver will be actually
+	    // ready when it's been initialized (default) *and* there are no pending
+	    // operations on the database (initiated by some other instances).
+	    function _fullyReady(callback) {
+	        var self = this;
+
+	        var promise = self._initReady().then(function () {
+	            var dbContext = dbContexts[self._dbInfo.name];
+
+	            if (dbContext && dbContext.dbReady) {
+	                return dbContext.dbReady;
+	            }
+	        });
+
+	        promise.then(callback, callback);
+	        return promise;
+	    }
+
+	    function _deferReadiness(dbInfo) {
+	        var dbContext = dbContexts[dbInfo.name];
+
+	        // Create a deferred object representing the current database operation.
+	        var deferredOperation = {};
+
+	        deferredOperation.promise = new Promise(function (resolve) {
+	            deferredOperation.resolve = resolve;
+	        });
+
+	        // Enqueue the deferred operation.
+	        dbContext.deferredOperations.push(deferredOperation);
+
+	        // Chain its promise to the database readiness.
+	        if (!dbContext.dbReady) {
+	            dbContext.dbReady = deferredOperation.promise;
+	        } else {
+	            dbContext.dbReady = dbContext.dbReady.then(function () {
+	                return deferredOperation.promise;
+	            });
+	        }
+	    }
+
+	    function _advanceReadiness(dbInfo) {
+	        var dbContext = dbContexts[dbInfo.name];
+
+	        // Dequeue a deferred operation.
+	        var deferredOperation = dbContext.deferredOperations.pop();
+
+	        // Resolve its promise (which is part of the database readiness
+	        // chain of promises).
+	        if (deferredOperation) {
+	            deferredOperation.resolve();
+	        }
+	    }
+
 	    // Open the IndexedDB database (automatically creates one if one didn't
 	    // previously exist), using any options set in the config.
 	    function _initStorage(options) {
@@ -1355,17 +1416,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	                // Running localForages sharing a database.
 	                forages: [],
 	                // Shared database.
-	                db: null
+	                db: null,
+	                // Database readiness (promise).
+	                dbReady: null,
+	                // Deferred operations on the database.
+	                deferredOperations: []
 	            };
 	            // Register the new context in the global container.
 	            dbContexts[dbInfo.name] = dbContext;
 	        }
 
 	        // Register itself as a running localForage in the current context.
-	        dbContext.forages.push(this);
+	        dbContext.forages.push(self);
 
-	        // Create an array of readiness of the related localForages.
-	        var readyPromises = [];
+	        // Replace the default `ready()` function with the specialized one.
+	        if (!self._initReady) {
+	            self._initReady = self.ready;
+	            self.ready = _fullyReady;
+	        }
+
+	        // Create an array of initialization states of the related localForages.
+	        var initPromises = [];
 
 	        function ignoreErrors() {
 	            // Don't handle errors here,
@@ -1375,9 +1446,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        for (var j = 0; j < dbContext.forages.length; j++) {
 	            var forage = dbContext.forages[j];
-	            if (forage !== this) {
+	            if (forage !== self) {
 	                // Don't wait for itself...
-	                readyPromises.push(forage.ready()['catch'](ignoreErrors));
+	                initPromises.push(forage._initReady()['catch'](ignoreErrors));
 	            }
 	        }
 
@@ -1386,7 +1457,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // Initialize the connection process only when
 	        // all the related localForages aren't pending.
-	        return Promise.all(readyPromises).then(function () {
+	        return Promise.all(initPromises).then(function () {
 	            dbInfo.db = dbContext.db;
 	            // Get the connection or open a new one without upgrade.
 	            return _getOriginalConnection(dbInfo);
@@ -1401,7 +1472,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            dbInfo.db = dbContext.db = db;
 	            self._dbInfo = dbInfo;
 	            // Share the final connection amongst related localForages.
-	            for (var k in forages) {
+	            for (var k = 0; k < forages.length; k++) {
 	                var forage = forages[k];
 	                if (forage !== self) {
 	                    // Self is already up-to-date.
@@ -1422,8 +1493,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    function _getConnection(dbInfo, upgradeNeeded) {
 	        return new Promise(function (resolve, reject) {
+
 	            if (dbInfo.db) {
 	                if (upgradeNeeded) {
+	                    _deferReadiness(dbInfo);
 	                    dbInfo.db.close();
 	                } else {
 	                    return resolve(dbInfo.db);
@@ -1463,6 +1536,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	            openreq.onsuccess = function () {
 	                resolve(openreq.result);
+	                _advanceReadiness(dbInfo);
 	            };
 	        });
 	    }
@@ -1595,10 +1669,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var dbInfo;
 	            self.ready().then(function () {
 	                dbInfo = self._dbInfo;
-	                return _checkBlobSupport(dbInfo.db);
-	            }).then(function (blobSupport) {
-	                if (!blobSupport && value instanceof Blob) {
-	                    return _encodeBlob(value);
+	                if (value instanceof Blob) {
+	                    return _checkBlobSupport(dbInfo.db).then(function (blobSupport) {
+	                        if (blobSupport) {
+	                            return value;
+	                        }
+	                        return _encodeBlob(value);
+	                    });
 	                }
 	                return value;
 	            }).then(function (value) {
@@ -1613,7 +1690,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    value = undefined;
 	                }
 
-	                var req = store.put(value, key);
 	                transaction.oncomplete = function () {
 	                    // Cast to undefined so the value passed to
 	                    // callback/promise is the same as what one would get out
@@ -1631,6 +1707,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    var err = req.error ? req.error : req.transaction.error;
 	                    reject(err);
 	                };
+
+	                var req = store.put(value, key);
 	            })['catch'](reject);
 	        });
 
@@ -1836,8 +1914,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        keys: keys
 	    };
 
-	    exports['default'] = asyncStorage;
-	}).call(typeof window !== 'undefined' ? window : self);
+	    return asyncStorage;
+	})(typeof window !== 'undefined' ? window : self);
+	exports['default'] = asyncStorage;
 	module.exports = exports['default'];
 
 /***/ },
@@ -1851,10 +1930,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	exports.__esModule = true;
-	(function () {
+	var localStorageWrapper = (function (globalObject) {
 	    'use strict';
 
-	    var globalObject = this;
 	    var localStorage = null;
 
 	    // If the app is running inside a Google Chrome packaged webapp, or some
@@ -1865,12 +1943,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    try {
 	        // If localStorage isn't available, we get outta here!
 	        // This should be inside a try catch
-	        if (!this.localStorage || !('setItem' in this.localStorage)) {
+	        if (!globalObject.localStorage || !('setItem' in globalObject.localStorage)) {
 	            return;
 	        }
 	        // Initialize localStorage and create a variable to use throughout
 	        // the code.
-	        localStorage = this.localStorage;
+	        localStorage = globalObject.localStorage;
 	    } catch (e) {
 	        return;
 	    }
@@ -2144,8 +2222,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        keys: keys
 	    };
 
-	    exports['default'] = localStorageWrapper;
-	}).call(typeof window !== 'undefined' ? window : self);
+	    return localStorageWrapper;
+	})(typeof window !== 'undefined' ? window : self);
+	exports['default'] = localStorageWrapper;
 	module.exports = exports['default'];
 
 /***/ },
@@ -2155,7 +2234,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	exports.__esModule = true;
-	(function () {
+	var localforageSerializer = (function (globalObject) {
 	    'use strict';
 
 	    // Sadly, the best way to save binary data in WebSQL/localStorage is serializing
@@ -2182,9 +2261,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var TYPE_FLOAT32ARRAY = 'fl32';
 	    var TYPE_FLOAT64ARRAY = 'fl64';
 	    var TYPE_SERIALIZED_MARKER_LENGTH = SERIALIZED_MARKER_LENGTH + TYPE_ARRAYBUFFER.length;
-
-	    // Get out of our habit of using `window` inline, at least.
-	    var globalObject = this;
 
 	    // Abstracts constructing a Blob object, so it also works in older
 	    // browsers that don't support the native Blob constructor. (i.e.
@@ -2409,8 +2485,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        bufferToString: bufferToString
 	    };
 
-	    exports['default'] = localforageSerializer;
-	}).call(typeof window !== 'undefined' ? window : self);
+	    return localforageSerializer;
+	})(typeof window !== 'undefined' ? window : self);
+	exports['default'] = localforageSerializer;
 	module.exports = exports['default'];
 
 /***/ },
@@ -2429,11 +2506,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	exports.__esModule = true;
-	(function () {
+	var webSQLStorage = (function (globalObject) {
 	    'use strict';
 
-	    var globalObject = this;
-	    var openDatabase = this.openDatabase;
+	    var openDatabase = globalObject.openDatabase;
 
 	    // If WebSQL methods aren't available, we can stop now.
 	    if (!openDatabase) {
@@ -2460,9 +2536,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            try {
 	                dbInfo.db = openDatabase(dbInfo.name, String(dbInfo.version), dbInfo.description, dbInfo.size);
 	            } catch (e) {
-	                return self.setDriver(self.LOCALSTORAGE).then(function () {
-	                    return self._initStorage(options);
-	                }).then(resolve)['catch'](reject);
+	                return reject(e);
 	            }
 
 	            // Create our key/value table if it doesn't exist.
@@ -2771,8 +2845,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        keys: keys
 	    };
 
-	    exports['default'] = webSQLStorage;
-	}).call(typeof window !== 'undefined' ? window : self);
+	    return webSQLStorage;
+	})(typeof window !== 'undefined' ? window : self);
+	exports['default'] = webSQLStorage;
 	module.exports = exports['default'];
 
 /***/ }

@@ -224,6 +224,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
+      self.isConnected = function() {
+        return self.connected;
+      };
 
       /** The following functions are wrappers around sendMessage.
        *  Consult dispatch.rkt for a full list of functions.

@@ -713,10 +713,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var tests = test ? self.getTestsForQuestion(question) : [];
           var path = self._getPath(question, "question", self.fileToRun);
           var file = self.root.find(path);
-          if(io_callback)
-            ws.register_callback('io', io_callback);
-          if(test_callback)
-            ws.register_callback('test', test_callback);
 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
