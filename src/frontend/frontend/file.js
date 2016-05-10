@@ -363,6 +363,7 @@ angular.module('frontend-app')
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
             self.editorOptions.vimMode = false;
           } else {
             self.editorOptions.keyMap = 'default';
