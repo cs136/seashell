@@ -161,7 +161,7 @@
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'must-truncate)
-  (void))
+											 (void))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.
@@ -183,16 +183,17 @@
     (define relative (if dir (build-path dir path) path))
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
-      [(and (directory-exists? current) (not (directory-hidden? current)))
+      [(and (directory-exists? current) (not (file-or-directory-hidden? current)))
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
-      [(file-exists? current)
+      [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
+			 ; directory-hidden should work for files as well (can rename if so)
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
-;; Determines if a directory is hidden (begins with a .)
-(define/contract (directory-hidden? path)
+;; Determines if a file/directory is hidden (begins with a .)
+(define/contract (file-or-directory-hidden? path)
   (-> path? boolean?)
   (define-values (_1 filename _2) (split-path (simplify-path path)))
   (string=? "." (substring (some-system-path->string filename) 0 1)))
