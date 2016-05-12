@@ -210,6 +210,7 @@
                              (result . 
                                #hash((type . "done")
                                      (pid . ,pid)
+                                     (asan . ,(bytes->string/utf-8 (program-asan-message pid)))
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.
