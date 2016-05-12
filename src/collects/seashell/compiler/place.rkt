@@ -48,21 +48,23 @@
   (seashell-compile-place/check-and-init)
   (define compiler-place (unbox global-compiler-place))
   (cond
-    [(and (place? compiler-place)
-          (not (sync/timeout 0 (place-dead-evt compiler-place))))
+    [(place? compiler-place)
       (define-values (read-end write-end) (place-channel))
+      (define dead-evt (place-dead-evt compiler-place))
       (place-channel-put compiler-place
                          (list write-end user-cflags user-ldflags sources objects))
-      (match-define
-        (list exn? result data)
-        (deserialize (place-channel-get read-end)))
-      (when exn?
-            (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
-                             (current-continuation-marks))))
-      (values (cast result (U False Bytes))
-              (cast data Seashell-Diagnostic-Table))]
-    [(retries . > . 0)
-     (seashell-compile-files/place user-cflags user-ldflags sources objects (sub1 retries))]
+      (match (sync dead-evt (wrap-evt read-end deserialize))
+        [(? (lambda (x) (eq? dead-evt x)))
+         (cond
+          [(retries . > . 0)
+           (seashell-compile-files/place user-cflags user-ldflags sources objects (sub1 retries))]
+          [else (raise (exn:fail (format "Compiler place dead!") (current-continuation-marks)))])]
+        [(list exn? result data)
+         (when exn?
+               (raise (exn:fail (format "Exception raised in compiler place: ~a!" data)
+                                (current-continuation-marks))))
+         (values (cast result (U False Bytes))
+                 (cast data Seashell-Diagnostic-Table))])]
     [else (raise (exn:fail (format "Compiler place dead!") (current-continuation-marks)))]))
 
 ;; seashell-compile-place/alive?
