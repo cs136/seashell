@@ -260,7 +260,7 @@ angular.module('frontend-app')
         if (io.asan) {
          self.write(io.asan);
         }
-        self.write("Program finished with exit code "+io.status);
+        self.write("\nProgram finished with exit code "+io.status);
         if(io.status !== 0 && return_codes[io.status]) {
           self.write(sprintf(" (%s)", return_codes[io.status]));
         }
