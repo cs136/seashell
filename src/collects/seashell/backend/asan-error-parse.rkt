@@ -12,24 +12,46 @@
 (define-type ErrorComponent (U String StackFrame))
 (define-type ASANError (Listof ErrorComponent))
 
+;; wrapper function
 (: asan-rewrite (Bytes -> Bytes))
 (define (asan-rewrite x)
-  (string->bytes/utf-8 
-    (ASANError->string 
-      (asan-error-parse (bytes->string/utf-8 x)))))
+  (cond [(zero? (bytes-length x)) x]
+        [else (string->bytes/utf-8
+                (format "\n~a\n" 
+                        (ASANError->string 
+                          (asan-error-parse (bytes->string/utf-8 x)))))]))
 
 ;; rewrite ASANError in a friendly way
 (: ASANError->string (ASANError -> String))
 (define (ASANError->string x)
   (string-join 
-    (map (lambda ([x : ErrorComponent])
-           (match x
-             [(? string?) x]
-             [(StackFrame frame file ln func)
-              (format "frame ~a, file \"~a\", line ~a, function \"~a\"" frame file ln func)]))
-         x) 
-    "\n"
-    #:after-last "\n"))
+    (filter-map 
+      (lambda ([x : ErrorComponent])
+        (match x
+          [(pregexp #px"^=+\\d+=+ERROR: AddressSanitizer: SEGV") "Error: Segmentation fault"]
+          [(pregexp #px"^=+\\d+=+ERROR: AddressSanitizer: stack-buffer-overflow") "Error: Stack overflows"]
+          [(pregexp #px"^=+\\d+=+ERROR: AddressSanitizer: heap-buffer-overflow") "Error: Heap overflows"]
+          [(pregexp #px"^=+\\d+=+ERROR: AddressSanitizer: global-buffer-overflow") "Error: Global buffer overflows"]
+          [(pregexp #px"^=+\\d+=+ERROR: AddressSanitizer: heap-use-after-free") "Error: Using variables after free"]
+          [(pregexp #px"^=+\\d+=+ERROR: LeakSanitizer: detected memory leaks") "Error: Memory leaks"]
+          [(pregexp #px"^(.+)from:" (list _ x)) x] ;; trim "from" to make the sentense more fluent
+          [(? string?) x]
+          [(StackFrame frame (? student-file-path? file) ln func)
+           (format "   in function call ~v, module ~v, line ~a" func (path->string (assert (file-name-from-path file))) ln)]
+          [(StackFrame frame _ _ (? interceptor? func))
+           (format "   in function call ~v" (string-trim func "__interceptor_"))]
+          [else #f]))
+      x)
+    "\n"))
+
+
+(: student-file-path? (String -> Boolean))
+(define (student-file-path? path)
+  (regexp-match? #px"/home/y667li/.seashell/projects/" path))
+
+(: interceptor? (String -> Boolean))
+(define (interceptor? func)
+  (regexp-match? #px"__interceptor_" func))
 
 ;; The main parser function. Use the error message as the argument.
 (: asan-error-parse (String -> ASANError))
@@ -40,25 +62,13 @@
                     ["" #f]
                     [x x]))
                 (string-split contents "\n")))
-  (when (< (length lines) 2)
-    (error 'ParseError "Input message is too short.\n Here is an example of an expected input:\n 
-           =================================================================
-           ==33482==ERROR: LeakSanitizer: detected memory leaks
-           Direct leak of 144 byte(s) in 9 object(s) allocated from:
-           {\"frame\": 0, \"module\": \"../A10-merge.c-g158-binary\", \"offset\": \"0x4b0240\", \"function\": \"malloc\", \"function_offset\": \"0x0\", \"file\": \"../asan_malloc_linux.cc\", \"line\": 40, \"column\": 0}
-           {\"frame\": 1, \"module\": \"../A10-merge.c-g158-binary\", \"offset\": \"0x4d2194\", \"function\": \"read_list\", \"function_offset\": \"0x0\", \"file\": \"../merge_tester.c\", \"line\": 21, \"column\": 31}
-           {\"frame\": 2, \"module\": \"../A10-merge.c-g158-binary\", \"offset\": \"0x4d262b\", \"function\": \"main\", \"function_offset\": \"0x0\", \"file\": \"../merge_tester.c\", \"line\": 43, \"column\": 3}
-           {\"frame\": 3, \"module\": \"../libc.so.6\", \"offset\": \"0x2176c\", \"function\": \"__libc_start_main\", \"function_offset\": \"0x0\", \"file\": \"../libc-start.c\", \"line\": 226, \"column\": 0}
-           SUMMARY: AddressSanitizer: 144 byte(s) leaked in 9 allocation(s)
-           \n"))
-  
   (filter-map 
     (lambda ([x : String])
       (cond [(findf (compose not false?)
                     (map (lambda ([f : (String -> (U False ErrorComponent))]) 
                            (f x))
                          (try-list))) => identity]
-            [else (eprintf "Ignored line \"~a\"\n" x) #f]))
+            [else (eprintf "# Ignored line: \"~a\"\n" x) #f]))
     lines))
 
 (define (inspect x) (eprintf "~v\n" x) x)
@@ -67,11 +77,16 @@
 (define (try-list) 
   (list extract-stackframe accept-str))
 
+
+;; Do not rewrite string in this function. You should only add match cases
+;;  that produce #f here. Rewrite strings in ASANError->string instead.
 (: accept-str (String -> (U False String)))
 (define (accept-str str)
   (match str
     [(pregexp #px"^=+$") #f]
-    [(pregexp #px"=+\\d+=+(.+)" (list _ x)) x]
+    [(pregexp #px"^SUMMARY") #f]
+    [(pregexp #px"^AddressSanitizer can not provide additional info.") #f]
+    [(pregexp #px"^=+\\d+=+ABORTING") #f]
     [x x]))
 
 (: extract-stackframe (String -> (U False StackFrame)))
@@ -111,5 +126,4 @@
   (match (string->number str)
     [(? exact-integer? x) x]
     [_ (error 'ERROR "str->int: expects an integer but get ~s\n" str)]))
-
 

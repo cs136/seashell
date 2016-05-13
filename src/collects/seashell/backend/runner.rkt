@@ -115,8 +115,12 @@
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
+       ;; read asan error message
+       (set-program-asan! pgrm (asan-rewrite (delete-read-asan pid)))
+       
        (define stdout (port->bytes buf-stdout))
-       (define stderr (port->bytes buf-stderr))
+       (define stderr (bytes-append (port->bytes buf-stderr)
+                                    (program-asan pgrm)))
 
        (match (subprocess-status handle)
          [0

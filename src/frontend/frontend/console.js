@@ -292,11 +292,11 @@ angular.module('frontend-app')
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       if(res.result==="passed") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s passed.\n", res.test_name));
+        self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
       }
       else if(res.result==="failed") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s failed.\n", res.test_name));
+        self.write(sprintf("Test \"%s\" failed.\n", res.test_name));
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('\n'); 
@@ -310,26 +310,24 @@ angular.module('frontend-app')
         self.write('\n');
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
-        self.write('---\n');
-        self.write(res.asan);
       } else if(res.result==="no-expect") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s produced output (stdout):\n", res.test_name));
+        self.write(sprintf("Test \"%s\" produced output (stdout):\n", res.test_name));
         self.write(res.stdout);
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
         self.write('\n');
       } else if(res.result==="timeout") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s timed out.\n", res.test_name));
+        self.write(sprintf("Test \"%s\" timed out.\n", res.test_name));
       }
       else if(res.result==="killed") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test %s was killed.\n", res.test_name));
+        self.write(sprintf("Test \"%s\" was killed.\n", res.test_name));
       }
     });
 
