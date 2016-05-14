@@ -59,7 +59,7 @@ self.onmessage = function(msg) {
   function compile(runnerFile) {
     console.log("compile called");
     var pp = Module.seashell_preprocessor_make();
-    Module.seashell_preprocessor_set_main_file(pp, runnerFile);
+    Module.seashell_preprocessor_set_main_file(pp, "/working/question/"+runnerFile);
     console.log("Running preprocessor...");
     var pres = Module.seashell_preprocessor_run(pp);
     console.log("Preprocessor finished.");
@@ -73,10 +73,12 @@ self.onmessage = function(msg) {
     }
     var cc = Module.seashell_compiler_make();
     var numDeps = Module.seashell_preprocessor_get_include_count(pp);
+    var sources = [];
     for(var ind = 0; ind < numDeps; ind++) {
       var source = Module.seashell_preprocessor_get_include(pp, ind);
+      sources.push(source);
       console.log("Adding "+source+" to compiler");
-      Module.seashell_compiler_add_file(cc, "/working/"+source);
+      Module.seashell_compiler_add_file(cc, source);
     }
     Module.seashell_preprocessor_free(pp);
 
@@ -102,10 +104,12 @@ self.onmessage = function(msg) {
   
   try {
     FS.mkdir("/working");
+    FS.mkdir("/working/question");
   } catch(e) { }
   var rf = data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
-    var file = FS.open("/working/"+data.files[i].name, 'w');
+    // TODO handle common files in the way expected by dependency resolution code
+    var file = FS.open("/working/question/"+data.files[i].name, 'w');
     var len = lengthBytesUTF8(data.files[i].contents)+1;
     var arr = new Uint8Array(len);
     var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);

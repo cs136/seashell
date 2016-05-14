@@ -23,17 +23,17 @@ angular.module('frontend-app')
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'NewTestModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
+      'NewQuestionModal', 'MarmosetResultsModal', 'console-service', 'socket',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, newTestModal,  submitMarmosetModal,
         $interval, marmoset, newQuestionModal,
-        marmosetResultsModal, Console) {
+        marmosetResultsModal, Console, ws) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
-        self.runner_file = "";
+        self.runnerFile = "";
         self.test_files = [];
         self.console = Console;
         self.marmoset_short_results = null;
@@ -50,6 +50,7 @@ angular.module('frontend-app')
         $scope.$on('$destroy', function() {
           cancelMarmosetRefresh();
           self.console.clear();
+          ws.unregister_callback(refreshKey);
         });
 
         /*
@@ -133,6 +134,7 @@ angular.module('frontend-app')
           });
         };
         $scope.refresh = self.refresh;
+        self.refreshKey = ws.register_callback('connected', self.refresh, true);
 
         /** Handle the setFileToRun broadcast 
          *  by refreshing the file list

@@ -80,7 +80,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       }
 
       /** Helper function to invoke the I/O callback. */
-      function io_cb(ignored, message) {
+      self.io_cb = function(ignored, message) {
         _.each(_.map(_.filter(callbacks, function(x) {
               return x && x.type === 'io';
             }),
@@ -90,9 +90,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           function(x) {
             x(message);
           });
-      }
+      };
 
-      function test_cb(ignored, result) {
+      self.test_cb = function(ignored, result) {
         _.each(_.map(_.filter(callbacks, function(x) {
               return x.type === 'test';
             }),
@@ -102,7 +102,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           function(x) {
             x(result);
           });
-      }
+      };
 
       /** Connects the socket, sets up the disconnection monitor. */
       self.connect = function() {
@@ -208,8 +208,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             }, 4000);
             self.connected = true;
             self.failed = false;
-            self._socket.requests[-3].callback = io_cb;
-            self._socket.requests[-4].callback = test_cb;
+            self._socket.requests[-3].callback = self.io_cb;
+            self._socket.requests[-4].callback = self.test_cb;
             console.log("Websocket disconnection monitor set up properly.");
             /** Run the callbacks. */
             _.each(_.map(_.filter(callbacks, function(x) {
@@ -505,12 +505,15 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         var offlineResult = localfiles.getRunnerFile(project, question);
         if (self.isOnline()) {
           var onlineResult = self._socket.getFileToRun(project, question, deferred);
-          return $q.all([onlineResult, offlineResult]).catch(
+          return $q.all([onlineResult, offlineResult])
+            .then(function(result) {
+              return result[0] || result[1];
+            }).catch(
             function(error) {
               // TODO: what if one of them doesn't resolve?
             });
         } else {
-          return $q.all([offlineResult]);
+          return $q.when(offlineResult);
         }
       };
 

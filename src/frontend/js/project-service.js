@@ -100,7 +100,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var question = self.project.root.find(self.name.slice(0,1));
           var common = self.project.root.find("common");
           deps = deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
-          deps = deps.concat(common.children);
+          if(common)
+            deps = deps.concat(common.children);
           return $q.all(_.map(deps, function(d) { return d.read(); }))
             .then(function() { return deps; });
         };
@@ -672,7 +673,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return $q.when(ws.getFileToRun(self.name, question))
             .then(function (result) {
                 self.fileToRun = result;
-                return result[0];
+                return result;
             });
         };
 
@@ -707,13 +708,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          *
          * test - boolean parameter, run with tests if true.
          */
-        SeashellProject.prototype.run = function(question, test, io_callback, test_callback) {
+        SeashellProject.prototype.run = function(question, test) {
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
           var path = self._getPath(question, "question", self.fileToRun);
           var file = self.root.find(path);
 
+          if(!file) {
+            return $q.reject("Attempting to run file that does not exist.");
+          }
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
@@ -732,7 +736,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               else if(result.data.status == "running") {
                 self.runner = new Worker("js/offline-run.js");
                 self.runner.onmessage = function(msg) {
-                  io_callback(msg.data);
+                  ws.io_cb(null, msg.data);
                 };
                 self.runner.postMessage(result.data.obj);
                 res.resolve(result.data);
@@ -741,6 +745,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.when(file.getDependencies()).then(function(deps) {
               var file_arr = _.map(deps, function(f) { return f.toWorker(); });
               self.compiler.postMessage({
+                runnerFile: self.fileToRun,
                 files: file_arr,
                 tests: tests
               });

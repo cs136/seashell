@@ -1013,9 +1013,13 @@ extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor
 void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, std::string file) {
 #endif
   std::vector<const char *> vec;
+#ifndef __EMSCRIPTEN__
   char *nfile = strdup(file);
+#else
+  char *nfile = strdup(file.c_str());
+#endif
   char *tok = strtok(nfile, "/");
-  do { vec.push_back(tok); } while(tok = strtok(NULL, "/"));
+  do { vec.push_back(tok); } while( (tok = strtok(NULL, "/")) );
   
   preprocessor->question_dir = vec[vec.size()-2];
   preprocessor->main_file = vec[vec.size()-1];
@@ -1033,7 +1037,7 @@ void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preproces
 #ifndef __EMSCRIPTEN__
 extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor) {
 #else
-std::string seashell_preprocessor_get_main_file(struct seashell_preprocesor *preprocessor) {
+std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor) {
 #endif
   std::string res = preprocessor->project_dir;
   res += "/";
@@ -1065,7 +1069,7 @@ extern "C" int seashell_preprocessor_get_include_count(struct seashell_preproces
 #ifndef __EMSCRIPTEN__
 extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
 #else
-std::string *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
+std::string seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
 #endif
   return preprocessor->sources[n].c_str();
 }
