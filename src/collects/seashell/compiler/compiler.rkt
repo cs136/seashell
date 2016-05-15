@@ -37,12 +37,12 @@
                 #:type-name Seashell-Diagnostic])
 (define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
 
-;; (seashell-resolve-dependencies runnerFile)
+;; (seashell-resolve-dependencies file)
 ;; Invokes the internal preprocessor to resolve dependencies
 (: seashell-resolve-dependencies (-> Path (Listof Path)))
-(define (seashell-resolve-dependencies runnerFile)
+(define (seashell-resolve-dependencies file)
   (define pp (seashell_preprocessor_make))
-  (seashell_preprocessor_set_main_file pp (path->string runnerFile))
+  (seashell_preprocessor_set_main_file pp (some-system-path->string file))
   (seashell_preprocessor_run pp)
   (define srcs (build-list (seashell_preprocessor_get_include_count pp)
     (lambda ([n : Nonnegative-Integer]) (seashell_preprocessor_get_include pp n))))
@@ -55,7 +55,7 @@
 ;; Arguments:
 ;;  cflags - List of flags to pass to the compiler.
 ;;  ldflags - List of flags to pass to the linker.
-;;  runnerFile - Path to target file. Dependencies will be traversed beginning here.
+;;  resolve-sources - Paths to target files. Dependencies will be traversed beginning here.
 ;;  objects - List of object paths to compile.
 ;; Returns:
 ;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
@@ -68,10 +68,10 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(: seashell-compile-files (-> (Listof String) (Listof String) Path (Listof Path)
+(: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files user-cflags user-ldflags runnerFile objects)
-  (define sources (seashell-resolve-dependencies runnerFile))
+(define (seashell-compile-files user-cflags user-ldflags resolve-sources objects)
+  (define sources (remove-duplicates (append* (map seashell-resolve-dependencies resolve-sources))))
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
   (cond

@@ -77,7 +77,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.unregister_callbacks = function(type) {
         callbacks = _.filter(callbacks, function(item) { return item && item.type == type; });
         key = callbacks.length;
-      }
+      };
 
       /** Helper function to invoke the I/O callback. */
       self.io_cb = function(ignored, message) {
