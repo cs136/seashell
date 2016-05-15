@@ -32,6 +32,7 @@
 (define SEASHELL_BUILD_PATH "@CMAKE_BINARY_DIR@")
 (define SEASHELL_SOURCE_PATH "@CMAKE_SOURCE_DIR@")
 (define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@)
+(define SEASHELL_RACKET "@SEASHELL_RACKET@")
 
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
@@ -42,7 +43,7 @@
 ;; Can we override these flags?
 (define override? (not/c (or/c 'seashell-crypto 'seashell-support 'seashell-clang 'seashell-git
                                'seashell-known-hosts 'seashell-runtime-library 'seashell-runtime-racket-library
-                               'seashell-install 'server-memory-limit 'request-memory-limit)))
+                               'seashell-install 'server-memory-limit 'request-memory-limit 'project-settings-filename)))
 
 ;; (config-set! key val) takes a symbol? key and any val, and mutates the
 ;; config to associate the key with the value. If the key is already there, it
@@ -163,6 +164,8 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Project settings filename.
+      (cons 'project-settings-filename     (string->path ".project-settings.txt"))
 
       ;; These flags can be overridden by the configuration file.
       ;; Default compiler flags.
@@ -228,14 +231,20 @@
       ;; Default shell
       (cons 'system-shell                  (string->path "/bin/sh"))
       ;; Racket interpreter
-      (cons 'racket-interpreter            (string->path "/usr/bin/racket"))
+      (cons 'racket-interpreter            (if (file-exists? "/usr/bin/racket")
+                                             (string->path "/usr/bin/racket")
+                                             (string->path SEASHELL_RACKET)))
       ;; diff program
       (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
       (cons 'ssh-binary                    (string->path "/usr/bin/ssh"))
       ;; Prefix on linker flags.
       (cons 'linker-flag-prefix            "-Wl,")
-      (cons 'project-settings-filename     (string->path "project-settings.txt"))
+      ;; Default logfile path for logging login issues.
+      (cons 'seashell-login-logfile        #f)
+      ;; Default TTL for the compiler place.
+      ;; This needs to be long enough for a file to compile.
+      (cons 'compiler-ttl                60)
       )))
   config-hash)
 
@@ -270,7 +279,7 @@
 (module* typed typed/racket
   (require/typed (submod "." "..")
                  [config-refresh! (-> Void)]
-                 [read-config (-> Symbol (U String (Listof String) Number Boolean Path))]
+                 [read-config (-> Symbol (U String (Listof String) Number Boolean Path-String))]
                  [SEASHELL_VERSION String]
                  [SEASHELL_BRANCH String]
                  [SEASHELL_COMMIT String]
@@ -289,7 +298,8 @@
   (: read-config-string (-> Symbol String))
   (define (read-config-string symbol)
     (define result (read-config symbol))
-    (cast result String))
+    (cond [(path? result) (some-system-path->string result)]
+          [else (cast result String)]))
   (: read-config-strings (-> Symbol (Listof String)))
   (define (read-config-strings symbol)
     (define result (read-config symbol))
@@ -310,12 +320,12 @@
   (define (read-config-boolean symbol)
     (define result (read-config symbol))
     (cast result Boolean))
-  (: read-config-path (-> Symbol Path))
+  (: read-config-path (-> Symbol Path-String))
   (define (read-config-path symbol)
     (define result (read-config symbol))
-    (cast result Path))
-  (: read-config-optional-path (-> Symbol (U Path False)))
+    (cast result Path-String))
+  (: read-config-optional-path (-> Symbol (U Path-String False)))
   (define (read-config-optional-path symbol)
     (define result (read-config symbol))
-    (cast result (U Path False)))
+    (cast result (U Path-String False)))
   )

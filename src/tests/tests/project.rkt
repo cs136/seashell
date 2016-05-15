@@ -31,7 +31,7 @@ HERE
     (test-case "Create a Project"
       (new-project "foo")
       (check-pred is-project? "foo"))
-    
+
     (test-case "Lock a project"
       (sleep 2) ;; make sure we have enough delay to make sure timestamps
                 ;; will be updated correctly.
@@ -41,7 +41,7 @@ HERE
       (define new-timestamp (file-or-directory-modify-seconds
                              (build-project-path "foo")))
       (check < current-timestamp new-timestamp))
-    
+
     (test-case "Lock a locked project"
       (sleep 2) ;; make sure we have enough delay to make sure timestamps
                 ;; will be updated correctly.
@@ -72,7 +72,7 @@ HERE
     (test-case "Run a Project"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '() #f))
+      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
@@ -106,7 +106,7 @@ HERE
     (test-case "Get a Compilation Error"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '()))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed"))
 
@@ -128,7 +128,7 @@ HERE
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))
-    
+
     (test-case "Read from nonexistent project settings"
       (new-project "test-project")
       (check-false (read-project-settings "test-project")))
@@ -162,6 +162,33 @@ HERE
     (test-case "Fetch template (from file)"
       (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file") "default/main.c"))))
+
+    (test-case "Test Racket files (from template)"
+      (new-project-from "test-racket" (format "~a/src/tests/test-template.zip" SEASHELL_SOURCE_PATH))
+      (define-values (success hsh) (compile-and-run-project "test-racket" "Test/Test.rkt" '("Test")))
+      (check-true success)
+      (for ([pid (hash-ref hsh 'pids)]
+            [exp-result '("passed")])
+        (sync (program-wait-evt pid))
+        (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
+
+    (test-case "Test Marmoset Racket Files (from template)"
+      (new-project-from "test-marmoset-racket" (format "~a/src/tests/test-marmoset-racket.zip" SEASHELL_SOURCE_PATH))
+      (define-values (success hsh) (compile-and-run-project (build-project-path "test-marmoset-racket") "Test.rkt" '("Test") #t 'flat))
+      (check-true success)
+      (for ([pid (hash-ref hsh 'pids)]
+            [exp-result '("passed")])
+        (sync (program-wait-evt pid))
+        (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
+
+    (test-case "Test Marmoset Racket Files (from runner/CLI)"
+      (parameterize ([current-directory (format "~a/src/tests/marmoset-racket-test-runner" SEASHELL_SOURCE_PATH)])
+        (define-values (success hsh) (compile-and-run-project "." "Test.rkt" '("Test") #t 'current-directory))
+        (check-true success)
+        (for ([pid (hash-ref hsh 'pids)]
+              [exp-result '("passed")])
+          (sync (program-wait-evt pid))
+          (check-equal? exp-result (third (deserialize (read (program-stdout pid))))))))
 
     (test-case "Test template does not overwrite existing project."
       (check-exn exn:fail? (thunk (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH)))))

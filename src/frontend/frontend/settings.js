@@ -28,11 +28,11 @@ angular.module('frontend-app')
           font : "Consolas",
           font_size  : 12,
           editor_mode  : "standard",
-          tab_width  : 2,
+          tab_width  : "2",
           use_space : true,
           force_narrow : false,
-          theme : "dark",
-          offline_mode : 1 /** Valid options: 0 - disabled, 1 - enabled, 2 - forced */
+          offline_mode : 1, /** Valid options: 0 - disabled, 1 - enabled, 2 - forced */
+          theme_style : "light"
         };
         self.notify = {};
         self.needToLoad = true;

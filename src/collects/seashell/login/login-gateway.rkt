@@ -105,8 +105,12 @@
   ;;  p - Password
   (: password-based-login/ajax (-> Any))
   (define (password-based-login/ajax)
-    ;; Set up the standard logger for password-based-login/ajax
-    ;; (Logs to stderr).
+    ;; Set up the standard logger for uw-login/redirect
+    ;; Write to the Seashell-CGI log file location.
+    (define login-logfile (read-config-optional-path 'seashell-login-logfile))
+    (when login-logfile
+      (current-error-port (open-output-file login-logfile #:exists 'append))
+      (file-stream-buffer-mode (current-error-port) 'none))
     (standard-logger-setup)
     (define bdgs (get-bindings))
 
@@ -187,7 +191,7 @@
   ;; UW-based login system + redirect.
   (define (uw-login/redirect)
     ;; Set up the standard logger for uw-login/redirect
-    ;; Write to the user's log file. 
+    ;; Write to the user's log file.
     (current-error-port (open-output-file (build-path (find-system-path 'home-dir) ".seashell-cgi.log") #:exists 'append))
     (file-stream-buffer-mode (current-error-port) 'none)
     (standard-logger-setup)
