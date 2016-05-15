@@ -584,7 +584,7 @@ angular.module('frontend-app')
         self.refreshRunner = function () {
           self.project.getFileToRun(self.question)
              .then(function (result) {
-                 self.runnerFile = (result !== "");
+                 self.runnerFile = result && (result !== "");
                  self.isFileToRun = (result === self.file);
              });
         };
