@@ -70,8 +70,14 @@
 ;;  function to deal with this, though.
 (: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files user-cflags user-ldflags resolve-sources objects)
-  (define sources (remove-duplicates (append* (map seashell-resolve-dependencies resolve-sources))))
+(define (seashell-compile-files user-cflags user-ldflags resolve-sources extra-objects)
+  (define raw (remove-duplicates (append* (cons extra-objects (map seashell-resolve-dependencies resolve-sources)))))
+  (define sources (filter
+                    (lambda ([file : Path])
+                      (equal? (filename-extension file) #"c")) raw))
+  (define objects (filter
+                    (lambda ([file : Path])
+                      (equal? (filename-extension file) #"o")) raw))
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
   (cond
