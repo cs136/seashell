@@ -1018,8 +1018,9 @@ void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preproces
 #else
   char *nfile = strdup(file.c_str());
 #endif
-  char *tok = strtok(nfile, "/");
-  do { vec.push_back(tok); } while( (tok = strtok(NULL, "/")) );
+  char *saveptr;
+  char *tok = strtok_r(nfile, "/", &saveptr);
+  do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
   
   preprocessor->question_dir = vec[vec.size()-2];
   preprocessor->main_file = vec[vec.size()-1];
