@@ -4,6 +4,7 @@
          seashell/backend/project
          seashell/backend/runner
          seashell/backend/files
+         seashell/compiler/place
          seashell/seashell-config)
 
 (define/provide-test-suite compiler-suite
@@ -13,18 +14,22 @@
       (new-project "foo1")
       (with-output-to-file (check-and-build-path (build-project-path "foo1") "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo1" "test.c" '() #f))
+      (define-values (success hsh) (compile-and-run-project "foo1" "test.c" '()))
       (check-true success)
       (define pid (hash-ref hsh 'pid))
       (sync (program-wait-evt pid))
       (check string=? (port->string (program-stdout pid)) "Hello.")
       (delete-project "foo1"))
 
+    (test-case "ok-shutdown-compiler"
+      (seashell-compile-place/shutdown)
+      (check-false (seashell-compile-place/alive?)))
+
     (test-case "fail-invalid-C"
       (new-project "foo2")
       (with-output-to-file (check-and-build-path (build-project-path "foo2") "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo2" "error.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo2" "error.c" '()))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed")
       (delete-project "foo2"))
@@ -39,7 +44,7 @@
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo4" "1.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo4" "1.c" '()))
       (check-false res)
       (delete-project "foo4"))
     
@@ -54,7 +59,7 @@ EOF
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo5" "1.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo5" "1.c" '()))
       (check-false res)
       (delete-project "foo5"))
     
@@ -67,7 +72,7 @@ EOF
   }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo6" "1.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo6" "1.c" '()))
       (check-false res)
       (delete-project "foo6"))
     
@@ -85,7 +90,7 @@ int main() {
     }
 EOF
       ) 'raw #f)
-      (define-values (res hsh) (compile-and-run-project "foo7" "1.c" '() #f))
+      (define-values (res hsh) (compile-and-run-project "foo7" "1.c" '()))
       (check-false res)
       (delete-project "foo7"))
 

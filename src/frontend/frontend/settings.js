@@ -28,10 +28,10 @@ angular.module('frontend-app')
           font : "Consolas",
           font_size  : 12,
           editor_mode  : "standard",
-          tab_width  : 2,
+          tab_width  : "2",
           use_space : true,
           force_narrow : false,
-          theme : "dark"
+          theme_style : "light"
         };
         self.notify = {};
         var nKey = 0;

@@ -153,6 +153,7 @@ angular.module('frontend-app')
         self.add_file = function () {
           newFileModal(self.project, 
                        self.question, 
+                       self.question_files,
                        self.common_files,
                        function () {
                            self.refresh();

@@ -52,6 +52,7 @@ angular.module('frontend-app')
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
         self.consoleOptions = {};
+        self.editorReadOnly = true; // We start out read only until contents are loaded.
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -59,7 +60,7 @@ angular.module('frontend-app')
          *  fine for now. */
         var cbC_key = ws.register_callback('connected', function () {
           if (self.editor)
-            self.editor.setOption("readOnly", false);
+            self.editor.setOption("readOnly", self.editorReadOnly);
         }, true);
         var cbF_key = ws.register_callback('failed', function () {
           if (self.editor)
@@ -263,12 +264,13 @@ angular.module('frontend-app')
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
+          self.editorReadOnly = !self.ready || self.isBinaryFile;
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
-            readOnly: !self.ready || self.isBinaryFile,
+            readOnly: self.editorReadOnly,
             mode: mime,
             theme: theme,
             tabSize: parseInt(settings.settings.tab_width),

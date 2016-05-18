@@ -266,7 +266,7 @@
        (check-signals loop)]))
   (void))
 
-;; (run-program binary directory lang test is-cli [test-folder #f])
+;; (run-program binary directory lang test [test-loc 'tree])
 ;;  Runs a program.
 ;;
 ;; Arguments:
@@ -277,22 +277,26 @@
 ;;               a string representing the name of a test to use in tests/.
 ;;               i.e. if test is "foo", input is from tests/foo.in, output is
 ;;               diffed against tests/foo.expect
-;;   is-cli    - if #t, assumes seashell was run from CLI; treats test as a
-;;               relative path, rather than searching for it in the project's
-;;               tests/ directory
-;;   test-folder - You can set this to the folder containing the *.in and *.expect
-;;                 files.
+;;   test-loc  - one of:
+;;                'current-directory - Look for the test in the current directory.
+;;                'flat - Look for the test in <directory>.
+;;                'tree - Look for the test in <directory>/<tests-subdirectory>.
+;;                Path-String - Look for the test in <test-loc>
+;;               By default it is 'tree.
 ;;
 ;; Returns:
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(: run-program (->* (Path-String Path-String (U 'C 'racket) (U False String) Boolean) ((U False Path-String)) Integer))
-(define (run-program binary directory lang test is-cli [test-folder #f])
-  (define test-path
-    (cond [test-folder test-folder]
-          [is-cli (build-path ".")]
-          [else (build-path directory (read-config-string 'tests-subdirectory))]))
+(: run-program (->* (Path-String Path-String (U 'C 'racket) (U False String))
+                    ((U Path-String 'current-directory 'flat 'tree)) Integer))
+(define (run-program binary directory lang test [test-loc 'tree])
+  (define test-path (cond
+                      [(eq? test-loc 'current-directory) (build-path ".")]
+                      [(eq? test-loc 'flat) (build-path directory)]
+                      [(eq? test-loc 'tree) (build-path directory (read-config-string 'tests-subdirectory))]
+                      [(path-string? test-loc) test-loc]
+                      [else (error "...unreachable.")]))
   (define run-custodian (make-custodian))
 
   (parameterize ([current-custodian run-custodian]
@@ -321,11 +325,11 @@
                   (putenv "ASAN_OPTIONS"
                           "allocator_may_return_null=1:detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"
                             detect_stack_use_after_return=1")
-                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (read-config-path 'llvm-symbolizer)))
+                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
                   (subprocess #f #f #f binary)]
                 ['racket (subprocess #f #f #f (read-config-path 'racket-interpreter)
                                      "-t"
-                                      (some-system-path->string (read-config-path 'seashell-racket-runtime-library))
+                                      (some-system-path->string (build-path (read-config-path 'seashell-racket-runtime-library)))
                                      "-u" binary)])))
 
               ;; Construct the I/O ports.
