@@ -545,11 +545,12 @@
            ;; In case students want to do (require "../qX/file.txt") from their common file
            (merge-directory/files (build-path temp-dir (read-config 'common-subdirectory))
                                   (build-path temp-dir question-name))]
-          [(directory-exists? project-common)
+          [else
            ;; Copy the files over from the question
            (merge-directory/files base (build-path temp-dir question-dir-name))
            ;; Copy all files in the common folder to the question folder
-           (merge-directory/files project-common (build-path temp-dir question-dir-name))])
+           (when (directory-exists? project-common)
+             (merge-directory/files project-common (build-path temp-dir question-dir-name)))])
     (values (build-path temp-dir) (build-path temp-dir question-dir-name)))
 
   (define-values (racket-temp-dir
