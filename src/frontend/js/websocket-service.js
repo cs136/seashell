@@ -297,8 +297,8 @@ angular.module('seashell-websocket', ['ngCookies'])
         return self._socket.newDirectory(name, dir_name, deferred);
       };
 
-      self.writeFile = function(name, file_name, file_content, deferred) {
-        return self._socket.writeFile(name, file_name, file_content, deferred);
+      self.writeFile = function(name, file_name, file_content, history, deferred) {
+        return self._socket.writeFile(name, file_name, file_content, history, deferred);
       };
 
       self.deleteFile = function(name, file_name, deferred) {

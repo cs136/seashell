@@ -59,13 +59,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
          */
-        function SeashellFile(project, name, is_dir, last_saved) {
+        function SeashellFile(project, name, is_dir, last_saved, history) {
           var self = this;
           self.name = name.split("/");
           self.project = project;
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
+					self.history = history;
         }
 
         /**
@@ -109,18 +110,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return $q.when(ws.readFile(self.project.name, self.fullname()))
             .then(function (conts) {
               return conts;
+							//self.history = conts.history;
+							//return conts.data;
             });
         };
 
         /**
-         * write(data)
+         * write(data, history)
          * Writes data to the file.
          *
          * @param {String} data - Data to write.
+				 * @param {String} history - the file's undoHistory 
+         *   (to be placed in a corresponding hidden <FILENAME>.history file)
          */
-        SeashellFile.prototype.write = function(data) {
+        SeashellFile.prototype.write = function(data, history) {
           var self = this;
-          return $q.when(ws.writeFile(self.project.name, self.fullname(), data));
+          return $q.when(ws.writeFile(self.project.name, self.fullname(), data, history));
         };
 
         /**
@@ -431,14 +436,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          *
          * Saves the file at the given location.
          */
-        SeashellProject.prototype.saveFile = function(question, folder, filename, data) {
+        SeashellProject.prototype.saveFile = function(question, folder, filename, data, history) {
           var self = this;
           var file = self.root.find(self._getPath(question, folder, filename));
           if(!file)
             return $q.reject("Cannot save nonexistant file");
           if(file.is_dir)
             return $q.reject("Cannot save a directory.");
-          return file.write(data);
+          return file.write(data, history);
         };
 
         /**

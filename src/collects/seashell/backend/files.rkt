@@ -136,18 +136,27 @@
   (void))
 
 ;; (read-file project file) -> bytes?
-;; Reads a file as a Racket bytestring.
+;; Reads a file and its undoHistory as Racket bytestrings.
 ;;
 ;; Arguments:
 ;;  project - project to read file from.
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;  Contents of the file as a bytestring.
+;;   (list contents undoHistory)
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (check-and-build-path (build-project-path project) file)
+  (-> (and/c project-name? is-project?) path-string? (list/c bytes? bytes?))
+  (define (get-history-path path) 
+		(define-values (base name _1) (split-path (simplify-path path)))
+    (define history-file (string->path (string-append "." (path->string name) ".history")))
+    (build-path base history-file))
+
+	(define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
+	(define undo-history-data (with-input-from-file (get-history-path (check-and-build-path (build-project-path project) file))
+                        port->bytes))
+	(list content-data undo-history-data))
+
 
 ;; (write-file project file contents) -> void?
 ;; Writes a file from a Racket bytestring.
@@ -156,12 +165,20 @@
 ;;  project - project.
 ;;  file - name of file to write.
 ;;  contents - contents of file.
-(define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes? void?)
+(define/contract (write-file project file contents history)
+	(-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
+  (define (get-history-path path)
+		(define-values (base name _1) (split-path (simplify-path path)))
+		(define history-file (string->path (string-append "." (path->string name) ".history")))
+		(build-path base history-file))
   (with-output-to-file (check-and-build-path (build-project-path project) file)
-                       (lambda () (write-bytes contents))
-                       #:exists 'must-truncate)
-											 (void))
+											 (lambda () (write-bytes contents))
+											 #:exists 'must-truncate)
+	(when history
+		(with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
+												 (lambda () (write history))
+												 #:exists 'replace))
+	(void))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.
