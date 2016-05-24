@@ -361,6 +361,7 @@ angular.module('frontend-app')
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
             self.editorOptions.vimMode = false;
           } else {
             self.editorOptions.keyMap = 'default';
@@ -587,7 +588,11 @@ angular.module('frontend-app')
           self.project.getFileToRun(self.question)
              .then(function (result) {
                  self.runnerFile = (result !== "");
-                 self.isFileToRun = (result === self.file);
+                 if(self.folder === "question") {
+                     self.isFileToRun = (result === (self.question + '/' + self.file));
+                 } else {
+                     self.isFileToRun = (result === (self.folder + '/' + self.file));
+                 }
              });
         };
         self.refreshRunner();

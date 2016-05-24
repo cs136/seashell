@@ -85,7 +85,7 @@ angular.module('frontend-app')
 
         /** Refreshes the controller [list of files, ...] */
         self.refresh = function () {
-          function groupfiles(lof) {
+          function groupfiles(lof,folder) {
             lof.sort();
             var groups = [];
             for(var i=0; i<lof.length; i++) {
@@ -95,11 +95,20 @@ angular.module('frontend-app')
                 groups[groups.length-1].push(lof[i+1]);
                 lof.splice(i+1, 1);
               }
+
+              // Determine if current_file should is runner
+              var runThisFile = false;
+              if(folder === 'common') {
+                runThisFile = (self.runnerFile === (folder + '/' + current_file));
+              } else if(folder === 'question') {
+                runThisFile = (self.runnerFile === (self.question + '/' + current_file));
+              } // the last case is folder == 'tests', but tests can never be runner file
+
               // wrap the list in an object with a boolean
               // isFileToRun is true if the file is the file to run
               groups[groups.length-1] = {
                 files: groups[groups.length-1],
-                isFileToRun: _.contains(groups[groups.length-1], self.runnerFile)
+                isFileToRun: runThisFile
               }; 
                 
             }
@@ -110,10 +119,9 @@ angular.module('frontend-app')
               .then(function (fileToRun) {
                 self.runnerFile = fileToRun;
                 var result = self.project.filesFor(self.question);
-                self.common_files = groupfiles(result.common);
-                self.question_files = groupfiles(result.question);
-                self.test_files = groupfiles(result.tests);
-      
+                self.common_files = groupfiles(result.common, 'common');
+                self.question_files = groupfiles(result.question, 'question');
+                self.test_files = groupfiles(result.tests, 'tests');
               })
               .catch(function () {
                 self.runnerFile = "";
@@ -145,6 +153,7 @@ angular.module('frontend-app')
         self.add_file = function () {
           newFileModal(self.project, 
                        self.question, 
+                       self.question_files,
                        self.common_files,
                        function () {
                            self.refresh();
