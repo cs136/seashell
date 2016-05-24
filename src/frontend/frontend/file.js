@@ -76,9 +76,6 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
-          //if(undefined===self.undoHistory[self.folder])
-          //  self.undoHistory[self.folder] = {};
-          //self.undoHistory[self.folder][self.file] = self.editor.getHistory();
           ws.unregister_callback(cbC_key);
           ws.unregister_callback(cbF_key);
           ws.unregister_callback(cbD_key);
@@ -191,10 +188,6 @@ angular.module('frontend-app')
               }, 2000);
               self.console.errors = [];
             } else {
-             //self.editor.clearHistory();
-             // get history here
-						 // if(self.undoHistory[self.folder] &&
-             //   self.undoHistory[self.folder][self.file]) {
              self.editor.setHistory(self.undoHistory);
              // }
               if(self.scrollInfo[self.folder] &&
@@ -567,8 +560,8 @@ angular.module('frontend-app')
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
 						if (conts.history.slice(1).length > 1) {
 							self.undoHistory = JSON.parse(JSON.parse(conts.history.slice(1)));
-							console.log(self.undoHistory);
-							console.log("history type: " + typeof self.undoHistory);
+							//console.log(self.undoHistory);
+							//console.log("history type: " + typeof self.undoHistory);
 							self.editor.setHistory(self.undoHistory);
 						} else {
 							console.log("warning: could not read history");
