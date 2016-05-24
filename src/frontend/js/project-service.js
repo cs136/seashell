@@ -110,8 +110,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           return $q.when(ws.readFile(self.project.name, self.fullname()))
             .then(function (conts) {
               return conts;
-							//self.history = conts.history;
-							//return conts.data;
             });
         };
 

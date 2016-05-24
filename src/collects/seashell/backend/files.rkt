@@ -146,15 +146,12 @@
 ;;   (list contents undoHistory)
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? (list/c bytes? bytes?))
-  (define (get-history-path path) 
-		(define-values (base name _1) (split-path (simplify-path path)))
-    (define history-file (string->path (string-append "." (path->string name) ".history")))
-    (build-path base history-file))
-
 	(define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
-	(define undo-history-data (with-input-from-file (get-history-path (check-and-build-path (build-project-path project) file))
-                        port->bytes))
+	(define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
+	(define undo-history-data (if (file-exists? history-path)
+															  (with-input-from-file history-path port->bytes)
+																#""))
 	(list content-data undo-history-data))
 
 
@@ -167,10 +164,6 @@
 ;;  contents - contents of file.
 (define/contract (write-file project file contents history)
 	(-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
-  (define (get-history-path path)
-		(define-values (base name _1) (split-path (simplify-path path)))
-		(define history-file (string->path (string-append "." (path->string name) ".history")))
-		(build-path base history-file))
   (with-output-to-file (check-and-build-path (build-project-path project) file)
 											 (lambda () (write-bytes contents))
 											 #:exists 'must-truncate)
@@ -179,6 +172,19 @@
 												 (lambda () (write history))
 												 #:exists 'replace))
 	(void))
+
+;; (get-history-path path) -> path
+;; Given a file's path, returns the path to that file's corresponding .history file
+;;
+;; Arguments:
+;;  path - path to file
+;;
+;; Returns:
+;;  path to file's undoHistory (stored as json string)
+(define (get-history-path path)
+	(define-values (base name _1) (split-path (simplify-path path)))
+	(define history-file (string->path (string-append "." (path->string name) ".history")))
+	(build-path base history-file))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.

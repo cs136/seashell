@@ -191,10 +191,11 @@ angular.module('frontend-app')
               }, 2000);
               self.console.errors = [];
             } else {
-             // self.editor.clearHistory();
-             // if(self.undoHistory[self.folder] &&
+             //self.editor.clearHistory();
+             // get history here
+						 // if(self.undoHistory[self.folder] &&
              //   self.undoHistory[self.folder][self.file]) {
-             //   self.editor.setHistory(self.undoHistory[self.folder][self.file]);
+             self.editor.setHistory(self.undoHistory);
              // }
               if(self.scrollInfo[self.folder] &&
                 self.scrollInfo[self.folder][self.file]) {
@@ -564,12 +565,10 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
-						//console.log(conts.history.slice(1));
-						//console.log(JSON.parse(conts.history.slice(1)));
-						self.undoHistory = JSON.parse(JSON.parse(conts.history.slice(1)));
-						console.log(self.undoHistory);
-						console.log(typeof self.undoHistory);
-						if (self.undoHistory){
+						if (conts.history.slice(1).length > 1) {
+							self.undoHistory = JSON.parse(JSON.parse(conts.history.slice(1)));
+							console.log(self.undoHistory);
+							console.log("history type: " + typeof self.undoHistory);
 							self.editor.setHistory(self.undoHistory);
 						} else {
 							console.log("warning: could not read history");
