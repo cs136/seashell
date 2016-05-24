@@ -37,9 +37,9 @@
   ;; TODO: Grab global lock to protect against _all_ operations.
   ;; Do not want other operations modifying state that the offline engine needs to work with.
 
-  (match-define (hash-table ('projects #{projects : (Listof String)})
-                            ('files #{files : (Listof JSExpr)}) 
-                            ('changes #{changes : (Listof JSExpr)}))
+  (match-define (hash-table ('projects #{their-projects : (Listof String)})
+                            ('files #{their-files : (Listof JSExpr)}) 
+                            ('changes #{their-changes : (Listof JSExpr)}))
     (cast changeset (HashTable Symbol JSExpr)))
   ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
   ;; before looking at projects/files.
@@ -76,9 +76,19 @@
                  (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
              conflicts)]))
       '()
-      changes))
+      their-changes))
   ;; Collect list of new projects.
-  ;; Collect list of new files.
-  ;; Write list of conflicts.
-  ;; Add list of conflicts to changes to send back to user.
+  (define our-projects (list-projects))
+  (define new-projects (remove* our-projects their-projects))
+  ;; Resolve conflicts (add .conflict for each file)
+  ;; Collect list of changes.
+  (define our-files
+    (foldl
+      (lambda ([project : String] [files : (Listof JSExpr)])
+        )
+      '()
+      our-projects))
+  (define new-files (remove* our-files their-files))
+  (define conflict-files #f)
+  ;; TODO settings?
   '())
