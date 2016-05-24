@@ -28,8 +28,7 @@
          lock-project
          force-lock-project
          unlock-project
-         exn:project?
-         exn:project
+         (struct-out exn:project)
          check-path
          init-projects
          check-and-build-path
