@@ -449,8 +449,7 @@
         ('type "readFile")
         ('project project)
         ('file file))
-			 (define contents (car (read-file project file)))
-			 (define contents_history (car (cdr (read-file project file))))
+			 (define-values (contents contents_history) (read-file project file))
 				`#hash((id . ,id)
               (success . #t)
               (result . 

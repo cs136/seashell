@@ -143,16 +143,16 @@
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;   (list contents undoHistory)
+;;   (values contents undoHistory)
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? (list/c bytes? bytes?))
+  (-> (and/c project-name? is-project?) path-string? (values bytes? bytes?))
   (define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
   (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
   (define undo-history-data (if (file-exists? history-path)
                                 (with-input-from-file history-path port->bytes)
                                 #""))
-  (list content-data undo-history-data))
+  (values content-data undo-history-data))
 
 
 ;; (write-file project file contents) -> void?
