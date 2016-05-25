@@ -255,8 +255,7 @@
     (write-string contents (program-stdin pid))
     `#hash((id . ,id)
            (pid . ,pid)
-           (iucces
-						 . #t)
+           (success . #t)
            (result . #t)))
 
   ;; (dispatch-authenticated message)

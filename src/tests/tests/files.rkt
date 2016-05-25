@@ -26,11 +26,13 @@
     
     (test-case "List files"
       (new-file "test" "good.c" #"" 'raw #f)
+      (new-file "test" ".hidden.c" #"" 'raw #f)
       (check-match (list-files "test") (list-no-order
         (list "default" #t _)
         (list "default/main.c" #f _)
         (list "good.c" #f _)
-        (list "bad.c" #f _))))
+        (list "bad.c" #f _)
+        (list ".hidden.c" #f))))
     
     (test-case "Create a file, with a data URL"
       (new-file "test" "foo1.c" #"data:,A brief note" 'url #f)
@@ -60,6 +62,12 @@
     (test-case "Create a file, with a data URL and windows newlines"
       (new-file "test" "foo7.c" #"data:,apple juice\r\n" 'url #t)
       (check-equal? (read-file "test" "foo7.c") #"apple juice\n"))
+
+    (test-case "Create and save a file, ensuring that the history exists"
+      (new-file "test" "foo8.c" #"" 'raw #f)
+      (write-file "test" "foo8.c" #"" #"sample history\n")
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo8.c.history"))
+      (check-equal? (read-file "test" ".foo8.c.history") #"sample history\n"))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

@@ -146,13 +146,13 @@
 ;;   (list contents undoHistory)
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? (list/c bytes? bytes?))
-	(define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
+  (define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
-	(define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
-	(define undo-history-data (if (file-exists? history-path)
-															  (with-input-from-file history-path port->bytes)
-																#""))
-	(list content-data undo-history-data))
+  (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
+  (define undo-history-data (if (file-exists? history-path)
+                                (with-input-from-file history-path port->bytes)
+                                #""))
+  (list content-data undo-history-data))
 
 
 ;; (write-file project file contents) -> void?
@@ -163,15 +163,15 @@
 ;;  file - name of file to write.
 ;;  contents - contents of file.
 (define/contract (write-file project file contents history)
-	(-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
+  (-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
   (with-output-to-file (check-and-build-path (build-project-path project) file)
-											 (lambda () (write-bytes contents))
-											 #:exists 'must-truncate)
-	(when history
-		(with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-												 (lambda () (write history))
-												 #:exists 'replace))
-	(void))
+                       (lambda () (write-bytes contents))
+                       #:exists 'must-truncate)
+  (when history
+    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
+                         (lambda () (write history))
+                         #:exists 'replace))
+  (void))
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
@@ -182,9 +182,9 @@
 ;; Returns:
 ;;  path to file's undoHistory (stored as json string)
 (define (get-history-path path)
-	(define-values (base name _1) (split-path (simplify-path path)))
-	(define history-file (string->path (string-append "." (path->string name) ".history")))
-	(build-path base history-file))
+  (define-values (base name _1) (split-path (simplify-path path)))
+  (define history-file (string->path (string-append "." (path->string name) ".history")))
+  (build-path base history-file))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.
@@ -210,7 +210,7 @@
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
       [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
-			 ; directory-hidden should work for files as well (can rename if so)
+       ; directory-hidden should work for files as well (can rename if so)
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
