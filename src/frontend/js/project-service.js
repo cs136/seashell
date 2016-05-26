@@ -686,7 +686,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.currentMarmosetProject = function(question) {
           var self = this;
           // first test if the project/question is an assigment 
-          if(/^a[0-9]+$/i.test(self.name) && /^q[0-9]+[a-z]*$/i.test(question)) {
+          if(/^a[0-9]+$/i.test(self.name) && /^(a\d)?(q|p)[0-9]+[a-z]*$/i.test(question)) {
             var withoutA = self.name.substr(1);    // eg. "A5" -> "5"
             var withoutQ = question.substr(1);     // eg. "q3b" -> "3b"
 
