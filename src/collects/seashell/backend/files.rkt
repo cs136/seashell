@@ -169,7 +169,7 @@
                        #:exists 'must-truncate)
   (when history
     (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-                         (lambda () (write history))
+                         (lambda () (write-bytes history))
                          #:exists 'replace))
   (void))
 
