@@ -50,6 +50,8 @@ angular.module('seashell-local-files', [])
       // Returns the offline changelog as a dictionary (object)
       //   of projects (keys) to paths (values), grouped by project. 
       // Eg. {"A1": ["foo/bar/baz.txt", "foo/bar/bar.txt"]} 
+      // NOTE: this function is unused, left here from Charlie's
+      //   original code for this
       self.getOfflineChangelog = function () {
         var self = this;
         var result = _.chain(self.offlineChangelog)
@@ -63,6 +65,32 @@ angular.module('seashell-local-files', [])
           result[project].push(self.offlineDeletedFiles[key]);
         }
         return result;
+      };
+
+      /*
+        Returns a list of changes since last sync to be sent to the backend
+        on reconnection. Returns array of entries of the form
+          ["deleteFile"/"editFile", {project: ..., path: ..., contents: ...,
+            checksum: ...}]
+      */
+      self.getOfflineChanges = function() {
+        var proms = [];
+        // edited files
+        for(var key in self.offlineChangelog) {
+          var oc = self.offlineChangelog[key];
+          proms.push($q.when(self.readFile(oc.getProject(), oc.getPath()))
+            .then(function(contents) {
+              return ["editFile", {project: oc.getProject(), path:oc.getPath(),
+                                   contents: contents.contents, checksum: contents.offline_checksum}];
+            }));
+        }
+
+        // deleted files
+        for(var key in self.offlineDeletedFiles) {
+          var oc = self.offlineDeletedFiles[key];
+          proms.push($q.when(["deleteFile", {project: oc.getProject(), path:oc.getPath()}]));
+        }
+        return $q.all(proms);
       };
 
       // Add a change to the offline changelog.

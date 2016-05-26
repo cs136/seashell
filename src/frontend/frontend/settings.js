@@ -31,7 +31,7 @@ angular.module('frontend-app')
           tab_width  : "2",
           use_space : true,
           force_narrow : false,
-          offline_mode : 1, /** Valid options: 0 - disabled, 1 - enabled, 2 - forced */
+          offline_mode : ws.offline_mode,
           theme_style : "light"
         };
         self.notify = {};
@@ -40,9 +40,6 @@ angular.module('frontend-app')
 
         function notifyChanges () {
           _.forEach(self.notify, function (fn) {fn();});
-          // Notify of offline/online changes 
-          if (self.settings.offline_mode === "2")
-          ws.forceOfflineMode(self.settings.offline_mode === "2"); 
         }
 
         /** Adds and removes watchers on the settings service. */
@@ -62,9 +59,11 @@ angular.module('frontend-app')
           }
           return $q.when(ws.getSettings()).then(function (settings) {
             self.needToLoad = false;
-            if (settings)
+            if (settings) {
               for (var k in settings)
                 self.settings[k] = settings[k];
+              self.settings['offline_mode'] = ws.offline_mode;
+            }
             // Backwards compatibility.
             if (typeof self.settings.font_size === 'string') {
               self.settings.font_size = parseInt(self.settings.font_size);
@@ -77,6 +76,7 @@ angular.module('frontend-app')
 
         self.save = function () {
           self.needToLoad = true;
+          ws.setOfflineModeSetting(self.settings['offline_mode']);
           return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 

@@ -28,11 +28,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 
+  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles',
     function($q, $interval, $cookies, $timeout, localfiles) {
       "use strict";
       var self = this;
-
+      var SEASHELL_OFFLINE_MODE_COOKIE = 'seashell-offline-mode-cookie';
        
       self._socket = null;
       Object.defineProperty(self, 'socket', {
@@ -40,10 +40,29 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           throw new ReferenceError("You forgot to replace something.");
         }
       });
-
+      
+      self.syncing = false;
       self.connected = false;
       self.failed = false;
       self.forceOffline = false;
+
+      // load the offline mode setting, which is stored separately
+      //  from other Seashell settings as a cookie.
+      self.offline_mode = $cookies.get(SEASHELL_OFFLINE_MODE_COOKIE);
+      if(self.offline_mode === undefined) {
+        self.offline_mode = 0;
+        $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, 0);
+      }
+      else self.offline_mode = parseInt(self.offline_mode);
+
+      localfiles.init().then(function() {
+        self.register_callback("syncing", function() {
+          if(self.offlineEnabled()) {
+            return self.syncAll();
+          }
+          return $q.when(true);
+        }, true);
+      });
 
       var timeout_count = 0;
       var timeout_interval = null;
@@ -211,21 +230,44 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             self._socket.requests[-3].callback = self.io_cb;
             self._socket.requests[-4].callback = self.test_cb;
             console.log("Websocket disconnection monitor set up properly.");
-            /** Run the callbacks. */
-            _.each(_.map(_.filter(callbacks, function(x) {
-                  return x.type === 'connected';
-                }),
-                function(x) {
-                  return x.cb;
-                }),
-              function(x) {
-                x();
-              });
+            /** Run the callbacks. First the syncing ones, then the
+              connected ones when these are resolved. */
+            $q.all(_.each(_.map(_.filter(callbacks, function(x) {
+                return x.type === 'syncing';
+              }), function(x) {
+                return x.cb;
+              }), function(x) { x(); }))
+              .then(function() {
+                _.each(_.map(_.filter(callbacks, function(x) {
+                      return x.type === 'connected';
+                    }),
+                    function(x) {
+                      return x.cb;
+                    }),
+                  function(x) {
+                    x();
+                  });
+            });
           });
       };
 
       self.isConnected = function() {
         return self.connected;
+      };
+
+      self.isOffline = function() {
+        return self.offline_mode === 2 || (!self.connected && self.offline_mode === 1);
+      };
+
+      self.offlineEnabled = function() {
+        return self.offline_mode === 1 || self.offline_mode === 2;
+      };
+
+      self.setOfflineModeSetting = function(setting) {
+        if(setting === 0 || setting === 1 || setting === 2) {
+          self.offline_mode = setting;
+          $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, setting);
+        }
       };
 
       /** The following functions are wrappers around sendMessage.
@@ -263,6 +305,37 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         } else {
           return $q.resolve(false); // noop 
         }
+      };
+
+      /**
+       * Sync everything, to be called when we first connect to the websocket.
+       * @returns Angular deferred that resolves to true when the sync is done.
+       */
+      self.syncAll = function() {
+        // I don't like the way this works, it'll be very slow.
+        //  I am still in favour of a lazy sync process
+        $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
+          .then(function(res) {
+            var projects = _.map(res[0], function(p) { return p[0]; });
+            $q.all(_.map(projects, localfiles.listProject))
+              .then(function(trees) {
+                var files = [];
+                for(var i=0; i<res[0].length; i++) {
+                  console.log(res[0][i][0], trees[i]);
+                  if(trees[i]) {
+                    // TODO will have to map this depending on what we get back
+                    files.push({project: res[0][i][0],
+                      path: trees[i]});
+                  }
+                }
+                // should have everything now, just send it to the backend
+                return $q.when(self._socket.sync({
+                  projects: projects,
+                  files: files,
+                  changes: res[1]
+                }));
+              });
+          });
       };
 
       self.getProjects = function(deferred) {
