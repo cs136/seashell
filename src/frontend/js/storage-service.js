@@ -359,6 +359,25 @@ angular.module('seashell-local-files', [])
         return $q.when(self.store.setItem("//projects", self.projects));
       };
 
+      self.deleteProject = function(name) {
+        console.log("[localfiles] deleteProject", name);
+        $q.when(self.store.getItem(sprintf("//projects/%s", name)))
+          .then(function(files) {
+            var proms = [];
+            _.each(_.filter(files, function(f) {
+              return !f[1];
+            }), function(f) {
+              proms.push(self.deleteFile(name, f[0]));
+            });
+            proms.push($q.when(self.store.removeItem(sprintf("//projects/%s", name))));
+            self.projects = _.filter(self.projects, function(p) {
+              return p !== name;
+            });
+            proms.push($q.when(self.store.setItem("//projects", self.projects)));
+            return $q.all(proms);
+          });
+      };
+
       self.getProjects = function() {
         console.log("[localfiles] getProjects", self.projects);
         return $q.when(self.projects);
