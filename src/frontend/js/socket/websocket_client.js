@@ -363,22 +363,22 @@ SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
 
 SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, file_history, deferred) {
   if (file_history) {
-		return this.sendMessage({
-			type : "writeFile",
-			project : name,
-			file : file_name,
-			contents : file_content,
-			history: file_history},
-			deferred);
-	} else {
-		return this.sendMessage({
-			type : "writeFile",
-			project : name,
-			file : file_name,
-			contents : file_content,
-			history: false},
-			deferred);
-	}
+    return this.sendMessage({
+      type : "writeFile",
+      project : name,
+      file : file_name,
+      contents : file_content,
+      history: file_history},
+      deferred);
+  } else {
+    return this.sendMessage({
+      type : "writeFile",
+      project : name,
+      file : file_name,
+      contents : file_content,
+      history: false},
+      deferred);
+  }
 };
 
 SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
