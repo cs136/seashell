@@ -87,7 +87,7 @@
      #`(let
            ([T? (make-predicate T)])
          (if (T? x) x
-             (raise-json-error "Expected ~a, got ~a." '#,(syntax->datum #'T) x))))))
+             (raise-json-error "Expected ~a, got ~s." '#,(syntax->datum #'T) x))))))
 
 ;; (->json T)
 ;; Returns a helper function for converting an object of type T to a JSExpr
@@ -96,11 +96,12 @@
 ;; Returns:
 ;;  (-> T JSExpr)
 (define-syntax (->json T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option)
     [(_ Integer) #'(lambda ([x : Integer]) : JSExpr x)]
     [(_ Boolean) #'(lambda ([x : Boolean]) : JSExpr x)]
     [(_ String) #'(lambda ([x : String]) : JSExpr x)]
     [(_ Inexact-Real) #'(lambda ([x : Inexact-Real]) : JSExpr x)]
+    [(_ (Option T)) #'(lambda ([x : (Option T)]) : JSExpr x)]
     [(_ (List T ...))
      (with-syntax
          ([(v ...) (generate-temporaries #'(T ...))])
@@ -125,7 +126,7 @@
 ;; Returns:
 ;;  (-> JSExpr T)
 (define-syntax (json-> T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option)
     [(_ Integer) #`(lambda ([x : JSExpr]) : Integer
                      (check-type Integer x))]
     [(_ Boolean) #`(lambda ([x : JSExpr]) : Boolean
@@ -134,6 +135,9 @@
                     (check-type String x))]
     [(_ Inexact-Real) #`(lambda ([x : JSExpr]) : Inexact-Real
                           (check-type Inexact-Real x))]
+    [(_ (Option T))
+     `#(lambda ([x : JSExpr]) : (Option T)
+         (check-type (Option T) x))]
     [(_ (List Ts ...))
      #`(lambda ([x : JSExpr]) : (List Ts ...)
          (check-type (List Ts ...) x))]
@@ -142,7 +146,7 @@
          (map (json-> T1)
               (cond
                 [(list? l) l]
-                [else (raise-json-error "Expected a list, got ~a." l)])))]
+                [else (raise-json-error "Expected ~a, got ~s." '#,(syntax->datum #'T) l)])))]
     [(_ T) (+-> 'json #'T)]))
 
 ;; (make->json name fields types [parent #f])
@@ -159,14 +163,23 @@
         : (HashTable Symbol JSExpr)
         (let
             ([assocs : (Listof (Pairof Symbol JSExpr))
-                     (list
-                      #,@(map
-                          (lambda (field type)
-                            #`(cons '#,field
-                                    ((->json #,type)
-                                     (#,(format-id name "~a-~a" name field) obj))))
-                          (syntax->list fields)
-                          (syntax->list types)))])
+                     (foldl
+                      (lambda ([assoc : (U False (Pairof Symbol JSExpr))]
+                               [assocs : (Listof (Pairof Symbol JSExpr))])
+                        (if assoc (cons assoc assocs) assocs))
+                      '()
+                      (list
+                       #,@(map
+                           (lambda (field type)
+                             #`(let ([field-value
+                                      ((->json #,type)
+                                       (#,(format-id name "~a-~a" name field) obj))])
+                                 #,(syntax-case type (Option)
+                                     [(Option T)
+                                      #`(if field-value (cons '#,field field-value) #f)]
+                                     [else #`(cons '#,field field-value)])))
+                           (syntax->list fields)
+                           (syntax->list types))))])
           #,(if parent
                 #`(let ([parent : (HashTable Symbol JSExpr)
                                 (#,(+-> parent 'json) obj)])
@@ -190,15 +203,19 @@
             #,@(map
                 (lambda (field type opt?)
                   (define opt-thunk
-                    (cond
-                      [(null? opt?)
-                       #`(lambda () (raise-json-error "Missing field ~a in ~a." '#,field obj))]
-                      [(null? (cdr opt?))
-                       #`(lambda () : #,type #,(car opt?))]
-                      [else
+                    (syntax-case opt? ()
+                      [(opt)
+                       #`(lambda () : #,type opt)]
+                      [(opt _ ...)
                        (raise-syntax-error #f
                                            "Expected only one expression for default value for field."
-                                           name field)]))
+                                           name field)]
+                      [(_ ...)
+                       (syntax-case type (Option)
+                         [(Option T)
+                          #`(lambda () #f)]
+                         [else
+                          #`(lambda () (raise-json-error "json->~a: Missing field ~a in ~s." '#,(syntax->datum name) '#,field obj))])]))
                   #`(cond
                       [(hash-has-key? obj '#,field)
                        (define field-value (hash-ref obj '#,field))
@@ -207,9 +224,9 @@
                        (#,opt-thunk)]))
                 (syntax->list fields)
                 (syntax->list types)
-                (map syntax->list (syntax->list opts?))))]
+                (syntax->list opts?)))]
           [else
-           (raise-json-error "Expected object, got ~a." obj)]))))
+           (raise-json-error "json:->~a: Expected object, got ~s." '#,(syntax->datum name) obj)]))))
 
 ;; (json-struct name ([field : type opt?] ...) options ...)
 ;; (json-struct name parent ([field : type opt?] ...) options ...)
@@ -258,3 +275,9 @@
 ;((->json String) "args")
 ;((json-> (Listof Integer)) (list 10 15 20))
 ;(json->bar (bar->json (bar 6 (list "b" "c") 12)))
+;(json->foo #{'#hash((y . ("a" "b"))) :: JSExpr})
+;(json-struct baz ([z : (Option Integer)]) #:transparent)
+;(baz->json (baz #f))
+;(json->baz #{'#hash() :: JSExpr})
+;(json-struct foobar ([q : Integer]))
+;(json->foobar #{'#hash() :: JSExpr})
