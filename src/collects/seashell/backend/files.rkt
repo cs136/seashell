@@ -31,7 +31,8 @@
          file/unzip
          openssl/md5)
 
-(provide exn:project:file
+(provide (struct-out exn:project:file)
+         (struct-out exn:project:file:checksum)
          new-file
          new-directory
          remove-file
@@ -45,6 +46,7 @@
          write-settings)
 
 (struct exn:project:file exn:project ())
+(struct exn:project:file:checksum exn:project:file ())
 
 ;; (new-file project file) -> void?
 ;; Creates a new file inside a project.
@@ -65,7 +67,7 @@
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project
+         (raise (exn:project:file
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (define data
@@ -99,7 +101,7 @@
   (with-handlers
     [(exn:fail:filesystem?
       (lambda (exn)
-        (raise (exn:project
+        (raise (exn:project:file
           (format "Directory already exists, or some other filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
     (make-directory*
@@ -120,7 +122,7 @@
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project
+         (raise (exn:project:file
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
@@ -135,7 +137,7 @@
   (with-handlers
     [(exn:fail:filesystem?
       (lambda (exn)
-        (raise (exn:project
+        (raise (exn:project:file
           (format "Filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
     (logf 'info "Deleting directory ~a!" (some-system-path->string (check-and-build-path (build-project-path project) dir)))
@@ -178,14 +180,16 @@
                                  (when tag
                                    (define expected-tag (call-with-input-file file-to-write md5))
                                    (unless (equal? tag expected-tag)
-                                     (raise (exn:project (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
-                                                         (current-continuation-marks)))))
+                                     (raise (exn:project:file:checksum
+                                              (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                      (current-continuation-marks)))))
                                  (with-output-to-file (check-and-build-path (build-project-path project) file)
                                                       (lambda () (write-bytes contents))
                                                       #:exists 'must-truncate))
                                (lambda ()
-                                 (raise (exn:project (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
-                                                     (current-continuation-marks)))))
+                                 (raise (exn:project:file
+                                          (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                  (current-continuation-marks)))))
   (call-with-input-bytes contents md5))
 
 ;; (list-files project)
