@@ -55,7 +55,7 @@
          seashell/compiler
          seashell/backend/runner
          seashell/backend/template
-         seashell/utils
+         seashell/utils/misc
          net/url
          net/head
          json
