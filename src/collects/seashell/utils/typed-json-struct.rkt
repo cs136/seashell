@@ -137,7 +137,7 @@
                           (check-type Inexact-Real x))]
     [(_ (Option T))
      `#(lambda ([x : JSExpr]) : (Option T)
-         (check-type (Option T) x))]
+         (if x ((->json T) x) x))]
     [(_ (List Ts ...))
      #`(lambda ([x : JSExpr]) : (List Ts ...)
          (check-type (List Ts ...) x))]
