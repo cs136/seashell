@@ -295,14 +295,22 @@
   ;; Collect list of new/edited files (in the backend).
   ;; NOTE: The checksum matters for this calculation.
   (define backend-changed-files (remove* our-files their-files))
+  ;; NOTE: Binary files are ignored when sending back list of new files.
+  ;; TODO: Properly handle binary files (as base64 data: URLs).
   (define our-edit-changes
-    (map (lambda ([f : off:file])
-           (define-values (contents checksum)
-             (read-file (off:file-project f) (off:file-file f)))
-           ;; TODO: Handle binary files here...
-           (off:change "editFile" f (bytes->string/utf-8 contents)
-                       (if (set-member? backend-new-files (strip-checksum f)) #f checksum)))
-         backend-changed-files))
+    (foldl
+      (lambda ([change : (U False off:change)]
+               [changes : (Listof off:change)])
+        (if change (cons change changes) changes))
+      '()
+      (map (lambda ([f : off:file]) : (U False off:change)
+             (define-values (contents checksum)
+               (read-file (off:file-project f) (off:file-file f)))
+             (with-handlers
+               ([exn:fail? (lambda ([exn : exn]) #f)])
+               (off:change "editFile" f (bytes->string/utf-8 contents)
+                           (if (set-member? backend-new-files (strip-checksum f)) #f checksum))))
+           backend-changed-files)))
   ;; Generate changes to send back.
   (off:response->json (off:response
                         conflict-information
