@@ -28,11 +28,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 
+  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles',
     function($q, $interval, $cookies, $timeout, localfiles) {
       "use strict";
       var self = this;
-
+      var SEASHELL_OFFLINE_MODE_COOKIE = 'seashell-offline-mode-cookie';
        
       self._socket = null;
       Object.defineProperty(self, 'socket', {
@@ -40,10 +40,33 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           throw new ReferenceError("You forgot to replace something.");
         }
       });
-
+      
+      self.syncing = false;
       self.connected = false;
       self.failed = false;
       self.forceOffline = false;
+
+      // load the offline mode setting, which is stored separately
+      //  from other Seashell settings as a cookie.
+      self.offline_mode = $cookies.get(SEASHELL_OFFLINE_MODE_COOKIE);
+      if(self.offline_mode === undefined) {
+        self.offline_mode = 0;
+        $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, 0);
+      }
+      else self.offline_mode = parseInt(self.offline_mode);
+
+      // these will hold workers for offline mode
+      self.compiler = null;
+      self.runner = null;
+
+      localfiles.init().then(function() {
+        self.register_callback("syncing", function() {
+          if(self.offlineEnabled()) {
+            return self.syncAll();
+          }
+          return $q.when(true);
+        }, true);
+      });
 
       var timeout_count = 0;
       var timeout_interval = null;
@@ -211,21 +234,44 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             self._socket.requests[-3].callback = self.io_cb;
             self._socket.requests[-4].callback = self.test_cb;
             console.log("Websocket disconnection monitor set up properly.");
-            /** Run the callbacks. */
-            _.each(_.map(_.filter(callbacks, function(x) {
-                  return x.type === 'connected';
-                }),
-                function(x) {
-                  return x.cb;
-                }),
-              function(x) {
-                x();
-              });
+            /** Run the callbacks. First the syncing ones, then the
+              connected ones when these are resolved. */
+            $q.all(_.each(_.map(_.filter(callbacks, function(x) {
+                return x.type === 'syncing';
+              }), function(x) {
+                return x.cb;
+              }), function(x) { x(); }))
+              .then(function() {
+                _.each(_.map(_.filter(callbacks, function(x) {
+                      return x.type === 'connected';
+                    }),
+                    function(x) {
+                      return x.cb;
+                    }),
+                  function(x) {
+                    x();
+                  });
+            });
           });
       };
 
       self.isConnected = function() {
         return self.connected;
+      };
+
+      self.isOffline = function() {
+        return self.offline_mode === 2 || (!self.connected && self.offline_mode === 1);
+      };
+
+      self.offlineEnabled = function() {
+        return self.offline_mode === 1 || self.offline_mode === 2;
+      };
+
+      self.setOfflineModeSetting = function(setting) {
+        if(setting === 0 || setting === 1 || setting === 2) {
+          self.offline_mode = setting;
+          $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, setting);
+        }
       };
 
       /** The following functions are wrappers around sendMessage.
@@ -236,13 +282,45 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return self._socket.ping(deferred);
       };
 
-      self.compileAndRunProject = function(project, question, test, deferred) {
-        // TODO: offline runner
-        return self._socket.compileAndRunProject(project, question, test, deferred);
+      self.compileAndRunProject = function(project, question, file, tests, deferred) {
+          if(!self.isOffline()) {
+            return self._socket.compileAndRunProject(project, question, tests, deferred);
+          }
+          else {
+            var res = $q.defer();
+            if(!self.compiler) {
+              self.compiler = new Worker("js/offline-compile.js");
+            }
+            self.compiler.onmessage = function(result) {
+              if(result.data.status == "compile-failed") {
+                res.reject(result.data);
+              }
+              else if(result.data.status == "running") {
+                self.runner = new Worker("js/offline-run.js");
+                self.runner.onmessage = function(msg) {
+                  self.io_cb(null, msg.data);
+                };
+                self.runner.postMessage(result.data.obj);
+                res.resolve(result.data);
+              }
+            };
+            return $q.when(file.getDependencies()).then(function(deps) {
+              var file_arr = _.map(deps, function(f) { return f.toWorker(); });
+              self.compiler.postMessage({
+                runnerFile: file.filename(),
+                files: file_arr,
+                tests: tests
+              });
+              return res.promise;
+            });
+          }
       };
 
       self.programKill = function(pid, deferred) {
-        // TODO: offline runner
+        if(pid<0 && self.runner) {
+          self.runner.terminate();
+          return $q.when();
+        }
         return self._socket.programKill(pid, deferred);
       };
 
@@ -258,15 +336,79 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.saveProject = function(project, message, deferred) {
         // TODO: is this even used? 
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.saveProject(project, message, deferred);
         } else {
           return $q.resolve(false); // noop 
         }
       };
 
+      /**
+       * Sync everything, to be called when we first connect to the websocket.
+       * Should only be called after offlineEnabled() has been checked.
+       *
+       * @returns Angular deferred that resolves to true when the sync is done.
+       */
+      self.syncAll = function() {
+        // I don't like the way this works, it'll be very slow.
+        //  I am still in favour of a lazy sync process
+        $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
+          .then(function(res) {
+            var projects = _.map(res[0], function(p) { return p[0]; });
+            $q.all(_.map(projects, localfiles.listProject))
+              .then(function(trees) {
+                var files = [];
+                for(var i=0; i<res[0].length; i++) {
+                  console.log(res[0][i][0], trees[i]);
+                  if(trees[i]) {
+                    files = files.concat(_.map(_.filter(trees[i], function(file) {
+                      return !file[1];
+                    }), function(file) {
+                      return {project: res[0][i][0], path: file[0]};
+                    }));
+                  }
+                }
+                // should have everything now, just send it to the backend
+                return $q.when(self._socket.sync({
+                  projects: projects,
+                  files: files,
+                  changes: res[1]
+                })).then(function(res) {
+                  // TODO process the sync results and save them
+                  var proms = [];
+                  for(var i in res.newProjects) {
+                    proms.push(localfiles.newProject(res.newProjects[i]));
+                  }
+                  for(var i in res.changes) {
+                    var file = res.changes[i][1];
+                    if(res.changes[i][0] === "editFile") {
+                      proms.push(localfiles.writeFile(file.project, file.path, file.contents, file.checksum));
+                    }
+                    else if(res.changes[i][0] === "deleteFile") {
+                      proms.push(localfiles.deleteFile(file.project, file.path));
+                    }
+                  }
+                  for(var i in res.deletedProjects) {
+                    proms.push(localfiles.deleteProject(res.deletedProjects[i]));
+                  }
+                  return $q.all(proms).then(function() {
+                    // send the changes back in case we need to act on the files that have
+                    //  changed within the open project
+                    return res.changes;
+                  });
+                });
+              });
+          });
+      };
+
+      // saves the directory & file structure of a project locally
+      self.updateTree = function(project) {
+        if(self.offlineEnabled())
+          localfiles._dumpProject(project);
+      };
+
       self.getProjects = function(deferred) {
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.getProjects(deferred)
           .then(function(projects) {
             localfiles.setProjects(projects);
@@ -279,7 +421,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.listProject = function(name, deferred) {
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           localfiles.listProject(name).then(
               function(tree) {
                 console.log("[websocket] offline listProject", tree);
@@ -292,7 +434,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.newProject = function(name, deferred) {
         // TODO: offline mode 
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.newProject(name, deferred);
         } else {
           return self._rejectOffline();
@@ -300,7 +442,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.newProjectFrom = function(name, src_url, deferred) {
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.newProjectFrom(name, src_url, deferred);
         } else {
           return self._rejectOffline();
@@ -309,7 +451,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.deleteProject = function(name, deferred) {
         // TODO: offline mode
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.deleteProject(name, deferred);
         } else {
           return self._rejectOffline();
@@ -318,7 +460,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.lockProject = function(name, deferred) {
         // locking only makes sense when we're online
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.lockProject(name, deferred);
         } else {
           return $q.when();
@@ -326,7 +468,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.forceLockProject = function(name, deferred) {
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.forceLockProject(name, deferred);
         } else {
           return $q.when();
@@ -335,7 +477,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.unlockProject = function(name, deferred) {
         // locking only makes sense when we're online
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.unlockProject(name, deferred);
         } else {
           return $q.when();
@@ -358,7 +500,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.newFile = function(name, file_name, contents,
         encoding, normalize, deferred) {
         localfiles.newFile(name, file_name, contents, encoding, normalize);
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self.onlineNewFile(name, file_name, contents, encoding, normalize, deferred);
         }
       };
@@ -368,7 +510,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.restoreFileFrom = function(projectName, fpath, url) {
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.restoreFileFrom(projectName, fpath, url);
         } else {
           return self._rejectOffline();
@@ -401,7 +543,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.deleteFile = function(name, file_name, deferred) {
         var offlineResult = localfiles.deleteFile(name, file_name);
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.deleteFile(name, file_name, deferred);
         } else {
           return offlineResult;
@@ -419,7 +561,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getExportToken = function(project, deferred) {
-        if (!self.isOnline) {
+        if (self.isOffline()) {
           return self._rejectOffline(); 
         } else {
           return self._socket.getExportToken(project, deferred);
@@ -427,7 +569,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.getUploadFileToken = function(project, file, deferred) {
-        if (!self.isOnline()) {
+        if (self.isOffline()) {
           return self._rejectOffline(); 
         } else {
           return self._socket.getUploadFileToken(project, file, deferred);
@@ -436,7 +578,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.renameFile = function(project, oldName, newName, deferred) {
         var offlineResult = localfiles.renameFile(project, oldName, newName);
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           var onlineResult = self._socket.renameFile(project, oldName, newName, deferred);
           return $q.all([onlineResult, offlineResult]);
         } else {
@@ -446,7 +588,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getMostRecentlyUsed = function(project, directory, deferred) {
         // TODO: offline mode 
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.getMostRecentlyUsed(project, directory, deferred);
         } else {
           return $q.when(false);
@@ -455,7 +597,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
         // TODO: store this in offline mode 
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
         } else {
           return $q.when();
@@ -464,7 +606,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.saveSettings = function(settings, deferred) {
         // TODO: offline mode
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.saveSettings(settings, deferred);
         } else {
           return $q.when();
@@ -473,7 +615,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getSettings = function(deferred) {
         // TODO: offline mode
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.getSettings(deferred);
         } else {
           return $q.when();
@@ -481,7 +623,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.marmosetSubmit = function(project, assn, subdir, deferred) {
-        if (!self.isOnline()) {
+        if (!self.isOffline()) {
           return self._socket.marmosetSubmit(project, assn, subdir, deferred);
         } else {
           return self._rejectOffline();
@@ -494,7 +636,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.archiveProjects = function(deferred) {
-        if (!self.isOnline()) {
+        if (self.isOffline()) {
           return self._rejectOffline();
         } else {
           return self._socket.archiveProjects(deferred);
@@ -503,7 +645,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getFileToRun = function(project, question, deferred) {
         var offlineResult = localfiles.getRunnerFile(project, question);
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           var onlineResult = self._socket.getFileToRun(project, question, deferred);
           return $q.all([onlineResult, offlineResult])
             .then(function(result) {
@@ -519,7 +661,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.setFileToRun = function(project, question, folder, file, deferred) {
         var offlineResult = localfiles.setRunnerFile(project, question, folder, file);
-        if (self.isOnline()) {
+        if (!self.isOffline()) {
           var onlineResult = self._socket.setFileToRun(project, question, folder, file, deferred);
           return $q.all([onlineResult, offlineResult]).catch(
             function(error) {
@@ -528,14 +670,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         } else {
           return $q.all([offlineResult]);
         }
-      };
-
-      self.forceOfflineMode = function(force) {
-        self.forceOffline = force;
-      };
-
-      self.isOnline = function() {
-        return (self.connected && !self.forceOffline);
       };
 
       self._rejectOffline = function() {

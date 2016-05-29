@@ -490,3 +490,8 @@ SeashellWebsocket.prototype.setFileToRun = function(project, question, folder, f
     file: file},
     deferred);
 };
+
+SeashellWebsocket.prototype.sync = function(message, deferred) {
+  message.type = "sync";
+  return this.sendMessage(message, deferred);
+};

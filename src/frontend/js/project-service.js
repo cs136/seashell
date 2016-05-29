@@ -23,9 +23,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
    */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', 'localfiles',
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset',
       '$http', 'settings-service', '$cookies',
-    function($scope, $q, ws, marmoset, localfiles, $http, settings, $cookies) {
+    function($scope, $q, ws, marmoset, $http, settings, $cookies) {
       "use strict";
       var self = this;
       var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
@@ -37,17 +37,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
-
-      localfiles.init().then(function () { 
-        ws.register_callback("connected", function () {
-          settings.load() // need to load so that we can determine if we are forceOffline
-            .then(function () { 
-              if (ws.isOnline()) {
-                localfiles.syncOfflineChanges(self.syncOfflineChanges);          
-              }
-            });
-        }, true);
-      });
      
       var SeashellProject = (function () { 
         /**
@@ -287,7 +276,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               return $q.reject("File does not exist.");
             }
             self.children = split[1] || [];
-            localfiles._dumpProject(self.project);
+            ws.updateTree(self.project);
             if (!soft_delete) {
               return $q.when(ws.deleteFile(self.project.name, split[0][0].fullname()));
             }
@@ -297,7 +286,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               return path[0] == c.name[c.name.length-1];
             })[0]._removeFromTree(path.slice(1), soft_delete);
           }
-          localfiles._dumpProject(self.project);
+          ws.updateTree(self.project);
           return $q.when();
         };
 
@@ -318,19 +307,19 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                 return $q.when(ws.newDirectory(file.project.name,
                   file.fullname())).then(function () {
                   self.children.push(file);
-                  localfiles._dumpProject(self.project);
+                  ws.updateTree(self.project);
                 });
               } else {
                 return $q.when(ws.newFile(file.project.name,
                   file.fullname(), contents, encoding, normalize ? true : false))
                     .then(function () {
                       self.children.push(file);
-                      localfiles._dumpProject(self.project);
+                      ws.updateTree(self.project);
                     });
               }
             } else {
               self.children.push(file);
-              localfiles._dumpProject(self.project);
+              ws.updateTree(self.project);
             }
           } else {
             var match = _.filter(self.children, function(c) {
@@ -345,7 +334,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                   $q.when(ws.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
-                  localfiles._dumpProject(self.project);
+                  ws.updateTree(self.project);
                   return self._placeInTree(file, path, soft_place, contents,
                     encoding, normalize);
                 });
@@ -701,7 +690,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           });
         };
 
-
         /**
          * SeashellProject.run(...)
          * Compiles [if necessary] and runs the project.
@@ -721,39 +709,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
-          if(ws.connected && settings.settings.offline_mode !== 2) {
-            return $q.when(ws.compileAndRunProject(self.name, question, tests));
-          }
-          else if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
-            var res = $q.defer();
-            if(!self.compiler) {
-              self.compiler = new Worker("js/offline-compile.js");
-            }
-            self.compiler.onmessage = function(result) {
-              if(result.data.status == "compile-failed") {
-                res.reject(result.data);
-              }
-              else if(result.data.status == "running") {
-                self.runner = new Worker("js/offline-run.js");
-                self.runner.onmessage = function(msg) {
-                  ws.io_cb(null, msg.data);
-                };
-                self.runner.postMessage(result.data.obj);
-                res.resolve(result.data);
-              }
-            };
-            return $q.when(file.getDependencies()).then(function(deps) {
-              var file_arr = _.map(deps, function(f) { return f.toWorker(); });
-              self.compiler.postMessage({
-                runnerFile: self.fileToRun,
-                files: file_arr,
-                tests: tests
-              });
-              return res.promise;
-            });
-          } else {
-            return $q.reject("Offline mode disabled while disconnected!");
-          }
+          return $q.when(ws.compileAndRunProject(self.name, question, file, tests));
         };
 
         /** 
@@ -771,12 +727,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * Kills program with specified PID.
          */
         SeashellProject.prototype.kill = function(pid) {
-          var self = this;
-          if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
-            var def = $q.defer();
-            def.resolve();
-            return def.promise;
-          }
           return $q.when(ws.programKill(pid));
         };
 
@@ -903,7 +853,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
           // handle offline mode:
-          if(settings.settings.offline_mode === 2 || !ws.connected && settings.settings.offline_mode !== 0) {
+          if(ws.isOffline()) {
             self.runner.postMessage(message);
             var def = $q.defer();
             def.resolve();
@@ -1185,29 +1135,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             console.log(sprintf("Syncing %s encountered an error!", name));
             console.log("Syncing ", err);
           }); 
-      };
-
-      /**
-       * Sync all projects into the offline store.
-       * Only files that exist online will be synced.
-       * NOTE: this takes several seconds on a good machine with a good connection,
-       *   so we should only do this on first-run or something.
-       * @returns Angular deferred that resolves to true when the sync is done.
-       */
-      self.syncAll = function() {
-        var self = this;
-        var promises;
-        console.log("Syncing all projects");
-        return self.list()
-        .then(function (projects) {
-          return $q.all(_.map(projects, function (project) {
-             return self.syncProject(project[0]);
-          })); 
-        })
-        .then(function (res) {
-          console.log("Finished syncing all projects");
-          return true;
-        });
       };
 
       /**
