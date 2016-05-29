@@ -175,6 +175,50 @@
     '()
     their-changes))
 
+(: resolve-conflicts (-> Bytes (Listof Conflict-Type) (Listof off:conflict)))
+(define (resolve-conflicts timestamp conflicts)
+  (for/list : (Listof off:conflict)
+    ([cft : Conflict-Type conflicts])
+    (match-define (conflict type project file contents reason) cft)
+    (with-handlers
+      ;; Ignore errors when handling conflicts,
+      ;; but record that resolving the conflict failed.
+      ([exn:fail? (lambda ([exn : exn])
+                    (off:conflict type (off:file project file #f)
+                                  (format "Exception occurred while handling conflict: ~a.  Origional reason: ~a"
+                                          (exn-message exn) (reason->string reason))
+                                  #f))])
+      ;; Deal with type of conflict
+      (cond
+        ;; editFile - write out file contents.
+        [(equal? type "editFile")
+          ;; Generate new extension.
+          (define fext (filename-extension file))
+          (define newext
+            (bytes-append #"_conflict_" timestamp (if fext (bytes-append #"." fext) #"")))
+          ;; Calculate location for conflict file.
+          (define-values (base rel-file _2) (split-path (check-path (build-path file))))
+          (cond
+            [(path? rel-file)
+              (: calculate-conflict-location (-> (U False 'relative Path-String) Path-String))
+              (define (calculate-conflict-location base)
+                (cond
+                  [(equal? base 'relative) rel-file]
+                  [(not base) rel-file]
+                  [(directory-exists? base)
+                   (build-path base rel-file)]
+                  [else
+                    (define-values (new-base _1 _2) (split-path base))
+                    (calculate-conflict-location new-base)]))
+              (define file-to-write (path-replace-suffix (calculate-conflict-location base) newext))
+              (when contents
+                ;; This call to new-file should not fail.
+                (new-file project file-to-write (string->bytes/utf-8 contents) 'raw #f))
+              (off:conflict type (off:file project file #f) (reason->string reason) #t)]
+            [else (raise (exn:project:sync "Path did not refer to file!" (current-continuation-marks)))])]
+        [else
+          (off:conflict type (off:file project file #f) (reason->string reason) #t)]))))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
@@ -201,48 +245,7 @@
   (define new-projects (remove* our-projects their-projects))
   (define deleted-projects (remove* their-projects our-projects))
   ;; Resolve conflicts (add .conflict for each file)
-  (define conflict-information
-    (for/list : (Listof off:conflict)
-      ([cft : Conflict-Type conflicts])
-      (match-define (conflict type project file contents reason) cft)
-      (with-handlers
-        ;; Ignore errors when handling conflicts,
-        ;; but record that resolving the conflict failed.
-        ([exn:fail? (lambda ([exn : exn])
-                      (off:conflict type (off:file project file #f)
-                                    (format "Exception occurred while handling conflict: ~a.  Origional reason: ~a"
-                                            (exn-message exn) (reason->string reason))
-                                    #f))])
-        ;; Deal with type of conflict
-        (cond
-          ;; editFile - write out file contents.
-          [(equal? type "editFile")
-            ;; Generate new extension.
-            (define fext (filename-extension file))
-            (define newext
-              (bytes-append #"_conflict_" timestamp (if fext (bytes-append #"." fext) #"")))
-            ;; Calculate location for conflict file.
-            (define-values (base rel-file _2) (split-path (check-path (build-path file))))
-            (cond
-              [(path? rel-file)
-                (: calculate-conflict-location (-> (U False 'relative Path-String) Path-String))
-                (define (calculate-conflict-location base)
-                  (cond
-                    [(equal? base 'relative) rel-file]
-                    [(not base) rel-file]
-                    [(directory-exists? base)
-                     (build-path base rel-file)]
-                    [else
-                      (define-values (new-base _1 _2) (split-path base))
-                      (calculate-conflict-location new-base)]))
-                (define file-to-write (path-replace-suffix (calculate-conflict-location base) newext))
-                (when contents
-                  ;; This call to new-file should not fail.
-                  (new-file project file-to-write (string->bytes/utf-8 contents) 'raw #f))
-                (off:conflict type (off:file project file #f) (reason->string reason) #t)]
-              [else (raise (exn:project:sync "Path did not refer to file!" (current-continuation-marks)))])]
-          [else
-            (off:conflict type (off:file project file #f) (reason->string reason) #t)]))))
+  (define conflict-information (resolve-conflicts timestamp conflicts))
   ;; Collect list of changes.
   ;; Collect list of deleted files (in the backend).
   ;; Collect list of new/edited files (in the backend).
