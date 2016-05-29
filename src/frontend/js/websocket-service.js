@@ -376,10 +376,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                 })).then(function(res) {
                   // TODO process the sync results and save them
                   var proms = [];
-                  for(var i in res.newProjects) {
+                  var i;
+                  for(i in res.newProjects) {
                     proms.push(localfiles.newProject(res.newProjects[i]));
                   }
-                  for(var i in res.changes) {
+                  for(i in res.changes) {
                     var file = res.changes[i][1];
                     if(res.changes[i][0] === "editFile") {
                       proms.push(localfiles.writeFile(file.project, file.path, file.contents, file.checksum));
@@ -388,7 +389,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                       proms.push(localfiles.deleteFile(file.project, file.path));
                     }
                   }
-                  for(var i in res.deletedProjects) {
+                  for(i in res.deletedProjects) {
                     proms.push(localfiles.deleteProject(res.deletedProjects[i]));
                   }
                   return $q.all(proms).then(function() {

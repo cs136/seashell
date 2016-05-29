@@ -75,9 +75,10 @@ angular.module('seashell-local-files', [])
       */
       self.getOfflineChanges = function() {
         var proms = [];
+        var key, oc;
         // edited files
-        for(var key in self.offlineChangelog) {
-          var oc = self.offlineChangelog[key];
+        for(key in self.offlineChangelog) {
+          oc = self.offlineChangelog[key];
           proms.push($q.when(self.readFile(oc.getProject(), oc.getPath()))
             .then(function(contents) {
               return ["editFile", {project: oc.getProject(), path:oc.getPath(),
@@ -86,8 +87,8 @@ angular.module('seashell-local-files', [])
         }
 
         // deleted files
-        for(var key in self.offlineDeletedFiles) {
-          var oc = self.offlineDeletedFiles[key];
+        for(key in self.offlineDeletedFiles) {
+          oc = self.offlineDeletedFiles[key];
           proms.push($q.when(["deleteFile", {project: oc.getProject(), path:oc.getPath()}]));
         }
         return $q.all(proms);

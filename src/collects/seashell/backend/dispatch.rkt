@@ -23,6 +23,7 @@
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner
+         seashell/backend/offline
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -267,6 +268,12 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      [(hash-table
+        ('id id)
+        ('type "sync")
+        (_ _) ...)
+       ;; Sync
+       (sync-offline-changes message)]
       ;; Ping, for timeout checking.
       [(hash-table
         ('id id)

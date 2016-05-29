@@ -23,6 +23,7 @@
          typed/racket/date
          typed/racket/unsafe)
 
+(provide sync-offline-changes)
 (module untyped-helper racket/base
   (require racket/date)
   (provide date-nanosecond)
@@ -59,6 +60,11 @@
                            [file : off:file]
                            [reason : String]
                            [saved? : Boolean])
+             #:transparent)
+(json-struct off:response ([conflicts : (Listof off:conflict)]
+                           [changes : (Listof off:change)]
+                           [newProjects : (Listof String)]
+                           [deletedProjects : (Listof String)])
              #:transparent)
 
 ;; Internal datatypes.
@@ -268,19 +274,38 @@
   ;; Apply changes, collect conflicts.
   (define conflicts (apply-offline-changes their-changes))
   ;; Collect list of new projects.
-  (define our-projects (list-projects))
+  (define our-projects (map (lambda ([l : (List String Number)]) (first l))
+                            (list-projects)))
   (define new-projects (remove* our-projects their-projects))
   (define deleted-projects (remove* their-projects our-projects))
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
+
+  ;; After this point the changeset has been committed to disk.
   ;; Collect list of files in the backend.
   (define our-files (fetch-all-files))
   (define our-files/w-c (map strip-checksum our-files))
   (define their-files/w-c (map strip-checksum their-files))
   ;; Collect list of deleted files (in the backend).
   (define backend-deleted-files (remove* their-files/w-c our-files/w-c))
+  (define backend-new-files (list->set (remove* our-files/w-c their-files/w-c)))
+  (define our-delete-change
+    (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f))
+         backend-deleted-files))
   ;; Collect list of new/edited files (in the backend).
   ;; NOTE: The checksum matters for this calculation.
   (define backend-changed-files (remove* our-files their-files))
+  (define our-edit-changes
+    (map (lambda ([f : off:file])
+           (define-values (contents checksum)
+             (read-file (off:file-project f) (off:file-file f)))
+           ;; TODO: Handle binary files here...
+           (off:change "editFile" f (bytes->string/utf-8 contents)
+                       (if (set-member? backend-new-files (strip-checksum f)) #f checksum)))
+         backend-changed-files))
   ;; Generate changes to send back.
-  '())
+  (off:response->json (off:response
+                        conflict-information
+                        (append our-delete-change our-edit-changes)
+                        new-projects
+                        deleted-projects)))

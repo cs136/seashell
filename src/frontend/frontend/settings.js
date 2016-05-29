@@ -62,7 +62,7 @@ angular.module('frontend-app')
             if (settings) {
               for (var k in settings)
                 self.settings[k] = settings[k];
-              self.settings['offline_mode'] = ws.offline_mode;
+              self.settings.offline_mode = ws.offline_mode;
             }
             // Backwards compatibility.
             if (typeof self.settings.font_size === 'string') {
@@ -76,7 +76,7 @@ angular.module('frontend-app')
 
         self.save = function () {
           self.needToLoad = true;
-          ws.setOfflineModeSetting(self.settings['offline_mode']);
+          ws.setOfflineModeSetting(self.settings.offline_mode);
           return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 
