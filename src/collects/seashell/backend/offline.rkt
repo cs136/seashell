@@ -219,6 +219,33 @@
         [else
           (off:conflict type (off:file project file #f) (reason->string reason) #t)]))))
 
+(: fetch-files-for (-> String (Listof off:file)))
+(define (fetch-files-for project)
+  (foldl
+    (lambda ([file : (List String Boolean Number String)]
+             [result : (Listof off:file)])
+      (match-define (list path is-dir? mtime checksum) file)
+      (if is-dir?
+        result
+        (cons  (off:file project path checksum) result)))
+    '()
+    (list-files project)))
+
+(: fetch-all-files (-> (Listof off:file)))
+(define (fetch-all-files)
+  (apply append
+         (map
+           fetch-files-for
+           (map
+             (lambda ([rst : (List String Number)]) : String
+              (first rst))
+            (list-projects)))))
+
+(: strip-checksum (-> off:file off:file))
+(define (strip-checksum f)
+  (match f
+    [(off:file project file _) (off:file project file #f)]))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
@@ -246,7 +273,14 @@
   (define deleted-projects (remove* their-projects our-projects))
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
-  ;; Collect list of changes.
+  ;; Collect list of files in the backend.
+  (define our-files (fetch-all-files))
+  (define our-files/w-c (map strip-checksum our-files))
+  (define their-files/w-c (map strip-checksum their-files))
   ;; Collect list of deleted files (in the backend).
+  (define backend-deleted-files (remove* their-files/w-c our-files/w-c))
   ;; Collect list of new/edited files (in the backend).
+  ;; NOTE: The checksum matters for this calculation.
+  (define backend-changed-files (remove* our-files their-files))
+  ;; Generate changes to send back.
   '())
