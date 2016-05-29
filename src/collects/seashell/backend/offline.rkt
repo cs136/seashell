@@ -63,7 +63,11 @@
 
 ;; Internal datatypes.
 (define-type Conflict-Reason (U String 'checksum 'missing-directory))
-(define-type Conflict-Type (List String String String (U String False) Conflict-Reason))
+(struct conflict ([type : String]
+                  [project : String]
+                  [file : String]
+                  [contents : (Option String)]
+                  [reason : Conflict-Reason]) #:transparent #:type-name Conflict-Type)
 
 ;; Exception types.
 (struct exn:project:sync exn:project ())
@@ -86,16 +90,97 @@
     [(equal? reason 'missing-directory) "Could not create missing directory."]
     [else "Other reason."]))
 
+(: make-timestamp (-> Bytes))
+(define (make-timestamp)
+  (parameterize ([date-display-format 'iso-8601])
+    (define dt (current-date))
+    (string->bytes/utf-8 (format "~a+~a" (date->string dt #t)
+                                 (date-nanosecond dt)))))
+
+(: apply-offline-changes (-> (Listof off:change) (Listof Conflict-Type)))
+(define (apply-offline-changes their-changes)
+  (foldl
+    (lambda ([change : off:change]
+             [conflicts : (Listof Conflict-Type)])
+      : (Listof Conflict-Type)
+      (with-handlers
+        ([exn:fail?
+           (lambda ([exn : exn])
+             (define file (off:change-file change))
+             (cons (conflict (off:change-type change)
+                             (off:file-project file)
+                             (off:file-file file)
+                             (off:change-contents change)
+                             (exn-message exn))
+                   conflicts))])
+        (match change
+          [(off:change "deleteFile"
+                       (off:file project file _)
+                       #f
+                       checksum)
+           (assert (path-string? file))
+           (cond
+             ;; Missing project: ignore (delete on local, as cannot create project offline)
+             [(not (is-project? project)) conflicts]
+             [checksum
+               (with-handlers
+                 ([exn:project:file?
+                    (lambda ([exn : exn])
+                      (cons (conflict "deleteFile" project file #f 'checksum) conflicts))])
+                 (remove-file project file)
+                 conflicts)]
+             [else
+               (raise (exn:project:sync "Expected non-#f checksum for deleteFile!"
+                                        (current-continuation-marks)))])]
+          [(off:change "editFile"
+                       (off:file project file _)
+                       contents
+                       checksum)
+           (assert (path-string? file))
+           [cond
+             ;; Missing project: ignore (delete on local, as cannot create project offline)
+             [(not (is-project? project)) conflicts]
+             ;; Project present:
+             [contents
+               ;; Project present, create directory if missing.
+               (define-values (base _1 _2) (split-path (check-path (build-path file))))
+               ;; Attempt to write file.
+               (: attempt-to-write-file (-> (Listof Conflict-Type)))
+               (define (attempt-to-write-file)
+                 (with-handlers
+                   ([exn:project:file?
+                      (lambda ([exn : exn])
+                        (cons (conflict "editFile" project file contents 'checksum) conflicts))])
+                   (cond
+                     [checksum
+                       (write-file project file (string->bytes/utf-8 contents) checksum)]
+                     [else
+                       (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
+                   conflicts))
+               (if (path? base)
+                 ;; Attempt to create base path -- if it fails, record the conflict.
+                 (with-handlers
+                   ([exn:fail:filesystem?
+                      (lambda ([exn: exn])
+                        (cons (conflict "editFile" project file contents 'missing-directory) conflicts))])
+                   (parameterize ([current-directory (build-project-path project)])
+                     (make-directory* base))
+                   ;; Everything OK, write file
+                   (attempt-to-write-file))
+                 ;; Just write file.
+                 (attempt-to-write-file))]
+               [else
+                 (raise (exn:project:sync "Expected non-#f contents for editFile!"
+                                          (current-continuation-marks)))]]])))
+    '()
+    their-changes))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
   ;; Do not want other operations modifying state that the offline engine needs to work with.
 
-  (define timestamp
-    (parameterize ([date-display-format 'iso-8601])
-      (define dt (current-date))
-      (string->bytes/utf-8 (format "~a+~a" (date->string dt #t)
-                                   (date-nanosecond dt)))))
+  (define timestamp (make-timestamp))
   (define changeset (json->off:changes js-changeset))
   (match-define
     (off:changes their-projects their-files their-changes)
@@ -110,83 +195,7 @@
     (record-offline-changeset timestamp js-changeset))
 
   ;; Apply changes, collect conflicts.
-  (define
-    conflicts
-    (foldl
-      (lambda ([change : off:change]
-               [conflicts : (Listof Conflict-Type)])
-        : (Listof Conflict-Type)
-        (with-handlers
-          ([exn:fail?
-             (lambda ([exn : exn])
-               (define file (off:change-file change))
-               (cons (list (off:change-type change)
-                           (off:file-project file)
-                           (off:file-file file)
-                           (off:change-contents change)
-                           (exn-message exn))
-                     conflicts))])
-          (match change
-            [(off:change "deleteFile"
-                         (off:file project file _)
-                         #f
-                         checksum)
-             (assert (path-string? file))
-             (cond
-               ;; Missing project: ignore (delete on local, as cannot create project offline)
-               [(not (is-project? project)) conflicts]
-               [checksum
-                 (with-handlers
-                   ([exn:project:file?
-                      (lambda ([exn : exn])
-                        (cons (list "deleteFile" project file #f 'checksum) conflicts))])
-                   (remove-file project file)
-                   conflicts)]
-               [else
-                 (raise (exn:project:sync "Expected non-#f checksum for deleteFile!"
-                                          (current-continuation-marks)))])]
-            [(off:change "editFile"
-                         (off:file project file _)
-                         contents
-                         checksum)
-             (assert (path-string? file))
-             [cond
-               ;; Missing project: ignore (delete on local, as cannot create project offline)
-               [(not (is-project? project)) conflicts]
-               ;; Project present:
-               [contents
-                 ;; Project present, create directory if missing.
-                 (define-values (base _1 _2) (split-path (check-path (build-path file))))
-                 ;; Attempt to write file.
-                 (: attempt-to-write-file (-> (Listof Conflict-Type)))
-                 (define (attempt-to-write-file)
-                   (with-handlers
-                     ([exn:project:file?
-                        (lambda ([exn : exn])
-                          (cons (list "editFile" project file contents 'checksum) conflicts))])
-                     (cond
-                       [checksum
-                         (write-file project file (string->bytes/utf-8 contents) checksum)]
-                       [else
-                         (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
-                     conflicts))
-                 (if (path? base)
-                   ;; Attempt to create base path -- if it fails, record the conflict.
-                   (with-handlers
-                     ([exn:fail:filesystem?
-                        (lambda ([exn: exn])
-                          (cons (list "editFile" project file contents 'missing-directory) conflicts))])
-                     (parameterize ([current-directory (build-project-path project)])
-                       (make-directory* base))
-                     ;; Everything OK, write file
-                     (attempt-to-write-file))
-                   ;; Just write file.
-                   (attempt-to-write-file))]
-                 [else
-                   (raise (exn:project:sync "Expected non-#f contents for editFile!"
-                                            (current-continuation-marks)))]]])))
-      '()
-      their-changes))
+  (define conflicts (apply-offline-changes their-changes))
   ;; Collect list of new projects.
   (define our-projects (list-projects))
   (define new-projects (remove* our-projects their-projects))
@@ -194,8 +203,8 @@
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information
     (for/list : (Listof off:conflict)
-      ([conflict : Conflict-Type conflicts])
-      (match-define (list type project file contents reason) conflict)
+      ([cft : Conflict-Type conflicts])
+      (match-define (conflict type project file contents reason) cft)
       (with-handlers
         ;; Ignore errors when handling conflicts,
         ;; but record that resolving the conflict failed.
