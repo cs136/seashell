@@ -1,7 +1,6 @@
-#lang typed/racket/no-check
-;; TODO: Change above ^^ to typed/racket when match issue fixed.
+#lang typed/racket
 ;; Seashell
-;; Copyright (C) 2012-2014 The Seashell Maintainers
+;; Copyright (C) 2016 The Seashell Maintainers
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,76 +18,223 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
          (submod seashell/seashell-config typed)
-         typed/json)
+         typed/json
+         seashell/utils/typed-json-struct
+         typed/racket/date
+         typed/racket/unsafe)
+
+(module untyped-helper racket/base
+  (require racket/date)
+  (provide date-nanosecond)
+  (define (date-nanosecond dt)
+    (date*-nanosecond dt)))
+(unsafe-require/typed (submod "." untyped-helper)
+                      [date-nanosecond (-> date Integer)])
 (require/typed seashell/backend/project
                [list-projects (-> (Listof (List String Number)))]
+               [build-project-path (-> String Path)]
+               [check-path (-> Path Path)]
+               [is-project? (-> String Boolean)]
                [#:struct (exn:project exn:fail:user) ()])
 (require/typed seashell/backend/files
                [new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (-> String Path-String Void)]
                [read-file (-> String Path-String (Values Bytes String))]
-               [write-file (->* (String Path-String String) ((U False String)) String)]
-               [list-files (-> (Listof (List String Boolean Number String)))]
+               [write-file (->* (String Path-String Bytes) ((U False String)) String)]
+               [list-files (->* (String) ((U String False))
+                                (Listof (List String Boolean Number String)))]
                [#:struct (exn:project:file exn:project) ()]
                [#:struct (exn:project:file:checksum exn:project:file) ()])
 
+;; External datatypes (to send back to the frontend)
+(json-struct off:file ([project : String] [file : String] [checksum : (Option String)]) #:transparent)
+(json-struct off:change ([type : String] [file : off:file]
+                         [contents : (Option String)] [checksum : (Option String)])
+             #:transparent)
+(json-struct off:changes ([projects : (Listof String)]
+                          [files : (Listof off:file)]
+                          [changes : (Listof off:change)])
+             #:transparent)
+(json-struct off:conflict ([type : String]
+                           [file : off:file]
+                           [reason : String]
+                           [saved? : Boolean])
+             #:transparent)
+
+;; Internal datatypes.
+(define-type Conflict-Reason (U String 'checksum 'missing-directory))
+(define-type Conflict-Type (List String String String (U String False) Conflict-Reason))
+
+;; Exception types.
+(struct exn:project:sync exn:project ())
+
+(define offline-path (build-path (read-config-path 'seashell) "offline"))
+
+(: record-offline-changeset (-> Bytes JSExpr Any))
+(define (record-offline-changeset timestamp js-changeset)
+  (make-directory* offline-path)
+  (with-output-to-file
+    (build-path offline-path (format "changeset-~a.json" timestamp))
+    (thunk
+      (write-json js-changeset))))
+
+(: reason->string (-> Conflict-Reason String))
+(define (reason->string reason)
+  (cond
+    [(string? reason) (format "Exception in syncing: ~a." reason)]
+    [(equal? reason 'checksum) "Checksum mismatch."]
+    [(equal? reason 'missing-directory) "Could not create missing directory."]
+    [else "Other reason."]))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
-(define (sync-offline-changes changeset)
+(define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
   ;; Do not want other operations modifying state that the offline engine needs to work with.
 
-  (match-define (hash-table ('projects #{their-projects : (Listof String)})
-                            ('files #{their-files : (Listof JSExpr)}) 
-                            ('changes #{their-changes : (Listof JSExpr)}))
-    (cast changeset (HashTable Symbol JSExpr)))
+  (define timestamp
+    (parameterize ([date-display-format 'iso-8601])
+      (define dt (current-date))
+      (string->bytes/utf-8 (format "~a+~a" (date->string dt #t)
+                                   (date-nanosecond dt)))))
+  (define changeset (json->off:changes js-changeset))
+  (match-define
+    (off:changes their-projects their-files their-changes)
+    changeset)
   ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
   ;; before looking at projects/files.
 
-  ;; Apply changes, collect conflicts. 
+  ;; If nontrivial changes exist, record the changeset in case something goes wrong.
+  ;; TODO: Write scripts so instructional support staff can replay/fix changesets
+  ;; that go bad.
+  (when (not (empty? their-changes))
+    (record-offline-changeset timestamp js-changeset))
+
+  ;; Apply changes, collect conflicts.
   (define
     conflicts
     (foldl
-      (lambda ([change : JSExpr] [conflicts : (Listof (List String Path-String String))])
-        : (Listof (List String Path-String String))
-        (match (cast change (HashTable Symbol JSExpr))
-          [(hash-table
-             ('type "deleteFile")
-             ('project #{project : String})
-             ('file #{file : Path-String})
-             ('checksum #{checksum : String}))
-           ;; TODO Delete only if checksum matches.
-           (remove-file project file)
-           conflicts]
-          [(hash-table
-             ('type "editFile")
-             ('project #{project : String})
-             ('file #{file : String})
-             ('contents #{contents : String})
-             ('checksum #{checksum : (U String False)}))
-           (with-handlers
-             ([exn:project:file:checksum?
-                (lambda ([exn : exn])
-                  (cons (list project file contents) conflicts))])
+      (lambda ([change : off:change]
+               [conflicts : (Listof Conflict-Type)])
+        : (Listof Conflict-Type)
+        (with-handlers
+          ([exn:fail?
+             (lambda ([exn : exn])
+               (define file (off:change-file change))
+               (cons (list (off:change-type change)
+                           (off:file-project file)
+                           (off:file-file file)
+                           (off:change-contents change)
+                           (exn-message exn))
+                     conflicts))])
+          (match change
+            [(off:change "deleteFile"
+                         (off:file project file _)
+                         #f
+                         checksum)
+             (assert (path-string? file))
              (cond
+               ;; Missing project: ignore (delete on local, as cannot create project offline)
+               [(not (is-project? project)) conflicts]
                [checksum
-                 (write-file project file (string->bytes/utf-8 contents) checksum)]
+                 (with-handlers
+                   ([exn:project:file?
+                      (lambda ([exn : exn])
+                        (cons (list "deleteFile" project file #f 'checksum) conflicts))])
+                   (remove-file project file)
+                   conflicts)]
                [else
-                 (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
-             conflicts)]))
+                 (raise (exn:project:sync "Expected non-#f checksum for deleteFile!"
+                                          (current-continuation-marks)))])]
+            [(off:change "editFile"
+                         (off:file project file _)
+                         contents
+                         checksum)
+             (assert (path-string? file))
+             [cond
+               ;; Missing project: ignore (delete on local, as cannot create project offline)
+               [(not (is-project? project)) conflicts]
+               ;; Project present:
+               [contents
+                 ;; Project present, create directory if missing.
+                 (define-values (base _1 _2) (split-path (check-path (build-path file))))
+                 ;; Attempt to write file.
+                 (: attempt-to-write-file (-> (Listof Conflict-Type)))
+                 (define (attempt-to-write-file)
+                   (with-handlers
+                     ([exn:project:file?
+                        (lambda ([exn : exn])
+                          (cons (list "editFile" project file contents 'checksum) conflicts))])
+                     (cond
+                       [checksum
+                         (write-file project file (string->bytes/utf-8 contents) checksum)]
+                       [else
+                         (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
+                     conflicts))
+                 (if (path? base)
+                   ;; Attempt to create base path -- if it fails, record the conflict.
+                   (with-handlers
+                     ([exn:fail:filesystem?
+                        (lambda ([exn: exn])
+                          (cons (list "editFile" project file contents 'missing-directory) conflicts))])
+                     (parameterize ([current-directory (build-project-path project)])
+                       (make-directory* base))
+                     ;; Everything OK, write file
+                     (attempt-to-write-file))
+                   ;; Just write file.
+                   (attempt-to-write-file))]
+                 [else
+                   (raise (exn:project:sync "Expected non-#f contents for editFile!"
+                                            (current-continuation-marks)))]]])))
       '()
       their-changes))
   ;; Collect list of new projects.
   (define our-projects (list-projects))
   (define new-projects (remove* our-projects their-projects))
+  (define deleted-projects (remove* their-projects our-projects))
   ;; Resolve conflicts (add .conflict for each file)
+  (define conflict-information
+    (for/list : (Listof off:conflict)
+      ([conflict : Conflict-Type conflicts])
+      (match-define (list type project file contents reason) conflict)
+      (with-handlers
+        ;; Ignore errors when handling conflicts,
+        ;; but record that resolving the conflict failed.
+        ([exn:fail? (lambda ([exn : exn])
+                      (off:conflict type (off:file project file #f)
+                                    (format "Exception occurred while handling conflict: ~a.  Origional reason: ~a"
+                                            (exn-message exn) (reason->string reason))
+                                    #f))])
+        ;; Deal with type of conflict
+        (cond
+          ;; editFile - write out file contents.
+          [(equal? type "editFile")
+            ;; Generate new extension.
+            (define fext (filename-extension file))
+            (define newext
+              (bytes-append #"_conflict_" timestamp (if fext (bytes-append #"." fext) #"")))
+            ;; Calculate location for conflict file.
+            (define-values (base rel-file _2) (split-path (check-path (build-path file))))
+            (cond
+              [(path? rel-file)
+                (: calculate-conflict-location (-> (U False 'relative Path-String) Path-String))
+                (define (calculate-conflict-location base)
+                  (cond
+                    [(equal? base 'relative) rel-file]
+                    [(not base) rel-file]
+                    [(directory-exists? base)
+                     (build-path base rel-file)]
+                    [else
+                      (define-values (new-base _1 _2) (split-path base))
+                      (calculate-conflict-location new-base)]))
+                (define file-to-write (path-replace-suffix (calculate-conflict-location base) newext))
+                (when contents
+                  ;; This call to new-file should not fail.
+                  (new-file project file-to-write (string->bytes/utf-8 contents) 'raw #f))
+                (off:conflict type (off:file project file #f) (reason->string reason) #t)]
+              [else (raise (exn:project:sync "Path did not refer to file!" (current-continuation-marks)))])]
+          [else
+            (off:conflict type (off:file project file #f) (reason->string reason) #t)]))))
   ;; Collect list of changes.
-  (define our-files
-    (foldl
-      (lambda ([project : String] [files : (Listof JSExpr)])
-        )
-      '()
-      our-projects))
-  (define new-files (remove* our-files their-files))
-  (define conflict-files #f)
-  ;; TODO settings?
+  ;; Collect list of deleted files (in the backend).
+  ;; Collect list of new/edited files (in the backend).
   '())
