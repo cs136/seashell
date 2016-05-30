@@ -48,7 +48,7 @@ angular.module('seashell-local-files', [])
 
 
       // Returns the offline changelog as a dictionary (object)
-      //   of projects (keys) to paths (values), grouped by project. 
+      //   of projects (keys) to paths (values), grouped by project.
       // Eg. {"A1": ["foo/bar/baz.txt", "foo/bar/bar.txt"]} 
       // NOTE: this function is unused, left here from Charlie's
       //   original code for this
@@ -56,7 +56,7 @@ angular.module('seashell-local-files', [])
         var self = this;
         var result = _.chain(self.offlineChangelog)
           .groupBy(function(oc) { return oc.getProject(); }).value();
-        
+
         for (var key in self.offlineDeletedFiles) {
           var project = self.offlineDeletedFiles[key].getProject();
           if (!result[project]) {
@@ -101,7 +101,7 @@ angular.module('seashell-local-files', [])
 
         delete self.offlineDeletedFiles[key];
         if (!(key in self.offlineChangelogSet)) {
-          self.offlineChangelogSet[key] = true; 
+          self.offlineChangelogSet[key] = true;
           self.offlineChangelog.push(new OfflineChange(project, path));
           return $q.all([
             $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog)),
@@ -127,13 +127,13 @@ angular.module('seashell-local-files', [])
           delete self.offlineChangelogSet[key];
           self.offlineChangelog = _.reject(self.offlineChangelog,
             function(oc) {
-              return oc.getProject() === project && oc.getPath() == path; 
+              return oc.getProject() === project && oc.getPath() == path;
             });
           promises.push($q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog)));
-        } 
+        }
 
         if (!(key in self.offlineDeletedFiles)) {
-          self.offlineDeletedFiles[key] = new OfflineChange(project, path, true); 
+          self.offlineDeletedFiles[key] = new OfflineChange(project, path, true);
           promises.push($q.when(self.store.setItem("//offlineDeletedFiles", self.offlineDeletedFiles)));
           return $q.all(promises);
         } else {
@@ -171,14 +171,14 @@ angular.module('seashell-local-files', [])
           version: 1.0
         });
 
-        var getProjects = 
+        var getProjects =
           self.store.getItem("//projects")
           .then(function(projs) {
             self.projects = projs || [];
             console.log("[localfiles] projects", self.projects);
           });
 
-        var getOfflineChanges = 
+        var getOfflineChanges =
           self.store.getItem("//offlineChangelog")
           .then(function(data) {
             self.offlineChangelog = [];
@@ -215,7 +215,7 @@ angular.module('seashell-local-files', [])
        * Returns the path to where this file is stored.
        */
       self._path = function(project, file) {
-        return sprintf("%s/%s", project, file); 
+        return sprintf("%s/%s", project, file);
       };
 
       /*
@@ -313,7 +313,7 @@ angular.module('seashell-local-files', [])
       self._serializeChildren = function(children) {
         return  _.foldl(children, function (rest, p) {
           return rest.concat(self._serializeProject(p));
-        }, []); 
+        }, []);
       };
 
       // Store an entire SeashellProject tree into the offline store
@@ -321,10 +321,10 @@ angular.module('seashell-local-files', [])
         // manually (trivially) serialize the project,
         // stripping away things we don't need
         // NOTE: exclude the root!
-        var serialized = self._serializeChildren(project.root.children); 
+        var serialized = self._serializeChildren(project.root.children);
         return $q.when(self.store.setItem(sprintf("//projects/%s", project.name), serialized));
       };
-      
+
       self.listProject = function(name) {
         // return the entire SeashellProject tree
         return $q.when(self.store.getItem(sprintf("//projects/%s", name)));
