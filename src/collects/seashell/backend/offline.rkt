@@ -43,7 +43,7 @@
                [read-file (-> String Path-String (Values Bytes String))]
                [write-file (->* (String Path-String Bytes) ((U False String)) String)]
                [list-files (->* (String) ((U String False))
-                                (Listof (List String Boolean Number String)))]
+                                (Listof (List String Boolean Number (U False String))))]
                [#:struct (exn:project:file exn:project) ()]
                [#:struct (exn:project:file:checksum exn:project:file) ()])
 
@@ -228,12 +228,12 @@
 (: fetch-files-for (-> String (Listof off:file)))
 (define (fetch-files-for project)
   (foldl
-    (lambda ([file : (List String Boolean Number String)]
+    (lambda ([file : (List String Boolean Number (U False String))]
              [result : (Listof off:file)])
       (match-define (list path is-dir? mtime checksum) file)
       (if is-dir?
         result
-        (cons  (off:file project path checksum) result)))
+        (cons  (off:file project path (begin (assert checksum) checksum)) result)))
     '()
     (list-files project)))
 

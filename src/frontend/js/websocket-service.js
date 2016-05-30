@@ -44,7 +44,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.syncing = false;
       self.connected = false;
       self.failed = false;
-      self.forceOffline = false;
 
       // load the offline mode setting, which is stored separately
       //  from other Seashell settings as a cookie.
@@ -102,10 +101,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         key = callbacks.length;
       };
 
-      /** Helper function to invoke the I/O callback. */
-      self.io_cb = function(ignored, message) {
-        _.each(_.map(_.filter(callbacks, function(x) {
-              return x && x.type === 'io';
+      self.invoke_cb = function(type, message) {
+        return _.each(_.map(_.filter(callbacks, function(x) {
+              return x && x.type === type;
             }),
             function(x) {
               return x.cb;
@@ -115,16 +113,17 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
+      /** Helper function to invoke the I/O callback. */
+      self.io_cb = function(ignored, message) {
+        return self.invoke_cb('io', message);
+      };
+
       self.test_cb = function(ignored, result) {
-        _.each(_.map(_.filter(callbacks, function(x) {
-              return x.type === 'test';
-            }),
-            function(x) {
-              return x.cb;
-            }),
-          function(x) {
-            x(result);
-          });
+        return self.invoke_cb('test', result);
+      };
+
+      self.sync_cb = function(ignored, result) {
+        return self.invoke_cb('syncing', result);
       };
 
       /** Connects the socket, sets up the disconnection monitor. */
@@ -155,15 +154,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
               self.failed = true;
               $timeout(function() {
                 $interval.cancel(timeout_interval);
-                _.each(_.map(_.filter(callbacks, function(x) {
-                      return x.type === 'failed';
-                    }),
-                    function(x) {
-                      return x.cb;
-                    }),
-                  function(x) {
-                    x();
-                  });
+                self.invoke_cb('failed');
               }, 0);
             },
             /** Socket closed - probably want to prompt the user to reconnect? */
@@ -268,9 +259,17 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.setOfflineModeSetting = function(setting) {
+        var old = self.offline_mode;
         if(setting === 0 || setting === 1 || setting === 2) {
           self.offline_mode = setting;
           $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, setting);
+        }
+        if(old === 2 && self.offline_mode !== old) {
+          // trigger reconnect and sync
+          if(!self.connected)
+            self.connect();
+          else
+            self.sync_cb();
         }
       };
 
@@ -350,6 +349,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
        * @returns Angular deferred that resolves to true when the sync is done.
        */
       self.syncAll = function() {
+        console.log("syncAll invoked");
         // I don't like the way this works, it'll be very slow.
         //  I am still in favour of a lazy sync process
         $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
@@ -364,7 +364,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                     files = files.concat(_.map(_.filter(trees[i], function(file) {
                       return !file[1];
                     }), function(file) {
-                      return {project: res[0][i][0], path: file[0]};
+                      return {project: res[0][i][0], file: file[0], checksum: file[1]};
                     }));
                   }
                 }
@@ -374,7 +374,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                   files: files,
                   changes: res[1]
                 })).then(function(res) {
-                  // TODO process the sync results and save them
                   var proms = [];
                   var i;
                   for(i in res.newProjects) {
@@ -490,7 +489,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       // because code for handling online/offline stuff
       // is compilcated and needs to be dealt with in project-service
       self.onlineReadFile = function(name, file_name, deferred) {
-        if (self.forceOffline) return $q.reject();
+        if (self.isOffline()) return $q.reject();
         return self._socket.readFile(name, file_name, deferred);
       };
 
@@ -530,7 +529,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           return checksum;
         };
 
-        if (self.forceOffline) return $q.when(offlineWrite(false));
+        if (self.isOffline()) return $q.when(offlineWrite(false));
 
         return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
           .then(offlineWrite)  // get checksum from backend and write

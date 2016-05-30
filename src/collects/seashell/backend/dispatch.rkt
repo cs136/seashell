@@ -273,7 +273,8 @@
         ('type "sync")
         (_ _) ...)
        ;; Sync
-       (sync-offline-changes message)]
+       `#hash((id . ,id)
+              (result . ,(sync-offline-changes message)))]
       ;; Ping, for timeout checking.
       [(hash-table
         ('id id)

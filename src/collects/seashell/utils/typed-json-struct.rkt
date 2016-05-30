@@ -87,7 +87,7 @@
      #`(let
            ([T? (make-predicate T)])
          (if (T? x) x
-             (raise-json-error "Expected ~a, got ~s." '#,(syntax->datum #'T) x))))))
+             (raise-json-error "Expected (type) ~a, got ~s." '#,(syntax->datum #'T) x))))))
 
 ;; (->json T)
 ;; Returns a helper function for converting an object of type T to a JSExpr
@@ -136,17 +136,17 @@
     [(_ Inexact-Real) #`(lambda ([x : JSExpr]) : Inexact-Real
                           (check-type Inexact-Real x))]
     [(_ (Option T))
-     `#(lambda ([x : JSExpr]) : (Option T)
-         (if x ((->json T) x) x))]
-    [(_ (List Ts ...))
-     #`(lambda ([x : JSExpr]) : (List Ts ...)
-         (check-type (List Ts ...) x))]
-    [(_ (Listof T1))
-     #`(lambda ([l : JSExpr]) : (Listof T1)
-         (map (json-> T1)
+     #`(lambda ([x : JSExpr]) : (Option T)
+         (if x ((json-> T) x) x))]
+    [(_ (List T ...))
+     #`(lambda ([x : JSExpr]) : (List T ...)
+         (check-type (List T ...) x))]
+    [(_ (Listof T))
+     #`(lambda ([l : JSExpr]) : (Listof T)
+         (map (json-> T)
               (cond
                 [(list? l) l]
-                [else (raise-json-error "Expected ~a, got ~s." '#,(syntax->datum #'T) l)])))]
+                [else (raise-json-error "Expected (list) ~a, got ~s." '#,(syntax->datum #'T) l)])))]
     [(_ T) (+-> 'json #'T)]))
 
 ;; (make->json name fields types [parent #f])
@@ -219,7 +219,8 @@
                   #`(cond
                       [(hash-has-key? obj '#,field)
                        (define field-value (hash-ref obj '#,field))
-                       (check-type #,type field-value)]
+                       (check-type #,type
+                        ((json-> #,type) field-value))]
                       [else
                        (#,opt-thunk)]))
                 (syntax->list fields)
