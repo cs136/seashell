@@ -358,16 +358,16 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             $q.all(_.map(projects, localfiles.listProject))
               .then(function(trees) {
                 var files = [];
-                for(var i=0; i<res[0].length; i++) {
-                  console.log(res[0][i][0], trees[i]);
-                  if(trees[i]) {
-                    files = files.concat(_.map(_.filter(trees[i], function(file) {
-                      return !file[1];
-                    }), function(file) {
-                      return {project: res[0][i][0], file: file[0], checksum: file[1]};
-                    }));
-                  }
-                }
+                _.each(projects, function(project) {
+                    console.log(project, trees[i]);
+                    if(trees[i]) {
+                      files = files.concat(_.map(_.filter(trees[i], function(file) {
+                        return !file[1];
+                      }), function(file) {
+                        return {project: project, file: file[0], checksum: file[2]};
+                      }));
+                    }
+                  });
                 // should have everything now, just send it to the backend
                 return $q.when(self._socket.sync({
                   projects: projects,
