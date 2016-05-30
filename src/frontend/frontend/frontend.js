@@ -62,9 +62,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             .then(function() {
               $q.when(ws.archiveProjects())
                 .then(function() {
-                  // look at all these callbacks
-                  $location.path("/");
-                  $window.location.reload();
+                   self.refresh();
                  }).catch(function(err) {
                    self.errors.report(err, "Failed to archive projects.");
                  });
@@ -75,7 +73,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           confirm("Sync all projects",
               "Confirming will download all files for use in offline mode. You should only have to do this once per browser.")
             .then(function() {
-              $q.when(projects.syncAll())
+              $q.when(ws.syncAll()).then(function () {
+                  self.refresh();
+                })
                 .catch(function (err) {
                   self.errors.report(err, "Failed to sync all projects.");
                 });

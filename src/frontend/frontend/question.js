@@ -50,7 +50,7 @@ angular.module('frontend-app')
         $scope.$on('$destroy', function() {
           cancelMarmosetRefresh();
           self.console.clear();
-          ws.unregister_callback(refreshKey);
+          ws.unregister_callback(self.refreshKey);
         });
 
         /*
@@ -114,7 +114,6 @@ angular.module('frontend-app')
                 self.common_files = groupfiles(result.common);
                 self.question_files = groupfiles(result.question);
                 self.test_files = groupfiles(result.tests);
-      
               })
               .catch(function () {
                 self.runnerFile = "";
@@ -136,17 +135,17 @@ angular.module('frontend-app')
         $scope.refresh = self.refresh;
         self.refreshKey = ws.register_callback('connected', self.refresh, true);
 
-        /** Handle the setFileToRun broadcast 
+        /** Handle the setFileToRun broadcast
          *  by refreshing the file list
          */
-        $scope.$on('setFileToRun', function () { 
+        $scope.$on('setFileToRun', function () {
             self.refresh();
         });
 
         /** Adds file to the project. */
         self.add_file = function () {
-          newFileModal(self.project, 
-                       self.question, 
+          newFileModal(self.project,
+                       self.question,
                        self.common_files,
                        function () {
                            self.refresh();
@@ -158,7 +157,7 @@ angular.module('frontend-app')
         self.add_test = function () {
           newTestModal(self.project, self.question, function () {
              self.refresh();
-          }); 
+          });
         };
 
         /** Dispatches a function to run when the
