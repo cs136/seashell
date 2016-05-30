@@ -303,7 +303,7 @@ angular.module('seashell-local-files', [])
       // convert it back into a tree. The return value of this function
       // is the same format as what listProject returns.
       self._serializeProject = function(project) {
-        // A project is an array [name, is_dir, timestamp (0), hash (false)] 
+        // A file is an array [name, is_dir, timestamp (0), hash (false)]
         var initial = [[project.name.join("/"), project.is_dir, 0, false]];
         return initial.concat(self._serializeChildren(project.children));
       };

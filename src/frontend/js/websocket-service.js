@@ -33,14 +33,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       "use strict";
       var self = this;
       var SEASHELL_OFFLINE_MODE_COOKIE = 'seashell-offline-mode-cookie';
-       
       self._socket = null;
       Object.defineProperty(self, 'socket', {
         get: function () {
           throw new ReferenceError("You forgot to replace something.");
         }
       });
-      
       self.syncing = false;
       self.connected = false;
       self.failed = false;
@@ -358,13 +356,15 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             $q.all(_.map(projects, localfiles.listProject))
               .then(function(trees) {
                 var files = [];
-                _.each(projects, function(project) {
-                    console.log(project, trees[i]);
-                    if(trees[i]) {
-                      files = files.concat(_.map(_.filter(trees[i], function(file) {
+                _.each(_.zip(projects,trees), function(project_tree) {
+                    var project = project_tree[0];
+                    var tree = project_tree[1];
+                    console.log(project, tree);
+                    if(tree) {
+                      files = files.concat(_.map(_.filter(tree, function(file) {
                         return !file[1];
                       }), function(file) {
-                        return {project: project, file: file[0], checksum: file[2]};
+                        return {project: project, file: file[0], checksum: file[3]};
                       }));
                     }
                   });
@@ -415,7 +415,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             return projects;
           });
         }
-        else { 
+        else {
           return localfiles.getProjects();
         }
       };
