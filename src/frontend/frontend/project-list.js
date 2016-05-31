@@ -46,6 +46,9 @@ angular.module('frontend-app')
     self.refresh = function () {
       self.projectList.refresh();
     };
+    $scope.on("projects-refreshed", function () {
+      self.refresh();
+    });
 
     // Tests if project is deleteable
     self.isDeletable = function(project) {
