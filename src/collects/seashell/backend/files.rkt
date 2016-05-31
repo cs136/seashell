@@ -110,14 +110,17 @@
 ;;  exn:project:file if file does not exist.
 (define/contract (remove-file project file)
   (-> (and/c project-name? is-project?) path-string? void?)
-  (with-handlers
+  (define file-path (check-and-build-path (build-project-path project) file))
+  (define history-path (get-history-path file-path))
+  (with-handlers 
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file (check-and-build-path (build-project-path project) file)))
+    (delete-file file-path)
+    (delete-file history-path))
   (void))
 
 ;; (remove-directory project dir)
