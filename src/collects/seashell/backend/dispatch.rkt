@@ -274,6 +274,7 @@
         (_ _) ...)
        ;; Sync
        `#hash((id . ,id)
+              (success . #t)
               (result . ,(sync-offline-changes message)))]
       ;; Ping, for timeout checking.
       [(hash-table
