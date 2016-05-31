@@ -37,7 +37,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         if(cookie) {
           self.host = cookie.host;
         }
-
+        // Refresh function
+        self.refresh = function () {
+          $rootScope.$broadcast('projects-refreshed');
+        }
         // Help function
         self.help = function () {
           $modal.open({
@@ -74,7 +77,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
               "Confirming will download all files for use in offline mode. You should only have to do this once per browser.")
             .then(function() {
               $q.when(ws.syncAll()).then(function () {
-                  self.refresh();
                 })
                 .catch(function (err) {
                   self.errors.report(err, "Failed to sync all projects.");

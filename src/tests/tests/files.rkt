@@ -65,10 +65,21 @@
       (define tag (call-with-input-bytes contents md5)) 
       (new-file "test" "foo5.c" contents 'raw #f)
       (write-file "test" "foo5.c" #"Hello World 2.0!" tag))
-    
+
+    (test-case "Delete file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (new-file "test" "foo17.c" contents 'raw #f)
+      (remove-file "test" "foo17.c" tag))
+  (test-case "Delete file, check MD5 tag. (failure)"
+      (define contents #"Hello World!")
+      (define tag "not a md5 tag.")
+      (new-file "test" "foo18.c" contents 'raw #f)
+      (check-exn exn:fail? (lambda () (remove-file "test" "foo18.c" tag))))
+
     (test-case "Write to file, check MD5 tag. (failure)"
       (define contents #"Hello World!")
-      (define tag "not a md5 tag.") 
+      (define tag "not a md5 tag.")
       (new-file "test" "foo6.c" contents 'raw #f)
       (check-exn exn:fail? (lambda () (write-file "test" "foo6.c" #"Hello World 2.0!" tag))))
 
@@ -78,7 +89,7 @@
       (new-file "test" "foo7.c" contents 'raw #f)
       (define-values (data checksum) (read-file "test" "foo7.c"))
       (check-equal? checksum tag))
-    
+
     (test-case "Write file, check MD5 tag."
       (define contents #"Hello World!")
       (define tag (call-with-input-bytes contents md5)) 
@@ -96,7 +107,7 @@
       (new-file "test" "foo10.c" #"data:,apple juice\n\n" 'url #t)
       (define-values (data _) (read-file "test" "foo10.c"))
       (check-equal? data #"apple juice\n\n"))
-    
+
     (test-case "Create a file, with a data URL and windows newlines"
       (new-file "test" "foo11.c" #"data:,apple juice\r\n" 'url #t)
       (define-values (data _) (read-file "test" "foo11.c"))
