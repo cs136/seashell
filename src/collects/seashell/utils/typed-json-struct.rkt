@@ -35,7 +35,7 @@
 ;;   fields - Fields (syntax object) of structure.
 ;;   types - Types (syntax object) of fields.
 ;;   opts? - Optional default values for fields (for structure).
-(define-for-syntax (install-struct-assoc! name fields types opts?)
+(define-for-syntax (install-json-assoc! name fields types opts?)
   (set! struct-assoc
         (cons (list name fields types opts?) struct-assoc)))
 
@@ -45,7 +45,7 @@
 ;;  name - Name (syntax object) of structure. 
 ;; Returns:
 ;;  (list Struct-Fields Field-Types Optional-Default) (all syntax objects)
-(define-for-syntax (fetch-struct-assoc name)
+(define-for-syntax (fetch-json-assoc name)
   (define res
     (filter
      (lambda (assoc)
@@ -220,7 +220,7 @@
                       [(hash-has-key? obj '#,field)
                        (define field-value (hash-ref obj '#,field))
                        (check-type #,type
-                        ((json-> #,type) field-value))]
+                                   ((json-> #,type) field-value))]
                       [else
                        (#,opt-thunk)]))
                 (syntax->list fields)
@@ -243,8 +243,9 @@
   (syntax-case stx (:)
     [(_ name ([fields : types opts? ...] ...) opt ...)
      (begin
-       (install-struct-assoc! #'name #'(fields ...) #'(types ...) #'((opts? ...) ...))
        #`(begin
+           (begin-for-syntax
+             (install-json-assoc! #'name #'(fields ...) #'(types ...) #'((opts? ...) ...)))
            (struct name ([fields : types] ...) opt ...)
            #,(make->json #'name #'(fields ...) #'(types ...))
            #,(make-json-> #'name #'(fields ...) #'(types ...) #'((opts? ...) ...))))]
@@ -252,12 +253,13 @@
         parent
         ([fields : types opts? ...] ...) opt ...)
      (begin
-       (define par-assoc (fetch-struct-assoc #'parent))
+       (define par-assoc (fetch-json-assoc #'parent))
        (define par-fields (car par-assoc))
        (define par-types (cadr par-assoc))
        (define par-opts? (caddr par-assoc))
-       (install-struct-assoc! #'name #`(#,@par-fields fields ...) #`(#,@par-types types ...) #`(#,@par-opts? (opts? ...) ...))
        #`(begin
+           (begin-for-syntax
+             (install-json-assoc! #'name #'#,#`(#,@par-fields fields ...) #'#,#`(#,@par-types types ...) #'#,#`(#,@par-opts? (opts? ...) ...)))
            (struct name parent ([fields : types] ...) opt ...)
            #,(make->json #'name
                          #'(fields ...)
@@ -270,6 +272,7 @@
 
 ;(json-struct foo ([x : Integer 5] [y : (List String String)]) #:transparent)
 ;(json-struct bar foo ([z : Integer]) #:transparent)
+;(json-struct faz bar ([a : String]) #:transparent)
 ;(foo->json (foo 10 15))
 ;(foo->json (foo 10 15))
 ;((json-> (Listof foo)) ((->json (Listof foo)) (list (foo 5 '("a" "b")))))
