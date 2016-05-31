@@ -369,28 +369,28 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                     }
                   });
                 // should have everything now, just send it to the backend
-                return $q.when(self._socket.sync({
+                return self._socket.sync({
                   projects: projects,
                   files: files,
                   changes: res[1]
-                })).then(function(res) {
+                }).then(function(res) {
                   var proms = [];
                   var i;
-                  for(i in res.newProjects) {
-                    proms.push(localfiles.newProject(res.newProjects[i]));
-                  }
-                  for(i in res.changes) {
-                    var file = res.changes[i][1];
-                    if(res.changes[i][0] === "editFile") {
-                      proms.push(localfiles.writeFile(file.project, file.path, file.contents, file.checksum));
+                  _.each(res.newProjects, function(project) {
+                    proms.push(localfiles.newProject(project));
+                  });
+                  _.each(res.changes, function(change) {
+                    var file = change.file;
+                    if(change.type === "editFile") {
+                      proms.push(localfiles.writeFile(file.project, file.path, change.contents, file.checksum));
                     }
-                    else if(res.changes[i][0] === "deleteFile") {
+                    else if(change.type === "deleteFile") {
                       proms.push(localfiles.deleteFile(file.project, file.path));
                     }
-                  }
-                  for(i in res.deletedProjects) {
-                    proms.push(localfiles.deleteProject(res.deletedProjects[i]));
-                  }
+                  });
+                  _.each(res.deletedProjects, function(project) {
+                    proms.push(localfiles.deleteProject(project));
+                  });
                   return $q.all(proms).then(function() {
                     // send the changes back in case we need to act on the files that have
                     //  changed within the open project
