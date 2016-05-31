@@ -276,8 +276,8 @@
   ;; Collect list of new projects.
   (define our-projects (map (lambda ([l : (List String Number)]) (first l))
                             (list-projects)))
-  (define new-projects (remove* our-projects their-projects))
-  (define deleted-projects (remove* their-projects our-projects))
+  (define deleted-projects (remove* our-projects their-projects))
+  (define new-projects (remove* their-projects our-projects))
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
 
@@ -287,14 +287,14 @@
   (define our-files/w-c (map strip-checksum our-files))
   (define their-files/w-c (map strip-checksum their-files))
   ;; Collect list of deleted files (in the backend).
-  (define backend-deleted-files (remove* their-files/w-c our-files/w-c))
-  (define backend-new-files (list->set (remove* our-files/w-c their-files/w-c)))
+  (define backend-new-files (list->set (remove* their-files/w-c our-files/w-c)))
+  (define backend-deleted-files (remove* our-files/w-c their-files/w-c))
   (define our-delete-change
     (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f))
          backend-deleted-files))
   ;; Collect list of new/edited files (in the backend).
   ;; NOTE: The checksum matters for this calculation.
-  (define backend-changed-files (remove* our-files their-files))
+  (define backend-changed-files (remove* their-files our-files))
   ;; NOTE: Binary files are ignored when sending back list of new files.
   ;; TODO: Properly handle binary files (as base64 data: URLs).
   (define our-edit-changes
