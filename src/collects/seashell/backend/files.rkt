@@ -117,16 +117,29 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file does not exist.
-(define/contract (remove-file project file)
-  (-> (and/c project-name? is-project?) path-string? void?)
+(define/contract (remove-file project file [tag #f])
+  (->* ((and/c project-name? is-project?) path-string?) ((or/c string? #f)) void?)
+  (define file-to-write (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project:file
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file (check-and-build-path (build-project-path project) file)))
+    (call-with-file-lock/timeout file-to-write 'exclusive
+                                 (lambda ()
+                                   (when tag
+                                     (define expected-tag (call-with-input-file file-to-write md5))
+                                     (unless (equal? tag expected-tag)
+                                       (raise (exn:project:file:checksum
+                                                (format "Could not write delete file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                        (current-continuation-marks)))))
+                                    (logf 'info "Deleting file ~a!" (some-system-path->string file-to-write))
+                                    (delete-file file-to-write))
+                                 (lambda ()
+                                   (raise (exn:project:file
+                                          (format "Could not delete file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                  (current-continuation-marks))))))
   (void))
 
 ;; (remove-directory project dir)
@@ -175,7 +188,7 @@
        ((or/c #f string?))
        string?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
-  (call-with-file-lock/timeout file-to-write 'exclusive 
+  (call-with-file-lock/timeout file-to-write 'exclusive
                                (lambda ()
                                  (when tag
                                    (define expected-tag (call-with-input-file file-to-write md5))

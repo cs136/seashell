@@ -39,7 +39,7 @@
                [#:struct (exn:project exn:fail:user) ()])
 (require/typed seashell/backend/files
                [new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
-               [remove-file (-> String Path-String Void)]
+               [remove-file (->* (String Path-String) ((U False String)) Void)]
                [read-file (-> String Path-String (Values Bytes String))]
                [write-file (->* (String Path-String Bytes) ((U False String)) String)]
                [list-files (->* (String) ((U String False))
@@ -121,7 +121,7 @@
                    conflicts))])
         (match change
           [(off:change "deleteFile"
-                       (off:file project file _)
+                       (off:file project file checksum)
                        #f
                        checksum)
            (assert (path-string? file))
@@ -133,7 +133,7 @@
                  ([exn:project:file?
                     (lambda ([exn : exn])
                       (cons (conflict "deleteFile" project file #f 'checksum) conflicts))])
-                 (remove-file project file)
+                 (remove-file project file checksum)
                  conflicts)]
              [else
                (raise (exn:project:sync "Expected non-#f checksum for deleteFile!"
