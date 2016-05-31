@@ -21,9 +21,9 @@
 /* jshint supernew: true */
 angular.module('frontend-app')
   // Controller for Project Lists
-  .controller('ProjectListController', ['projectList', 'projects',
+  .controller('ProjectListController', ['$scope', 'projectList', 'projects',
       'NewProjectModal', 'DeleteProjectModal', 'error-service',
-      function (projectList, projects, newProjectModal, deleteProjectModal, errors) {
+      function ($scope, projectList, projects, newProjectModal, deleteProjectModal, errors) {
     var self = this;
     self.projectList = projectList;
     self.state = "list-projects";
@@ -46,7 +46,7 @@ angular.module('frontend-app')
     self.refresh = function () {
       self.projectList.refresh();
     };
-    $scope.on("projects-refreshed", function () {
+    $scope.$on("projects-refreshed", function () {
       self.refresh();
     });
 

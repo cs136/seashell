@@ -350,7 +350,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         console.log("syncAll invoked");
         // I don't like the way this works, it'll be very slow.
         //  I am still in favour of a lazy sync process
-        $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
+        return $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
           .then(function(res) {
             var projects = _.map(res[0], function(p) { return p[0]; });
             $q.all(_.map(projects, localfiles.listProject))
@@ -369,7 +369,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                     }
                   });
                 // should have everything now, just send it to the backend
-                return self._socket.sync({
+                var prom = self._socket.sync({
                   projects: projects,
                   files: files,
                   changes: res[1]
@@ -397,6 +397,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                     return res.changes;
                   });
                 });
+                return prom;
               });
           });
       };
