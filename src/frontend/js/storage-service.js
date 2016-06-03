@@ -229,30 +229,65 @@ angular.module('seashell-local-files', [])
       self.writeFile = function(name, file_name, file_content, checksum) {
         var offline_checksum = md5(file_content);
         var path = self._path(name, file_name);
-        var def = $q.defer();
 
-        // checksum is false when we're doing an offline write
-        if (checksum === false) {
-          // read and write back
-          return $q.when(self.store.getItem(path)).then(
-            function(contents) {
-              contents = contents || {};
-              contents.data = file_content;
-              contents.offline_checksum = offline_checksum;
-              self._addOfflineChange(name, file_name);
-              console.log("[localfiles] Offline Write", contents);
-              return self.store.setItem(path, contents);
+        return self._getProject(name).then(function(tree) {
+          var found = false;
+          var prom;
+          for(var i=0; i<tree.length; i++) {
+            if(tree[i].path==file_name) {
+              found = tree[i];
             }
-          );
-        } else {
-          var to_write = {
-            data: file_content,
-            online_checksum: checksum,
-            offline_checksum: offline_checksum
-          };
-          console.log("[localfiles] Writing: ", to_write);
-          return $q.when(self.store.setItem(path, to_write));
-        }
+          }
+          if(!found) {
+            tree.push({path: file_name, online_checksum: checksum,
+                offline_checksum: offline_checksum});
+          }
+          else {
+            found.offline_checksum = offline_checksum;
+            if(checksum) {
+              found.online_checksum = checksum;
+            }
+          }
+          prom = self.store.setItem(sprintf("//projects/%s", name), tree);
+          return prom.then(function() {
+            console.log("[localfiles] Offline Write", contents);
+            return self.store.setItem(path, contents);
+          });
+        });
+      };
+
+      self.batchWrite = function(name, files, contents, checksums) {
+        var offline_checksums = _.map(contents, md5);
+        var paths = _.map(files, function(file) { return self._path(name, file); });
+
+        return self._getProject(name).then(function(tree) {
+          for(var f=0; f<files.length; f++) {
+            var found = false;
+            var prom;
+            for(var i=0; i<tree.length; i++) {
+              if(tree[i].path === files[f]) {
+                found = tree[i];
+              }
+            }
+            if(!found) {
+              tree.push({path: files[f], online_checksum: checksums[f],
+                  offline_checksum: offline_checksums[f]});
+            }
+            else {
+              found.offline_checksum = offline_checksums[f];
+              if(checksums[f]) {
+                found.online_checksum = checksums[f];
+              }
+            }
+          }
+          prom = self.store.setItem(sprintf("//projects/%s", name), tree);
+          return prom.then(function() {
+            console.log("[localfiles] Offline Batch Write", files);
+            return $q.all(_.map(_.zip(paths, contents), function(p) {
+              return self.store.setItem(p[0], p[1]);
+            }));
+          });
+        });
       };
 
       self.readFile = function(name, file_name) {
@@ -279,7 +314,48 @@ angular.module('seashell-local-files', [])
       self.deleteFile = function(name, file_name) {
         console.log("[localfiles] deleteFile");
         self._addOfflineDelete(name, file_name);
-        return $q.when(self.store.removeItem(self._path(name, file_name)));
+        return self.store.getItem(sprintf("//projects/%s", name)).then(function(tree) {
+          var i = 0;
+          var found = false;
+          for(; i<tree.length; i++) {
+            if(tree[i].path === file_name) {
+              found = true;
+              break;
+            }
+          }
+          if(found) {
+            tree.splice(i, 1);
+          }
+          return self.store.setItem(sprintf("//projects/%s", name), tree).then(function() {
+            return $q.when(self.store.removeItem(self._path(name, file_name))); 
+          });
+        });
+      };
+
+      self.batchDelete = function(name, files) {
+        console.log("[localfiles] batchDelete");
+
+        _.each(files, function(f) { self._addOfflineDelete(name, f); });
+        return self.store.getItem(sprintf("//projects/%s", name)).then(function(tree) {
+          for(var f=0; f<files.length; f++) {
+            var i = 0;
+            var found = false;
+            for(; i<tree.length; i++) {
+              if(tree[i].path === files[f]) {
+                found = true;
+                break;
+              }
+            }
+            if(found) {
+              tree.splice(i, 1);
+            }
+          }
+          return self.store.setItem(sprintf("//projects/%s", name), tree).then(function() {
+            return $q.all(_.map(files, function(f) {
+              return self.store.removeItem(self._path(name, f));
+            }));
+          });
+        });
       };
 
       self.getRunnerFile = function(name, question) {
@@ -301,7 +377,7 @@ angular.module('seashell-local-files', [])
       // to be stored offline.
       // When this is read out again, project-service will
       // convert it back into a tree. The return value of this function
-      // is the same format as what listProject returns.
+      // is the same format as what _getProject returns.
       self._serializeProject = function(project) {
         // A file is an array [name, is_dir, timestamp (0), hash (false)]
         var initial = [[project.name.join("/"), project.is_dir, 0, false]];
@@ -325,9 +401,32 @@ angular.module('seashell-local-files', [])
         return $q.when(self.store.setItem(sprintf("//projects/%s", project.name), serialized));
       };
 
-      self.listProject = function(name) {
+      self._getProject = function(name) {
         // return the entire SeashellProject tree
-        return $q.when(self.store.getItem(sprintf("//projects/%s", name)));
+        return self.store.getItem(sprintf("//projects/%s", name))
+          .then(function(tree) {
+            if(!Array.isArray(tree)) return [];
+            return tree;
+          });
+      };
+
+      self.listProject = function(name) {
+        // outward-facing listProject matching the type of result returned from
+        //  online listProject
+        return self._getProject(name).then(function(files) {
+          var result = _.map(files, function(f) {
+            return [f.path, false, 0, f.online_checksum];
+          });
+          _.each(files, function(f) {
+            var dir = f.path.split("/");
+            dir.pop();
+            dir = dir.join("/");
+            if(result.indexOf(dir)===-1) {
+              result.push([dir, true, 0, ""]);
+            }
+          });
+          return result;
+        });
       };
 
       self.newDirectory = function(name, dir_path) {
@@ -354,31 +453,58 @@ angular.module('seashell-local-files', [])
       self.newProject = function(name) {
         console.log("[localfiles] newProject", name);
         self.projects.push(name);
-        return $q.when(self.store.setItem("//projects", self.projects));
+        return self.store.getItem("//projects").then(function(projects) {
+          if(projects.indexOf(name)===-1)
+            projects.push(name);
+          return self.store.setItem("//projects", self.projects);
+        });
       };
 
+      // Assumes all files contained in the project have already been deleted.
       self.deleteProject = function(name) {
         console.log("[localfiles] deleteProject", name);
-        $q.when(self.store.getItem(sprintf("//projects/%s", name)))
-          .then(function(files) {
+        return $q.all([self.getProjects(), self.store.getItem(sprintf("//projects/%s", name))])
+          .then(function(res) {
             var proms = [];
-            _.each(_.filter(files, function(f) {
-              return !f[1];
-            }), function(f) {
+            var files = res[1];
+            var projects = res[0];
+            _.each(files, function(f) {
               proms.push(self.deleteFile(name, f[0]));
             });
             proms.push($q.when(self.store.removeItem(sprintf("//projects/%s", name))));
-            self.projects = _.filter(self.projects, function(p) {
+            projects = _.filter(projects, function(p) {
               return p !== name;
             });
-            proms.push($q.when(self.store.setItem("//projects", self.projects)));
+            proms.push($q.when(self.store.setItem("//projects", projects)));
             return $q.all(proms);
           });
       };
 
+      self.batchDeleteProjects = function(names) {
+        console.log('[localfiles] batchDeleteProjects', names);
+        return $q.all(_.map(names, function(p) {
+          return self.store.getItem(sprintf("//projects/%s", p));
+        })).then(function(trees) {
+          var proms = [];
+          for(var p=0; p<names.length; p++) {
+            _.each(trees[p], function(f) {
+              proms.push(self.deleteFile(names[p], f[0]));
+            });
+            proms.push(self.store.removeItem(sprintf("//projects/%s", names[p])));
+            self.projects = _.filter(self.projects, function(n) {
+              return n !== names[p];
+            });
+          }
+          proms.push(self.store.setItem("//projects", self.projects));
+          return $q.all(proms);
+        });
+      };
+
       self.getProjects = function() {
-        console.log("[localfiles] getProjects", self.projects);
-        return $q.when(self.projects);
+        return self.store.getItem("//projects").then(function(proj) {
+          if(!Array.isArray(proj)) return [];
+          return proj;
+        });
       };
     }
   ]);

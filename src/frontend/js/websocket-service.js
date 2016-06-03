@@ -348,8 +348,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
        */
       self.syncAll = function() {
         console.log("syncAll invoked");
-        // I don't like the way this works, it'll be very slow.
-        //  I am still in favour of a lazy sync process
+
         return $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
           .then(function(res) {
             var projects = _.map(res[0], function(p) { return p[0]; });
@@ -358,12 +357,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                 var files = [];
                 _.each(_.zip(projects,trees), function(project_tree) {
                     var project = project_tree[0];
-                    var tree = project_tree[1];
+                    var tree = _.filter(project_tree[1], function(f) { return !f[1]; });
                     console.log(project, tree);
                     if(tree) {
-                      files = files.concat(_.map(_.filter(tree, function(file) {
-                        return !file[1];
-                      }), function(file) {
+                      files = files.concat(_.map(tree, function(file) {
                         return {project: project, file: file[0], checksum: file[3]};
                       }));
                     }
@@ -379,23 +376,32 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                   _.each(res.newProjects, function(project) {
                     proms.push(localfiles.newProject(project));
                   });
-                  _.each(res.changes, function(change) {
-                    var file = change.file;
-                    if(change.type === "editFile") {
-                      proms.push(localfiles.writeFile(file.project, file.path, change.contents, file.checksum));
-                    }
-                    else if(change.type === "deleteFile") {
-                      proms.push(localfiles.deleteFile(file.project, file.path));
-                    }
-                  });
-                  _.each(res.deletedProjects, function(project) {
-                    proms.push(localfiles.deleteProject(project));
-                  });
-                  return $q.all(proms).then(function() {
-                    // send the changes back in case we need to act on the files that have
-                    //  changed within the open project
-                    return res.changes;
-                  });
+                  var edits = _.filter(res.changes, function(c) { return c.type === 'editFile'; });
+                  var deletes = _.filter(res.changes, function(c) { return c.type === 'deleteFile'; });
+                  
+                  // apply all the edits in a batch write
+                  return $q.all(_.mapObject(_.groupBy(edits,
+                      function(c) { return c.file.project; }),
+                    function(changes, project) {
+                      var args = _.unzip(_.map(changes, function(c) {
+                        return [c.file.file, c.contents, c.file.checksum];
+                      }));
+                      return localfiles.batchWrite(project, args[0], args[1], args[2]);
+                    })).then(function() {
+                      // apply all deletes in a batch
+                      return $q.all(_.mapObject(_.groupBy(deletes,
+                          function(c) { return c.file.project; }),
+                        function(changes, project) {
+                          var arg = _.map(changes, function(c) { return c.file.file; });
+                          return localfiles.batchDelete(project, arg);
+                        })).then(function() {
+                          return localfiles.batchDeleteProjects(res.deletedProjects);
+                        });
+                    }).then(function() {
+                      // send the changes back in case we need to act on the files that have
+                      //  changed within the open project
+                      return res.changes;
+                    });
                 });
                 return prom;
               });
@@ -404,8 +410,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       // saves the directory & file structure of a project locally
       self.updateTree = function(project) {
-        if(self.offlineEnabled())
-          localfiles._dumpProject(project);
+        //if(self.offlineEnabled())
+        //  localfiles._dumpProject(project);
       };
 
       self.getProjects = function(deferred) {
@@ -417,16 +423,16 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
         }
         else {
-          return localfiles.getProjects();
+          return localfiles.getProjects().then(function(projects) {
+            // return placeholder last modified value of 0 for now
+            return projects;
+            //return _.map(projects, function(p) { return [p, 0]; });
+          });
         }
       };
 
       self.listProject = function(name, deferred) {
         if (!self.isOffline()) {
-          localfiles.listProject(name).then(
-              function(tree) {
-                console.log("[websocket] offline listProject", tree);
-              });
           return self._socket.listProject(name, deferred);
         } else {
           return localfiles.listProject(name);
