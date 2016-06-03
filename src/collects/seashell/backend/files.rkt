@@ -120,7 +120,8 @@
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
     (delete-file file-path)
-    (delete-file history-path))
+    (delete-file history-path)
+    )
   (void))
 
 ;; (remove-directory project dir)
@@ -170,10 +171,10 @@
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'must-truncate)
-  (when history
+  ;(when history
     (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                          (lambda () (write-bytes history))
-                         #:exists 'replace))
+                         #:exists 'replace);)
   (void))
 
 ;; (get-history-path path) -> path
