@@ -302,13 +302,14 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
               }
             };
             return $q.when(file.getDependencies()).then(function(deps) {
-              var file_arr = _.map(deps, function(f) { return f.toWorker(); });
-              self.compiler.postMessage({
-                runnerFile: file.filename(),
-                files: file_arr,
-                tests: tests
+              $q.all(_.map(deps, function(f) { return f.toWorker(); })).then(function(file_arr) {
+                self.compiler.postMessage({
+                  runnerFile: file.filename(),
+                  files: file_arr,
+                  tests: tests
+                });
+                return res.promise;
               });
-              return res.promise;
             });
           }
       };
@@ -491,17 +492,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         }
       };
 
-
-      // These two functions are provided separately
-      // because code for handling online/offline stuff
-      // is compilcated and needs to be dealt with in project-service
-      self.onlineReadFile = function(name, file_name, deferred) {
-        if (self.isOffline()) return $q.reject();
-        return self._socket.readFile(name, file_name, deferred);
-      };
-
-      self.offlineReadFile = function(name, file_name, deferred) {
-        return localfiles.readFile(name, file_name);
+      self.readFile = function(name, file_name, deferred) {
+        if(self.isOffline()) return localfiles.readFile(name, file_name)
+          .then(function(conts) {
+            return {data: conts};
+          });
+        else return self._socket.readFile(name, file_name, deferred);
       };
 
       self.newFile = function(name, file_name, contents,

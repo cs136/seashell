@@ -417,14 +417,14 @@ angular.module('seashell-local-files', [])
           var result = _.map(files, function(f) {
             return [f.path, false, 0, f.online_checksum];
           });
-          _.each(files, function(f) {
+          /*_.each(files, function(f) {
             var dir = f.path.split("/");
             dir.pop();
             dir = dir.join("/");
             if(result.indexOf(dir)===-1) {
               result.push([dir, true, 0, ""]);
             }
-          });
+          });*/
           return result;
         });
       };

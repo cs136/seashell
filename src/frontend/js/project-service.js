@@ -56,11 +56,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * @constructor Constructor for a new SeashellFile
          * @param {SeashellProject} project - Project for which this file belongs in.
          * @param {String} name - Full name of file.
-         * @param {String} contents - Complete file contents.
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
          */
-        function SeashellFile(project, name, contents, is_dir, last_saved) {
+        function SeashellFile(project, name, is_dir, last_saved) {
           var self = this;
           self.name = name.split("/");
           var par = self.name.slice(0,self.name.length-1).join('/');
@@ -68,7 +67,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             self.parent = project.root.find(par);
           }
           self.project = project;
-          self.contents = contents ? contents : null;
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
@@ -76,9 +74,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
         SeashellFile.prototype.toWorker = function() {
           var self = this;
-          var obj = { name: self.name[self.name.length-1],
-                      contents: self.contents };
-          return obj;
+          return self.read().then(function(conts) {
+            var obj = { name: self.name[self.name.length-1],
+                        contents: conts };
+            return obj;
+          });
         };
 
         // for now, bundle everything together from question and common
@@ -138,33 +138,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellFile.prototype.read = function() {
           var self = this;
-          var def = $q.defer();
 
-          if(self.contents !== null) {
-            def.resolve(self.contents);
-          }
-          else {
-            var offlineRead = function() {
-              return ws.offlineReadFile(self.project.name, self.fullname());
-            };
-
-            $q.when(ws.onlineReadFile(self.project.name, self.fullname()))
-              .then(function(conts) {
-                  self.contents = conts.data;
-                  def.resolve(self.contents);
-              })
-              .catch(function() {
-                offlineRead().then(function(conts) {
-                  if(conts === null) {
-                    return def.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
-                  } else {
-                    self.contents = conts.data;
-                    def.resolve(self.contents);
-                  }
-                });
-              });
-          }
-          return def.promise;
+          return $q.when(ws.readFile(self.project.name, self.fullname()))
+            .then(function(conts) {
+              if(conts === null) {
+                  return $q.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                }
+              return conts.data;
+            });
         };
 
         /**
@@ -175,7 +156,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellFile.prototype.write = function(data) {
           var self = this;
-          self.contents = data;
           return $q.when(ws.writeFile(self.project.name, self.fullname(), data));
         };
 
@@ -355,12 +335,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
           return result.then(function () {
             return $q.when(ws.listProject(self.name)).then(function(files) {
-               self.root = new SeashellFile(self, "", null, true);
-                 _.map(files, function(f) {
-                   self.root._placeInTree(new SeashellFile(self, f[0], null, f[1], f[2], f[3]), null, true);
-               });
-
-            });}).then(function () {
+              self.root = new SeashellFile(self, "", true);
+              var chain = function(i) {
+                if(i>= files.length) return $q.when();
+                var f = files[i];
+                $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
+                  .then(function() {
+                    return chain(i+1);
+                  });
+              };
+              return chain(0);
+            });
+          }).then(function () {
                /* If the project is listed in the project skeleton on the server,
                   set self.projectZipURL to the project directory url.
                   set self.skel to the file skeleton url.
