@@ -213,8 +213,8 @@ angular.module('seashell-local-files', [])
           }
           prom = self.store.setItem(sprintf("//projects/%s", name), tree);
           return prom.then(function() {
-            console.log("[localfiles] Offline Write", contents);
-            return self.store.setItem(path, contents);
+            console.log("[localfiles] Offline Write", file_content);
+            return self.store.setItem(path, file_content);
           });
         });
       };

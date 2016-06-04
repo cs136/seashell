@@ -216,19 +216,24 @@ angular.module('frontend-app')
         };
 
         /** Try to load the question, and go back to the project if we can't. */
-        try {
-          self.refresh();
-          self.project.updateMostRecentlyUsed(self.question);
-          self.project.mostRecentlyUsed(self.question)
-            .then(function (recent) {
-              if (recent && $state.is('edit-project.editor')) {
-                $state.go("edit-project.editor.file",
-                          {part: recent.part, file: recent.file},
-                          {location: "replace"});
-              }
-            });
-        } catch (e) {
-          errors.report({}, sprintf("Could not open question %s!", self.question));
-          $state.go("edit-project");
-        }
+        var key = ws.register_callback('connected', function() {
+          try {
+            self.refresh();
+            self.project.updateMostRecentlyUsed(self.question);
+            self.project.mostRecentlyUsed(self.question)
+              .then(function (recent) {
+                if (recent && $state.is('edit-project.editor')) {
+                  $state.go("edit-project.editor.file",
+                            {part: recent.part, file: recent.file},
+                            {location: "replace"});
+                }
+              });
+          } catch (e) {
+            errors.report({}, sprintf("Could not open question %s!", self.question));
+            $state.go("edit-project");
+          }
+        });
+        $scope.$on('$destroy', function() {
+          ws.unregister_callback(key);
+        });
       }]);

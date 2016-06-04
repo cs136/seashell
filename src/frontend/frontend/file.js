@@ -53,23 +53,7 @@ angular.module('frontend-app')
         self.consoleEditor = null;
         self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
-        /** Callback key when connected.
-         *  NOTE: This is slightly sketchy -- however, as
-         *  the editor will only be loaded if and only if
-         *  the socket exists in the first place, this is
-         *  fine for now. */
-        var cbC_key = ws.register_callback('connected', function () {
-          //if (self.editor)
-          //  self.editor.setOption("readOnly", self.editorReadOnly);
-        }, true);
-        var cbF_key = ws.register_callback('failed', function () {
-          //if (self.editor)
-            //self.editor.setOption("readOnly", true);
-        }, true);
-        var cbD_key = ws.register_callback('disconnected', function () {
-          //if (self.editor)
-            //self.editor.setOption("readOnly", true);
-        }, true);
+        /** Deregistration code */
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
           if(undefined===self.scrollInfo[self.folder])
@@ -79,9 +63,6 @@ angular.module('frontend-app')
           if(undefined===self.undoHistory[self.folder])
             self.undoHistory[self.folder] = {};
           self.undoHistory[self.folder][self.file] = self.editor.getHistory();
-          ws.unregister_callback(cbC_key);
-          ws.unregister_callback(cbF_key);
-          ws.unregister_callback(cbD_key);
         });
         self.editorFocus = false;
         self.contents = "";
@@ -547,17 +528,32 @@ angular.module('frontend-app')
             // since EditorController is in the child scope of EditorFileController
 
         };
+        self.refreshRunner = function () {
+          self.project.getFileToRun(self.question)
+             .then(function (result) {
+                 self.runnerFile = result && (result !== "");
+                 self.isFileToRun = (result === self.file);
+             });
+        };
 
         // Initialization code goes here.
-        var key = settings.addWatcher(function () {self.refreshSettings();}, true);
-
+        var settings_key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
             self.project.saveFile(self.question, self.folder, self.file, self.contents);
           }
-          settings.removeWatcher(key);
+          settings.removeWatcher(settings_key);
+          ws.unregister_callback(connected_key);
         });
+        /** Callback key when connected.
+         *  NOTE: This is slightly sketchy -- however, as
+         *  the editor will only be loaded if and only if
+         *  the socket exists in the first place, this is
+         *  fine for now. */
+        var connected_key = ws.register_callback('connected', function () {
+          //if (self.editor)
+          //  self.editor.setOption("readOnly", self.editorReadOnly);
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts;
@@ -575,19 +571,6 @@ angular.module('frontend-app')
               $state.go('edit-project.editor');
             }
           });
-
-        // true iff the given file has the given extension
-        function has_ext(ext, fname){
-          return fname.split(".").pop() === ext;
-        }
-
-        self.refreshRunner = function () {
-          self.project.getFileToRun(self.question)
-             .then(function (result) {
-                 self.runnerFile = result && (result !== "");
-                 self.isFileToRun = (result === self.file);
-             });
-        };
-        self.refreshRunner();
-
+          self.refreshRunner();
+        }, true);
       }]);
