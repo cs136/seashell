@@ -263,7 +263,6 @@ angular.module('seashell-local-files', [])
         return self._getProject(name).then(function(tree) {
           for(var f=0; f<files.length; f++) {
             var found = false;
-            var prom;
             for(var i=0; i<tree.length; i++) {
               if(tree[i].path === files[f]) {
                 found = tree[i];
@@ -280,7 +279,7 @@ angular.module('seashell-local-files', [])
               }
             }
           }
-          prom = self.store.setItem(sprintf("//projects/%s", name), tree);
+          var prom = self.store.setItem(sprintf("//projects/%s", name), tree);
           return prom.then(function() {
             console.log("[localfiles] Offline Batch Write", files);
             return $q.all(_.map(_.zip(paths, contents), function(p) {
@@ -483,19 +482,21 @@ angular.module('seashell-local-files', [])
       self.batchDeleteProjects = function(names) {
         console.log('[localfiles] batchDeleteProjects', names);
         return $q.all(_.map(names, function(p) {
-          return self.store.getItem(sprintf("//projects/%s", p));
-        })).then(function(trees) {
+          return {name: p, tree: self.store.getItem(sprintf("//projects/%s", p))};
+        })).then(function(names_trees) {
           var proms = [];
-          for(var p=0; p<names.length; p++) {
-            _.each(trees[p], function(f) {
-              proms.push(self.deleteFile(names[p], f[0]));
+          _.each(names_trees, function (name_tree) {
+            var name = name_tree.name;
+            var tree = name_tree.tree;
+              _.each(tree, function(f) {
+                proms.push(self.deleteFile(name, f[0]));
+              });
+              proms.push(self.store.removeItem(sprintf("//projects/%s", name)));
+              self.projects = _.filter(self.projects, function(n) {
+                return n !== name;
+              });
             });
-            proms.push(self.store.removeItem(sprintf("//projects/%s", names[p])));
-            self.projects = _.filter(self.projects, function(n) {
-              return n !== names[p];
-            });
-          }
-          proms.push(self.store.setItem("//projects", self.projects));
+            proms.push(self.store.setItem("//projects", self.projects));
           return $q.all(proms);
         });
       };

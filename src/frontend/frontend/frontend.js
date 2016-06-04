@@ -40,7 +40,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         // Refresh function
         self.refresh = function () {
           $rootScope.$broadcast('projects-refreshed');
-        }
+        };
         // Help function
         self.help = function () {
           $modal.open({
