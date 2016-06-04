@@ -372,34 +372,6 @@ angular.module('seashell-local-files', [])
         return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
       };
 
-      // Flatten the project tree into a list of nodes
-      // to be stored offline.
-      // When this is read out again, project-service will
-      // convert it back into a tree. The return value of this function
-      // is the same format as what _getProject returns.
-      self._serializeProject = function(project) {
-        // A file is an array [name, is_dir, timestamp (0), hash (false)]
-        var initial = [[project.name.join("/"), project.is_dir, 0, false]];
-        return initial.concat(self._serializeChildren(project.children));
-      };
-
-      // Calls serializeProject on a list of children and folds the results
-      // Need this because we need to exclude the root from the flattened list.
-      self._serializeChildren = function(children) {
-        return  _.foldl(children, function (rest, p) {
-          return rest.concat(self._serializeProject(p));
-        }, []);
-      };
-
-      // Store an entire SeashellProject tree into the offline store
-      self._dumpProject = function(project) {
-        // manually (trivially) serialize the project,
-        // stripping away things we don't need
-        // NOTE: exclude the root!
-        var serialized = self._serializeChildren(project.root.children);
-        return $q.when(self.store.setItem(sprintf("//projects/%s", project.name), serialized));
-      };
-
       self._getProject = function(name) {
         // return the entire SeashellProject tree
         return self.store.getItem(sprintf("//projects/%s", name))
