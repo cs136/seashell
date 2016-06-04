@@ -197,7 +197,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               return $q.reject("File does not exist.");
             }
             self.children = split[1] || [];
-            ws.updateTree(self.project);
             if (!soft_delete) {
               return $q.when(ws.deleteFile(self.project.name, split[0][0].fullname()));
             }
@@ -207,7 +206,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               return path[0] == c.name[c.name.length-1];
             })[0]._removeFromTree(path.slice(1), soft_delete);
           }
-          ws.updateTree(self.project);
           return $q.when();
         };
 
@@ -228,19 +226,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                 return $q.when(ws.newDirectory(file.project.name,
                   file.fullname())).then(function () {
                   self.children.push(file);
-                  ws.updateTree(self.project);
                 });
               } else {
                 return $q.when(ws.newFile(file.project.name,
                   file.fullname(), contents, encoding, normalize ? true : false))
                     .then(function () {
                       self.children.push(file);
-                      ws.updateTree(self.project);
                     });
               }
             } else {
               self.children.push(file);
-              ws.updateTree(self.project);
             }
           } else {
             var match = _.filter(self.children, function(c) {
@@ -255,7 +250,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                   $q.when(ws.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
-                  ws.updateTree(self.project);
                   return self._placeInTree(file, path, soft_place, contents,
                     encoding, normalize);
                 });

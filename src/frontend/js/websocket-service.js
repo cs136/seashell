@@ -409,12 +409,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
-      // saves the directory & file structure of a project locally
-      self.updateTree = function(project) {
-        //if(self.offlineEnabled())
-        //  localfiles._dumpProject(project);
-      };
-
       self.getProjects = function(deferred) {
         if (!self.isOffline()) {
           return self._socket.getProjects(deferred)
