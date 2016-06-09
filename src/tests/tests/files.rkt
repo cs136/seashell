@@ -78,6 +78,11 @@
       (define-values (contents history) (read-file "test" "foo8.c"))
       (check-equal? history #"sample history\n"))
 
+    (test-case "Create a file backup (with directory) and ensure it exists"
+      (new-file "test" "foo9.c" #"back-this-up" 'raw #f)
+      (write-backup "test" "foo9.c")
+      (check-equal? (length (list-files (check-and-build-path "test") ".foo9.c_backup")) 1))
+
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))

@@ -28,6 +28,7 @@
          racket/match
          racket/file
          racket/path
+         racket/date
          file/unzip
          openssl/md5)
 
@@ -41,6 +42,7 @@
          list-files
          rename-file
          restore-file-from-template
+         write-backup
          read-settings
          write-settings)
 
@@ -171,7 +173,37 @@
     (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                          (lambda () (write-bytes history))
                          #:exists 'replace))
+  ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
+  (write-backup project file)
   (void))
+
+;; (write-backup project file) -> void?
+;; creates a backup of a file in a hidden folder
+;;
+;;  project - project.
+;;  file - name of file to write.
+(define/contract (write-backup project file)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (define source (check-and-build-path (build-project-path project) file))
+  (define backup-folder (get-backup-path (check-and-build-path (build-project-path project) file)))
+  (define timestamp (date->string (current-date))) ;; might need cleaning
+  (define destination (check-and-build-path backup-folder (string-append file timestamp)))
+  (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
+  (copy-file source destination)
+  (void))
+
+;; TODO: maybe combine "get-X-path" into something more general?
+;; (get-backup-path path) -> path
+;; given a file's path, returns the path to that file's backups folder
+;; Arguments:
+;;  path - path to file
+;;
+;; Returns:
+;;  path to file's backups
+(define (get-backup-path path)
+  (define-values (base name _1) (split-path (simplify-path path)))
+  (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
+  (build-path base backup-folder))
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
