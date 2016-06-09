@@ -85,7 +85,8 @@
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
-      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))
+      (check-false (or (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
+                       (file-exists? (check-and-build-path (build-project-path "test") ".bad.c.history")))))
 
     (test-case "Create a directory"
       (new-directory "test" "boost")

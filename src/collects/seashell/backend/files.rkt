@@ -112,14 +112,18 @@
 ;;  exn:project:file if file does not exist.
 (define/contract (remove-file project file)
   (-> (and/c project-name? is-project?) path-string? void?)
-  (with-handlers
+  (define file-path (check-and-build-path (build-project-path project) file))
+  (define history-path (get-history-path file-path))
+  (with-handlers 
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file (check-and-build-path (build-project-path project) file)))
+    (delete-file file-path)
+    (delete-file history-path)
+    )
   (void))
 
 ;; (remove-directory project dir)
@@ -186,9 +190,13 @@
   (-> (and/c project-name? is-project?) path-string? void?)
   (define source (check-and-build-path (build-project-path project) file))
   (define backup-folder (get-backup-path (check-and-build-path (build-project-path project) file)))
-  (define timestamp (date->string (current-date))) ;; might need cleaning
-  (define destination (check-and-build-path backup-folder (string-append file timestamp)))
+  (define timestamp (date->string (current-date))) ;; TODO: clean this up
+  (define destination (check-and-build-path backup-folder (string-append "backup_" timestamp)))
   (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
+  (printf "file: ~a\n" file)
+  (printf "source: ~a\n" source)
+  (printf "backup-folder: ~a\n" backup-folder)
+  (printf "dest: ~a\n" destination)
   (copy-file source destination)
   (void))
 
