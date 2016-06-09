@@ -359,7 +359,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                 _.each(_.zip(projects,trees), function(project_tree) {
                     var project = project_tree[0];
                     var tree = _.filter(project_tree[1], function(f) { return !f[1]; });
-                    console.log(project, tree);
                     if(tree) {
                       files = files.concat(_.map(tree, function(file) {
                         return {project: project, file: file[0], checksum: file[3]};
@@ -399,6 +398,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                           return localfiles.batchDeleteProjects(res.deletedProjects);
                         });
                     }).then(function() {
+                      localfiles.clearOfflineChanges();
                       // send the changes back in case we need to act on the files that have
                       //  changed within the open project
                       return res.changes;
@@ -531,11 +531,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
           .then(offlineWrite)  // get checksum from backend and write
           .catch(function () { offlineWrite(false); }); // force write
-      };
-
-
-      self.offlineWriteFile = function(name, file_name, file_content, checksum) {
-        localfiles.writeFile(name, file_name, file_content, checksum);
       };
 
       self.deleteFile = function(name, file_name, deferred) {
