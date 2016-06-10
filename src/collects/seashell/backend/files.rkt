@@ -121,9 +121,9 @@
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file file-path)
-    (delete-file history-path)
-    )
+    (delete-file file-path))
+  (when (file-exists? history-path)
+    (delete-file history-path))
   (void))
 
 ;; (remove-directory project dir)
