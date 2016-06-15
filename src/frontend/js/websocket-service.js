@@ -39,7 +39,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           throw new ReferenceError("You forgot to replace something.");
         }
       });
-      self.syncing = false;
+      self.synced = false;
       self.connected = false;
       self.failed = false;
 
@@ -100,14 +100,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.invoke_cb = function(type, message) {
-        return _.each(_.map(_.filter(callbacks, function(x) {
-              return x && x.type === type;
-            }),
-            function(x) {
-              return x.cb;
-            }),
+        return _.map(_.filter(callbacks, function(x) {
+            return x && x.type === type;
+          }),
           function(x) {
-            x(message);
+            return x.cb(message);
           });
       };
 
@@ -129,15 +126,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         if (!$cookies.get(SEASHELL_CREDS_COOKIE)) {
           self.failed = true;
           $timeout(function() {
-            _.each(_.map(_.filter(callbacks, function(x) {
-                  return x.type === 'failed';
-                }),
-                function(x) {
-                  return x.cb;
-                }),
-              function(x) {
-                x();
-              });
+            self.invoke_cb('failed');
           }, 0);
           return $q.reject("No credentials found!");
         }
@@ -160,29 +149,13 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
               self.connected = false;
               $timeout(function() {
                 $interval.cancel(timeout_interval);
-                _.each(_.map(_.filter(callbacks, function(x) {
-                      return x.type === 'disconnected';
-                    }),
-                    function(x) {
-                      return x.cb;
-                    }),
-                  function(x) {
-                    x();
-                  });
+                self.invoke_cb('disconnected');
               }, 0);
             });
         } catch (e) {
           self.failed = true;
           $timeout(function() {
-            _.each(_.map(_.filter(callbacks, function(x) {
-                  return x.type === 'failed';
-                }),
-                function(x) {
-                  return x.cb;
-                }),
-              function(x) {
-                x();
-              });
+            self.invoke_cb('failed');
           }, 0);
           return $q.reject(e);
         }
@@ -192,28 +165,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             console.log("Seashell socket set up properly.");
             timeout_interval = $interval(function() {
               if (timeout_count++ === 3) {
-                _.each(_.map(_.filter(callbacks, function(x) {
-                      return x.type === 'timeout';
-                    }),
-                    function(x) {
-                      return x.cb;
-                    }),
-                  function(x) {
-                    x();
-                  });
+                self.invoke_cb('timeout');
               }
               $q.when(self._socket.ping())
                 .then(function() {
                   if (timeout_count >= 3) {
-                    _.each(_.map(_.filter(callbacks, function(x) {
-                          return x.type === 'timein';
-                        }),
-                        function(x) {
-                          return x.cb;
-                        }),
-                      function(x) {
-                        x();
-                      });
+                    self.invoke_cb('timein');
                   }
                   timeout_count = 0;
                 });
@@ -225,22 +182,13 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             console.log("Websocket disconnection monitor set up properly.");
             /** Run the callbacks. First the syncing ones, then the
               connected ones when these are resolved. */
-            $q.all(_.each(_.map(_.filter(callbacks, function(x) {
+            $q.all(_.map(_.filter(callbacks, function(x) {
                 return x.type === 'syncing';
               }), function(x) {
-                return x.cb;
-              }), function(x) { x(); }))
-              .then(function() {
-                _.each(_.map(_.filter(callbacks, function(x) {
-                      return x.type === 'connected';
-                    }),
-                    function(x) {
-                      return x.cb;
-                    }),
-                  function(x) {
-                    x();
-                  });
-            });
+                return x.cb();
+              })).then(function() {
+                return self.invoke_cb('connected');
+              });
           });
       };
 
@@ -352,7 +300,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
         return $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
           .then(function(res) {
-            var projects = _.map(res[0], function(p) { return p[0]; });
+            var projects = res[0];
             $q.all(_.map(projects, localfiles.listProject))
               .then(function(trees) {
                 var files = [];
@@ -373,9 +321,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                 }).then(function(res) {
                   var proms = [];
                   var i;
-                  _.each(res.newProjects, function(project) {
-                    proms.push(localfiles.newProject(project));
-                  });
+                  proms.push(localfiles.batchNewProjects(res.newProjects));
                   var edits = _.filter(res.changes, function(c) { return c.type === 'editFile'; });
                   var deletes = _.filter(res.changes, function(c) { return c.type === 'deleteFile'; });
                   
@@ -411,17 +357,13 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.getProjects = function(deferred) {
         if (!self.isOffline()) {
-          return self._socket.getProjects(deferred)
-          .then(function(projects) {
-            localfiles.setProjects(projects);
-            return projects;
-          });
+          return self._socket.getProjects(deferred);
         }
         else {
           return localfiles.getProjects().then(function(projects) {
             // return placeholder last modified value of 0 for now
-            return projects;
-            //return _.map(projects, function(p) { return [p, 0]; });
+            // TODO maintain an actual last modified value
+            return _.map(projects, function(p) { return [p, 0]; });
           });
         }
       };

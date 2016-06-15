@@ -63,10 +63,11 @@ angular.module('seashell-local-files', [])
               var file = _.filter(files, function(f) { return f.path == oc.getPath(); })[0];
               return self.readFile(proj, oc.getPath()).then(function(contents) {
                 if(oc._isDeleted) {
-                  return ["deleteFile", {project: proj, path: file.path}];
+                  return {type:"deleteFile", checksum:file.online_checksum,
+                    file:{project: proj, file: file.path, checksum:file.online_checksum}};
                 }
-                return ["editFile", {project: proj, path: file.path,
-                                     contents: contents, checksum: file.online_checksum}];
+                return {type:"editFile", contents:contents, checksum: file.online_checksum,
+                  file:{project: proj, file: file.path, checksum: file.online_checksum}};
               });
             }));
           });
@@ -404,8 +405,23 @@ angular.module('seashell-local-files', [])
       self.newProject = function(name) {
         console.log("[localfiles] newProject", name);
         return self.store.getItem("//projects").then(function(projects) {
+          if(!projects)
+            projects = [];
           if(projects.indexOf(name)===-1)
             projects.push(name);
+          return self.store.setItem("//projects", projects);
+        });
+      };
+
+      self.batchNewProjects = function(names) {
+        console.log("[localfiles] batchNewProjects", names);
+        return self.store.getItem("//projects").then(function(projects) {
+          if(!projects)
+            projects = [];
+          for(var i=0; i<names.length; i++) {
+            if(projects.indexOf(name[i])==-1)
+              projects.push(names[i]);
+          }
           return self.store.setItem("//projects", projects);
         });
       };
