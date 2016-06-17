@@ -81,7 +81,8 @@
     (test-case "Create a file backup (with directory) and ensure it exists"
       (new-file "test" "foo9.c" #"back-this-up" 'raw #f)
       (write-backup "test" "foo9.c")
-      (check-equal? (length (list-files (check-and-build-path "test") ".foo9.c_backup")) 1))
+      (check-equal? (length (list-files (check-and-build-path "test") ".foo9.c_backup")) 1)
+      (check-equal? (length (list-backups (check-and-build-path "test") "foo9.c")) 1))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

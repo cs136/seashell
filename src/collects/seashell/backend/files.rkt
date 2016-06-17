@@ -40,6 +40,7 @@
          read-file
          write-file
          list-files
+         list-backups
          rename-file
          restore-file-from-template
          write-backup
@@ -190,13 +191,9 @@
   (-> (and/c project-name? is-project?) path-string? void?)
   (define source (check-and-build-path (build-project-path project) file))
   (define backup-folder (get-backup-path (check-and-build-path (build-project-path project) file)))
-  (define timestamp (date->string (current-date))) ;; TODO: clean this up
+  (define timestamp (number->string (current-seconds))) ;; TODO: format this better
   (define destination (check-and-build-path backup-folder (string-append "backup_" timestamp)))
   (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
-  (printf "file: ~a\n" file)
-  (printf "source: ~a\n" source)
-  (printf "backup-folder: ~a\n" backup-folder)
-  (printf "dest: ~a\n" destination)
   (copy-file source destination)
   (void))
 
@@ -250,7 +247,6 @@
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
       [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
-       ; directory-hidden should work for files as well (can rename if so)
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
@@ -260,6 +256,22 @@
   (-> path? boolean?)
   (define-values (_1 filename _2) (split-path (simplify-path path)))
   (string=? "." (substring (some-system-path->string filename) 0 1)))
+
+;; (list-backups project file)
+;; Lists all backups corresponding to a project+file
+;; Arguments:
+;;  project - project/assignment containing the file you're looking for
+;;  file - question/file you want to find backups of
+;;
+;; Returns:
+;;  (listof string?) - backup copies of the given file
+(define/contract (list-backups project file)
+  (-> (and/c project-name? is-project?) (and/c string? path-string?)
+      (listof (list/c (and/c string? path-string?) boolean? number?)))
+  (define full-backups-path (get-backup-path (check-and-build-path (build-project-path project) file)))
+  (define relative-backups-path (string-split (path->string full-backups-path) (string-append project "/")))
+  (printf "\n\n\nlisting backups in: ~a\n...~a\n\n\n\n" project relative-backups-path)
+  (list-files project backups-path))
 
 ;; (rename-file project old-file new-file)
 ;; Renames a file.
