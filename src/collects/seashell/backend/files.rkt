@@ -29,6 +29,7 @@
          racket/file
          racket/path
          racket/date
+         racket/string
          file/unzip
          openssl/md5)
 
@@ -182,33 +183,6 @@
   (write-backup project file)
   (void))
 
-;; (write-backup project file) -> void?
-;; creates a backup of a file in a hidden folder
-;;
-;;  project - project.
-;;  file - name of file to write.
-(define/contract (write-backup project file)
-  (-> (and/c project-name? is-project?) path-string? void?)
-  (define source (check-and-build-path (build-project-path project) file))
-  (define backup-folder (get-backup-path (check-and-build-path (build-project-path project) file)))
-  (define timestamp (number->string (current-seconds))) ;; TODO: format this better
-  (define destination (check-and-build-path backup-folder (string-append "backup_" timestamp)))
-  (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
-  (copy-file source destination)
-  (void))
-
-;; TODO: maybe combine "get-X-path" into something more general?
-;; (get-backup-path path) -> path
-;; given a file's path, returns the path to that file's backups folder
-;; Arguments:
-;;  path - path to file
-;;
-;; Returns:
-;;  path to file's backups
-(define (get-backup-path path)
-  (define-values (base name _1) (split-path (simplify-path path)))
-  (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
-  (build-path base backup-folder))
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
@@ -269,10 +243,54 @@
   (-> (and/c project-name? is-project?) (and/c string? path-string?)
       (listof (list/c (and/c string? path-string?) boolean? number?)))
   (define full-backups-path (get-backup-path (check-and-build-path (build-project-path project) file)))
-  (define relative-backups-path (string-split (path->string full-backups-path) (string-append project "/")))
-  (printf "\n\n\nlisting backups in: ~a\n...~a\n\n\n\n" project relative-backups-path)
-  (list-files project backups-path))
+  (define (second lst) (car (cdr lst)))
+  (define relative-backups-path (second (string-split (path->string full-backups-path)
+                                                      (string-append (path->string project )"/"))))
+  ;(printf "\n\n\nlisting backups in: ~a\n... ~a\n\n\n\n" project relative-backups-path)
+  (list-files project relative-backups-path))
 
+;; (write-backup project file) -> void?
+;; creates a backup of a file in a hidden folder
+;;
+;;  project - project.
+;;  file - name of file to write.
+(define/contract (write-backup project file)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (define source (check-and-build-path (build-project-path project) file))
+  (define backup-folder (get-backup-path (check-and-build-path (build-project-path project) file)))
+  (define timestamp (number->string (current-seconds))) ;; TODO: format this better
+  (define destination (check-and-build-path backup-folder (string-append "backup_" timestamp)))
+  (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
+  (copy-file source destination)
+  (void))
+
+;; (write-backup-if-changed project file) -> void
+;; calls write-backup, but only if the file currently is different from the most recent backup
+(define/contract (write-backup-if-changed project file)
+  (-> (and/c project-name? is-project?) path-string? void?)
+  (define backups (list-backups project file))
+  (if (not (empty? backups))
+    (begin
+      (define most-recent-backup (car (reverse backups)))
+      (define-values (file-contents file-undo-history) (read-file project file))
+      (define-values (backup-contents backup-history) (read-file project most-recent-backup))
+      (when (not (equal? file-contents backup-contents))
+            (write-backup project file)))
+    (write-backup project file)))
+
+
+;; TODO: maybe combine "get-X-path" into something more general?
+;; (get-backup-path path) -> path
+;; given a file's path, returns the path to that file's backups folder
+;; Arguments:
+;;  path - path to file
+;;
+;; Returns:
+;;  path to file's backups
+(define (get-backup-path path)
+  (define-values (base name _1) (split-path (simplify-path path)))
+  (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
+  (build-path base backup-folder))
 ;; (rename-file project old-file new-file)
 ;; Renames a file.
 ;;
