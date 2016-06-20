@@ -264,6 +264,18 @@
   (copy-file source destination)
   (void))
 
+;; (restore-from-backup project file backup) -> void?
+;; replaces file with backup, overwriting file's contents
+;;
+;; project - project
+;; file - file to overwrite (destination)
+;; backup - a backup of file (source)
+(define/contract (restore-from-backup project file backup)
+  (-> (and/c project-name? is-project?) path-string? path-string? void?)
+  (define dest (check-and-build-path (build-project-path project) file))
+  (printf "\n\n\ncopying ~a to ~a\n\n\n" backup dest) ; "backup" should be a result from "list-backups"
+  (copy-file backup dest))
+
 ;; (write-backup-if-changed project file) -> void
 ;; calls write-backup, but only if the file currently is different from the most recent backup
 (define/contract (write-backup-if-changed project file)
