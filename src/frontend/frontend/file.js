@@ -88,8 +88,8 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.undoHistory = JSON.stringify(self.editor.getHistory());
-            self.project.saveFile(self.question, self.folder, self.file, self.contents, self.undoHistory).then(function (){
+            self.undoHistory = /*JSON.stringify(*/self.editor.getHistory()/*)*/;
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
               .catch(function (error) {
@@ -177,8 +177,8 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.undoHistory = JSON.stringify(self.editor.getHistory());
-                self.project.saveFile(self.question, self.folder, self.file, self.contents, self.undoHistory)
+                self.undoHistory = /*JSON.stringify(*/self.editor.getHistory(/*)*/);
+                self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
                   })
@@ -188,7 +188,11 @@ angular.module('frontend-app')
               }, 2000);
               self.console.errors = [];
             } else {
-             self.editor.setHistory(self.undoHistory);
+              console.log("trying to set history as:");
+              console.log(self.undoHistory);
+              if (self.undoHistory !== undefined){
+                self.editor.setHistory(self.undoHistory);
+              }
              // }
               if(self.scrollInfo[self.folder] &&
                 self.scrollInfo[self.folder][self.file]) {
@@ -548,8 +552,8 @@ angular.module('frontend-app')
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-            self.undoHistory = JSON.stringify(self.editor.getHistory());
-            self.project.saveFile(self.question, self.folder, self.file, self.contents, self.undoHistory);
+            self.undoHistory = /*JSON.stringify(*/self.editor.getHistory()/*)*/;
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
           settings.removeWatcher(key);
         });
@@ -560,7 +564,9 @@ angular.module('frontend-app')
             if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
             if (conts.history.slice(1).length > 1) {
-              self.undoHistory = JSON.parse(JSON.parse(conts.history.slice(1)));
+              console.log("read in history as:");
+              console.log(conts.history);
+              self.undoHistory = JSON.parse(conts.history);
               //console.log(self.undoHistory);
               //console.log("history type: " + typeof self.undoHistory);
               self.editor.setHistory(self.undoHistory);
