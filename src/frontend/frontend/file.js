@@ -88,7 +88,7 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.undoHistory = /*JSON.stringify(*/self.editor.getHistory()/*)*/;
+            self.undoHistory = self.editor.getHistory();
             self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
@@ -177,7 +177,7 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.undoHistory = /*JSON.stringify(*/self.editor.getHistory(/*)*/);
+                self.undoHistory = self.editor.getHistory();
                 self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
@@ -188,6 +188,7 @@ angular.module('frontend-app')
               }, 2000);
               self.console.errors = [];
             } else {
+              self.editor.clearHistory();
               console.log("trying to set history as:");
               console.log(self.undoHistory);
               if (self.undoHistory !== undefined){
@@ -563,6 +564,7 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.editor.clearHistory();
             if (conts.history.slice(1).length > 1) {
               console.log("read in history as:");
               console.log(conts.history);
