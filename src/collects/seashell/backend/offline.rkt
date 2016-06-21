@@ -211,7 +211,7 @@
                 (cond
                   [(equal? base 'relative) rel-file]
                   [(not base) rel-file]
-                  [(directory-exists? base)
+                  [(directory-exists? (build-path (build-project-path project) base))
                    (build-path base rel-file)]
                   [else
                     (define-values (new-base _1 _2) (split-path base))

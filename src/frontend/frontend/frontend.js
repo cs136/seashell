@@ -24,9 +24,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', '$cookies', '$window',
-    'settings-service', '$location', '$css', 'projects',
+    'settings-service', '$location', '$css', 'projects', '$rootScope',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        $cookies, $window, settings, $location, $css, projects) {
+        $cookies, $window, settings, $location, $css, projects, $rootScope) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -129,7 +129,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           } else {
             $css.removeAll();
             $css.add("css/light.css");
-          } 
+          }
         }, true);
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
