@@ -88,7 +88,7 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.undoHistory = /*JSON.stringify(*/self.editor.getHistory()/*)*/;
+            self.undoHistory = self.editor.getHistory();
             self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
@@ -177,7 +177,7 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.undoHistory = /*JSON.stringify(*/self.editor.getHistory(/*)*/);
+                self.undoHistory = self.editor.getHistory();
                 self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
@@ -188,8 +188,7 @@ angular.module('frontend-app')
               }, 2000);
               self.console.errors = [];
             } else {
-              console.log("trying to set history as:");
-              console.log(self.undoHistory);
+              self.editor.clearHistory();
               if (self.undoHistory !== undefined){
                 self.editor.setHistory(self.undoHistory);
               }
@@ -552,7 +551,7 @@ angular.module('frontend-app')
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-            self.undoHistory = /*JSON.stringify(*/self.editor.getHistory()/*)*/;
+            self.undoHistory = self.editor.getHistory();
             self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
           settings.removeWatcher(key);
@@ -563,12 +562,9 @@ angular.module('frontend-app')
             self.ready = true;
             if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.editor.clearHistory();
             if (conts.history.slice(1).length > 1) {
-              console.log("read in history as:");
-              console.log(conts.history);
               self.undoHistory = JSON.parse(conts.history);
-              //console.log(self.undoHistory);
-              //console.log("history type: " + typeof self.undoHistory);
               self.editor.setHistory(self.undoHistory);
             } else {
               console.log("warning: could not read history");
