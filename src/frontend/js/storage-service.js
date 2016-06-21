@@ -64,10 +64,10 @@ angular.module('seashell-local-files', [])
               return self.readFile(proj, oc.getPath()).then(function(contents) {
                 if(oc._isDeleted) {
                   return {type:"deleteFile", checksum:file.online_checksum,
-                    file:{project: proj, file: file.path, checksum:file.online_checksum}};
+                    file:{project: proj, file: file.path, checksum:file.offline_checksum}};
                 }
                 return {type:"editFile", contents:contents, checksum: file.online_checksum,
-                  file:{project: proj, file: file.path, checksum: file.online_checksum}};
+                  file:{project: proj, file: file.path, checksum: file.offline_checksum}};
               });
             }));
           });
@@ -203,6 +203,7 @@ angular.module('seashell-local-files', [])
        */
       self.writeFile = function(name, file_name, file_content, checksum) {
         var offline_checksum = md5(file_content);
+        console.log(offline_checksum);
         var path = self._path(name, file_name);
         var prom = $q.when();
 
@@ -239,7 +240,9 @@ angular.module('seashell-local-files', [])
       };
 
       self.batchWrite = function(name, files, contents, checksums) {
-        var offline_checksums = _.map(contents, md5);
+        var offline_checksums = _.map(contents, function(f) {
+          return md5(f);
+        });
         var paths = _.map(files, function(file) { return self._path(name, file); });
 
         return self._getProject(name).then(function(tree) {
@@ -368,7 +371,7 @@ angular.module('seashell-local-files', [])
         //  online listProject
         return self._getProject(name).then(function(files) {
           var result = _.map(files, function(f) {
-            return [f.path, false, 0, f.online_checksum];
+            return [f.path, false, 0, f.offline_checksum];
           });
           /*_.each(files, function(f) {
             var dir = f.path.split("/");
