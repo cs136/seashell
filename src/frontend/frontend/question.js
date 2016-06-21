@@ -101,12 +101,10 @@ angular.module('frontend-app')
               groups[groups.length-1] = {
                 files: groups[groups.length-1],
                 isFileToRun: _.contains(groups[groups.length-1], self.runnerFile)
-              }; 
-                
+              };
             }
             return groups;
           }
-          
           self.project.getFileToRun(self.question)
               .then(function (fileToRun) {
                 self.runnerFile = fileToRun;
@@ -132,8 +130,6 @@ angular.module('frontend-app')
             }
           });
         };
-        $scope.refresh = self.refresh;
-        self.refreshKey = ws.register_callback('connected', self.refresh, true);
 
         /** Handle the setFileToRun broadcast
          *  by refreshing the file list
@@ -210,10 +206,6 @@ angular.module('frontend-app')
             self.marmoset_short_results = "submitting...";
           });
         });};
-
-        /** Displays Marmoset Results. */
-        self.marmoset_results = function () {
-        };
 
         /** Try to load the question, and go back to the project if we can't. */
         var key = ws.register_callback('connected', function() {
