@@ -333,7 +333,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               var chain = function(i) {
                 if(i>= files.length) return $q.when();
                 var f = files[i];
-                $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
+                return $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
                   .then(function() {
                     return chain(i+1);
                   });
