@@ -41,7 +41,7 @@
                [new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (->* (String Path-String) ((U False String)) Void)]
                [read-file (-> String Path-String (Values Bytes String))]
-               [write-file (->* (String Path-String Bytes) ((U False String)) String)]
+               [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
                [#:struct (exn:project:file exn:project) ()]
@@ -159,7 +159,7 @@
                         (cons (conflict "editFile" project file contents 'checksum) conflicts))])
                    (cond
                      [checksum
-                       (write-file project file (string->bytes/utf-8 contents) checksum)]
+                       (write-file project file (string->bytes/utf-8 contents) #f checksum)]
                      [else
                        (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
                    conflicts))
