@@ -37,7 +37,7 @@ angular.module('frontend-app')
         self.file = openFile;
         self.console = Console;
         self.settings = settings;
-        self.undoHistory = undoHistory;
+        /*self.undoHistory = undoHistory;*/
 
         // Instance fields.
         self.scrollInfo = scrollInfo;
@@ -60,9 +60,6 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
-          if(undefined===self.undoHistory[self.folder])
-            self.undoHistory[self.folder] = {};
-          self.undoHistory[self.folder][self.file] = self.editor.getHistory();
         });
         self.editorFocus = false;
         self.contents = "";
@@ -72,7 +69,8 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
               .catch(function (error) {
@@ -160,7 +158,8 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                self.undoHistory = self.editor.getHistory();
+                self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
                   })
@@ -171,10 +170,10 @@ angular.module('frontend-app')
               self.console.errors = [];
             } else {
               self.editor.clearHistory();
-              if(self.undoHistory[self.folder] &&
-                self.undoHistory[self.folder][self.file]) {
-                self.editor.setHistory(self.undoHistory[self.folder][self.file]);
+              if (self.undoHistory !== undefined){
+                self.editor.setHistory(self.undoHistory);
               }
+             // }
               if(self.scrollInfo[self.folder] &&
                 self.scrollInfo[self.folder][self.file]) {
                 var scr = self.scrollInfo[self.folder][self.file];
@@ -346,6 +345,7 @@ angular.module('frontend-app')
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
             self.editorOptions.vimMode = false;
           } else {
             self.editorOptions.keyMap = 'default';
@@ -528,20 +528,14 @@ angular.module('frontend-app')
             // since EditorController is in the child scope of EditorFileController
 
         };
-        self.refreshRunner = function () {
-          self.project.getFileToRun(self.question)
-             .then(function (result) {
-                 self.runnerFile = result && (result !== "");
-                 self.isFileToRun = (result === self.file);
-             });
-        };
 
         // Initialization code goes here.
         var settings_key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-            self.project.saveFile(self.question, self.folder, self.file, self.contents);
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
           settings.removeWatcher(settings_key);
           ws.unregister_callback(connected_key);
@@ -556,10 +550,17 @@ angular.module('frontend-app')
           //  self.editor.setOption("readOnly", self.editorReadOnly);
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
-            self.contents = conts;
+            self.contents = conts.data;
             self.ready = true;
-            if (conts.length === 0) self.loaded = true;
+            if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.editor.clearHistory();
+            if (conts.history.slice(1).length > 1) {
+              self.undoHistory = JSON.parse(conts.history);
+              self.editor.setHistory(self.undoHistory);
+            } else {
+              console.log("warning: could not read history");
+            }
             self.refreshSettings();
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
@@ -571,6 +572,17 @@ angular.module('frontend-app')
               $state.go('edit-project.editor');
             }
           });
+          self.refreshRunner = function () {
+            self.project.getFileToRun(self.question)
+               .then(function (result) {
+                   self.runnerFile = (result !== "");
+                   if(self.folder === "question") {
+                       self.isFileToRun = (result === (self.question + '/' + self.file));
+                   } else {
+                       self.isFileToRun = (result === (self.folder + '/' + self.file));
+                   }
+               });
+          };
           self.refreshRunner();
         }, true);
       }]);

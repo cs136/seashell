@@ -462,7 +462,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return self._socket.newDirectory(name, dir_name, deferred);
       };
 
-      self.writeFile = function(name, file_name, file_content, deferred) {
+      self.writeFile = function(name, file_name, file_content, history, deferred) {
         var offlineWrite = function(checksum) {
           localfiles.writeFile(name, file_name, file_content, checksum);
           return checksum;
@@ -470,7 +470,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
         if (self.isOffline()) return $q.when(offlineWrite(false));
 
-        return $q.when(self._socket.writeFile(name, file_name, file_content, deferred))
+        return $q.when(self._socket.writeFile(name, file_name, file_content, history, deferred))
           .then(offlineWrite)  // get checksum from backend and write
           .catch(function () { offlineWrite(false); }); // force write
       };

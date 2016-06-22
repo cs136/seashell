@@ -48,7 +48,7 @@
             <button id="toolbar-set-runner"
                     ng-click="editFileView.setFileToRun()"
                     class="btn btn-link"
-                    ng-disabled="editFileView.folder !== 'question' || editFileView.isFileToRun">
+                    ng-disabled="(editFileView.folder !== 'question' && editFileView.folder !== 'common') || editFileView.isFileToRun">
                     set as <span class="glyphicon glyphicon-play-circle"></span> file 
             </button>
             <div ng-show="editFileView.editor.hasFocus()"

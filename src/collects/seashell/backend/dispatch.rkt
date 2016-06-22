@@ -93,15 +93,16 @@
 
       (with-handlers
         ;; Data connection failure.  Quit.
-        [(exn:websocket? 
+        [(exn:websocket?
            (lambda (exn)
              (logf 'error "Data connection failure: ~a.  Terminating project ~a (PID ~a)." (exn-message exn)
                    project pid)
              (program-kill pid)
              (program-destroy-handle pid)))]
         ;; Block on stdout and on the websocket.
-        (match (sync socket-closed-evt (wrap-evt stdout (compose deserialize read)))
-           [(? (lambda (evt) (eq? evt socket-closed-evt)))
+        (match (sync (wrap-evt socket-closed-evt (lambda (_) 'closed))
+                     (wrap-evt stdout (compose deserialize read)))
+           ['closed
             ;; Connection died.
             (program-kill pid)
             (program-destroy-handle pid)]
@@ -132,7 +133,7 @@
                                                               diff))
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))))))])))))
-  
+
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
   ;; projects.
@@ -149,7 +150,7 @@
     (define stderr (program-stderr pid))
     (define wait-evt (program-wait-evt pid))
     (define socket-closed-evt (ws-connection-closed-evt connection))
-   
+
     ;; Helper function for sending messages
     ;; Arguments:
     ;;  name - name of port.
@@ -175,20 +176,20 @@
         event
         (lambda (result)
           (list tag result))))
-    
+
     (thread
       (lambda ()
         (let loop ()
           (with-handlers
             ;; Data connection failure.  Quit.
-            [(exn:websocket? 
+            [(exn:websocket?
                (lambda (exn)
                  (logf 'error "Data connection failure: ~a.  Terminating project ~a (PID ~a)." (exn-message exn)
                        project pid)
                  (program-kill pid)
                  (program-destroy-handle pid)))]
-            (match (sync wait-evt
-                         socket-closed-evt
+            (match (sync (wrap-evt wait-evt (lambda (_) 'done))
+                         (wrap-evt socket-closed-evt (lambda (_) 'closed))
                          ;; Well, this is rather inefficient.  JavaScript
                          ;; only supports UTF-8 (and we don't support any
                          ;; fancy encodings), so unless we want to cause
@@ -199,11 +200,11 @@
                          (if (port-closed? stderr)
                            never-evt
                            (tag-event (list "stderr" stderr) (peek-string-evt 1 0 #f stderr))))
-                   [(? (lambda (evt) (eq? evt socket-closed-evt)))
+                   ['closed
                     ;; Connection died.
                     (program-kill pid)
                     (program-destroy-handle pid)]
-                   [(? (lambda (evt) (eq? evt wait-evt)))
+                   ['done
                     ;; Program quit
                     (define message
                       `#hash((id . -3)
@@ -235,8 +236,8 @@
                    [`((,tag ,port) ,test)
                     (cond
                       [(not (eof-object? test))
-                        (define contents (list->string 
-                                           (for/list 
+                        (define contents (list->string
+                                           (for/list
                                              ([i (in-range (read-config 'io-buffer-size))])
                                              #:break (not (char-ready? port))
                                              #:break (eof-object? (peek-char port))
@@ -306,7 +307,7 @@
         ('project name)
         ('question question)
         ('tests test))
-       (define-values (success? result) 
+       (define-values (success? result)
          (compile-and-run-project/use-runner name question test))
        `#hash((id . ,id)
               (success . ,success?)
@@ -317,7 +318,7 @@
          ('project project)
          ('pid pid))
        (start-pid-io project pid)
-       `#hash((id . ,id) (success . #t))] 
+       `#hash((id . ,id) (success . #t))]
       ;; Send EOF to stdin of the program with the given pid
       [(hash-table
         ('id id)
@@ -446,9 +447,12 @@
         ('project project)
         ('file file)
         ('contents contents)
+        ('history history)
         (_ _) ...)
        (define checksum
-         (write-file project file (string->bytes/utf-8 contents) (hash-ref message 'checksum #f)))
+         (write-file project file (string->bytes/utf-8 contents)
+                     (if history (string->bytes/utf-8 history) "")
+                     (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
               (result . ,checksum))]
@@ -457,25 +461,13 @@
         ('type "readFile")
         ('project project)
         ('file file))
-       (define-values (data checksum) (read-file project file))
+       (define-values (data checksum history) (read-file project file))
        `#hash((id . ,id)
               (success . #t)
-              (result . 
+              (result .
                       #hash((data . ,(bytes->string/utf-8 data))
+                            (history . ,(bytes->string/utf-8 history))
                             (checksum . ,checksum))))]
-      ;; for getting contents of object files in offline mode..
-      ;;  should probably just combine this with above call
-      ;;  so the backend can deal with the 2 cases and send
-      ;;  another flag back
-      [(hash-table
-        ('id id)
-        ('type "readFileBytes")
-        ('project project)
-        ('file file))
-       (define-values (data _) (read-file project file))
-       #hash((id . ,id)
-             (success . #t)
-             (result . ,(bytes->list data)))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)
@@ -616,7 +608,7 @@
        `#hash((id . ,(hash-ref message 'id))
               (success . #f)
               (result . ,(format "Unknown message: ~s" message)))]))
-  
+
   ;; (dispatch-unauthenticated)
   ;; Dispatcher in unauthenticated mode.
   (define/contract (dispatch-unauthenticated message)
@@ -690,7 +682,7 @@
             (dispatch-authenticated message)]
            [else
             (dispatch-unauthenticated message)]))]))
-  
+
   ;; Per-connection event loop.
   (define (main-loop)
     (match (sync/timeout (/ (read-config 'backend-client-connection-timeout) 1000) connection)
@@ -724,7 +716,7 @@
               (define result (handle-message message))
               (send-message connection result))))))
        (main-loop)]))
- 
+
   (parameterize
     ([current-subprocess-custodian-mode 'interrupt])
     (with-handlers

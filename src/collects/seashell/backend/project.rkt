@@ -299,12 +299,14 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (compile-and-run-project name file tests full-path test-location)
+;; (compile-and-run-project name file tests full-path test-location question-name)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
 ;;  name - Name of project.
 ;;  file - Full path and name of file we are compiling from
+;;         When called from compile-and-run-project/use-runner below, looks like
+;;         "q1/file.rkt" or "common/file.rkt"
 ;;  test - Name of test, or empty to denote no test.
 ;;  full-path - If #f, looks for the project in the standard project location.
 ;;                 #t, assumes name is the full path to the project directory.
@@ -315,6 +317,8 @@
 ;;    'current-directory - Look for the tests in <current-directory>
 ;;    path-string? - Look for the tests in <project-dir>/<test-loc>.
 ;;    By default, 'tree.
+;;  question-name - When running a file in common, pass in the question name here.
+;;    Default is #f, meaning that we're not running a file in common/.
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
 ;;  A hash-map, with the following bindings:
@@ -323,9 +327,9 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests [full-path #f] [test-location 'tree])
+(define/contract (compile-and-run-project name file tests [full-path #f] [test-location 'tree] [question-name #f])
   (->* (path-string? (or/c #f path-string?) (listof path-string?))
-       (boolean? (or/c path-string? 'tree 'flat 'current-directory))
+       (boolean? (or/c path-string? 'tree 'flat 'current-directory) (or/c #f string?))
        (values boolean? hash?))
   (when (or (and (not full-path) (not (is-project? name)))
             (and full-path (not (directory-exists? name))))
@@ -357,6 +361,18 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
+  ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
+  (define question-dir-name
+    (let
+      ([simple-file (simplify-path file #f)])
+      (match-define-values (possible-question _ _) (split-path simple-file))
+      (cond
+        [(path? possible-question) possible-question]
+        [else (build-path ".")])))
+  ;; Check if we're running a file in common folder
+  (define running-common-file? (and (directory-exists? project-common) (equal? (path->string question-dir-name) "common/")))
+  (when (and running-common-file? (not question-name))
+    (error "No question name given when running a common file."))
 
   (define (compile-c-files)
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
@@ -400,20 +416,20 @@
     (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
     ;; Copy the common folder to the temp dir -- for backward compatibility this term
     (when (directory-exists? project-common)
-      (copy-directory/files project-common (build-path temp-dir "common")))
-    ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
-    (define question-dir-name
-      (let
-        ([simple-file (simplify-path file #f)])
-        (match-define-values (possible-question _ _) (split-path simple-file))
-        (cond
-          [(path? possible-question) possible-question]
-          [else (build-path ".")])))
-    ;; Copy the files over from the question
-    (merge-directory/files base (build-path temp-dir question-dir-name))
-    ;; Copy all files in the common folder to the question folder
-    (when (directory-exists? project-common)
-      (merge-directory/files project-common (build-path temp-dir question-dir-name)))
+      (copy-directory/files project-common (build-path temp-dir (read-config 'common-subdirectory))))
+
+    (cond [running-common-file?
+           ;; Copy the files over from the question into the common folder
+           (merge-directory/files (build-path project-base question-name) (build-path temp-dir (read-config 'common-subdirectory)))
+           ;; In case students want to do (require "../qX/file.txt") from their common file
+           (merge-directory/files (build-path temp-dir (read-config 'common-subdirectory))
+                                  (build-path temp-dir question-name))]
+          [else
+           ;; Copy the files over from the question
+           (merge-directory/files base (build-path temp-dir question-dir-name))
+           ;; Copy all files in the common folder to the question folder
+           (when (directory-exists? project-common)
+             (merge-directory/files project-common (build-path temp-dir question-dir-name)))])
     (values (build-path temp-dir) (build-path temp-dir question-dir-name)))
 
   (define-values (racket-temp-dir
@@ -472,7 +488,7 @@
   (if (string=? file-to-run "")
     (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
                         (current-continuation-marks)))
-    (compile-and-run-project name (build-path question file-to-run) tests)))
+    (compile-and-run-project name file-to-run tests #f (build-path question (read-config 'tests-subdirectory)) question)))
 
 
 ;; (export-project name) -> bytes?
@@ -733,7 +749,6 @@
         (hash-ref settings-hash 
                   (string->symbol (string-append question "-runner"))))
       (if (not (file-exists? (build-path (build-project-path project)
-                                          question
                                           file-to-run)))
         (raise (exn:project (format "File ~a does not exist." file-to-run)
                             (current-continuation-marks)))
@@ -758,13 +773,12 @@
 ;;   Nothing
 (define/contract (set-file-to-run project question folder file)
   (-> (and/c project-name? is-project?) path-string? path-string? path-string? void)
-  (if (or (string=? folder (read-config 'tests-subdirectory))
-          (string=? folder (read-config 'common-subdirectory)))
+  (if (string=? folder (read-config 'tests-subdirectory))
     (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
                         (current-continuation-marks)))
     (write-project-settings/key project
                                 (string->symbol (string-append question "-runner"))
-                                file)))
-  
-
-
+                                (path->string (build-path (if (string=? folder (read-config 'common-subdirectory))
+                                                              (read-config 'common-subdirectory)
+                                                              question)
+                                                          file)))))
