@@ -96,11 +96,12 @@
 ;; Returns:
 ;;  (-> T JSExpr)
 (define-syntax (->json T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null)
     [(_ Integer) #'(lambda ([x : Integer]) : JSExpr x)]
     [(_ Boolean) #'(lambda ([x : Boolean]) : JSExpr x)]
     [(_ String) #'(lambda ([x : String]) : JSExpr x)]
     [(_ Inexact-Real) #'(lambda ([x : Inexact-Real]) : JSExpr x)]
+    [(_ 'null) #'(lambda ([x : 'null]) : JSExpr x)]
     [(_ (Option T)) #'(lambda ([x : (Option T)]) : JSExpr x)]
     [(_ (List T ...))
      (with-syntax
@@ -126,7 +127,7 @@
 ;; Returns:
 ;;  (-> JSExpr T)
 (define-syntax (json-> T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null)
     [(_ Integer) #`(lambda ([x : JSExpr]) : Integer
                      (check-type Integer x))]
     [(_ Boolean) #`(lambda ([x : JSExpr]) : Boolean
@@ -135,6 +136,8 @@
                     (check-type String x))]
     [(_ Inexact-Real) #`(lambda ([x : JSExpr]) : Inexact-Real
                           (check-type Inexact-Real x))]
+    [(_ 'null) #`(lambda ([x : JSExpr]) : 'null
+                  (check-type 'null x))]
     [(_ (Option T))
      #`(lambda ([x : JSExpr]) : (Option T)
          (if x ((json-> T) x) x))]
@@ -285,3 +288,5 @@
 ;(json->baz #{'#hash() :: JSExpr})
 ;(json-struct foobar ([q : Integer]))
 ;(json->foobar #{'#hash() :: JSExpr})
+;(json-struct foo ([x : 'null]))
+;(json->foo (foo->json (foo 'null)))
