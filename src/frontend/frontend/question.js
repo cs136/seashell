@@ -234,7 +234,7 @@ angular.module('frontend-app')
             errors.report({}, sprintf("Could not open question %s!", self.question));
             $state.go("edit-project");
           }
-        });
+        }, true);
         $scope.$on('$destroy', function() {
           ws.unregister_callback(key);
         });
