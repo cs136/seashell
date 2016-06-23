@@ -431,7 +431,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.readFile = function(name, file_name, deferred) {
         if(self.isOffline()) return localfiles.readFile(name, file_name)
           .then(function(conts) {
-            return {data: conts};
+            return {data: conts, history: ""};
           });
         else return self._socket.readFile(name, file_name, deferred);
       };

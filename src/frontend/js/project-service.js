@@ -144,7 +144,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
               if(conts === null) {
                   return $q.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
                 }
-              return conts.data;
+              return {data: conts.data, history: conts.history};
             });
         };
 
