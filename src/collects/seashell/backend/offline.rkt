@@ -40,7 +40,7 @@
 (require/typed seashell/backend/files
                [new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (->* (String Path-String) ((U False String)) Void)]
-               [read-file (-> String Path-String (Values Bytes String))]
+               [read-file (-> String Path-String (Values Bytes String Bytes))]
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
@@ -304,7 +304,7 @@
         (if change (cons change changes) changes))
       '()
       (map (lambda ([f : off:file]) : (U False off:change)
-             (define-values (contents checksum)
+             (define-values (contents checksum history)
                (read-file (off:file-project f) (off:file-file f)))
              (with-handlers
                ([exn:fail? (lambda ([exn : exn]) #f)])
