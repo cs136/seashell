@@ -210,7 +210,7 @@ angular.module('seashell-local-files', [])
         if(checksum === false) {
           prom = self._addOfflineChange(name, file_name);
         }
-        
+
         return prom.then(function() {
           return self._getProject(name).then(function(tree) {
             var found = false;
@@ -241,7 +241,7 @@ angular.module('seashell-local-files', [])
 
       self.batchWrite = function(name, files, contents, checksums) {
         var offline_checksums = _.map(contents, function(f) {
-          return md5(f);
+          return (f && md5(f)) || null;
         });
         var paths = _.map(files, function(file) { return self._path(name, file); });
 
@@ -396,7 +396,7 @@ angular.module('seashell-local-files', [])
         // TODO: decoding 
         // name: project name
         // file_name: relative path under project
-        self.writeFile(name, file_name, contents, false);
+        self.writeFile(name, file_name, contents || "", false);
       };
 
 
