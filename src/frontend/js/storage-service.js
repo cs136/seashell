@@ -240,8 +240,10 @@ angular.module('seashell-local-files', [])
       };
 
       self.batchWrite = function(name, files, contents, checksums) {
-        var offline_checksums = _.map(contents, function(f) {
-          return (f && md5(f)) || null;
+        var offline_checksums = _.map(_.zip(contents, checksums), function(f) {
+          // Recalculate the checksum if it's a real file, otherwise store
+          // the online checksum for a placeholder record.
+          return (f[0] && md5(f[0])) || f[1];
         });
         var paths = _.map(files, function(file) { return self._path(name, file); });
 

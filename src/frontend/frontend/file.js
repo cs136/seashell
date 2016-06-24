@@ -37,11 +37,11 @@ angular.module('frontend-app')
         self.file = openFile;
         self.console = Console;
         self.settings = settings;
-        /*self.undoHistory = undoHistory;*/
 
         // Instance fields.
         self.scrollInfo = scrollInfo;
         self.isBinaryFile = false;
+        self.unavailable = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
         self.runnerFile = false; // true if a runner file is present in the project
@@ -244,7 +244,7 @@ angular.module('frontend-app')
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
-          self.editorReadOnly = !self.ready || self.isBinaryFile;
+          self.editorReadOnly = !self.ready || self.isBinaryFile || self.unavailable;
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
@@ -552,14 +552,18 @@ angular.module('frontend-app')
           .then(function(conts) {
             self.contents = conts.data;
             self.ready = true;
-            if (conts.data.length === 0) self.loaded = true;
-            self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
-            self.editor.clearHistory();
-            if (conts.history.slice(1).length > 1) {
-              self.undoHistory = JSON.parse(conts.history);
-              self.editor.setHistory(self.undoHistory);
+            if (conts.data) {
+              if (conts.data.length === 0) self.loaded = true;
+              self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+              self.editor.clearHistory();
+              if (conts.history.slice(1).length > 1) {
+                self.undoHistory = JSON.parse(conts.history);
+                self.editor.setHistory(self.undoHistory);
+              } else {
+                console.log("warning: could not read history");
+              }
             } else {
-              console.log("warning: could not read history");
+              self.unavailable = true;
             }
             self.refreshSettings();
           }).catch(function (error) {

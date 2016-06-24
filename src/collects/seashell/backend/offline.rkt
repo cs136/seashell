@@ -306,10 +306,14 @@
       (map (lambda ([f : off:file]) : (U False off:change)
              (define-values (contents checksum history)
                (read-file (off:file-project f) (off:file-file f)))
+             (define is-new-file? (set-member? backend-new-files (strip-checksum f)))
              (with-handlers
-               ([exn:fail? (lambda ([exn : exn]) #f)])
+               ;; Send a placeholder record for binary files (that are not available offline).
+               ([exn:fail? (lambda ([exn : exn])
+                             (off:change "editFile" f #f
+                                         (if is-new-file? #f checksum)))])
                (off:change "editFile" f (bytes->string/utf-8 contents)
-                           (if (set-member? backend-new-files (strip-checksum f)) #f checksum))))
+                           (if is-new-file? #f checksum))))
            backend-changed-files)))
   ;; Generate changes to send back.
   (off:response->json (off:response
