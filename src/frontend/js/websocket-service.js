@@ -301,7 +301,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
           .then(function(res) {
             var projects = res[0];
-            $q.all(_.map(projects, localfiles.listProject))
+            return $q.all(_.map(projects, localfiles.listProject))
               .then(function(trees) {
                 var files = [];
                 _.each(_.zip(projects,trees), function(project_tree) {
@@ -314,43 +314,41 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                     }
                   });
                 // should have everything now, just send it to the backend
-                var prom = self._socket.sync({
+                return $q.when(self._socket.sync({
                   projects: projects,
                   files: files,
                   changes: res[1]
-                }).then(function(res) {
-                  var proms = [];
-                  var i;
-                  proms.push(localfiles.batchNewProjects(res.newProjects));
+                })).then(function(res) {
                   var edits = _.filter(res.changes, function(c) { return c.type === 'editFile'; });
                   var deletes = _.filter(res.changes, function(c) { return c.type === 'deleteFile'; });
-                  
-                  // apply all the edits in a batch write
-                  return $q.all(_.mapObject(_.groupBy(edits,
-                      function(c) { return c.file.project; }),
-                    function(changes, project) {
-                      var args = _.unzip(_.map(changes, function(c) {
-                        return [c.file.file, c.contents, c.file.checksum];
-                      }));
-                      return localfiles.batchWrite(project, args[0], args[1], args[2]);
-                    })).then(function() {
-                      // apply all deletes in a batch
-                      return $q.all(_.mapObject(_.groupBy(deletes,
-                          function(c) { return c.file.project; }),
-                        function(changes, project) {
-                          var arg = _.map(changes, function(c) { return c.file.file; });
-                          return localfiles.batchDelete(project, arg);
-                        })).then(function() {
-                          return localfiles.batchDeleteProjects(res.deletedProjects);
-                        });
-                    }).then(function() {
-                      localfiles.clearOfflineChanges();
-                      // send the changes back in case we need to act on the files that have
-                      //  changed within the open project
-                      return res.changes;
-                    });
+
+                  return localfiles.batchNewProjects(res.newProjects).then(function () {
+                    // apply all the edits in a batch write
+                    return $q.all(_.mapObject(_.groupBy(edits,
+                        function(c) { return c.file.project; }),
+                      function(changes, project) {
+                        var args = _.unzip(_.map(changes, function(c) {
+                          return [c.file.file, c.contents, c.file.checksum];
+                        }));
+                        return localfiles.batchWrite(project, args[0], args[1], args[2]);
+                      })).then(function() {
+                        // apply all deletes in a batch
+                        return $q.all(_.mapObject(_.groupBy(deletes,
+                            function(c) { return c.file.project; }),
+                          function(changes, project) {
+                            var arg = _.map(changes, function(c) { return c.file.file; });
+                            return localfiles.batchDelete(project, arg);
+                          })).then(function() {
+                            return localfiles.batchDeleteProjects(res.deletedProjects);
+                          });
+                      }).then(function() {
+                        localfiles.clearOfflineChanges();
+                        // send the changes back in case we need to act on the files that have
+                        //  changed within the open project
+                        return res.changes;
+                      });
+                  });
                 });
-                return prom;
               });
           });
       };
