@@ -81,8 +81,26 @@
     (test-case "Create a file backup (with directory) and ensure it exists"
       (new-file "test" "foo9.c" #"back-this-up" 'raw #f)
       (write-backup "test" "foo9.c")
-      (check-equal? (length (list-files (check-and-build-path "test") ".foo9.c_backup")) 1)
-      (check-equal? (length (list-backups (check-and-build-path "test") "foo9.c")) 1))
+      (check-equal? (length (list-files "test" ".foo9.c_backup")) 1)
+      (check-equal? (length (list-backups "test" "foo9.c")) 1))
+
+    (test-case "Create a file backup and restore the file from the backup"
+      (new-file "test" "foo10.c" #"original" 'raw #f)
+      (write-backup "test" "foo10.c")
+      (write-file "test" "foo10.c" #"writing over stuff" #"")
+      (restore-from-backup "test" "foo10.c" (car (list-backups "test" "foo10.c")))
+      (define-values (contents history) (read-file "test" "foo10.c"))
+      (check-equal? contents #"original"))
+
+    (test-case "Ensure smart backups don't allow for duplicates"
+      (new-file "test" "foo11.c" #"unchanged" 'raw #f)
+      (write-backup-if-changed "test" "foo11.c")
+      (check-equal? (length (list-backups "test" "foo11.c")) 1)
+      (write-backup-if-changed "test" "foo11.c")
+      (check-equal? (length (list-backups  "test" "foo11.c")) 1)
+      (write-file "test" "foo11.c" #"changing some stuff" #"")
+      (write-backup-if-changed "test" "foo11.c")
+      (check-equal? (length (list-backups "test" "foo11.c")) 2))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

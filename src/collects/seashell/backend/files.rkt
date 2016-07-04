@@ -30,6 +30,7 @@
          racket/path
          racket/date
          racket/string
+         racket/list
          file/unzip
          openssl/md5)
 
@@ -45,7 +46,9 @@
          rename-file
          restore-file-from-template
          write-backup
+         write-backup-if-changed
          read-settings
+         restore-from-backup
          write-settings)
 
 (struct exn:project:file exn:project ())
@@ -180,7 +183,7 @@
                          (lambda () (write-bytes history))
                          #:exists 'replace))
   ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
-  (write-backup project file)
+  ;(write-backup project file)
   (void))
 
 
@@ -238,16 +241,17 @@
 ;;  file - question/file you want to find backups of
 ;;
 ;; Returns:
-;;  (listof string?) - backup copies of the given file
+;;  (listof string?) - backup copies of the given file (as path-strings)
 (define/contract (list-backups project file)
   (-> (and/c project-name? is-project?) (and/c string? path-string?)
-      (listof (list/c (and/c string? path-string?) boolean? number?)))
+      (listof (and/c string? path-string?)))
   (define full-backups-path (get-backup-path (check-and-build-path (build-project-path project) file)))
   (define (second lst) (car (cdr lst)))
   (define relative-backups-path (second (string-split (path->string full-backups-path)
-                                                      (string-append (path->string project )"/"))))
-  ;(printf "\n\n\nlisting backups in: ~a\n... ~a\n\n\n\n" project relative-backups-path)
-  (list-files project relative-backups-path))
+                                                      (string-append project "/"))))
+  (printf "\n\n\nlisting backups in: ~a\n-> ~a\n\n\n\n" project relative-backups-path)
+  (map (lambda (x) (printf "~a\n" x)) (map car (list-files project relative-backups-path)))
+  (map car (list-files project relative-backups-path)))
 
 ;; (write-backup project file) -> void?
 ;; creates a backup of a file in a hidden folder
@@ -261,7 +265,7 @@
   (define timestamp (number->string (current-seconds))) ;; TODO: format this better
   (define destination (check-and-build-path backup-folder (string-append "backup_" timestamp)))
   (when (not (directory-exists? backup-folder)) (make-directory backup-folder))
-  (copy-file source destination)
+  (copy-file source destination #t)
   (void))
 
 ;; (restore-from-backup project file backup) -> void?
@@ -273,23 +277,31 @@
 (define/contract (restore-from-backup project file backup)
   (-> (and/c project-name? is-project?) path-string? path-string? void?)
   (define dest (check-and-build-path (build-project-path project) file))
-  (printf "\n\n\ncopying ~a to ~a\n\n\n" backup dest) ; "backup" should be a result from "list-backups"
-  (copy-file backup dest))
+  (define src (check-and-build-path (build-project-path project) backup))
+  (printf "\n\n\ncopying ~a to ~a\n\n\n" src dest) ; "backup" should be a result from "list-backups"
+  (delete-file dest)
+  ;(define-values (backup-contents backup-history) (read-file (build-project-path project) file))
+  (copy-file src dest #t)
+  (void))
 
 ;; (write-backup-if-changed project file) -> void
 ;; calls write-backup, but only if the file currently is different from the most recent backup
 (define/contract (write-backup-if-changed project file)
   (-> (and/c project-name? is-project?) path-string? void?)
+  (define project-path (build-project-path project))
   (define backups (list-backups project file))
-  (if (not (empty? backups))
-    (begin
-      (define most-recent-backup (car (reverse backups)))
-      (define-values (file-contents file-undo-history) (read-file project file))
-      (define-values (backup-contents backup-history) (read-file project most-recent-backup))
-      (when (not (equal? file-contents backup-contents))
-            (write-backup project file)))
-    (write-backup project file)))
-
+  (define-values (file-contents file-undo-history) (read-file project-path file))
+  (define most-recent-backup (if (not (empty? backups))
+                               (car (reverse backups))
+                               'no-backups))
+  (define-values (backup-contents backup-history)
+                 (if (not (empty? backups))
+                     (read-file project-path most-recent-backup)
+                     (values #"" #"")))
+  (when (or (empty? backups)
+            (not (equal? backup-contents file-contents)))
+        (write-backup project file))
+  (void))
 
 ;; TODO: maybe combine "get-X-path" into something more general?
 ;; (get-backup-path path) -> path
@@ -303,6 +315,7 @@
   (define-values (base name _1) (split-path (simplify-path path)))
   (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
   (build-path base backup-folder))
+
 ;; (rename-file project old-file new-file)
 ;; Renames a file.
 ;;
