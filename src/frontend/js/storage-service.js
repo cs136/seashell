@@ -60,10 +60,17 @@ angular.module('seashell-local-files', [])
           return self._getProject(proj).then(function(files) {
             return $q.all(_.map(ocs, function(oc) {
               var file = _.filter(files, function(f) { return f.path == oc.getPath(); })[0];
-              return self.readFile(proj, oc.getPath()).then(function(contents) {
+
+              if (oc.changeType() === "editFile") {
+                return self.readFile(proj, oc.getPath()).then(function(contents) {
+                  return {type: oc.changeType(), checksum:file.online_checksum,
+                    contents: contents,
+                    file:{project: proj, file: file.path, checksum:file.offline_checksum}};
+                });
+              } else if (oc.changeType() === "deleteFile") {
                 return {type: oc.changeType(), checksum:file.online_checksum,
                   file:{project: proj, file: file.path, checksum:file.offline_checksum}};
-              });
+              }
             }));
           });
         }))).then(function(res) {
@@ -198,7 +205,7 @@ angular.module('seashell-local-files', [])
         var offline_checksums = _.map(_.zip(contents, checksums), function(f) {
           // Recalculate the checksum if it's a real file, otherwise store
           // the online checksum for a placeholder record.
-          return (f[0] && md5(f[0])) || f[1];
+          return (typeof f[0] === "string" && md5(f[0])) || f[1];
         });
         var paths = _.map(files, function(file) { return self._path(name, file); });
 
