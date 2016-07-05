@@ -390,6 +390,11 @@ angular.module('frontend-app')
                   $scope.$parent.editView.refresh();
                   $state.go("edit-project.editor");
                   self.refreshRunner();
+                }).catch(function (res) {
+                  errors.report(res, "An error occurred when deleting '"+self.file+"'.");
+                  $scope.$parent.editView.refresh();
+                  $state.go("edit-project.editor");
+                  self.refreshRunner();
                 });
             });
         };
