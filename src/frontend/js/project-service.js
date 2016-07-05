@@ -305,6 +305,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return question+"/"+fname;
         };
 
+        SeashellProject.prototype._buildTree = function() {
+          var self = this;
+          return $q.when(ws.listProject(self.name)).then(function(files) {
+            self.root = new SeashellFile(self, "", true);
+            var chain = function(i) {
+              if(i>= files.length) return $q.when();
+              var f = files[i];
+              return $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
+                .then(function() {
+                  return chain(i+1);
+                });
+            };
+            return chain(0);
+          });
+        };
+
         /**
          * SeashellProject.init()
          *
@@ -329,20 +345,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             result = $q.when();
           }
 
-          return result.then(function () {
-            return $q.when(ws.listProject(self.name)).then(function(files) {
-              self.root = new SeashellFile(self, "", true);
-              var chain = function(i) {
-                if(i>= files.length) return $q.when();
-                var f = files[i];
-                return $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
-                  .then(function() {
-                    return chain(i+1);
-                  });
-              };
-              return chain(0);
-            });
-          }).then(function () {
+          return result.then(function() { return self._buildTree(); }).then(function () {
                /* If the project is listed in the project skeleton on the server,
                   set self.projectZipURL to the project directory url.
                   set self.skel to the file skeleton url.
@@ -356,6 +359,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                });
                return self;
             });
+          self.cb_key = ws.register_callback('connected', self._buildTree);
         };
 
         /* List all file in this project.
@@ -493,6 +497,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.close = function(save) {
           var self = this;
+          ws.unregister_callback(self.cb_key);
           if (self.lock === "none") {
             return $q.when();
           }
@@ -851,6 +856,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         */
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
+          if(ws.isOffline()) {
+            return $q.when(true);
+          }
           return self.missingSkelFiles().then(function(missingFiles) {
               if (missingFiles.length) {
                 return $q.all(missingFiles.map(function(fpath) {

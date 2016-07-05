@@ -186,9 +186,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                 return x.type === 'syncing';
               }), function(x) {
                 return x.cb();
-              })).then(function() {
-                return self.invoke_cb('connected');
-              });
+              }));
           });
       };
 
@@ -343,6 +341,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                           });
                       }).then(function() {
                         localfiles.clearOfflineChanges();
+                        if(self.connected) {
+                          return $q.all(self.invoke_cb('connected'));
+                        }
                         // send the changes back in case we need to act on the files that have
                         //  changed within the open project
                         return res.changes;

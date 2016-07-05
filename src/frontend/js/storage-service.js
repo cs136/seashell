@@ -298,9 +298,9 @@ angular.module('seashell-local-files', [])
       };
 
       self.deleteFile = function(name, file_name) {
-        console.log("[localfiles] deleteFile");
+        console.log("[localfiles] deleteFile", file_name);
         self._addOfflineDelete(name, file_name);
-        return self.store.getItem(sprintf("//projects/%s", name)).then(function(tree) {
+        return $q.when(self.store.getItem(sprintf("//projects/%s", name))).then(function(tree) {
           var i = 0;
           var found = false;
           for(; i<tree.length; i++) {
@@ -312,7 +312,7 @@ angular.module('seashell-local-files', [])
           if(found) {
             tree.splice(i, 1);
           }
-          return self.store.setItem(sprintf("//projects/%s", name), tree).then(function() {
+          return $q.when(self.store.setItem(sprintf("//projects/%s", name), tree)).then(function() {
             return $q.when(self.store.removeItem(self._path(name, file_name))); 
           });
         });
