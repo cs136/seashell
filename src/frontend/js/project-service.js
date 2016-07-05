@@ -1,5 +1,5 @@
 /*
- * Angular bindings for Seashell projects.
+/* Angular bindings for Seashell projects.
  * Copyright (C) 2013-2015 The Seashell Maintainers.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,14 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
+angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 'seashell-local-files'])
   /**
    * Project [factory] service.
    * Provides functions to list/load/open/create new SeashellProject
    *  instances.
-   */ 
-  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset', '$http', '$cookies',
-    function($scope, $q, ws, marmoset, $http, $cookies) {
+   */
+  .service('projects', ['$rootScope', '$q', 'socket', 'marmoset',
+      '$http', 'settings-service', '$cookies',
+    function($scope, $q, ws, marmoset, $http, settings, $cookies) {
       "use strict";
       var self = this;
       var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
@@ -36,8 +37,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
-     
-      var SeashellProject = (function () { 
+      var SeashellProject = (function () {
         /**
          * SeashellProject.
          *
@@ -59,15 +59,40 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * @param {bool} is_dir - Is directory?
          * @param {Number} last_saved - Last saved time.
          */
-        function SeashellFile(project, name, is_dir, last_saved, history) {
+        function SeashellFile(project, name, is_dir, last_saved) {
           var self = this;
           self.name = name.split("/");
+          var par = self.name.slice(0,self.name.length-1).join('/');
+          if(par.length>0) {
+            self.parent = project.root.find(par);
+          }
           self.project = project;
           self.children = is_dir ? [] : null;
           self.is_dir = is_dir ? true : false;
           self.last_saved = last_saved ? new Date(last_saved) : Date.now();
-					self.history = history;
         }
+
+        SeashellFile.prototype.toWorker = function() {
+          var self = this;
+          return self.read().then(function(conts) {
+            var obj = { name: self.name[self.name.length-1],
+                        contents: conts };
+            return obj;
+          });
+        };
+
+        // for now, bundle everything together from question and common
+        SeashellFile.prototype.getDependencies = function() {
+          var self = this;
+          var deps = [];
+          var question = self.project.root.find(self.name.slice(0,1));
+          var common = self.project.root.find("common");
+          deps = deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
+          if(common)
+            deps = deps.concat(common.children);
+          return $q.all(_.map(deps, function(d) { return d.read(); }))
+            .then(function() { return deps; });
+        };
 
         /**
          * fullname()
@@ -105,11 +130,21 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
         };
 
+        /**
+         * read()
+         * Reads the file and returns a deferred that will resolve to its contents.
+         * If offline, it will attempt to read the offline store.
+         * This function does not attempt to do any synchronization (see sync instead).
+         */
         SeashellFile.prototype.read = function() {
           var self = this;
+
           return $q.when(ws.readFile(self.project.name, self.fullname()))
-            .then(function (conts) {
-              return conts;
+            .then(function(conts) {
+              if(conts === null) {
+                  return $q.reject(self.fullname() + ": Could not read file from server and no local copy exists.");
+                }
+              return {data: conts.data, history: conts.history};
             });
         };
 
@@ -213,7 +248,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 contents, encoding, normalize);
             } else {
               var dir = new SeashellFile(file.project, file.name.slice(0,file.name.length-path.length+1).join('/'), true);
-              return (dir.fullname === "" ? $q.when() : 
+              return (dir.fullname === "" ? $q.when() :
                   $q.when(ws.newDirectory(dir.project.name, dir.fullname())))
                 .then(function() {
                   self.children.push(dir);
@@ -227,7 +262,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         /**
          * find(path)
-         * 
+         *
          * Finds the file located at path.
          */
         SeashellFile.prototype.find = function(path) {
@@ -260,7 +295,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           return self.children;
         };
-        
+
         SeashellProject.prototype._getPath = function(question, folder, fname) {
           folder = folder || "";
           fname = fname || "";
@@ -268,6 +303,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           if(folder == "common") return "common/"+fname;
           if(folder == "tests") return question+"/tests/"+fname;
           return question+"/"+fname;
+        };
+
+        SeashellProject.prototype._buildTree = function() {
+          var self = this;
+          return $q.when(ws.listProject(self.name)).then(function(files) {
+            self.root = new SeashellFile(self, "", true);
+            var chain = function(i) {
+              if(i>= files.length) return $q.when();
+              var f = files[i];
+              return $q.when(self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2], f[3]), null, true))
+                .then(function() {
+                  return chain(i+1);
+                });
+            };
+            return chain(0);
+          });
         };
 
         /**
@@ -294,13 +345,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             result = $q.when();
           }
 
-          return result.then(function () {
-            return $q.when(ws.listProject(self.name)).then(function(files) {
-               self.root = new SeashellFile(self, "", true);
-                  _.map(files, function(f) {
-                   self.root._placeInTree(new SeashellFile(self, f[0], f[1], f[2]), null, true);
-               });
-            });}).then(function () {
+          return result.then(function() { return self._buildTree(); }).then(function () {
                /* If the project is listed in the project skeleton on the server,
                   set self.projectZipURL to the project directory url.
                   set self.skel to the file skeleton url.
@@ -314,10 +359,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                });
                return self;
             });
+          self.cb_key = ws.register_callback('connected', self._buildTree);
         };
-        
+
         /* List all file in this project.
-        
+
           Return type: [String] - paths
           eg. ["q1a/file.c", "q1a/tests/a.in","common/text.txt"]
         */
@@ -337,7 +383,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               files.push(c.name.join('/'));
             }
           }
-          return files.sort();
+          return files;
         };
 
         /** SeashellProject.questions()
@@ -375,7 +421,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         /**
          * SeashellProject.createFile(fname)
-         * 
+         *
          * Creates a new file in the project with the given name.
          * Requires .init to be called already.
          *
@@ -384,21 +430,21 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           var path = self._getPath(question, folder, fname);
           contents = contents || "";
-          
+
           if(self.root.find(path)) {
             return $q.reject("A file with that name already exists.");
           }
-          var file = new SeashellFile(self, path);
+          var file = new SeashellFile(self, path, false, contents);
           return self.root._placeInTree(file, false, false, contents, encoding, normalize);
         };
-        
+
 
         SeashellProject.prototype.createQuestion = function(question) {
           var self = this;
           if(self.root.find(question)) {
             return $q.reject("A question with that name already exists.");
           }
-          var dir = new SeashellFile(self, question, true);
+          var dir = new SeashellFile(self, question, null, true);
           return self.root._placeInTree(dir, false, false);
         };
 
@@ -417,7 +463,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             return $q.reject("Cannot open a directory in editor.");
           return file.read();
         };
-        
+
         /**
          * SeashellProject.hasFile(question, folder, filename)
          *
@@ -451,7 +497,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.close = function(save) {
           var self = this;
-          
+          ws.unregister_callback(self.cb_key);
           if (self.lock === "none") {
             return $q.when();
           }
@@ -535,15 +581,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         /**
          * SeashellProject.getFileToRun(question)
          *
-         * Returns the basename of the file to run when hitting run, from the 
+         * Returns the basename of the file to run when hitting run, from the
          * question settings file.
          */
         SeashellProject.prototype.getFileToRun = function (question) {
-            var self = this;
-            return $q.when(ws.getFileToRun(self.name, question))
-                .then(function (result) {
-                    return result;
-                });
+          var self = this;
+          return $q.when(ws.getFileToRun(self.name, question))
+            .then(function (result) {
+                self.fileToRun = result;
+                return result;
+            });
         };
 
 
@@ -553,8 +600,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Modify the settings file to set which file to run.
          */
         SeashellProject.prototype.setFileToRun = function (question, folder, file) {
-            var self = this;
-            return $q.when(ws.setFileToRun(self.name, question, folder, file));
+          var self = this;
+          return $q.when([ws.setFileToRun(self.name, question, folder, file)])
+            .then(function() { self.fileToRun = file; });
         };
 
         /**
@@ -569,7 +617,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           });
         };
 
-
         /**
          * SeashellProject.run(...)
          * Compiles [if necessary] and runs the project.
@@ -580,14 +627,19 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
+          var path = self._getPath(question, "question", self.fileToRun);
+          var file = self.root.find(path);
 
+          if(!file) {
+            return $q.reject("Attempting to run file that does not exist.");
+          }
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
-          return $q.when(ws.compileAndRunProject(self.name, question, tests));
+          return $q.when(ws.compileAndRunProject(self.name, question, file, tests));
         };
 
-        /** 
+        /**
          * save(message | optional)
          * Saves (commits) the project to Git.
          */
@@ -602,7 +654,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          * Kills program with specified PID.
          */
         SeashellProject.prototype.kill = function(pid) {
-          var self = this;
           return $q.when(ws.programKill(pid));
         };
 
@@ -645,7 +696,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.renameFile = function(question, folder, file, newFolder, newName) {
           var self = this;
           var path = self._getPath(question, folder, file);
-          var target = newName; 
+          var target = newName;
           if (self.root.find(path)) {
             return self.root.find(path).rename(target).then(function() {
                return self.inSkeleton().then(function(bool) {
@@ -688,7 +739,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          */
         SeashellProject.prototype.currentMarmosetProject = function(question) {
           var self = this;
-          // first test if the project/question is an assigment 
+          // first test if the project/question is an assignment
           if(/^a[0-9]+$/i.test(self.name) && /^(a\d)?(q|p)[0-9]+[a-z]*$/i.test(question)) {
             var withoutA = self.name.substr(1);    // eg. "A5" -> "5"
             var withoutQ = question.substr(1);     // eg. "q3b" -> "3b"
@@ -698,18 +749,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             // - A2p5b
             // - A5q5b
             var regexFormat = sprintf("^a%s(q|p)%s", withoutA, withoutQ);
-            var guess = new RegExp(regexFormat, "i");                
-            var extended = new RegExp(regexFormat + "extended", "i"); 
+            var guess = new RegExp(regexFormat, "i");
+            var extended = new RegExp(regexFormat + "extended", "i");
             return marmoset.projects().then(function(projects) {
               return $q.when(
                 // search for extended first
                 _.find(projects, function(p) {
-                  return extended.test(p); 
-                }) || 
+                  return extended.test(p);
+                }) ||
                 // then search for non-extension
                 _.find(projects, function(p) {
-                  return guess.test(p); 
-                }) 
+                  return guess.test(p);
+                })
               );
             });
           }
@@ -728,6 +779,13 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
+          // handle offline mode:
+          if(ws.isOffline()) {
+            self.runner.postMessage(message);
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
+          }
           return $q.when(ws.programInput(pid, message));
         };
 
@@ -735,13 +793,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           var self = this;
           return $q.when(ws.sendEOF(pid));
         };
-    
-        
+
         /* Returns a list of file paths in the current project skeleton.
            This method only send requests to the server once when it's initially called.
            The server response is remembered for future calls.
-           
-           Deffered return type: [String] -- list of file paths, relative to the project directory.
+
+           Deferred return type: [String] -- list of file paths, relative to the project directory.
            eg. ["q1a/file.c", "q1a/tests/a.in","common/text.txt"]
         */
         SeashellProject.prototype.listSkelFiles = function() {
@@ -759,12 +816,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
           return self._listSkelFiles;
         };
-        
-        /* Checks if the project is listed in the skeleton on the server.
-           This method only send requests to the server once when it's initially called.
-           The server response is remembered for future calls.
 
-           Deffered type: Bool
+        /**
+         * Checks if the project is listed in the skeleton on the server.
+         * This function is memoized.
         */
         SeashellProject.prototype.inSkeleton = function() {
           var self = this;
@@ -775,14 +830,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           }
           return self._inSkeleton;
         };
-        
+
         /* Returns a list of files missing in the local project,
            by comparing with the server project skeleton.
-           
-           This function uses SeashellProject.prototype.listSkelFiles 
+
+           This function uses SeashellProject.prototype.listSkelFiles
            to get a list of files on the server.
-           
-           Deffered return type: [String] -- list of missing local files
+
+           Deferred return type: [String] -- list of missing local files
         */
         SeashellProject.prototype.missingSkelFiles = function() {
           var self = this;
@@ -794,14 +849,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             });
           });
         };
-        
-        
+
         /* Calls SeashellProject.prototype.missingSkelFiles to get a list of
            missing files, then requests the server to create them, then reads
            the files from the server.
         */
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
+          if(ws.isOffline()) {
+            return $q.when(true);
+          }
           return self.missingSkelFiles().then(function(missingFiles) {
               if (missingFiles.length) {
                 return $q.all(missingFiles.map(function(fpath) {
@@ -816,13 +873,11 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
               }
           });
         };
-        
       return SeashellProject;})();
 
 
       /**
        * Lists projects available.
-       *
        * @returns {Angular.$q -> [String]/?} Deferred object that will resolve
        *  to the list of projects available to be opened.
        */
@@ -830,11 +885,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         return $q.when(ws.getProjects());
       };
 
-      /* Returns projects listed in PROJ_SKEL_URL
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-           
-         Deffered object type: [String], a list of project names 
+      /**
+       * Returns a memoized list of project template skeletons.
       */
       self.listSkelProjects = listSkelProjects;
       var listSkelProjects = function() {
@@ -847,13 +899,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         }
         return self._listSkelProjects;
       };
-      
-      /* Returns a list of user names in the whitelist. 
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-         
-         Deffered type: [String]
-      */
+
+      /**
+       * Returns a memoized list of whitelisted users.
+       */
       self.userWhitelist = function() {
          if (! self._userWhitelist) {
             self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
@@ -865,13 +914,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          }
          return self._userWhitelist;
       };
- 
-       /* Returns a list of projects in the whitelist. 
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-         
-         Deffered type: [String], eg ["A1", "A2"]
-      */     
+
+      /**
+       * Returns a memoized lists of whitelisted projects.
+       */
       self.projectWhitelist = function() {
          if (! self._projectWhitelist) {
             self._projectWhitelist = $http.get(PROJ_WHITE_LIST_URL).then(function(result) {
@@ -913,7 +959,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                   var start = $q.when();
                   return _.foldl(new_projects, function(in_continuation, template) {
                      function clone(failed) {
-                        return $q.when(ws.newProjectFrom(template, 
+                        return $q.when(ws.newProjectFrom(template,
                            sprintf(PROJ_ZIP_URL_TEMPLATE, template))).then(function () {
                               if (failed) {
                                  return $q.reject("Propagating failure...");
@@ -924,7 +970,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                            });
                         }
                         return in_continuation.then(function () {return clone(false);},
-                                                    function () {return clone(true);}); 
+                                                    function () {return clone(true);});
                   }, start).then(function() {return new_projects;})
                            .catch(function() {return $q.reject(failed_projects);});
                });
@@ -959,7 +1005,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
           });
       };
 
-      /** 
+      /**
        * Opens an existing project.
        * @param {String} name
        * @param {string} One of "lock", "none", "force-lock"

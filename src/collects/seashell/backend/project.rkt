@@ -28,8 +28,7 @@
          lock-project
          force-lock-project
          unlock-project
-         exn:project?
-         exn:project
+         (struct-out exn:project)
          check-path
          init-projects
          check-and-build-path
@@ -55,7 +54,7 @@
          seashell/compiler
          seashell/backend/runner
          seashell/backend/template
-         seashell/utils
+         seashell/utils/misc
          net/url
          net/head
          json
@@ -300,113 +299,6 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (get-co-files/rec main-file file-dir common-dir
-;; Produces a list of the user's compilation files, recursively resolving
-;; dependencies
-;;
-;; Arguments:
-;;  c-files    - The .c files being compiled
-;;  file-dir   - The directory containing main-file
-;;  common-dir - The directory containing the common subdirectory
-;;
-;; Returns:
-;;  A list of the .h files included by a program, with the .h extension stripped
-(define/contract (get-co-files/rec c-files o-files file-dir common-dir depth)
-  (-> (listof path-string?) (listof path-string?) path? path? exact-nonnegative-integer? 
-      (values (listof path-string?) (listof path-string?)))
-
-  (logf 'debug "c-files is ~s\n" c-files)
-  (logf 'debug "o-files is ~s\n" o-files)
-
-  (define headers (get-headers c-files file-dir common-dir))
-  (logf 'debug "Header files are ~s." headers)
-
-  (define-values (found-c-files found-o-files) (get-co-files headers))
-  (logf 'debug ".c files are ~s." found-c-files)
-  (logf 'debug ".o files are ~s." found-o-files)
-
-  (cond
-    ;; TODO: off by one on depth? subset? works w.r.t. path-string? vs string?
-    [(or (> depth (read-config 'header-search-depth)) 
-         (and (subset? found-c-files c-files)
-              (subset? found-o-files o-files))) 
-     (values c-files o-files)]
-    [else 
-      (get-co-files/rec (remove-duplicates (append c-files found-c-files)) 
-                       (remove-duplicates (append o-files found-o-files))
-                       file-dir common-dir (add1 depth))]))
-
-
-;; (get-headers c-files file-dir common-dir)
-;; Produces a list of the user's header files included by the files in c-files (without recursively
-;; resovling dependencies
-;;
-;; Arguments:
-;;  c-files    - The .c files being compiled
-;;  file-dir   - The directory containing main-file
-;;  common-dir - The directory containing the common subdirectory
-;;
-;; Returns:
-;;  A list of the .h files included by the files in c-files, with the .h extension stripped
-;; Raises:
-;;  exn:project if an included header is not a .h file
-;; TODO: need to clean up the subprocess and ports?
-(define/contract (get-headers c-files file-dir common-dir)
-  (-> (listof path-string?) path? path? (listof path-string?))
-  (define clang-error (open-output-file "/dev/null" #:exists 'truncate))
-  (define-values (clang clang-output clang-input fake-error)
-    ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f clang-error (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
-  (define files
-    (remove-duplicates
-      (filter values
-        (for/list ([line (in-lines clang-output)])
-          (match (regexp-match #rx"^# [0-9]+ \"([^<][^\"]*)\"" line)
-            [(list _ file)
-              (match-define-values (hdrpath hdrname _) (split-path file))
-              (cond
-                [(and (or (equal? (path->directory-path hdrpath) (path->directory-path file-dir))
-                          (equal? (path->directory-path hdrpath) (path->directory-path common-dir)))
-                      (regexp-match #rx"\\.h$" hdrname))
-                  (substring file 0 (- (string-length file) 2))]
-                [else #f])]
-            [#f #f])))))
-  (close-input-port clang-output)
-  (close-output-port clang-input)
-  (close-output-port clang-error)
-  files)
-
-;; (get-co-files headers)
-;; Produces a list of the local .c and .o files to be compiled/linked with a program
-;;
-;; Arguments:
-;;  headers - The list of included local .h files, i.e., produced by get-headers
-;;
-;; Returns:
-;;  A list of the .c files and a list of the .o files to be compiled/linked with a program.
-;; Raises:
-;;  exn:project if an element of headers is not a .h file, if a .h file has no
-;;  corresponding .o or .c file, or if a .h file has both a .c and .o file.
-(define/contract (get-co-files headers)
-  (-> (listof path-string?) (values (listof path?) (listof path?)))
-
-  ;; TODO: object/c files must be in the same directory as the header
-  (logf 'debug "headers in get-co-files: ~s\n" headers)
-  (for/fold ([c-files '()]
-             [o-files '()])
-            ([hdr headers])
-    (match-define-values (basedir hdrname _) (split-path hdr))
-    (match/values (values (file-exists? (string-append hdr ".c"))
-                          (file-exists? (string-append hdr ".o")))
-      [(#t #t) (raise (exn:project (format "You included ~a.h, but provided both ~a.c and ~a.o"
-                                            hdrname hdrname hdrname)
-                                   (current-continuation-marks)))]
-      [(#t #f) (values (cons (string->path (string-append hdr ".c")) c-files) o-files)]
-      [(#f #t) (values c-files (cons (string->path (string-append hdr ".o")) o-files))]
-      [(#f #f) (raise (exn:project (format "You included ~a.h, but did not provide ~a.c or ~a.o"
-                                          hdrname hdrname hdrname)
-                                   (current-continuation-marks)))])))
-
 ;; (compile-and-run-project name file tests full-path test-location question-name)
 ;; Compiles and runs a project.
 ;;
@@ -483,26 +375,13 @@
     (error "No question name given when running a common file."))
 
   (define (compile-c-files)
-    ;; Get the .c and .o files needed to compile file
-    (define-values (c-files o-files)
-      (get-co-files/rec (list (build-path base exe)) '() base
-                        (if running-common-file? (build-path project-base question-name) project-common)
-                        0))
-
-    (logf 'debug ".c files are ~s." c-files)
-    (logf 'debug ".o files are ~s." o-files)
-
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place
-        `(,@(read-config 'compiler-flags)
-          ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '())
-          ,@(if (and running-common-file? (directory-exists? (build-path project-base question-name)))
-                `("-I" ,(some-system-path->string (build-path project-base question-name))) '()))
-          '("-lm")
-           (remove-duplicates (cons (build-path base exe) c-files))
-           o-files))
+      (seashell-compile-files/place `(,@(read-config 'compiler-flags)
+                                      ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+                                    '("-lm")
+                                    (list (check-and-build-path project-base file)) '()))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
@@ -575,6 +454,7 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
+      (eprintf "about to test\n")
       (define pids (map
                      (lambda (test)
                        (run-program target base lang test real-test-location))

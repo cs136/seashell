@@ -31,9 +31,11 @@ angular.module('frontend-app')
           tab_width  : "2",
           use_space : true,
           force_narrow : false,
+          offline_mode : ws.offline_mode,
           theme_style : "light"
         };
         self.notify = {};
+        self.needToLoad = true;
         var nKey = 0;
 
         function notifyChanges () {
@@ -51,10 +53,17 @@ angular.module('frontend-app')
         };
 
         self.load = function () {
+          // do nothing if we haven't written anything
+          if (!self.needToLoad) {
+            return $q.when();
+          }
           return $q.when(ws.getSettings()).then(function (settings) {
-            if (settings)
+            self.needToLoad = false;
+            if (settings) {
               for (var k in settings)
                 self.settings[k] = settings[k];
+              self.settings.offline_mode = ws.offline_mode;
+            }
             // Backwards compatibility.
             if (typeof self.settings.font_size === 'string') {
               self.settings.font_size = parseInt(self.settings.font_size);
@@ -66,6 +75,8 @@ angular.module('frontend-app')
         };
 
         self.save = function () {
+          self.needToLoad = true;
+          ws.setOfflineModeSetting(self.settings.offline_mode);
           return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 
@@ -85,4 +96,6 @@ angular.module('frontend-app')
               };}]
             });
         };
+
+
       }]);

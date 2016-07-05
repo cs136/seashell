@@ -32,6 +32,11 @@ int main( int argc, char* argv[] ) {
   printf("Debug build: %d.\n", SEASHELL_DEBUG);
   printf("Is installed: %d.\n", IS_INSTALLED());
   if (argc > 1) {
+    struct seashell_preprocessor *pp = seashell_preprocessor_make();
+    seashell_preprocessor_set_main_file(pp, argv[1]);
+    seashell_preprocessor_run(pp);
+    seashell_preprocessor_free(pp);
+
     struct seashell_compiler* compiler = seashell_compiler_make();
     seashell_compiler_add_file(compiler, argv[1]);
     seashell_compiler_run(compiler);

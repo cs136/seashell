@@ -23,6 +23,7 @@
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner
+         seashell/backend/offline
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -268,6 +269,14 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      [(hash-table
+        ('id id)
+        ('type "sync")
+        (_ _) ...)
+       ;; Sync
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(sync-offline-changes message)))]
       ;; Ping, for timeout checking.
       [(hash-table
         ('id id)
@@ -397,11 +406,12 @@
          ('file file)
          ('normalize normalize)
          (_ _) ...)
-       (new-file project file
-                 (string->bytes/utf-8 (hash-ref message 'contents ""))
-                 (string->symbol (hash-ref message 'encoding "raw"))
-                 normalize)
+       (define tag (new-file project file
+                             (string->bytes/utf-8 (hash-ref message 'contents ""))
+                             (string->symbol (hash-ref message 'encoding "raw"))
+                             normalize))
        `#hash((id . ,id)
+              (checksum . ,tag)
               (success . #t)
               (result . #t))]
       [(hash-table
@@ -437,24 +447,27 @@
         ('project project)
         ('file file)
         ('contents contents)
-        ('history history))
-			 (write-file project file (string->bytes/utf-8 contents)
-									 (if history (string->bytes/utf-8 history)
-										 (string->bytes/utf-8 "0")))
+        ('history history)
+        (_ _) ...)
+       (define checksum
+         (write-file project file (string->bytes/utf-8 contents)
+                     (if history (string->bytes/utf-8 history) "")
+                     (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . ,checksum))]
       [(hash-table
         ('id id)
         ('type "readFile")
         ('project project)
         ('file file))
-			 (define-values (contents contents_history) (read-file project file))
-				`#hash((id . ,id)
+       (define-values (data checksum history) (read-file project file))
+       `#hash((id . ,id)
               (success . #t)
-              (result . 
-											#hash((data . ,(bytes->string/utf-8 contents))
-														(history . ,(bytes->string/utf-8 contents_history)))))]
+              (result .
+                      #hash((data . ,(bytes->string/utf-8 data))
+                            (history . ,(bytes->string/utf-8 history))
+                            (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)

@@ -24,7 +24,7 @@
          seashell/websocket/handshake
          typed/openssl
          seashell/overrides/typed-web-server
-         seashell/utils)
+         seashell/utils/misc)
 (require/typed web-server/http/response
                [print-headers (-> Output-Port (Listof Header) Void)])
 (require/typed web-server/http/request
