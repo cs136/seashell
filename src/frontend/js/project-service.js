@@ -434,7 +434,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           if(self.root.find(path)) {
             return $q.reject("A file with that name already exists.");
           }
-          var file = new SeashellFile(self, path, contents);
+          var file = new SeashellFile(self, path, false, contents);
           return self.root._placeInTree(file, false, false, contents, encoding, normalize);
         };
 

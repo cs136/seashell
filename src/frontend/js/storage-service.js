@@ -252,7 +252,7 @@ angular.module('seashell-local-files', [])
 
       self.deleteFile = function(name, file_name) {
         console.log("[localfiles] deleteFile", file_name);
-        self._addOfflineDelete(name, file_name, "deleteFile");
+        self._addOfflineChange(name, file_name, "deleteFile");
         return $q.when(self.store.getItem(sprintf("//projects/%s", name))).then(function(tree) {
           var i = 0;
           var found = false;
@@ -274,7 +274,7 @@ angular.module('seashell-local-files', [])
       self.batchDelete = function(name, files) {
         console.log("[localfiles] batchDelete");
 
-        _.each(files, function(f) { self._addOfflineDelete(name, f); });
+        _.each(files, function(f) { self._addOfflineChange(name, f); });
         return self.store.getItem(sprintf("//projects/%s", name)).then(function(tree) {
           for(var f=0; f<files.length; f++) {
             var i = 0;
