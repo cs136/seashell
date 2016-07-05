@@ -344,6 +344,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           } else {
             result = $q.when();
           }
+          self.cb_key = ws.register_callback('connected', self._buildTree);
 
           return result.then(function() { return self._buildTree(); }).then(function () {
                /* If the project is listed in the project skeleton on the server,
@@ -359,7 +360,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                });
                return self;
             });
-          self.cb_key = ws.register_callback('connected', self._buildTree);
         };
 
         /* List all file in this project.
