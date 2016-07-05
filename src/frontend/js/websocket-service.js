@@ -345,9 +345,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
                             return localfiles.batchDeleteProjects(res.deletedProjects);
                           });
                       }).then(function() {
-                        localfiles.clearOfflineChanges();
+                        return localfiles.clearOfflineChanges();
+                      }).then(function() {
                         if(self.connected) {
-                          return $q.all(self.invoke_cb('connected'));
+                          self.invoke_cb('connected');
                         }
                         // send the changes back in case we need to act on the files that have
                         //  changed within the open project

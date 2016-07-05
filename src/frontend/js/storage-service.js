@@ -82,6 +82,7 @@ angular.module('seashell-local-files', [])
       self.clearOfflineChanges = function() {
         self.offlineChangelog = [];
         self.offlineChangelogSet = {};
+        return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
       };
 
       // Add a change to the offline changelog.
