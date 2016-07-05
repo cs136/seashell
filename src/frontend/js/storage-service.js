@@ -114,22 +114,24 @@ angular.module('seashell-local-files', [])
         });
 
         var getProjects =
-          self.store.getItem("//projects")
+          $q.when(self.store.getItem("//projects"))
           .then(function(projs) {
             console.log("[localfiles] projects", projs);
           });
 
         var getOfflineChanges =
-          self.store.getItem("//offlineChangelog")
+          $q.when(self.store.getItem("//offlineChangelog"))
           .then(function(data) {
             self.offlineChangelog = [];
             self.offlineChangelogSet = {};
-            for (var i = 0; i < data.length; i++) {
-              var oc = dta[i];
-              var offlineChange = new OfflineChange(oc._project, oc._path, oc._changeType);
-              var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
-              self.offlineChangelog.push(offlineChange);
-              self.offlineChangelogSet[key] = i;
+            if (data) {
+              for (var i = 0; i < data.length; i++) {
+                var oc = data[i];
+                var offlineChange = new OfflineChange(oc._project, oc._path, oc._changeType);
+                var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
+                self.offlineChangelog.push(offlineChange);
+                self.offlineChangelogSet[key] = i;
+              }
             }
             console.log("offlineChangelog", self.offlineChangelog);
             console.log("offlineChangelogSet", self.offlineChangelogSet);
