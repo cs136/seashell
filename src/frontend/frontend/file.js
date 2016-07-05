@@ -552,7 +552,7 @@ angular.module('frontend-app')
           .then(function(conts) {
             self.contents = conts.data;
             self.ready = true;
-            if (conts.data) {
+            if (typeof conts.data === "string") {
               if (conts.data.length === 0) self.loaded = true;
               self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
               self.editor.clearHistory();
