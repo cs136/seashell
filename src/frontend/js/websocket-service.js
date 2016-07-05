@@ -46,11 +46,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       // load the offline mode setting, which is stored separately
       //  from other Seashell settings as a cookie.
       self.offline_mode = $cookies.get(SEASHELL_OFFLINE_MODE_COOKIE);
-      if(self.offline_mode === undefined) {
+      if (self.offline_mode === undefined) {
         self.offline_mode = 0;
-        $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, 0);
       }
-      else self.offline_mode = parseInt(self.offline_mode);
+      else
+        self.offline_mode = parseInt(self.offline_mode);
 
       // these will hold workers for offline mode
       self.compiler = null;
@@ -208,7 +208,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         var old = self.offline_mode;
         if(setting === 0 || setting === 1 || setting === 2) {
           self.offline_mode = setting;
-          $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, setting);
+          // Set cookie, set expiry to some date sufficiently
+          // in the future.
+          var expiryDate = new Date();
+          expiryDate.setFullYear(expiryDate.getFullYear() + 10);
+          $cookies.put(SEASHELL_OFFLINE_MODE_COOKIE, setting,
+              {'secure': true, expires: expiryDate});
         }
         if(old === 2 && self.offline_mode !== old) {
           // trigger reconnect and sync
