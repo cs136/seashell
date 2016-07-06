@@ -14,7 +14,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      //First ones must stay up to date with the 
+      //First ones must stay up to date with the
       // scripts in ../frontend/includes/scripts.html
       '../../../lib/jslib/tests/jquery-2.1.3.min.js',
       '../../../lib/jslib/tests/underscore-min.js',
@@ -48,12 +48,15 @@ module.exports = function(config) {
       '../../../lib/jslib/ui-codemirror.js',
       '../../../lib/jslib/hotkeys.min.js',
       '../../../lib/jslib/autofill-event.js',
+      '../../../lib/jslib/md5.js',
+      '../../../lib/jslib/localforage.js',
       // JS files we are testing
       '../../frontend/js/socket/crypto.js',
       '../../frontend/js/socket/websocket_client.js',
       '../../frontend/js/marmoset-service.js',
       '../../frontend/js/websocket-service.js',
       '../../frontend/js/project-service.js',
+      '../../frontend/js/storage-service.js',
       // Frontend JS files we are testing
       '../../frontend/frontend/frontend.js',
       '../../frontend/frontend/filters.js',

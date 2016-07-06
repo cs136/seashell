@@ -8,7 +8,6 @@ angular.module('seashell-local-files', [])
       "use strict";
       var self = this;
 
-      self.user = null;   // username
       self.store = null;  // localForage instance
       self.offlineChangelog = []; // array of OfflineChange objects 
       self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
@@ -111,13 +110,10 @@ angular.module('seashell-local-files', [])
       // Returns a deferred that resolves to true when initialization is complete.
       self.init = function() {
         var self = this;
-        self.user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
 
-        // set up localforage to have a per-user store
-        //   note that this doesn't actually secure anything:
-        //   it only prevents name conflicts
+        // TODO: manage per-user stores (note that the username may not be set if we are working offline)
         self.store = localforage.createInstance({
-          name: self.user,
+          name: "seashell-offline",
           version: 1.0
         });
 
