@@ -101,7 +101,7 @@
       (write-file "test" "foo11.c" #"changing some stuff" #"")
       (write-backup-if-changed "test" "foo11.c")
       (check-equal? (length (list-backups "test" "foo11.c")) 2))
-
+    
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
       (check-false (or (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
