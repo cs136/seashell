@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
+/* jslint esversion: 6 */
 angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
   /**
    * WebSocket service:
@@ -183,7 +184,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       };
 
       self.offlineEnabled = function() {
-        return self.offline_mode === 1 || self.offline_mode === 2;
+        return localfiles.ready() && (self.offline_mode === 1 || self.offline_mode === 2);
       };
 
       self.setOfflineModeSetting = function(setting) {
@@ -210,9 +211,106 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
        *  Consult dispatch.rkt for a full list of functions.
        *  These functions take in arguments as specified in server.rkt
        *  and return a JQuery Deferred object. */
-      self.ping = function(deferred) {
-        return self._socket.ping(deferred);
-      };
+      function make_offline_disabled(name) {
+        return function () {
+          if (!self.isOffline()) {
+            return $q.when(self._socket[name].apply(self._socket, arguments));
+          } else {
+            return self._rejectOffline(name);
+          }
+        };
+      }
+      function make_offline_noop(name) {
+        return function () {
+          if (!self.isOffline()) {
+            return $q.when(self._socket[name].apply(self._socket, arguments));
+          } else {
+            return $q.when(true);
+          }
+        };
+      }
+      function make_offline_enabled(name, offlineWriteThrough) {
+        var online_arity = SeashellWebsocket.prototype[name].length;
+        var offline_arity = localfiles[name].length;
+        if (offline_arity != online_arity && offline_arity != online_arity + 1) {
+          throw sprintf("Offline and online arities differ: %s (%d, %d)!", name, online_arity, offline_arity);
+        }
+        if (online_arity != offline_arity) {
+          console.log("Registering function %s which will use online result in write-through mode.", name);
+        }
+        return function () {
+          var args = Array.from(arguments);
+          if (args.length > online_arity) {
+            return $q.reject(sprintf("Too many arguments passed to function %s!", name));
+          }
+
+          if (self.offlineEnabled()) {
+            if (self.isOffline()) {
+              console.log(sprintf("Invoking %s in offline mode.", name));
+              return localfiles[name].apply(localfiles, args);
+            } else {
+              return $q.when(self._socket[name].apply(self._socket, args))
+                .then(function (result) {
+                  if (offlineWriteThrough) {
+                    console.log(sprintf("Invoking %s in write-through mode.", name));
+                    var write_through_args = args
+                      .concat(new Array(online_arity - args.length))
+                      .concat([result]);
+                    return localfiles[name].apply(localfiles, write_through_args)
+                      .then(function() {
+                        return result;
+                      });
+                  } else {
+                    return result;
+                  }
+                })
+                .catch(function (error) {
+                  if (self.isOffline()) {
+                    console.log(sprintf("Invoking %s in offline mode.", name));
+                    return localfiles[name].apply(localfiles, args);
+                  } else {
+                    return $q.reject(error);
+                  }
+                });
+            }
+          } else {
+            return $q.when(self._socket[name].apply(self._socket, args));
+          }
+        };
+      }
+
+      // These functions are not available in offline mode.
+      self.ping = make_offline_disabled('ping');
+      self.newProject = make_offline_disabled('newProject');
+      self.newProjectFrom = make_offline_disabled('newProjectFrom');
+      self.deleteProject = make_offline_disabled('deleteProject');
+      self.restoreFileFrom = make_offline_disabled('restoreFileFrom');
+      self.getUploadFileToken = make_offline_disabled('getUploadFileToken');
+      self.getExportToken = make_offline_disabled('getExportToken');
+      // These functions do nothing and just resolve in offline mode.
+      self.lockProject = make_offline_noop('lockProject');
+      self.forceLockProject = make_offline_noop('forceLockProject');
+      self.unlockProject = make_offline_noop('unlockProject');
+      self.marmosetSubmit = make_offline_noop('marmosetSubmit');
+      self.archiveProjects = make_offline_noop('archiveProjects');
+      // These functions either:
+      //  - return the online result if online.
+      //  - return the offline result if offline.
+      self.getProjects = make_offline_enabled('getProjects');
+      self.listProject = make_offline_enabled('listProject');
+      self.readFile = make_offline_enabled('readFile');
+      self.getFileToRun = make_offline_enabled('getFileToRun');
+      // These functions:
+      //  - invoke the offline version if offline
+      //  - invoke the both the offline version and the online
+      //    version if online, returning the online version.
+      self.newDirectory = make_offline_enabled('newDirectory', true);
+      self.deleteDirectory = make_offline_enabled('deleteDirectory', true);
+      self.newFile = make_offline_enabled('newFile', true);
+      self.writeFile = make_offline_enabled('writeFile', true);
+      self.deleteFile = make_offline_enabled('deleteFile', true);
+      self.renameFile = make_offline_enabled('renameFile', true);
+      self.setFileToRun = make_offline_enabled('setFileToRun', true);
 
       self.compileAndRunProject = function(project, question, file, tests, deferred) {
           if(!self.isOffline()) {
@@ -262,18 +360,50 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         return self._socket.sendEOF(pid, deferred);
       };
 
-      self.compileProject = function(project, file, deferred) {
+      self.programInput = function(pid, contents, deferred) {
         // TODO: offline runner
-        return self._socket.compileProject(project, file, deferred);
+        return self._socket.programInput(pid, contents, deferred);
       };
 
-      self.saveProject = function(project, message, deferred) {
-        // TODO: is this even used? 
+
+      self.getMostRecentlyUsed = function(project, directory, deferred) {
+        // TODO: offline mode
         if (!self.isOffline()) {
-          return self._socket.saveProject(project, message, deferred);
+          return self._socket.getMostRecentlyUsed(project, directory, deferred);
         } else {
-          return $q.resolve(false); // noop 
+          return $q.when(false);
         }
+      };
+
+      self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
+        // TODO: store this in offline mode 
+        if (!self.isOffline()) {
+          return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
+        } else {
+          return $q.when();
+        }
+      };
+
+      self.saveSettings = function(settings, deferred) {
+        // TODO: offline mode
+        if (!self.isOffline()) {
+          return self._socket.saveSettings(settings, deferred);
+        } else {
+          return $q.when();
+        }
+      };
+
+      self.getSettings = function(deferred) {
+        // TODO: offline mode
+        if (!self.isOffline()) {
+          return self._socket.getSettings(deferred);
+        } else {
+          return $q.when();
+        }
+      };
+      self.startIO = function(project, pid, deferred) {
+        //  TODO: offline runner
+        return self._socket.startIO(project, pid, deferred);
       };
 
       /**
@@ -285,7 +415,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.syncAll = function() {
         console.log("syncAll invoked");
 
-        return $q.all([localfiles.getProjects(), localfiles.getOfflineChanges()])
+        return $q.all([localfiles._getProjects(), localfiles.getOfflineChanges()])
           .then(function(res) {
             var projects = res[0];
             return $q.all(_.map(projects, localfiles.listProject))
@@ -344,264 +474,13 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           });
       };
 
-      self.getProjects = function(deferred) {
-        if (!self.isOffline()) {
-          return self._socket.getProjects(deferred);
-        }
-        else {
-          return localfiles.getProjects().then(function(projects) {
-            // return placeholder last modified value of 0 for now
-            // TODO maintain an actual last modified value
-            return _.map(projects, function(p) { return [p, 0]; });
-          });
-        }
-      };
-
-      self.listProject = function(name, deferred) {
-        if (!self.isOffline()) {
-          return self._socket.listProject(name, deferred);
-        } else {
-          return localfiles.listProject(name);
-        }
-      };
-
-      self.newProject = function(name, deferred) {
-        // TODO: offline mode 
-        if (!self.isOffline()) {
-          return self._socket.newProject(name, deferred);
-        } else {
-          return self._rejectOffline();
-        }
-      };
-
-      self.newProjectFrom = function(name, src_url, deferred) {
-        if (!self.isOffline()) {
-          return self._socket.newProjectFrom(name, src_url, deferred);
-        } else {
-          return self._rejectOffline();
-        }
-      };
-
-      self.deleteProject = function(name, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.deleteProject(name, deferred);
-        } else {
-          return self._rejectOffline();
-        }
-      };
-
-      self.lockProject = function(name, deferred) {
-        // locking only makes sense when we're online
-        if (!self.isOffline()) {
-          return self._socket.lockProject(name, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.forceLockProject = function(name, deferred) {
-        if (!self.isOffline()) {
-          return self._socket.forceLockProject(name, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.unlockProject = function(name, deferred) {
-        // locking only makes sense when we're online
-        if (!self.isOffline()) {
-          return self._socket.unlockProject(name, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.readFile = function(name, file_name, deferred) {
-        if(self.isOffline()) return localfiles.readFile(name, file_name)
-          .then(function(conts) {
-            return {data: conts, history: ""};
-          });
-        else return self._socket.readFile(name, file_name, deferred);
-      };
-
-      self.newFile = function(name, file_name, contents,
-        encoding, normalize, deferred) {
-        localfiles.newFile(name, file_name, contents, encoding, normalize);
-        if (!self.isOffline()) {
-          return self.onlineNewFile(name, file_name, contents, encoding, normalize, deferred);
-        }
-      };
-
-      self.onlineNewFile = function(name, file_name, contents, encoding, normalize, deferred) {
-        return self._socket.newFile(name, file_name, contents, encoding, normalize, deferred);
-      };
-
-      self.restoreFileFrom = function(projectName, fpath, url) {
-        if (!self.isOffline()) {
-          return self._socket.restoreFileFrom(projectName, fpath, url);
-        } else {
-          return self._rejectOffline();
-        }
-      };
-
-
-      self.newDirectory = function(name, dir_name, deferred) {
-        localfiles.newDirectory(name, dir_name);
-        return self._socket.newDirectory(name, dir_name, deferred);
-      };
-
-      self.writeFile = function(name, file_name, file_content, history, deferred) {
-        var offlineWrite = function(checksum) {
-          localfiles.writeFile(name, file_name, file_content, checksum);
-          return checksum;
-        };
-
-        if (self.isOffline()) return $q.when(offlineWrite(false));
-
-        return $q.when(self._socket.writeFile(name, file_name, file_content, history, deferred))
-          .then(offlineWrite)  // get checksum from backend and write
-          .catch(function () { offlineWrite(false); }); // force write
-      };
-
-      self.deleteFile = function(name, file_name, deferred) {
-        var offlineResult = localfiles.deleteFile(name, file_name);
-        if (!self.isOffline()) {
-          return self._socket.deleteFile(name, file_name, deferred);
-        } else {
-          return offlineResult;
-        }
-      };
-
-      self.deleteDirectory = function(name, dir_name, deferred) {
-        // TODO: is this even used? 
-        return self._socket.deleteDirectory(name, dir_name, deferred);
-      };
-
-      self.programInput = function(pid, contents, deferred) {
-        // TODO: offline runner
-        return self._socket.programInput(pid, contents, deferred);
-      };
-
-      self.getExportToken = function(project, deferred) {
-        if (self.isOffline()) {
-          return self._rejectOffline(); 
-        } else {
-          return self._socket.getExportToken(project, deferred);
-        }
-      };
-
-      self.getUploadFileToken = function(project, file, deferred) {
-        if (self.isOffline()) {
-          return self._rejectOffline(); 
-        } else {
-          return self._socket.getUploadFileToken(project, file, deferred);
-        }
-      };
-
-      self.renameFile = function(project, oldName, newName, deferred) {
-        var offlineResult = localfiles.renameFile(project, oldName, newName);
-        if (!self.isOffline()) {
-          var onlineResult = self._socket.renameFile(project, oldName, newName, deferred);
-          return $q.all([onlineResult, offlineResult]);
-        } else {
-          return $q.all([offlineResult]);
-        }
-      };
-
-      self.getMostRecentlyUsed = function(project, directory, deferred) {
-        // TODO: offline mode 
-        if (!self.isOffline()) {
-          return self._socket.getMostRecentlyUsed(project, directory, deferred);
-        } else {
-          return $q.when(false);
-        }
-      };
-
-      self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
-        // TODO: store this in offline mode 
-        if (!self.isOffline()) {
-          return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.saveSettings = function(settings, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.saveSettings(settings, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.getSettings = function(deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.getSettings(deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.marmosetSubmit = function(project, assn, subdir, deferred) {
-        if (!self.isOffline()) {
-          return self._socket.marmosetSubmit(project, assn, subdir, deferred);
-        } else {
-          return self._rejectOffline();
-        }
-      };
-
-      self.startIO = function(project, pid, deferred) {
-        //  TODO: offline runner
-        return self._socket.startIO(project, pid, deferred);
-      };
-
-      self.archiveProjects = function(deferred) {
-        if (self.isOffline()) {
-          return self._rejectOffline();
-        } else {
-          return self._socket.archiveProjects(deferred);
-        }
-      };
-
-      self.getFileToRun = function(project, question, deferred) {
-        var offlineResult = localfiles.getRunnerFile(project, question);
-        if (!self.isOffline()) {
-          var onlineResult = self._socket.getFileToRun(project, question, deferred);
-          return $q.all([onlineResult, offlineResult])
-            .then(function(result) {
-              return result[0] || result[1];
-            }).catch(
-            function(error) {
-              // TODO: what if one of them doesn't resolve?
-            });
-        } else {
-          return $q.when(offlineResult);
-        }
-      };
-
-      self.setFileToRun = function(project, question, folder, file, deferred) {
-        var offlineResult = localfiles.setRunnerFile(project, question, folder, file);
-        if (!self.isOffline()) {
-          var onlineResult = self._socket.setFileToRun(project, question, folder, file, deferred);
-          return $q.all([onlineResult, offlineResult]).catch(
-            function(error) {
-              // TODO: what if one of them doesn't resolve?
-            });
-        } else {
-          return $q.all([offlineResult]);
-        }
-      };
-
-      self._rejectOffline = function() {
-        return $q.reject("Functionality not available in offline mode.");
+      self._rejectOffline = function(name) {
+        return $q.reject(name + " is not available in offline mode.");
       };
 
       // Register callback for syncing.
       self.register_callback("syncing", function() {
-        if(self.offlineEnabled() && localfiles.ready()) {
+        if(self.offlineEnabled()) {
           return self.syncAll();
         } else {
           self.invoke_cb('connected');

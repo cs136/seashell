@@ -278,16 +278,17 @@
 ;;  old-file - The original name of the file
 ;;  new-file - The desired new name of the file
 ;; Returns:
-;;  void?
+;;  string? - checksum of file
 (define/contract (rename-file project old-file new-file)
-  (-> (and/c project-name? is-project?) path-string? path-string? void?)
+  (-> (and/c project-name? is-project?) path-string? path-string? string?)
   (define proj-path (check-and-build-path (build-project-path project)))
   (with-handlers
     [(exn:fail:filesystem? (lambda (e)
       (raise (exn:project "File could not be renamed." (current-continuation-marks)))))]
     (unless (equal? old-file new-file)
       (rename-file-or-directory (check-and-build-path proj-path old-file)
-                                (check-and-build-path proj-path new-file)))))
+                                (check-and-build-path proj-path new-file)))
+    (call-with-input-file (check-and-build-path proj-path new-file) md5)))
 
 ;; (restore-file-from-template project file template)
 ;; Restores a file from a skeleton/template.

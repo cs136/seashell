@@ -519,10 +519,10 @@
         ('project project)
         ('oldName old-file)
         ('newName new-file))
-       (rename-file project old-file new-file)
+       (define result (rename-file project old-file new-file))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . result))]
       [(hash-table
         ('id id)
         ('type "restoreFileFrom")
