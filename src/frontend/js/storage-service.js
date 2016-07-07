@@ -11,6 +11,7 @@ angular.module('seashell-local-files', [])
       self.store = null;  // localForage instance
       self.offlineChangelog = []; // array of OfflineChange objects 
       self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
+      self._ready = false;
 
 
       /* Constructor for an OfflineChange
@@ -106,6 +107,11 @@ angular.module('seashell-local-files', [])
         }
       };
 
+      // Tests if the store is ready.
+      self.ready = function() {
+        return self._ready;
+      };
+
       // Must call this before using anything
       // Returns a deferred that resolves to true when initialization is complete.
       self.init = function() {
@@ -142,7 +148,7 @@ angular.module('seashell-local-files', [])
           });
 
         return $q.all([getProjects, getOfflineChanges])
-          .then(function () { return true; });
+          .then(function () { self._ready = true; return true; });
       };
 
       /*
@@ -195,6 +201,8 @@ angular.module('seashell-local-files', [])
               return self.store.setItem(path, file_content);
             });
           });
+        }).then(function () {
+          return offline_checksum;
         });
       };
 
@@ -351,8 +359,7 @@ angular.module('seashell-local-files', [])
         // do nothing, since dumpProject will take care of this
       };
 
-      self.newFile = function(name, file_name, contents,
-        encoding, normalize) {
+      self.newFile = function(name, file_name, contents, encoding, normalize) {
         console.log("[localfiles] newFile", name, file_name, contents);
         // TODO: decoding 
         // name: project name

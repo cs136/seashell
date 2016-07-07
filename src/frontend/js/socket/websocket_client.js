@@ -242,22 +242,6 @@ SeashellWebsocket.prototype.sendEOF = function(pid, deferred) {
     deferred);
 };
 
-SeashellWebsocket.prototype.compileProject = function(project, file, deferred) {
-  return this.sendMessage({
-    type : "compileProject",
-    project : project,
-    file : file},
-    deferred);
-};
-
-SeashellWebsocket.prototype.saveProject = function(project, message, deferred) {
-  return this.sendMessage({
-    type : "saveProject",
-    project: project,
-    message: message},
-    deferred);
-};
-
 SeashellWebsocket.prototype.getProjects = function(deferred) {
   return this.sendMessage({
     type : "getProjects"},

@@ -601,7 +601,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       // Register callback for syncing.
       self.register_callback("syncing", function() {
-        if(self.offlineEnabled()) {
+        if(self.offlineEnabled() && localfiles.ready()) {
           return self.syncAll();
         } else {
           self.invoke_cb('connected');
