@@ -56,14 +56,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self.compiler = null;
       self.runner = null;
 
-      localfiles.init().then(function() {
-        self.register_callback("syncing", function() {
-          if(self.offlineEnabled()) {
-            return self.syncAll();
-          }
-          return $q.when(true);
-        }, true);
-      });
 
       var timeout_count = 0;
       var timeout_interval = null;
@@ -115,10 +107,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
 
       self.test_cb = function(ignored, result) {
         return self.invoke_cb('test', result);
-      };
-
-      self.sync_cb = function(ignored, result) {
-        return self.invoke_cb('syncing', result);
       };
 
       /** Connects the socket, sets up the disconnection monitor. */
@@ -182,11 +170,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             console.log("Websocket disconnection monitor set up properly.");
             /** Run the callbacks. First the syncing ones, then the
               connected ones when these are resolved. */
-            $q.all(_.map(_.filter(callbacks, function(x) {
-                return x.type === 'syncing';
-              }), function(x) {
-                return x.cb();
-              }));
+            self.invoke_cb('syncing');
           });
       };
 
@@ -218,7 +202,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
           if(!self.connected)
             self.connect();
           else
-            self.sync_cb();
+            self.invoke_cb('syncing');
         }
       };
 
@@ -614,5 +598,14 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
       self._rejectOffline = function() {
         return $q.reject("Functionality not available in offline mode.");
       };
+
+      // Register callback for syncing.
+      self.register_callback("syncing", function() {
+        if(self.offlineEnabled()) {
+          return self.syncAll();
+        } else {
+          self.invoke_cb('connected');
+        }
+      }, true);
     }
   ]);
