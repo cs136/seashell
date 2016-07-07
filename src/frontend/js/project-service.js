@@ -76,7 +76,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           return self.read().then(function(conts) {
             var obj = { name: self.name[self.name.length-1],
-                        contents: conts };
+                        contents: conts.data };
             return obj;
           });
         };
