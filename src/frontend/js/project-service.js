@@ -779,13 +779,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
 
         SeashellProject.prototype.sendInput = function(pid, message) {
           var self = this;
-          // handle offline mode:
-          if(ws.isOffline()) {
-            self.runner.postMessage(message);
-            var def = $q.defer();
-            def.resolve();
-            return def.promise;
-          }
           return $q.when(ws.programInput(pid, message));
         };
 

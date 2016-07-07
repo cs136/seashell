@@ -120,11 +120,13 @@ self.onmessage = function(msg) {
   if(init) {
     var res = compile(rf);
     postMessage(res);
+    close();
   }
   else {
     init_queue.push(function() {
       var res = compile(rf);
       postMessage(res);
+      close();
     });
   }
 };

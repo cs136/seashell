@@ -18,7 +18,7 @@
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /* jslint esversion: 6 */
-angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
+angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seashell-compiler'])
   /**
    * WebSocket service:
    *  provides:
@@ -29,8 +29,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles',
-    function($q, $interval, $cookies, $timeout, localfiles) {
+  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 'offline-compiler', 'offline-runner',
+    function($q, $interval, $cookies, $timeout, localfiles, compiler, runner) {
       "use strict";
       var self = this;
       var SEASHELL_OFFLINE_MODE_COOKIE = 'seashell-offline-mode-cookie';
@@ -317,52 +317,61 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
             return self._socket.compileAndRunProject(project, question, tests, deferred);
           }
           else {
-            var res = $q.defer();
-            if(!self.compiler) {
-              self.compiler = new Worker("js/offline-compile.js");
-            }
-            self.compiler.onmessage = function(result) {
-              if(result.data.status == "compile-failed") {
-                res.reject(result.data);
-              }
-              else if(result.data.status == "running") {
-                self.runner = new Worker("js/offline-run.js");
-                self.runner.onmessage = function(msg) {
-                  self.io_cb(null, msg.data);
-                };
-                self.runner.postMessage(result.data.obj);
-                res.resolve(result.data);
-              }
-            };
-            return $q.when(file.getDependencies()).then(function(deps) {
-              $q.all(_.map(deps, function(f) { return f.toWorker(); })).then(function(file_arr) {
-                self.compiler.postMessage({
-                  runnerFile: file.filename(),
-                  files: file_arr,
-                  tests: tests
-                });
-                return res.promise;
+            return $q.when(file.getDependencies())
+              .then(function(deps) {
+                return $q.all(_.map(deps, function(f) { return f.toWorker(); }));
+              })
+              .then(function (file_arr) {
+                return compiler.compile(file_arr, file.filename());
+              })
+              .then(function (result) {
+                // Fill in the PID with a fake, offline PID.
+                return runner.run(result.obj,
+                    function (message, data) {
+                      self.io_cb(message, data);
+                    })
+                  .then(function (pid) {
+                    result.pid = pid;
+                    return result;
+                  });
               });
-            });
           }
       };
 
-      self.programKill = function(pid, deferred) {
-        if(pid<0 && self.runner) {
-          self.runner.terminate();
+      self.programKill = function(pid) {
+        if (typeof pid === "object") {
+          pid.kill();
           return $q.when();
+        } else {
+          return self._socket.programKill(pid);
         }
-        return self._socket.programKill(pid, deferred);
       };
 
-      self.sendEOF = function(pid, deferred) {
-        // TODO: offline runner
-        return self._socket.sendEOF(pid, deferred);
+      self.sendEOF = function(pid) {
+        if (typeof pid === "object") {
+          pid.sendEOF();
+          return $q.when();
+        } else {
+          return self._socket.sendEOF(pid);
+        }
       };
 
-      self.programInput = function(pid, contents, deferred) {
-        // TODO: offline runner
-        return self._socket.programInput(pid, contents, deferred);
+      self.programInput = function(pid, contents) {
+        if (typeof pid === "object") {
+          pid.programInput(contents);
+          return $q.when();
+        } else {
+          return self._socket.programInput(pid, contents);
+        }
+      };
+
+      self.startIO = function(project, pid, deferred) {
+        if (typeof pid === "object") {
+          pid.startIO();
+          return $q.when();
+        } else {
+          return self._socket.startIO(pid, contents);
+        }
       };
 
 
@@ -400,10 +409,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files'])
         } else {
           return $q.when();
         }
-      };
-      self.startIO = function(project, pid, deferred) {
-        //  TODO: offline runner
-        return self._socket.startIO(project, pid, deferred);
       };
 
       /**
