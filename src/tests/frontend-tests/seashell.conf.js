@@ -57,6 +57,7 @@ module.exports = function(config) {
       '../../frontend/js/websocket-service.js',
       '../../frontend/js/project-service.js',
       '../../frontend/js/storage-service.js',
+      '../../frontend/js/compiler-service.js',
       // Frontend JS files we are testing
       '../../frontend/frontend/frontend.js',
       '../../frontend/frontend/filters.js',
