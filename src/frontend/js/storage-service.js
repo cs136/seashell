@@ -122,7 +122,13 @@
       };
 
       self.listAllProjectsForSync = () => {
-        return self.database.files.toArray();
+        return self.database.files.toArray(
+        (files) => {
+          return files.map(
+            (file) => {
+              return {project: file.project, file:file.file, checksum: file.checksum};
+            });
+        });
       };
 
       self.newDirectory = (name, path) => {
@@ -133,11 +139,11 @@
         return new Dexie.Promise((resolve, reject) => {resolve(true);});
       };
 
-      self.newFile = (name, file, contents, encoding, normalize, online) => {
-        let checksum = md5(contents);
+      self.newFile = (name, file, contents, encoding, normalize, online_checksum) => {
+        let checksum = (typeof contents === "string" && md5(contents)) || online_checksum || "";
         let key = [name, file];
         return self.database.transaction('rw', self.database.changelog, self.database.files, () => {
-          if (online !== undefined) {
+          if (online_checksum !== undefined) {
             return self.database.files.add({project: name, file: file,
                                             contents: contents, history: "",
                                             checksum: checksum,
@@ -190,7 +196,7 @@
             } else if (change.type === "editFile") {
               self.writeFile(change.file.project, change.file.file, change.contents, change.history, change.file.checksum);
             } else if (change.type === "newFile") {
-              self.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, true);
+              self.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, change.file.checksum);
             } else {
               throw sprintf("applyChanges: unknown change %s!", change);
             }
