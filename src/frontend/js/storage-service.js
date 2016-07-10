@@ -38,6 +38,7 @@
                 .then((current) => {
                   self.database.changelog.add({file:{project: name, file: file, checksum: current.checksum},
                                                type: "editFile",
+                                               history: history,
                                                contents: contents});
                   self.database.files.update(key,
                     {contents: contents, history: history, checksum: offline_checksum,
@@ -144,6 +145,7 @@
         let key = [name, file];
         return self.database.transaction('rw', self.database.changelog, self.database.files, () => {
           if (online_checksum !== undefined) {
+            // TODO: Set history when syncing.
             return self.database.files.add({project: name, file: file,
                                             contents: contents, history: "",
                                             checksum: checksum,
@@ -186,6 +188,7 @@
 
       self.applyChanges = (changes, newProjects, deletedProjects) => {
         return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, () => {
+          // TODO: how to sync project settings?  Probably with last-modified-time...
           // TODO: send back project settings with project
           newProjects.forEach((project) => {
             self.newProject(project);
