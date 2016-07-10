@@ -572,7 +572,8 @@ angular.module('frontend-app')
             }
             self.refreshSettings();
           }).catch(function (error) {
-            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
+            if (typeof error === "string" &&
+                error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
               self.isBinaryFile = true;
               self.refreshSettings();
             }

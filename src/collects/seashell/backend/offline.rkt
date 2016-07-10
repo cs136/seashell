@@ -138,7 +138,7 @@
              [else
                (raise (exn:project:sync "Expected non-#f checksum for deleteFile!"
                                         (current-continuation-marks)))])]
-          [(off:change "editFile"
+          [(off:change (and type (or "newFile" "editFile"))
                        (off:file project file _)
                        contents
                        checksum)
@@ -156,11 +156,11 @@
                  (with-handlers
                    ([exn:project:file?
                       (lambda ([exn : exn])
-                        (cons (conflict "editFile" project file contents 'checksum) conflicts))])
+                        (cons (conflict type project file contents 'checksum) conflicts))])
                    (cond
-                     [checksum
+                     [(equal? type "editFile")
                        (write-file project file (string->bytes/utf-8 contents) #f checksum)]
-                     [else
+                     [(equal? type "newFile")
                        (new-file project file (string->bytes/utf-8 contents) 'raw #f)])
                    conflicts))
                (if (path? base)
@@ -168,7 +168,7 @@
                  (with-handlers
                    ([exn:fail:filesystem?
                       (lambda ([exn: exn])
-                        (cons (conflict "editFile" project file contents 'missing-directory) conflicts))])
+                        (cons (conflict type project file contents 'missing-directory) conflicts))])
                    (parameterize ([current-directory (build-project-path project)])
                      (make-directory* base))
                    ;; Everything OK, write file
@@ -197,7 +197,7 @@
       ;; Deal with type of conflict
       (cond
         ;; editFile - write out file contents.
-        [(equal? type "editFile")
+        [(or (equal? type "newFile") (equal? type "editFile"))
           ;; Generate new extension.
           (define fext (filename-extension file))
           (define newext
@@ -310,9 +310,11 @@
              (with-handlers
                ;; Send a placeholder record for binary files (that are not available offline).
                ([exn:fail? (lambda ([exn : exn])
-                             (off:change "editFile" f #f
+                             (off:change (if is-new-file? "newFile" "editFile")
+                                         f #f
                                          (if is-new-file? #f checksum)))])
-               (off:change "editFile" f (bytes->string/utf-8 contents)
+               (off:change (if is-new-file? "newFile" "editFile")
+                           f (bytes->string/utf-8 contents)
                            (if is-new-file? #f checksum))))
            backend-changed-files)))
   ;; Generate changes to send back.

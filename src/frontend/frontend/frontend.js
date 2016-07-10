@@ -140,13 +140,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         '$window', '$document', '$rootScope', 'localfiles',
         function($cookies, ws, settings, errors, projects, $window, $document, $rootScope,
                 localfiles) {
-    localfiles.init()
-      .catch(function(err) {
-        errors.report(err, 'Could not load offline storage!');
-      })
-      .then(function() {
-        return ws.connect();
-      });
+    ws.connect();
     // Reload settings on (re)connect.
     ws.register_callback('connected', function () {
       return settings.load().catch(function (error) {

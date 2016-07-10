@@ -1,471 +1,209 @@
-angular.module('seashell-local-files', [])
-  /**
-   * Local file storage service, using localforage.js
-   * Must call init before using!
-   */
-  .service('localfiles', ['$q', '$cookies',
-    function($q, $cookies) {
-      "use strict";
-      var self = this;
-
-      self.store = null;  // localForage instance
-      self.offlineChangelog = []; // array of OfflineChange objects 
-      self.offlineChangelogSet = {}; // properties determine membership in offlineChangelog
-      self._ready = false;
-
-
-      /* Constructor for an OfflineChange
-       * It stores information about a file that has changed offline
-       *   but not online, so that it can be updated when the user goes 
-       *   back online.
-       */
-      var OfflineChange = function(project, path, changeType) {
+  /* jslint esversion: 6 */
+  angular.module('seashell-local-files', [])
+    .service('localfiles', ['$q', '$cookies',
+      function($q, $cookies) {
+        "use strict";
+        // TODO: per user database.
         var self = this;
-        self._project = project;
-        self._path = path;
-        self._changeType = changeType;
-      };
-
-      // Getter for project name. Returns a string.
-      OfflineChange.prototype.getProject = function() {
-        var self = this;
-        return self._project;
-      };
-
-      // Getter for path. Returns a string.
-      OfflineChange.prototype.getPath = function() {
-        var self = this;
-        return self._path;
-      };
-
-      // Returns the type of change.
-      OfflineChange.prototype.changeType = function() {
-        var self = this;
-        return self._changeType;
-      };
-
-      /*
-        Returns a list of changes since last sync to be sent to the backend
-        on reconnection. Returns array of entries of the form
-          ["deleteFile"/"editFile", {project: ..., path: ..., contents: ...,
-            checksum: ...}]
-      */
-      self.getOfflineChanges = function() {
-        // extreme callback hell
-        // need to group the projects by file, then a promise for each project,
-        //  then a promise for each changed file in each project
-        return $q.all(_.values(_.mapObject(_.groupBy(self.offlineChangelog, function(oc) {
-          return oc.getProject();
-        }), function(ocs, proj) {
-          return self._getProject(proj).then(function(files) {
-            return $q.all(_.map(ocs, function(oc) {
-              var file = _.filter(files, function(f) { return f.path == oc.getPath(); })[0];
-
-              if (oc.changeType() === "editFile") {
-                return self._readFile(proj, oc.getPath()).then(function(contents) {
-                  return {type: oc.changeType(), checksum:file.online_checksum,
-                    contents: contents,
-                    file:{project: proj, file: file.path, checksum:file.offline_checksum}};
+        self.database = new Dexie("seashell-local-files");
+        self.database.version(1).stores({
+          changelog: '++id',
+          files: '[project+file], project',
+          projects: 'name'
+        });
+        /*
+         * Save a file to local storage.
+         * @param {string} name: project name.
+         * @param {string} file_name: filename.
+         * @param {string} file_content: The contents of the file.
+         * @param {string} file_history: The history of the file.
+         * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
+         */
+        self.writeFile = (name, file, contents, history, checksum) => {
+          let offline_checksum = md5(contents);
+          let key = [name, file];
+          return self.database.transaction('rw', self.database.changelog, self.database.files, () => {
+            if (checksum !== undefined) {
+              return self.database.files.update(key,
+                  {contents: contents, history: history, checksum: checksum,
+                   last_modified: new Date()})
+                .then((result) => {
+                  if (!result) {
+                    throw sprintf("Storage.writeFile: file %s/%s not found!", name, file);
+                  }
+                  return offline_checksum;
                 });
-              } else if (oc.changeType() === "deleteFile") {
-                return {type: oc.changeType(), checksum:file.online_checksum,
-                  file:{project: proj, file: file.path, checksum:file.offline_checksum}};
-              }
-            }));
-          });
-        }))).then(function(res) {
-          return _.flatten(res, true);
-        });
-      };
-
-      // to be called after syncing is complete to reset internal change log
-      self.clearOfflineChanges = function() {
-        self.offlineChangelog = [];
-        self.offlineChangelogSet = {};
-        return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
-      };
-
-      // Add a change to the offline changelog.
-      // Does nothing if the change is already logged.
-      self._addOfflineChange = function(project, path, change) {
-        var self = this;
-        var key = sprintf("%s/%s", project, path);
-
-        // Add the change if an entry does not exist.
-        if (!(key in self.offlineChangelogSet)) {
-          self.offlineChangelogSet[key] = self.offlineChangelog.length;
-          self.offlineChangelog.push(new OfflineChange(project, path, change));
-          return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
-        }
-        // Otherwise, make sure the change type matches up; if not, rewrite the changelog.
-        else if (self.offlineChangelog[self.offlineChangelogSet[key]].changeType() !==
-            change) {
-          self.offlineChangelog[self.offlineChangelogSet[key]] = new OfflineChange(project, path, change);
-          return $q.when(self.store.setItem("//offlineChangelog", self.offlineChangelog));
-        } else {
-          return $q.when();
-        }
-      };
-
-      // Tests if the store is ready.
-      self.ready = function() {
-        return self._ready;
-      };
-
-      // Must call this before using anything
-      // Returns a deferred that resolves to true when initialization is complete.
-      self.init = function() {
-        var self = this;
-
-        // TODO: manage per-user stores (note that the username may not be set if we are working offline)
-        self.store = localforage.createInstance({
-          name: "seashell-offline",
-          version: 1.0
-        });
-
-        var getProjects =
-          $q.when(self.store.getItem("//projects"))
-          .then(function(projs) {
-            console.log("[localfiles] projects", projs);
-          });
-
-        var getOfflineChanges =
-          $q.when(self.store.getItem("//offlineChangelog"))
-          .then(function(data) {
-            self.offlineChangelog = [];
-            self.offlineChangelogSet = {};
-            if (data) {
-              for (var i = 0; i < data.length; i++) {
-                var oc = data[i];
-                var offlineChange = new OfflineChange(oc._project, oc._path, oc._changeType);
-                var key = sprintf("%s/%s", offlineChange.getProject(), offlineChange.getPath());
-                self.offlineChangelog.push(offlineChange);
-                self.offlineChangelogSet[key] = i;
-              }
-            }
-            console.log("offlineChangelog", self.offlineChangelog);
-            console.log("offlineChangelogSet", self.offlineChangelogSet);
-          });
-
-        return $q.all([getProjects, getOfflineChanges])
-          .then(function () { self._ready = true; return true; });
-      };
-
-      /*
-       * Returns the path to where this file is stored.
-       */
-      self._path = function(project, file) {
-        return sprintf("%s/%s", project, file);
-      };
-
-      /*
-       * Save a file to local storage.
-       * @param {string} name: project name.
-       * @param {string} file_name: filename.
-       * @param {string} file_content: The contents of the file.
-       * @param {string} file_history: The history of the file.
-       * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
-       */
-      self.writeFile = function(name, file_name, file_content, file_history, checksum) {
-        console.log("[localFiles] writeFile", name, file_name, file_content, file_history, checksum);
-        var offline_checksum = md5(file_content);
-        console.log(offline_checksum);
-        var path = self._path(name, file_name);
-
-        return self._getProject(name).then(function(tree) {
-          var found = false;
-          var prom;
-          for(var i=0; i<tree.length; i++) {
-            if(tree[i].path==file_name) {
-              found = tree[i];
-            }
-          }
-          if(!found) {
-            tree.push({path: file_name, online_checksum: checksum,
-                offline_checksum: offline_checksum});
-          }
-          else {
-            found.offline_checksum = offline_checksum;
-            if(checksum) {
-              found.online_checksum = checksum;
-            }
-          }
-          prom = self.store.setItem(sprintf("//projects/%s", name), tree);
-          return prom.then(function() {
-            console.log("[localfiles] Offline Write", file_content);
-            return self.store.setItem(path, file_content);
-          });
-        }).then(function () {
-          return offline_checksum;
-        });
-      };
-
-      self.batchWrite = function(name, files, contents, checksums) {
-        var offline_checksums = _.map(_.zip(contents, checksums), function(f) {
-          // Recalculate the checksum if it's a real file, otherwise store
-          // the online checksum for a placeholder record.
-          return (typeof f[0] === "string" && md5(f[0])) || f[1];
-        });
-        var paths = _.map(files, function(file) { return self._path(name, file); });
-
-        return self._getProject(name).then(function(tree) {
-          for(var f=0; f<files.length; f++) {
-            var found = false;
-            for(var i=0; i<tree.length; i++) {
-              if(tree[i].path === files[f]) {
-                found = tree[i];
-              }
-            }
-            if(!found) {
-              tree.push({path: files[f], online_checksum: checksums[f],
-                  offline_checksum: offline_checksums[f]});
-            }
-            else {
-              found.offline_checksum = offline_checksums[f];
-              if(checksums[f]) {
-                found.online_checksum = checksums[f];
-              }
-            }
-          }
-          var prom = self.store.setItem(sprintf("//projects/%s", name), tree);
-          return prom.then(function() {
-            console.log("[localfiles] Offline Batch Write", files);
-            return $q.all(_.map(_.zip(paths, contents), function(p) {
-              return self.store.setItem(p[0], p[1]);
-            }));
-          });
-        });
-      };
-
-      self._readFile = function(name, file_name) {
-        return $q.when(self.store.getItem(self._path(name, file_name))).then(
-          function(contents) {
-            console.log("[localfiles] Reading", contents);
-            return contents;
-          });
-      };
-      self.readFile = function(name, file_name) {
-        return self._readFile(name, file_name)
-          .then(function (data) {
-            return {
-              data: data,
-              history: "" // TODO: STORE HISTORY
-            };
-          });
-      };
-
-      self.renameFile = function(project, old_name, new_name, checksum) {
-        console.log("[localfiles] renameFile", project, old_name, new_name, checksum);
-        self._readFile(project, old_name)
-          .then(
-            function(contents) {
-              self.writeFile(project, new_name, contents, checksum);
-            })
-          .then(
-            function() {
-              self.deleteFile(project, old_name, checksum);
-            });
-      };
-
-      self.deleteFile = function(name, file_name, online) {
-        console.log("[localfiles] deleteFile", name, file_name, online);
-        var promise = online ? self._addOfflineChange(name, file_name, "deleteFile") : $q.when(true);
-        return promise.then(function () {
-          return $q.when(self.store.getItem(sprintf("//projects/%s", name))).then(function(tree) {
-            var i = 0;
-            var found = false;
-            for(; i<tree.length; i++) {
-              if(tree[i].path === file_name) {
-                found = true;
-                break;
-              }
-            }
-            if(found) {
-              tree.splice(i, 1);
-            }
-            return $q.when(self.store.setItem(sprintf("//projects/%s", name), tree)).then(function() {
-              return $q.when(self.store.removeItem(self._path(name, file_name)));
-            });
-          });
-        });
-      };
-
-      self.batchDelete = function(name, files) {
-        console.log("[localfiles] batchDelete");
-
-        _.each(files, function(f) { self._addOfflineChange(name, f); });
-        return self.store.getItem(sprintf("//projects/%s", name)).then(function(tree) {
-          for(var f=0; f<files.length; f++) {
-            var i = 0;
-            var found = false;
-            for(; i<tree.length; i++) {
-              if(tree[i].path === files[f]) {
-                found = true;
-                break;
-              }
-            }
-            if(found) {
-              tree.splice(i, 1);
-            }
-          }
-          return self.store.setItem(sprintf("//projects/%s", name), tree).then(function() {
-            return $q.all(_.map(files, function(f) {
-              return self.store.removeItem(self._path(name, f));
-            }));
-          });
-        });
-      };
-
-      self.getFileToRun = function(name, question) {
-        return self.store.getItem(self._path(name, question) + "//runnerFile")
-          .then(function(contents) {
-            console.log("[localfiles] getRunnerFile", contents);
-            return contents;
-          });
-      };
-
-      self.setFileToRun = function(name, question, folder, file) {
-        if (folder == "common" || folder == "tests")
-          return $q.reject("Runner file must be in question directory.");
-        console.log("[localfiles] setRunnerFile");
-        return $q.when(self.store.setItem(self._path(name, question) + "//runnerFile", file));
-      };
-
-      self._getProject = function(name) {
-        // return the entire SeashellProject tree
-        return self.store.getItem(sprintf("//projects/%s", name))
-          .then(function(tree) {
-            if(!Array.isArray(tree)) return [];
-            return tree;
-          });
-      };
-
-      self.listProject = function(name) {
-        // outward-facing listProject matching the type of result returned from
-        //  online listProject
-        return self._getProject(name).then(function(files) {
-          var result = _.map(files, function(f) {
-            return [f.path, false, 0, f.offline_checksum];
-          });
-          /*_.each(files, function(f) {
-            var dir = f.path.split("/");
-            dir.pop();
-            dir = dir.join("/");
-            if(result.indexOf(dir)===-1) {
-              result.push([dir, true, 0, ""]);
-            }
-          });*/
-          return result;
-        });
-      };
-
-      self.newDirectory = function(name, dir_path) {
-        console.log("[localfiles] newDirectory", name, dir_path);
-        // do nothing, since dumpProject will take care of this
-        return $q.when(true);
-      };
-      self.deleteDirectory = function(name, dir_path) {
-        console.log("[localfiles] newDirectory", name, dir_path);
-        // do nothing, since dumpProject will take care of this
-        return $q.when(true);
-      };
-
-      self.newFile = function(name, file_name, contents, encoding, normalize, checksum) {
-        console.log("[localfiles] newFile", name, file_name, contents, encoding, normalize, checksum);
-        // TODO: decoding
-        // name: project name
-        // file_name: relative path under project
-        return self.writeFile(name, file_name, contents || "", "", checksum);
-      };
-
-
-      // Overwrite the offline project list with a new list of projects
-      self.setProjects = function(projects) {
-        return $q.when(self.store.setItem("//projects", projects || []));
-      };
-
-      self.newProject = function(name) {
-        console.log("[localfiles] newProject", name);
-        return self.store.getItem("//projects").then(function(projects) {
-          if(!projects)
-            projects = [];
-          if(projects.indexOf(name)===-1)
-            projects.push(name);
-          return self.store.setItem("//projects", projects);
-        });
-      };
-
-      self.batchNewProjects = function(names) {
-        console.log("[localfiles] batchNewProjects", names);
-        return self.store.getItem("//projects").then(function(projects) {
-          if(!projects)
-            projects = [];
-          for(var i=0; i<names.length; i++) {
-            if(projects.indexOf(name[i])==-1)
-              projects.push(names[i]);
-          }
-          return self.store.setItem("//projects", projects);
-        });
-      };
-
-      // Assumes all files contained in the project have already been deleted.
-      self.deleteProject = function(name) {
-        console.log("[localfiles] deleteProject", name);
-        return $q.all([self._getProjects(), self.store.getItem(sprintf("//projects/%s", name))])
-          .then(function(res) {
-            var proms = [];
-            var files = res[1];
-            var projects = res[0];
-            _.each(files, function(f) {
-              proms.push(self.deleteFile(name, f[0]));
-            });
-            proms.push($q.when(self.store.removeItem(sprintf("//projects/%s", name))));
-            projects = _.filter(projects, function(p) {
-              return p !== name;
-            });
-            proms.push($q.when(self.store.setItem("//projects", projects)));
-            return $q.all(proms);
-          });
-      };
-
-      self.batchDeleteProjects = function(names) {
-        console.log('[localfiles] batchDeleteProjects', names);
-        return $q.all(_.map(names, function(p) {
-          return {name: p, tree: self.store.getItem(sprintf("//projects/%s", p))};
-        })).then(function(names_trees) {
-          return self._getProjects().then(function(projects) {
-            var proms = [];
-            _.each(names_trees, function (name_tree) {
-              var name = name_tree.name;
-              var tree = name_tree.tree;
-                _.each(tree, function(f) {
-                  proms.push(self.deleteFile(name, f[0]));
+            } else {
+              return self.database.files.get(key)
+                .then((current) => {
+                  self.database.changelog.add({file:{project: name, file: file, checksum: current.checksum},
+                                               type: "editFile",
+                                               contents: contents});
+                  self.database.files.update(key,
+                    {contents: contents, history: history, checksum: offline_checksum,
+                     last_modified: new Date()});
+                  return offline_checksum;
                 });
-                proms.push(self.store.removeItem(sprintf("//projects/%s", name)));
-                projects = _.filter(projects, function(n) {
-                  return n !== name;
+            }
+          });
+        };
+
+        self.readFile = (name, file) => {
+          let key = [name, file];
+          return self.database.files.get(key)
+            .then((result) => {
+              return {data: result.contents, history: result.history};
+            });
+        };
+
+        self.deleteFile = (name, file, online) => {
+          let key = [name, file];
+          return self.database.transaction('rw', self.database.changelog, self.database.files, () => {
+            if (online !== undefined) {
+              return self.database.files.delete(key);
+            } else {
+              return self.database.files.get(key)
+                .then((current) => {
+                  self.database.changelog.add({file:{project: name, file: file, checksum: current.checksum},
+                                               type: "deleteFile"});
+                  return self.database.files.delete(key);
                 });
+            }
+          });
+        };
+
+        self.renameFile = (name, file, new_file, checksum) => {
+          let key = [name, file];
+          return self.database.transaction('rw', self.database.files, self.database.changelog, () => {
+            return self.database.files.get({project: name, file: file})
+              .then((result) => {
+                self.deleteFile(name, file, checksum);
+                result.file = new_file;
+                if (checksum !== undefined) {
+                  self.database.files.add(result);
+                } else {
+                  self.database.changelog.add({file:{project: name, file: new_file},
+                                               type: "editFile",
+                                               contents: result.contents, history: result.history});
+                  self.database.files.add(result);
+                }
+                return result.checksum;
               });
-              proms.push(self.setProjects(projects));
-            return $q.all(proms);
+          });
+        };
+
+        self.getFileToRun = (name, question) => {
+          return self.database.projects.get(name)
+            .then((project) => {
+              return project.settings.runner_files[question];
+            });
+        };
+
+        self.setFileToRun = (name, question, folder, file) => {
+          if (folder === "tests") {
+            throw sprintf("Storage.setFileToRun: folder cannot be tests/!");
+          }
+          return self.database.transaction('rw', self.database.projects, () => {
+            self.database.projects.get(name).then((current) => {
+              current.settings.runner_files[question] = folder === "question" ? sprintf("%s/%s", question, file) : sprintf("%s/%s", folder, file);
+              return self.database.projects.put(current);
+            });
+          });
+        };
+
+        self.listProject = (name) => {
+          return self.database.files.where('project').equals(name).toArray(
+          (files) => {
+            return files.map(
+              (file) => {
+                return [file.file, false, file.last_modified.getUTCMilliseconds(), file.checksum];
+              });
+          });
+      };
+
+      self.listAllProjectsForSync = () => {
+        return self.database.files.toArray();
+      };
+
+      self.newDirectory = (name, path) => {
+        return new Dexie.Promise((resolve, reject) => {resolve(true);});
+      };
+
+      self.deleteDirectory = (name, path) => {
+        return new Dexie.Promise((resolve, reject) => {resolve(true);});
+      };
+
+      self.newFile = (name, file, contents, encoding, normalize, online) => {
+        let checksum = md5(contents);
+        let key = [name, file];
+        return self.database.transaction('rw', self.database.changelog, self.database.files, () => {
+          if (online !== undefined) {
+            return self.database.files.add({project: name, file: file,
+                                            contents: contents, history: "",
+                                            checksum: checksum,
+                                            last_modified: new Date()})
+              .then(() => {
+                return checksum;
+              });
+          } else {
+            self.database.changelog.add({file: {project: name, file: file},
+                                         type: "editFile",
+                                         contents: contents});
+            self.database.files.add({project: name, file: file,
+                            contents: contents, history: "", checksum: checksum,
+                            last_modified: new Date()});
+            return checksum;
+          }
+        });
+      };
+
+      self.newProject = (name) => {
+        return self.database.projects.add({name: name, settings: {runner_files: {}}, last_modified: new Date()});
+      };
+
+      self.deleteProject = (name, online) => {
+        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, () => {
+          self.database.files.where('project').equals(name).each((file) => {
+            self.deleteFile(name, file.file, online);
+          });
+          self.database.projects.delete(name);
+        });
+      };
+
+      self.getProjects = () => {
+        return self.database.projects.toCollection().toArray((projects) => {
+          return projects.map((project) => {
+            return [project.name, project.last_modified.getUTCMilliseconds()];
           });
         });
       };
 
-      self._getProjects = function() {
-        return self.store.getItem("//projects").then(function(proj) {
-          if(!Array.isArray(proj)) return [];
-          return proj;
+      self.applyChanges = (changes, newProjects, deletedProjects) => {
+        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, () => {
+          // TODO: send back project settings with project
+          newProjects.forEach((project) => {
+            self.newProject(project);
+          });
+          changes.forEach((change) => {
+            if (change.type === "deleteFile") {
+              self.deleteFile(change.file.project, change.file.file, true);
+            } else if (change.type === "editFile") {
+              self.writeFile(change.file.project, change.file.file, change.contents, change.history, change.file.checksum);
+            } else if (change.type === "newFile") {
+              self.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, true);
+            } else {
+              throw sprintf("applyChanges: unknown change %s!", change);
+            }
+          });
+          deletedProjects.forEach((project) => {
+            self.deleteProject(name, true);
+          });
+          self.database.changelog.clear();
         });
       };
-      self.getProjects = function() {
-        return self._getProjects()
-          .then(function (projs) {
-            return _.map(projs, function (proj) {
-              // TODO: store last modified time?
-              return [proj, 0];
-            });
-          });
+
+      self.getOfflineChanges = () => {
+        return self.database.changelog.toArray();
       };
     }
   ]);

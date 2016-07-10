@@ -184,7 +184,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       };
 
       self.offlineEnabled = function() {
-        return localfiles.ready() && (self.offline_mode === 1 || self.offline_mode === 2);
+        return (self.offline_mode === 1 || self.offline_mode === 2);
       };
 
       self.setOfflineModeSetting = function(setting) {
@@ -419,63 +419,29 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
        */
       self.syncAll = function() {
         console.log("syncAll invoked");
-
-        return $q.all([localfiles._getProjects(), localfiles.getOfflineChanges()])
-          .then(function(res) {
-            var projects = res[0];
-            return $q.all(_.map(projects, localfiles.listProject))
-              .then(function(trees) {
-                var files = [];
-                _.each(_.zip(projects,trees), function(project_tree) {
-                    var project = project_tree[0];
-                    var tree = _.filter(project_tree[1], function(f) { return !f[1]; });
-                    if(tree) {
-                      files = files.concat(_.map(tree, function(file) {
-                        return {project: project, file: file[0], checksum: file[3]};
-                      }));
-                    }
-                  });
-                // should have everything now, just send it to the backend
-                return $q.when(self._socket.sync({
-                  projects: projects,
-                  files: files,
-                  changes: res[1]
-                })).then(function(res) {
-                  var edits = _.filter(res.changes, function(c) { return c.type === 'editFile'; });
-                  var deletes = _.filter(res.changes, function(c) { return c.type === 'deleteFile'; });
-
-                  return localfiles.batchNewProjects(res.newProjects).then(function () {
-                    // apply all the edits in a batch write
-                    return $q.all(_.mapObject(_.groupBy(edits,
-                        function(c) { return c.file.project; }),
-                      function(changes, project) {
-                        var args = _.unzip(_.map(changes, function(c) {
-                          return [c.file.file, c.contents, c.file.checksum];
-                        }));
-                        return localfiles.batchWrite(project, args[0], args[1], args[2]);
-                      })).then(function() {
-                        // apply all deletes in a batch
-                        return $q.all(_.mapObject(_.groupBy(deletes,
-                            function(c) { return c.file.project; }),
-                          function(changes, project) {
-                            var arg = _.map(changes, function(c) { return c.file.file; });
-                            return localfiles.batchDelete(project, arg);
-                          })).then(function() {
-                            return localfiles.batchDeleteProjects(res.deletedProjects);
-                          });
-                      }).then(function() {
-                        return localfiles.clearOfflineChanges();
-                      }).then(function() {
-                        if(self.connected) {
-                          self.invoke_cb('connected');
-                        }
-                        // send the changes back in case we need to act on the files that have
-                        //  changed within the open project
-                        return res.changes;
-                      });
-                  });
-                });
+        return $q.all([localfiles.getProjects(), localfiles.listAllProjectsForSync(),localfiles.getOfflineChanges()])
+          .then(function(result) {
+            var projects = _.map(result[0], function (p) { return p[0]; });
+            var files = result[1];
+            var changes = result[2];
+            return $q.when(self._socket.sync({
+              projects: projects,
+              files: files,
+              changes: changes}));
+          })
+          .then(function(result) {
+            return $q.when(localfiles.applyChanges(result.changes, result.newProjects, result.deletedProjects))
+              .then(function () {
+                return result.changes;
               });
+          })
+          .then(function (changes) {
+            if(self.connected) {
+              self.invoke_cb('connected');
+            }
+            // send the changes back in case we need to act on the files that have
+            //  changed within the open project
+            return changes;
           });
       };
 
