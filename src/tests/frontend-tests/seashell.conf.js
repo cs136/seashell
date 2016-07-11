@@ -44,12 +44,12 @@ module.exports = function(config) {
       '../../../lib/jslib/tests/ui-bootstrap.min.js',
       '../../../lib/jslib/tests/ui-bootstrap-tpls.min.js',
       '../../../lib/jslib/tests/angular-css.min.js',
+      '../../../lib/jslib/tests/dexie.js',
       // Libraries stored in repo
       '../../../lib/jslib/ui-codemirror.js',
       '../../../lib/jslib/hotkeys.min.js',
       '../../../lib/jslib/autofill-event.js',
       '../../../lib/jslib/md5.js',
-      '../../../lib/jslib/localforage.js',
       // JS files we are testing
       '../../frontend/js/socket/crypto.js',
       '../../frontend/js/socket/websocket_client.js',
