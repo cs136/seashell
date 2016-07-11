@@ -20,8 +20,8 @@ before_install:
   - npm install karma-phantomjs-launcher --save-dev >/dev/null
   - cd ../../..
   # Install clang ccache
-  - sudo ln -s `which clang` /usr/lib/ccache/
-  - sudo ln -s `which clang++` /usr/lib/ccache/
+  - sudo ln -s `which ccache` /usr/lib/ccache/clang
+  - sudo ln -s `which ccache` /usr/lib/ccache/clang++
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
