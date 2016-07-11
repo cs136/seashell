@@ -25,7 +25,7 @@ before_install:
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
-  - cmake -Wno-dev -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DPROCESSOR_COUNT=1 -DLLVM_TARGETS_TO_BUILD=X86 ..
+  - cmake -Wno-dev -DCMAKE_C_FLAGS="-Qunused-arguments -fcolor-diagnostics" -DCMAKE_CXX_FLAGS="-Qunused-arguments -fcolor-diagnostics" -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DPROCESSOR_COUNT=1 -DLLVM_TARGETS_TO_BUILD=X86 ..
   - make -j2
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - ../src/tests/frontend-tests/node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js
