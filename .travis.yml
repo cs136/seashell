@@ -18,6 +18,7 @@ before_install:
   - npm install karma --save-dev >/dev/null
   - npm install karma-jasmine --save-dev >/dev/null
   - npm install karma-phantomjs-launcher --save-dev >/dev/null
+  - npm install jasmine-core --save-dev >/dev/null
   - cd ../../..
   # Install clang ccache
   - sudo ln -s `which ccache` /usr/lib/ccache/clang
