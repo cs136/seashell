@@ -103,7 +103,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         // Open login dialog window after disconnection
         self.login = function() {
           new LoginModal().then(function() {
-            self.refresh();
           });
         };
 
@@ -111,8 +110,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         ws.register_callback('timein', function () {self.timeout = false;});
         ws.register_callback('timeout', function () {self.timeout = true;});
         ws.register_callback('connected',
-            function () {self.disconnected = false; self.timeout = false; self.failed = false;
-                         self.refresh();}, true);
+            function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
         ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
         ws.register_callback('failed', function () {
           // if on production, redirect to login screen; else, display error and
