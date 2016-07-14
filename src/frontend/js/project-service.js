@@ -627,8 +627,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
-          var path = self._getPath(question, "question", self.fileToRun);
-          var file = self.root.find(path);
+          var file = self.root.find(self.fileToRun);
 
           if(!file) {
             return $q.reject("Attempting to run file that does not exist.");
@@ -636,6 +635,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           if (test && tests.length === 0)
             return $q.reject("No tests for question!");
 
+          // TODO: rework how we send stuff to the compiler; in particular,
+          // we shouldn't need to call file.getDependencies in the websocket service.
           return $q.when(ws.compileAndRunProject(self.name, question, file, tests));
         };
 
