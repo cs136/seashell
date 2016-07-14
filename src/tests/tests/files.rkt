@@ -2,6 +2,7 @@
 
 (require seashell/backend/project
          seashell/backend/files
+         seashell/backend/backup
          seashell/seashell-config
          openssl/md5
          rackunit)
