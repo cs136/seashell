@@ -116,10 +116,10 @@
 
     (test-case "Create and save a file, ensuring that the history exists"
       (new-file "test" "foo12.c" #"" 'raw #f)
-      (write-file "test" "foo12.c" #"" #"sample history\n")
+      (write-file "test" "foo12.c" #"" "sample history\n")
       (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo12.c.history"))
       (define-values (contents _ history) (read-file "test" "foo12.c"))
-      (check-equal? history #"sample history\n"))
+      (check-equal? history "sample history\n"))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
