@@ -2,23 +2,13 @@
 
 (require seashell/backend/project
          seashell/backend/files
-;         seashell/backend/template
-;         seashell/seashell-config
-;         seashell/log
-;         net/uri-codec
-;         net/base64
-;         json
          racket/contract
          racket/port
-;         racket/match
          racket/file
          racket/path
-;         racket/date
          racket/generator
-         racket/string
-;         file/unzip
-;         openssl/md5
-)
+         racket/string)
+
 (provide list-backups
          write-backup
          restore-from-backup
@@ -109,3 +99,10 @@
   (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
   (build-path base backup-folder))
 
+(define/contract (clean-backups project file monthly weekly daily)
+  (-> (and/c project-name? is-project?) path-string? number? number? number? void?)
+  ;; when cleaning:
+  ;; build a set for (m monthly, w weekly, y daily) backup filenames)
+  ;; if something is in the set, don't delete it
+  ;; else delete it
+  )
