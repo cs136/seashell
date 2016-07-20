@@ -4,8 +4,6 @@
          seashell/seashell-config
          seashell/crypto)
 
-(config-set! 'test-mode #t)
-
 (define/provide-test-suite crypto-suite
   (test-suite "Crypto Tests"
     (test-case "Encrypt and decrypt"

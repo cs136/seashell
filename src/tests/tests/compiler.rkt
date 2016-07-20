@@ -4,6 +4,7 @@
          seashell/backend/project
          seashell/backend/runner
          seashell/backend/files
+         seashell/compiler/place
          seashell/seashell-config)
 
 (define/provide-test-suite compiler-suite
@@ -19,6 +20,10 @@
       (sync (program-wait-evt pid))
       (check string=? (port->string (program-stdout pid)) "Hello.")
       (delete-project "foo1"))
+
+    (test-case "ok-shutdown-compiler"
+      (seashell-compile-place/shutdown)
+      (check-false (seashell-compile-place/alive?)))
 
     (test-case "fail-invalid-C"
       (new-project "foo2")

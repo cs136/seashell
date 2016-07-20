@@ -37,7 +37,7 @@ angular.module('frontend-app')
         self.file = openFile;
         self.console = Console;
         self.settings = settings;
-        self.undoHistory = undoHistory;
+        /*self.undoHistory = undoHistory;*/
 
         // Instance fields.
         self.scrollInfo = scrollInfo;
@@ -52,6 +52,7 @@ angular.module('frontend-app')
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
         self.consoleOptions = {};
+        self.editorReadOnly = true; // We start out read only until contents are loaded.
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -59,7 +60,7 @@ angular.module('frontend-app')
          *  fine for now. */
         var cbC_key = ws.register_callback('connected', function () {
           if (self.editor)
-            self.editor.setOption("readOnly", false);
+            self.editor.setOption("readOnly", self.editorReadOnly);
         }, true);
         var cbF_key = ws.register_callback('failed', function () {
           if (self.editor)
@@ -75,9 +76,6 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
-          if(undefined===self.undoHistory[self.folder])
-            self.undoHistory[self.folder] = {};
-          self.undoHistory[self.folder][self.file] = self.editor.getHistory();
           ws.unregister_callback(cbC_key);
           ws.unregister_callback(cbF_key);
           ws.unregister_callback(cbD_key);
@@ -90,7 +88,8 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
               .catch(function (error) {
@@ -178,7 +177,8 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                self.undoHistory = self.editor.getHistory();
+                self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
                   })
@@ -189,10 +189,10 @@ angular.module('frontend-app')
               self.console.errors = [];
             } else {
               self.editor.clearHistory();
-              if(self.undoHistory[self.folder] &&
-                self.undoHistory[self.folder][self.file]) {
-                self.editor.setHistory(self.undoHistory[self.folder][self.file]);
+              if (self.undoHistory !== undefined){
+                self.editor.setHistory(self.undoHistory);
               }
+             // }
               if(self.scrollInfo[self.folder] &&
                 self.scrollInfo[self.folder][self.file]) {
                 var scr = self.scrollInfo[self.folder][self.file];
@@ -263,12 +263,13 @@ angular.module('frontend-app')
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
+          self.editorReadOnly = !self.ready || self.isBinaryFile;
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
             lineWrapping: true,
             lineNumbers: !self.isBinaryFile,
-            readOnly: !self.ready || self.isBinaryFile,
+            readOnly: self.editorReadOnly,
             mode: mime,
             theme: theme,
             tabSize: parseInt(settings.settings.tab_width),
@@ -363,6 +364,7 @@ angular.module('frontend-app')
           if (settings.settings.editor_mode === 'vim') {
             self.editorOptions.vimMode = true;
           } else if(settings.settings.editor_mode === 'emacs') {
+            self.editorOptions.keyMap = 'emacs';
             self.editorOptions.vimMode = false;
           } else {
             self.editorOptions.keyMap = 'default';
@@ -549,16 +551,24 @@ angular.module('frontend-app')
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-            self.project.saveFile(self.question, self.folder, self.file, self.contents);
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
           settings.removeWatcher(key);
         });
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
-            self.contents = conts;
+            self.contents = conts.data;
             self.ready = true;
-            if (conts.length === 0) self.loaded = true;
+            if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.editor.clearHistory();
+            if (conts.history.slice(1).length > 1) {
+              self.undoHistory = JSON.parse(conts.history);
+              self.editor.setHistory(self.undoHistory);
+            } else {
+              console.log("warning: could not read history");
+            }
             self.refreshSettings();
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
@@ -580,7 +590,11 @@ angular.module('frontend-app')
           self.project.getFileToRun(self.question)
              .then(function (result) {
                  self.runnerFile = (result !== "");
-                 self.isFileToRun = (result === self.file);
+                 if(self.folder === "question") {
+                     self.isFileToRun = (result === (self.question + '/' + self.file));
+                 } else {
+                     self.isFileToRun = (result === (self.folder + '/' + self.file));
+                 }
              });
         };
         self.refreshRunner();

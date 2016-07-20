@@ -45,9 +45,9 @@ module.exports = function(config) {
       'lib/ui-bootstrap-tpls.min.js',
       'lib/angular-css.min.js',
       // Libraries stored in repo
-      '../../frontend/js/lib/ui-codemirror.js',
-      '../../frontend/js/lib/hotkeys.min.js',
-      '../../frontend/js/lib/autofill-event.js',
+      '../../../lib/jslib/ui-codemirror.js',
+      '../../../lib/jslib/hotkeys.min.js',
+      '../../../lib/jslib/autofill-event.js',
       // JS files we are testing
       '../../frontend/js/socket/crypto.js',
       '../../frontend/js/socket/websocket_client.js',

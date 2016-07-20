@@ -15,9 +15,11 @@
       (check-pred file-exists? (check-and-build-path (build-project-path "test") "good.c")))
 
     (test-case "Read a file"
-      (check-equal? (read-file "test" "good.c") #"")
-      (write-file "test" "good.c" #"foobar")
-      (check-equal? (read-file "test" "good.c") #"foobar"))
+      (define-values (pre-contents pre-history) (read-file "test" "good.c"))
+      (check-equal? pre-contents #"")
+      (write-file "test" "good.c" #"foobar" #"")
+      (define-values (post-contents post-history) (read-file "test" "good.c"))
+      (check-equal? post-contents #"foobar"))
 
     (test-case "Rename a file"
       (rename-file "test" "good.c" "bad.c")
@@ -26,6 +28,7 @@
     
     (test-case "List files"
       (new-file "test" "good.c" #"" 'raw #f)
+      (new-file "test" ".hidden.c" #"" 'raw #f)
       (check-match (list-files "test") (list-no-order
         (list "default" #t _)
         (list "default/main.c" #f _)
@@ -34,36 +37,51 @@
     
     (test-case "Create a file, with a data URL"
       (new-file "test" "foo1.c" #"data:,A brief note" 'url #f)
-      (check-equal? (read-file "test" "foo1.c") #"A brief note"))
+      (define-values (contents history) (read-file "test" "foo1.c"))
+      (check-equal? contents #"A brief note"))
 
     (test-case "Create a file, with a data URL (base64)"
       (new-file "test" "foo2.c" #"data:text/html;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (check-equal? (read-file "test" "foo2.c") #"This is a test\n"))
+      (define-values (contents history) (read-file "test" "foo2.c"))
+      (check-equal? contents #"This is a test\n"))
     
     (test-case "Create a file, with a data URL (base64) (missing MIME)"
       (new-file "test" "foo3.c" #"data:;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (check-equal? (read-file "test" "foo3.c") #"This is a test\n"))
+      (define-values (contents history) (read-file "test" "foo3.c"))
+      (check-equal? contents #"This is a test\n"))
     
     (test-case "Create a file, with a data URL (base64) (permissive)"
       (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (check-equal? (read-file "test" "foo4.c") #"This is a test\n"))
+      (define-values (contents history) (read-file "test" "foo4.c"))
+      (check-equal? contents #"This is a test\n"))
 
     ;; Normalizing newlines will ensure newline before EOF
     (test-case "Create a file, with a data URL and normalized newlines"
       (new-file "test" "foo5.c" #"data:,apple juice" 'url #t)
-      (check-equal? (read-file "test" "foo5.c") #"apple juice\n"))
+      (define-values (contents history) (read-file "test" "foo5.c"))
+      (check-equal? contents #"apple juice\n"))
 
     (test-case "Create a file, with a data URL and already-normalized newlines"
       (new-file "test" "foo6.c" #"data:,apple juice\n\n" 'url #t)
-      (check-equal? (read-file "test" "foo6.c") #"apple juice\n\n"))
+      (define-values (contents history) (read-file "test" "foo6.c"))
+      (check-equal? contents #"apple juice\n\n"))
     
     (test-case "Create a file, with a data URL and windows newlines"
       (new-file "test" "foo7.c" #"data:,apple juice\r\n" 'url #t)
-      (check-equal? (read-file "test" "foo7.c") #"apple juice\n"))
+      (define-values (contents history) (read-file "test" "foo7.c"))
+      (check-equal? contents #"apple juice\n"))
+
+    (test-case "Create and save a file, ensuring that the history exists"
+      (new-file "test" "foo8.c" #"" 'raw #f)
+      (write-file "test" "foo8.c" #"" #"sample history\n")
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo8.c.history"))
+      (define-values (contents history) (read-file "test" "foo8.c"))
+      (check-equal? history #"sample history\n"))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
-      (check-false (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))))
+      (check-false (or (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
+                       (file-exists? (check-and-build-path (build-project-path "test") ".bad.c.history")))))
 
     (test-case "Create a directory"
       (new-directory "test" "boost")

@@ -110,14 +110,18 @@
 ;;  exn:project:file if file does not exist.
 (define/contract (remove-file project file)
   (-> (and/c project-name? is-project?) path-string? void?)
-  (with-handlers
+  (define file-path (check-and-build-path (build-project-path project) file))
+  (define history-path (get-history-path file-path))
+  (with-handlers 
     [(exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
     (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file (check-and-build-path (build-project-path project) file)))
+    (delete-file file-path))
+  (when (file-exists? history-path)
+    (delete-file history-path))
   (void))
 
 ;; (remove-directory project dir)
@@ -136,18 +140,24 @@
   (void))
 
 ;; (read-file project file) -> bytes?
-;; Reads a file as a Racket bytestring.
+;; Reads a file and its undoHistory as Racket bytestrings.
 ;;
 ;; Arguments:
 ;;  project - project to read file from.
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;  Contents of the file as a bytestring.
+;;   (values contents undoHistory)
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? bytes?)
-  (with-input-from-file (check-and-build-path (build-project-path project) file)
+  (-> (and/c project-name? is-project?) path-string? (values bytes? bytes?))
+  (define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
                         port->bytes))
+  (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
+  (define undo-history-data (if (file-exists? history-path)
+                                (with-input-from-file history-path port->bytes)
+                                #""))
+  (values content-data undo-history-data))
+
 
 ;; (write-file project file contents) -> void?
 ;; Writes a file from a Racket bytestring.
@@ -156,12 +166,29 @@
 ;;  project - project.
 ;;  file - name of file to write.
 ;;  contents - contents of file.
-(define/contract (write-file project file contents)
-  (-> (and/c project-name? is-project?) path-string? bytes? void?)
+(define/contract (write-file project file contents history)
+  (-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'must-truncate)
+  ;(when history
+    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
+                         (lambda () (write-bytes history))
+                         #:exists 'replace);)
   (void))
+
+;; (get-history-path path) -> path
+;; Given a file's path, returns the path to that file's corresponding .history file
+;;
+;; Arguments:
+;;  path - path to file
+;;
+;; Returns:
+;;  path to file's undoHistory (stored as json string)
+(define (get-history-path path)
+  (define-values (base name _1) (split-path (simplify-path path)))
+  (define history-file (string->path (string-append "." (path->string name) ".history")))
+  (build-path base history-file))
 
 ;; (list-files project)
 ;; Lists all files and directories in a project.
@@ -183,16 +210,17 @@
     (define relative (if dir (build-path dir path) path))
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
-      [(and (directory-exists? current) (not (directory-hidden? current)))
+      [(and (directory-exists? current) (not (file-or-directory-hidden? current)))
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
-      [(file-exists? current)
+      [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
+       ; directory-hidden should work for files as well (can rename if so)
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
-;; Determines if a directory is hidden (begins with a .)
-(define/contract (directory-hidden? path)
+;; Determines if a file/directory is hidden (begins with a .)
+(define/contract (file-or-directory-hidden? path)
   (-> path? boolean?)
   (define-values (_1 filename _2) (split-path (simplify-path path)))
   (string=? "." (substring (some-system-path->string filename) 0 1)))
