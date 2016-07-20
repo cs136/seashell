@@ -38,7 +38,9 @@
                [is-project? (-> String Boolean)]
                [#:struct (exn:project exn:fail:user) ()])
 (require/typed seashell/backend/files
-               [new-file (->* (String Path-String Bytes (U 'raw 'url) Boolean) ((U False String)) String)] ; modify to take history
+               [new-file (->* (String Path-String Bytes (U 'raw 'url) Boolean) ((U False String)) String)]
+               ;(->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
+               ;[new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (->* (String Path-String) ((U False String)) Void)]
                [read-file (-> String Path-String (Values Bytes String String))]
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]

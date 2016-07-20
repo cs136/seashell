@@ -61,8 +61,8 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file exists.
-(define/contract (new-file project file contents encoding normalize?)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? string?)
+(define/contract (new-file project file contents encoding normalize? [history #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
