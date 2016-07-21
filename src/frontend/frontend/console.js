@@ -66,7 +66,8 @@ angular.module('frontend-app')
       maybe_log(err);
       if(err.error_type == "unknown") { return; }
       var to_print = [];
-      to_print.push("MEMORY ERROR TYPE: " + err.error_type);
+      to_print.push("================================================");
+      to_print.push("Memory error occurred! Type of error: " + err.error_type);
       for (var current_stack = 0; current_stack < err.call_stacks.length; current_stack++) {
         maybe_log('current stack: ' + current_stack);
         var framelist = err.call_stacks[current_stack].framelist;
@@ -101,7 +102,7 @@ angular.module('frontend-app')
       //maybe_log('done iterating over everything; to_print has ' + to_print.length + ' items');
       //to_print.push(err.raw_message);
       for (var j = 0; j < to_print.length; j++){
-        self.write(to_print[j] + '\n');
+        self._write(to_print[j] + '\n');
         //console.log(to_print[j]);
       }
     }
