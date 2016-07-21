@@ -18,14 +18,15 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
          (submod seashell/seashell-config typed)
-         seashell/diff
-         "asan-error-parse.rkt")
+         seashell/diff)
 (require/typed racket/serialize
                [serialize (-> Any Any)])
 (require/typed racket/base
                [#:opaque Environment-Variable-Set environment-variables?]
                [current-environment-variables (Parameterof Environment-Variable-Set)]
                [environment-variables-copy (-> Environment-Variable-Set Environment-Variable-Set)])
+(require/typed "asan-error-parse.rkt"
+               [asan->json (-> Bytes Bytes)])
 
 (provide run-program program-stdin program-stdout program-stderr
          program-wait-evt program-kill program-status program-destroy-handle
@@ -115,8 +116,14 @@
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
-       ;; read asan error message
-       (set-program-asan! pgrm (asan-rewrite (delete-read-asan pid)))
+       ;; Read asan error message.
+       ;; For tests (instead of clicking run button), we append a special string
+       ;; so that the front end (console.js) can extract it and parse the json string.
+       ;; Otherwise, students will see a bunch of jibberish.
+       (define asan-marker-string #"this_is_a_special_asan_marker_string_7f84028cdd719df7570532dbf54cd10c3b5a1cc1b4bb62193079da701fdd9acb")
+       (set-program-asan! pgrm (bytes-append asan-marker-string
+                                             (asan->json (delete-read-asan pid))
+                                             asan-marker-string))
        
        (define stdout (port->bytes buf-stdout))
        (define stderr (bytes-append (port->bytes buf-stderr)
@@ -238,7 +245,7 @@
            (port->bytes raw-stderr)))
        (unless (eof-object? read-stderr)
          (write-bytes read-stderr out-stderr))
-       (set-program-asan! pgrm (asan-rewrite (delete-read-asan pid)))
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)

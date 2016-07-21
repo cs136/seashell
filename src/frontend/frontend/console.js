@@ -46,168 +46,63 @@ angular.module('frontend-app')
     };
     var asan_contents = [];
 
-    // contents is an array of lines of address sanitizer output
-    function parse_asan_output(contents) {
-      console.warn("ASAN output:", contents);
-      var traced_main = false;
-      var filepatt = /\/([^\/]+(:[0-9]+|[^\)]+))\)?$/;
-      var addrpatt = /0x[0-9a-f]+/;
-      // 0xff is ... 3 bytes ... left ... 10-byte region
-      var suppallocaddrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside)(?:[^0-9])*([0-9]+)-byte/;
-      // .... 0xff is located in stack ...
-      var suppstackaddrpatt = /(0x[0-9a-f]+).*located in stack.*offset ([0-9]+)/;
-      // 0xff is ... 0 bytes ... left ... global variable 'x' defined in 'foo.c:9:15' (0xff) of size 10
-      var suppglobaladdrpatt = /^(0x[0-9a-f]+)(?:[^0-9])*([0-9]+).*(left|right|inside).*global variable '([^']+)'.*'([^':]+):([0-9]+):([0-9]+)' \((0x[0-9a-f]+)\).*size ([0-9]+)$/;
-      // frame ... 2 object(s)
-      var frameinfopatt = /frame(?:[^0-9])*([0-9]+) object/;
-      // [32, 40) 'x'
-      var framevarpatt = /\[([0-9]+), ([0-9]+)\) '([^']+)'/;
+    // err is a json object (parsed & filtered in backend, only printed here)
+    // TODO: better logic (self.write or something?)
+    function maybe_log(string){
+      var debugmode = true;
+      if(debugmode) { console.log(string); }
+    }
 
-      function stack_trace_line(line) {
-        try {
-          if(/^{/.test(line)) {
-            var json = line.replace(/'/g, '"');
-            var frame = JSON.parse(json);
-            var short_module = frame.module && frame.module.split('/').pop();
-            var short_file = frame.file && frame.file.split('/').pop();
-            traced_main = traced_main || (frame.function === "main");
-            if (frame.frame === 0) {
-              /** Reset the trace status when tracing a new frame. */
-              traced_main = false;
-            }
-
-            if (frame.function !== "<null>" && frame.file !== "<null>") {
-              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
-                self._write(sprintf("  frame %d: %s, %s:%d:%d\n",
-                  frame.frame,
-                  frame.function,
-                  short_file,
-                  frame.line,
-                  frame.column));
-            } else if (frame.function !== "<null>") {
-              if (!traced_main || (frame.function !== "_start" && frame.function !== "__libc_start_main"))
-                self._write(sprintf("  frame %d: %s, from module %s (+%x)\n", frame.frame, frame.function, short_module, frame.offset));
-            } else {
-              self._write(sprintf("  frame %d: module %s (+%x)\n", frame.frame, short_module, frame.offset));
-            }
-          } else if (/^(Direct|Indirect)/.test(line)) {
-            self._write(sprintf("\n  %s byte(s) allocated, never freed.\n",
-              /[0-9]+/.exec(line)));
-          } else if (/^WRITE/.test(line)) {
-            var sizeWrite = /size ([0-9]+)/.exec(line)[1];
-            var addrWrite = addrpatt.exec(line)[0];
-            self._write(sprintf("  Error caused by write of size %d byte(s) to %s:\n", sizeWrite, addrWrite));
-          } else if (/^READ/.test(line)) {
-            var sizeRead = /size ([0-9]+)/.exec(line)[1];
-            var addrRead = addrpatt.exec(line)[0];
-            self._write(sprintf("  Error caused by read of size %d byte(s) to %s:\n", sizeRead, addrRead));
-          } else if (suppallocaddrpatt.test(line)) {
-            var suppAllocAddrInfo = suppallocaddrpatt.exec(line);
-            self._write(sprintf("\n  %s is %s bytes %s of %s-byte region ", suppAllocAddrInfo[1], suppAllocAddrInfo[2], suppAllocAddrInfo[3], suppAllocAddrInfo[4]));
-          } else if (/^allocated by/.test(line)) {
-            self._write("allocated by:\n");
-          } else if (suppstackaddrpatt.test(line)) {
-            var stackAddressInfo = suppstackaddrpatt.exec(line);
-            self._write(sprintf("\n  %s is contained %s bytes into stack frame:\n", stackAddressInfo[1], stackAddressInfo[2]));
-          } else if (frameinfopatt.test(line)) {
-            var numFrameObjects = frameinfopatt.exec(line)[1];
-            self._write(sprintf("\n  This frame has %s object(s):\n", numFrameObjects));
-          } else if (framevarpatt.test(line)) {
-            var frameVarInfo = framevarpatt.exec(line);
-            var objectSize = parseInt(frameVarInfo[2]) - parseInt(frameVarInfo[1]);
-            self._write(sprintf("  %d byte object %s located %s bytes into frame.", objectSize, frameVarInfo[3], frameVarInfo[1]));
-            if (/overflow/.test(line)) {
-              self._write("  Access overflew this variable.\n");
-            } else if (/underflow/.test(line)) {
-              self._write("  Access underflew this variable.\n");
-            } else {
-              self._write("\n");
-            }
-          } else if (/^previously allocated/.test(line)) {
-            self._write("\n  Allocated by:\n");
-          } else if (/^freed by/.test(line)) {
-            self._write("freed already by:\n");
-          } else if(suppglobaladdrpatt.test(line)) {
-            var globalAddrInfo = suppglobaladdrpatt.exec(line);
-            var shortAddrFileInfo = globalAddrInfo[5].split('/').pop();
-            self._write(sprintf("\n  %s is %s bytes %s of %s byte(s) global variable %s (located %s) defined at %s:%s:%s.\n",
-                                globalAddrInfo[1],
-                                globalAddrInfo[2],
-                                globalAddrInfo[3],
-                                globalAddrInfo[9],
-                                globalAddrInfo[4],
-                                globalAddrInfo[8],
-                                shortAddrFileInfo,
-                                globalAddrInfo[6],
-                                globalAddrInfo[7]));
-          }
-        } catch (e) {
-          console.log("Could not produce stack trace from line: %s, %s", line, e);
+    function print_asan_error(err) {
+      // json object should have:
+      // error_type (string)
+      // depending on error_type, you can assume each frame-list will have certain key-value pairs, AND
+      // at the top level, the json object passed in will also have certain key-value pairs
+      // **OR**: have a misc field and just iterate over it and print everything (at the same level as frame_list AND/OR at the very top level with
+      // call_stacks: hash (definitely has frame-list; may have other members)
+      // frame_list: list of frames (with line numbers, columns, files, etc.
+      // frame: column, file, frame#, function, function_offset, line, module, offset
+      // raw message
+      maybe_log(err);
+      if(err.error_type == "unknown") { return; }
+      var to_print = [];
+      to_print.push("MEMORY ERROR TYPE: " + err.error_type);
+      for (var current_stack = 0; current_stack < err.call_stacks.length; current_stack++) {
+        maybe_log('current stack: ' + current_stack);
+        var framelist = err.call_stacks[current_stack].framelist;
+        var framelist_misc = err.call_stacks[current_stack][1];
+        // print framelist
+        to_print.push('current framelist: ' + current_stack);
+        for (var i = 0; i < framelist.length; i++){
+          maybe_log('current framelist: ' + i);
+          //to_print.push('framelist: ' + i);
+          // print each frame
+          // TODO: re-arrange these & decide not to print some out
+          to_print.push('\tframe: '      + framelist[i].frame);
+          to_print.push('\t\tfile: '     + framelist[i].file.replace(/^.*[\\\/]/, ''));
+          //to_print.push('\t\tmodule: ' + framelist[i].module);
+          //to_print.push('\t\toffset: ' + framelist[i].offset);
+          to_print.push('\t\tfunction: ' + framelist[i].function);
+          //to_print.push('\t\tfunction_offset: ' + framelist[i].function_offset);
+          to_print.push('\t\tline: '     + framelist[i].line);
+          to_print.push('\t\tcolumn: '   + framelist[i].column);
         }
-      }
-      function stack_trace(contents) {
-        for(var i=0; i<contents.length; i++) {
-          stack_trace_line(contents[i]);
+        // print misc (Second item)
+        for (var key in err.call_stacks[current_stack].misc) {
+          maybe_log('printing inner misc: ' + key);
+          to_print.push('\t' + key.replace(/_/g, " ") + ': ' + err.call_stacks[current_stack].misc[key]);
         }
+        maybe_log('done iterating over inner misc');
       }
-       
-      if(/ SEGV /.test(contents[1]) && filepatt.test(contents[2])) { // segfault
-        self._write(sprintf("Attempt to access invalid address %s.\n",
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
+      for (var key2 in err.misc) {
+        maybe_log('printing outer misc: ' + key2);
+        to_print.push(key2.replace(/_/g, " ") + ': ' + err.misc[key2]);
       }
-      else if(/ SEGV /.test(contents[1])) {
-        self._write(sprintf("%s\n",
-          /^[^\(]*/.exec(contents[1])));
-      }
-      else if(/stack-overflow /.test(contents[1])) {
-        self._write(sprintf("Stack overflow on address %s. Check call stack.\n",
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      } 
-      else if(/global-buffer-(over|underflow)/.test(contents[1])) {
-        var globalErrorType = /(overflow|underflow)/.exec(contents[1])[1];
-        self._write(sprintf("Global buffer %s on address %s. Check array indices.\n",
-          globalErrorType,
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      }
-      else if(/stack-buffer-(over|under)flow /.test(contents[1])) { // stack buffer overflow
-        var stackErrorType = /(overflow|underflow)/.exec(contents[1])[1];
-        self._write(sprintf("Stack buffer %s on address %s. Check array indices.\n",
-          stackErrorType,
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      }
-      else if(/heap-buffer-(over|under)flow /.test(contents[1])) { // heap buffer overflow
-        var heapErrorType = /(overflow|underflow)/.exec(contents[1])[1];
-        self._write(sprintf("Heap buffer %s on address %s. Check indices used for dynamically allocated arrays.\n",
-          heapErrorType,
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      }
-      else if(/LeakSanitizer:/.test(contents[1])) { // memory leak
-        self._write("Memory leaks occurred:");
-        stack_trace(contents);
-      }
-      else if(/heap-use-after-free /.test(contents[1])) { // use after free
-        self._write(sprintf("Using address %s after it has been freed.\n",
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      }
-      else if(/double-free /.test(contents[1])) { // double free
-        self._write(sprintf("Attempting to free address %s, which has already been freed.\n",
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      } else if(/attempting free on/.test(contents[1])) { // free, not malloc
-        self._write(sprintf("Attempting to free address %s, which not been malloc'd.\n",
-          addrpatt.exec(contents[1])));
-        stack_trace(contents);
-      }
-      else { // else print usual message
-        _.each(contents, function(line) {
-          self._write(line + "\n");
-        });
+      //maybe_log('done iterating over everything; to_print has ' + to_print.length + ' items');
+      //to_print.push(err.raw_message);
+      for (var j = 0; j < to_print.length; j++){
+        self.write(to_print[j] + '\n');
+        //console.log(to_print[j]);
       }
     }
 
@@ -252,13 +147,9 @@ angular.module('frontend-app')
         self._write(self.stdout);
         self._write(self.stderr);
         self.stdout = self.stderr = "";
-        if (self.asan_parse) {
-          parse_asan_output(asan_contents);
-          self.asan_parse = false;
-          asan_contents = [];
-        }
         if (io.asan) {
-         self.write(io.asan);
+          // Print parsed ASAN output
+          print_asan_error(JSON.parse(io.asan));
         }
         self.write("\nProgram finished with exit code "+io.status);
         if(io.status !== 0 && return_codes[io.status]) {
@@ -290,6 +181,15 @@ angular.module('frontend-app')
     socket.register_callback("test", function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
+      // Try to parse res.stderr for ASAN error output
+      // This string is defined in runner.rkt and should equal it.
+      var asan_marker_string = "this_is_a_special_asan_marker_string_7f84028cdd719df7570532dbf54cd10c3b5a1cc1b4bb62193079da701fdd9acb";
+      var asan_split_result = res.stderr.split(asan_marker_string);
+      var asan_json_string = "";
+      if(asan_split_result.length == 3) {
+        asan_json_string = asan_split_result[1];
+      }
+
       if(res.result==="passed") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
@@ -306,20 +206,38 @@ angular.module('frontend-app')
         printExpectedFromDiff(res);   
         self.write('---\n');
         self.write('Produced errors (stderr):\n');
-        self.write(res.stderr);
+        if(asan_json_string) {
+          self.write(asan_split_result[0]);
+          self.write(asan_split_result[2]);
+          print_asan_error(JSON.parse(asan_json_string));
+        } else {
+          self.write(res.stderr);
+        }
         self.write('\n');
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
         self.write('Produced output (stderr):\n');
-        self.write(res.stderr);
+        if(asan_json_string) {
+          self.write(asan_split_result[0]);
+          self.write(asan_split_result[2]);
+          print_asan_error(JSON.parse(asan_json_string));
+        } else {
+          self.write(res.stderr);
+        }
         self.write('\n');
       } else if(res.result==="no-expect") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" produced output (stdout):\n", res.test_name));
         self.write(res.stdout);
         self.write('Produced output (stderr):\n');
-        self.write(res.stderr);
+        if(asan_json_string) {
+          self.write(asan_split_result[0]);
+          self.write(asan_split_result[2]);
+          print_asan_error(JSON.parse(asan_json_string));
+        } else {
+          self.write(res.stderr);
+        }
         self.write('\n');
       } else if(res.result==="timeout") {
         self.write('----------------------------------\n');
