@@ -451,7 +451,7 @@
         (_ _) ...)
        (define checksum
          (write-file project file (string->bytes/utf-8 contents)
-                     (if history (string->bytes/utf-8 history) "")
+                     (if history history "")
                      (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
@@ -466,7 +466,7 @@
               (success . #t)
               (result .
                       #hash((data . ,(bytes->string/utf-8 data))
-                            (history . ,(bytes->string/utf-8 history))
+                            (history . ,history)
                             (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
