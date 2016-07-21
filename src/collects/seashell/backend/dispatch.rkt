@@ -437,8 +437,11 @@
         ('type "writeFile")
         ('project project)
         ('file file)
-        ('contents contents))
-       (write-file project file (string->bytes/utf-8 contents))
+        ('contents contents)
+        ('history history))
+			 (write-file project file (string->bytes/utf-8 contents)
+									 (if history (string->bytes/utf-8 history)
+										 (string->bytes/utf-8 "0")))
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -447,9 +450,12 @@
         ('type "readFile")
         ('project project)
         ('file file))
-       `#hash((id . ,id)
+			 (define-values (contents contents_history) (read-file project file))
+				`#hash((id . ,id)
               (success . #t)
-              (result . ,(bytes->string/utf-8 (read-file project file))))]
+              (result . 
+											#hash((data . ,(bytes->string/utf-8 contents))
+														(history . ,(bytes->string/utf-8 contents_history)))))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)

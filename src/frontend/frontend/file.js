@@ -37,7 +37,7 @@ angular.module('frontend-app')
         self.file = openFile;
         self.console = Console;
         self.settings = settings;
-        self.undoHistory = undoHistory;
+        /*self.undoHistory = undoHistory;*/
 
         // Instance fields.
         self.scrollInfo = scrollInfo;
@@ -76,9 +76,6 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
-          if(undefined===self.undoHistory[self.folder])
-            self.undoHistory[self.folder] = {};
-          self.undoHistory[self.folder][self.file] = self.editor.getHistory();
           ws.unregister_callback(cbC_key);
           ws.unregister_callback(cbF_key);
           ws.unregister_callback(cbD_key);
@@ -91,7 +88,8 @@ angular.module('frontend-app')
           if (self.timeout) {
             $timeout.cancel(self.timeout);
             self.timeout = null;
-            self.project.saveFile(self.question, self.folder, self.file, self.contents).then(function (){
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory)).then(function (){
                 fn();
               })
               .catch(function (error) {
@@ -179,7 +177,8 @@ angular.module('frontend-app')
             }
             if (self.loaded && !self.isBinaryFile) {
               self.timeout = $timeout(function() {
-                self.project.saveFile(self.question, self.folder, self.file, self.contents)
+                self.undoHistory = self.editor.getHistory();
+                self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory))
                   .catch(function (error) {
                     errors.report(error, "Could not save file!");
                   })
@@ -190,10 +189,10 @@ angular.module('frontend-app')
               self.console.errors = [];
             } else {
               self.editor.clearHistory();
-              if(self.undoHistory[self.folder] &&
-                self.undoHistory[self.folder][self.file]) {
-                self.editor.setHistory(self.undoHistory[self.folder][self.file]);
+              if (self.undoHistory !== undefined){
+                self.editor.setHistory(self.undoHistory);
               }
+             // }
               if(self.scrollInfo[self.folder] &&
                 self.scrollInfo[self.folder][self.file]) {
                 var scr = self.scrollInfo[self.folder][self.file];
@@ -552,16 +551,24 @@ angular.module('frontend-app')
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
-            self.project.saveFile(self.question, self.folder, self.file, self.contents);
+            self.undoHistory = self.editor.getHistory();
+            self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
           settings.removeWatcher(key);
         });
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
-            self.contents = conts;
+            self.contents = conts.data;
             self.ready = true;
-            if (conts.length === 0) self.loaded = true;
+            if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+            self.editor.clearHistory();
+            if (conts.history.slice(1).length > 1) {
+              self.undoHistory = JSON.parse(conts.history);
+              self.editor.setHistory(self.undoHistory);
+            } else {
+              console.log("warning: could not read history");
+            }
             self.refreshSettings();
           }).catch(function (error) {
             if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
