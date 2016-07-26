@@ -300,6 +300,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.listProject = make_offline_enabled('listProject');
       self.readFile = make_offline_enabled('readFile');
       self.getFileToRun = make_offline_enabled('getFileToRun');
+      self.getSettings = make_offline_enabled('getSettings');
       // These functions:
       //  - invoke the offline version if offline
       //  - invoke the both the offline version and the online
@@ -311,6 +312,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.deleteFile = make_offline_enabled('deleteFile', true);
       self.renameFile = make_offline_enabled('renameFile', true);
       self.setFileToRun = make_offline_enabled('setFileToRun', true);
+      self.saveSettings = make_offline_enabled('saveSettings', true);
 
       self.compileAndRunProject = function(project, question, file, tests, deferred) {
           if(!self.isOffline()) {
@@ -393,7 +395,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         }
       };
 
-      self.saveSettings = function(settings, deferred) {
+      /*self.saveSettings = function(settings, deferred) {
         // TODO: offline mode
         if (!self.isOffline()) {
           return self._socket.saveSettings(settings, deferred);
@@ -409,7 +411,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         } else {
           return $q.when();
         }
-      };
+      };*/
 
       /**
        * Sync everything, to be called when we first connect to the websocket.

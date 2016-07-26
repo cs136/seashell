@@ -27,7 +27,8 @@
         self.database.version(1).stores({
           changelog: '++id',
           files: '[project+file], project',
-          projects: 'name'
+          projects: 'name',
+          settings: 'name'
         });
         /*
          * Save a file to local storage.
@@ -94,7 +95,7 @@
         self.renameFile = function (name, file, new_file, checksum) {
           var key = [name, file];
           return self.database.transaction('rw', self.database.files, self.database.changelog, function () {
-            return self.database.files.get({project: name, file: file})
+            return self.database.files.get(key)
               .then(function (result) {
                 self.deleteFile(name, file, checksum);
                 result.file = new_file;
@@ -128,6 +129,23 @@
               return self.database.projects.put(current);
             });
           });
+        };
+
+        self.getSettings = function() {
+          return self.database.settings.get("settings").then(function(settings) {
+            if(settings)
+              return settings.values;
+            return {};
+          });
+        };
+
+        self.saveSettings = function(settings) {
+          var data = {
+            name: "settings",
+            values: settings,
+            modified: (new Date()).getTime()
+          };
+          return self.database.settings.add(data);
         };
 
         self.listProject = function (name) {
