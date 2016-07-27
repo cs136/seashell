@@ -105,4 +105,4 @@
   ;; build a set for (m monthly, w weekly, y daily) backup filenames)
   ;; if something is in the set, don't delete it
   ;; else delete it
-  )
+  (void))
