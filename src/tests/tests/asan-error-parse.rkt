@@ -5,13 +5,14 @@
          seashell/backend/asan-error-parse
          seashell/backend/project
          seashell/backend/runner
+         seashell/seashell-config
          json)
 
 ;; Convenience function for creating a project, compiling,
 ;; running, and waiting for it to finish. Returns the ASAN
 ;; output as a JSON.
 (define (compile-run-wait code [project-name (symbol->string (gensym 'project))])
-  (new-project project-name)
+  (new-project-from project-name (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
   (with-output-to-file (check-and-build-path (build-project-path project-name) "main.c")
     (thunk (display code)))
   (define-values (success hsh) (compile-and-run-project project-name "main.c" '()))
