@@ -7,13 +7,15 @@
          racket/file
          racket/path
          racket/generator
-         racket/string)
+         racket/string
+         racket/set)
 
 (provide list-backups
          write-backup
          restore-from-backup
          write-backup-if-changed
-         get-backup-path)
+         get-backup-path
+         clean-backups)
 
 ;; (list-backups project file)
 ;; Lists all backups corresponding to a project+file. Sorted with the most recent first.
@@ -27,8 +29,7 @@
   (-> (and/c project-name? is-project?) (and/c string? path-string?)
       (listof (and/c string? path-string?)))
   (define full-backups-path (get-backup-path project file))
-  (define (second lst) (car (cdr lst)))
-  (define relative-backups-path (second (string-split (path->string full-backups-path)
+  (define relative-backups-path (cadr (string-split (path->string full-backups-path)
                                                       (string-append project "/"))))
   (define unsorted-backups (list-files project relative-backups-path))
   (define sorted-backups (sort unsorted-backups (lambda (x y) (> (caddr x) (caddr y)))))
@@ -80,13 +81,12 @@
   (define-values (backup-contents backup-history)
                  (if (not (null? backups))
                      (read-file project most-recent-backup)
-                     (values #"" #"")))
+                     (values #"" "")))
   (when (or (equal? most-recent-backup null)
             (not (equal? backup-contents file-contents)))
         (write-backup project file))
   (void))
 
-;; TODO: maybe combine "get-X-path" into something more general?
 ;; (get-backup-path path) -> path
 ;; given a file's path, returns the path to that file's backups folder
 ;; Arguments:
@@ -99,10 +99,63 @@
   (define backup-folder (string->path (string-append "." (path->string name) "_backup")))
   (build-path base backup-folder))
 
-(define/contract (clean-backups project file monthly weekly daily)
+;; (clean-backups project file num num num) -> void
+;; given a path to a file, "cleans up" the file's corresponding directory of backups
+;; by keeping daily-keep number of backups from the past 24 hours,
+;; weekly-keep number of backups from the past week, and
+;; monthly-keep number of backups from the past 30 days
+;;
+;; Arguments:
+;;  project - a project
+;;  file - a file
+;;  daily - number of backups to keep from the past 24 hours
+;;  weekly - number of backups to keep from the past week
+;;  monthly - number of backups to keep from the past 30 days
+(define/contract (clean-backups project file monthly-keep weekly-keep daily-keep)
   (-> (and/c project-name? is-project?) path-string? number? number? number? void?)
-  ;; when cleaning:
-  ;; build a set for (m monthly, w weekly, y daily) backup filenames)
-  ;; if something is in the set, don't delete it
-  ;; else delete it
+  ;; removes num items from lst, evenly distributed (i.e. removing 2 items will remove from the beginning and middle)
+  (define (list-evenly-remove lst num)
+    (define limit (ceiling (/ (length lst) num)))
+    (define (list-evenly-remove/acc lst counter limit)
+      (cond [(equal? 0 limit) lst]
+            [(null? lst) '()]
+            [(equal? counter 0)
+             (list-evenly-remove/acc (cdr lst) (sub1 limit) limit)]
+            [else (cons (car lst)
+                  (list-evenly-remove/acc (cdr lst) (sub1 counter) limit))]))
+    (list-evenly-remove/acc lst 0 limit))
+
+  ;; creates a set from the list lst
+  ;; (works like list->set)
+  (define (list->set lst)
+    (define (list->set/acc lst st)
+      (cond [(null? lst) st]
+            [else (list->set/acc (cdr lst) (set-add st (car lst)))]))
+    (list->set/acc lst (set)))
+    
+  (define full-backups-path (get-backup-path project file))
+  (define relative-backups-path (cadr (string-split (path->string full-backups-path)
+                                                      (string-append project "/"))))
+  (define unsorted-backups (list-files project relative-backups-path))
+  (define sorted-backups (sort unsorted-backups (lambda (x y) (> (caddr x) (caddr y)))))
+  (define now (* 1000 (current-inexact-milliseconds)))
+  (define millis-in-day 86400000)
+  (define millis-in-week (* millis-in-day 7))
+  (define millis-in-month (* millis-in-day 30))
+  (define daily-backups   (filter (lambda (x) (< (caddr x) (- now millis-in-day))) sorted-backups)) ; all backups less than a day old
+  (define num-daily-delete (max 0 (- (length daily-backups) daily-keep))) ; if we want to keep >= the number of backups we have, don't delete any
+  (define daily-keep-list (list-evenly-remove daily-backups num-daily-delete))
+  (define weekly-backups  (filter (lambda (x) (and (< (caddr x) (- now millis-in-week)) ; all backups less than a week old, but more than a day
+                                                   (not (member daily-keep-list x)))) sorted-backups))
+  (define num-weekly-delete (max 0 (- (length weekly-backups) weekly-keep))) 
+  (define weekly-keep-list (list-evenly-remove weekly-backups num-weekly-delete))
+  (define monthly-backups (filter (lambda (x) (and (< (caddr x) (- now millis-in-month)) ; all backups less than 30 days old, but more than a week
+                                                   (not (member daily-keep-list x))
+                                                   (not (member weekly-keep-list x)))) sorted-backups))
+  (define num-monthly-delete (max 0 (- (length monthly-backups) monthly-keep)))
+  (define monthly-keep-list (list-evenly-remove monthly-backups num-monthly-delete))
+  (define all-keep-set (list->set (append daily-keep-list weekly-keep-list monthly-keep-list)))
+  (for-each (lambda (x) (unless (set-member? all-keep-set x) (delete-file (check-and-build-path full-backups-path (cadr (string-split (car x)"/"))))))
+              ;(printf "~a\n" (cadr (string-split (car x)"/"))))
+            sorted-backups)
   (void))

@@ -102,7 +102,18 @@
       (write-file "test" "foo11.c" #"changing some stuff" #"")
       (write-backup-if-changed "test" "foo11.c")
       (check-equal? (length (list-backups "test" "foo11.c")) 2))
-    
+
+    (test-case "Make several backups and clean most of them out"
+      (new-file "test" "foo12.c" #"contents" 'raw #f)
+      (write-backup "test" "foo12.c")
+      (write-backup "test" "foo12.c")
+      (write-backup "test" "foo12.c")
+      (write-backup "test" "foo12.c")
+      (write-backup "test" "foo12.c")
+      (write-backup "test" "foo12.c")
+      (clean-backups "test" "foo12.c" 0 0 3) ; keep 3 from the last 24 hours, 0 from the last week and month
+      (check-equal? (length (list-backups "test" "foo12.c")) 3)) ; should have 3 total
+
     (test-case "Delete a file"
       (remove-file "test" "bad.c")
       (check-false (or (file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
