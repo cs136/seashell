@@ -148,6 +148,31 @@
           return self.database.settings.add(data);
         };
 
+        self.getMostRecentlyUsed = function(project, dir) {
+          return self.database.transaction('rw', self.database.projects, function() {
+            self.database.projects.get(project).then(function(current) {
+              if(dir) {
+                return current.settings.most_recently_used[dir];
+              }
+              return current.settings.most_recently_used_dir;
+            });
+          });
+        };
+
+        self.updateMostRecentlyUsed = function(project, dir, pred, data) {
+          return self.database.transaction('rw', self.database.projects, function() {
+            self.database.projects.get(project).then(function(current) {
+              if(dir) {
+                current.settings.most_recently_used[dir] = data;
+              }
+              else {
+                current.settings.most_recently_used_dir = data;
+              }
+              return self.database.projects.put(current);
+            });
+          });
+        };
+
         self.listProject = function (name) {
           return self.database.files.where('project').equals(name).toArray(
           function (files) {
