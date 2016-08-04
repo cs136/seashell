@@ -627,6 +627,9 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           // TODO: handle racket files.
           var tests = test ? self.getTestsForQuestion(question) : [];
+          if(!self.fileToRun) {
+            return $q.reject("Runner file is not set. Please select a runner file in order to run the program.");
+          }
           var file = self.root.find(self.fileToRun);
 
           if(!file) {
