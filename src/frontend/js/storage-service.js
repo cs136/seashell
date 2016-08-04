@@ -150,9 +150,11 @@
 
         self.getMostRecentlyUsed = function(project, dir) {
           return self.database.transaction('rw', self.database.projects, function() {
-            self.database.projects.get(project).then(function(current) {
+            return self.database.projects.get(project).then(function(current) {
               if(dir) {
-                return current.settings.most_recently_used[dir];
+                if(current.settings.most_recently_used && current.settings.most_recently_used[dir])
+                  return current.settings.most_recently_used[dir];
+                return false;
               }
               return current.settings.most_recently_used_dir;
             });
@@ -163,6 +165,8 @@
           return self.database.transaction('rw', self.database.projects, function() {
             self.database.projects.get(project).then(function(current) {
               if(dir) {
+                if(!current.settings.most_recently_used)
+                  current.settings.most_recently_used = {};
                 current.settings.most_recently_used[dir] = data;
               }
               else {

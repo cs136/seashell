@@ -374,7 +374,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           pid.startIO();
           return $q.when();
         } else {
-          return self._socket.startIO(pid, contents);
+          return self._socket.startIO(project, pid);
         }
       };
 
