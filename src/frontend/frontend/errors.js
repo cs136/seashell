@@ -37,6 +37,7 @@ angular.module('frontend-app')
 
     self.report = function (error, shorthand, type) {
       if (error) {
+        console.log(error);
         self.errors.push({shorthand: shorthand, error: error, type: type});
         $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }

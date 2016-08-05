@@ -2,6 +2,7 @@
 
 (require seashell/backend/project
          seashell/backend/files
+         rackunit
          seashell/seashell-config
          openssl/md5
          rackunit)
@@ -15,68 +16,110 @@
       (check-pred file-exists? (check-and-build-path (build-project-path "test") "good.c")))
 
     (test-case "Read a file"
-      (define-values (pre-contents pre-history) (read-file "test" "good.c"))
-      (check-equal? pre-contents #"")
-      (write-file "test" "good.c" #"foobar" #"")
-      (define-values (post-contents post-history) (read-file "test" "good.c"))
-      (check-equal? post-contents #"foobar"))
+      (define-values (data checksum _1) (read-file "test" "good.c"))
+      (check-equal? data #"")
+      (write-file "test" "good.c" #"foobar")
+      (define-values (data2 checksum2 _2) (read-file "test" "good.c"))
+      (check-equal? data2 #"foobar"))
 
     (test-case "Rename a file"
       (rename-file "test" "good.c" "bad.c")
       (check-pred file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "good.c"))))
-    
+
     (test-case "List files"
       (new-file "test" "good.c" #"" 'raw #f)
       (new-file "test" ".hidden.c" #"" 'raw #f)
       (check-match (list-files "test") (list-no-order
-        (list "default" #t _)
-        (list "default/main.c" #f _)
-        (list "good.c" #f _)
-        (list "bad.c" #f _))))
-    
+        (list "default" #t _ #f)
+        (list "default/main.c" #f _ _)
+        (list "good.c" #f _ _)
+        (list "bad.c" #f _ _))))
+
     (test-case "Create a file, with a data URL"
       (new-file "test" "foo1.c" #"data:,A brief note" 'url #f)
-      (define-values (contents history) (read-file "test" "foo1.c"))
-      (check-equal? contents #"A brief note"))
+      (define-values (data checksum _1) (read-file "test" "foo1.c"))
+      (check-equal? data #"A brief note"))
 
     (test-case "Create a file, with a data URL (base64)"
       (new-file "test" "foo2.c" #"data:text/html;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (define-values (contents history) (read-file "test" "foo2.c"))
-      (check-equal? contents #"This is a test\n"))
-    
+      (define-values (data checksum _1) (read-file "test" "foo2.c"))
+      (check-equal? data #"This is a test\n"))
+
     (test-case "Create a file, with a data URL (base64) (missing MIME)"
       (new-file "test" "foo3.c" #"data:;base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (define-values (contents history) (read-file "test" "foo3.c"))
-      (check-equal? contents #"This is a test\n"))
-    
+      (define-values (data checksum _1) (read-file "test" "foo3.c"))
+      (check-equal? data #"This is a test\n"))
+
     (test-case "Create a file, with a data URL (base64) (permissive)"
       (new-file "test" "foo4.c" #"data:base64,VGhpcyBpcyBhIHRlc3QK" 'url #f)
-      (define-values (contents history) (read-file "test" "foo4.c"))
-      (check-equal? contents #"This is a test\n"))
+      (define-values (data checksum _1) (read-file "test" "foo4.c"))
+      (check-equal? data #"This is a test\n"))
+
+    (test-case "Create a file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (check-equal? tag (new-file "test" "foo4.5.c" contents 'raw #f)))
+
+    (test-case "Write to file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (new-file "test" "foo5.c" contents 'raw #f)
+      (write-file "test" "foo5.c" #"Hello World 2.0!" #f tag))
+
+    (test-case "Delete file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (new-file "test" "foo17.c" contents 'raw #f)
+      (remove-file "test" "foo17.c" tag))
+  (test-case "Delete file, check MD5 tag. (failure)"
+      (define contents #"Hello World!")
+      (define tag "not a md5 tag.")
+      (new-file "test" "foo18.c" contents 'raw #f)
+      (check-exn exn:fail? (lambda () (remove-file "test" "foo18.c" tag))))
+
+    (test-case "Write to file, check MD5 tag. (failure)"
+      (define contents #"Hello World!")
+      (define tag "not a md5 tag.")
+      (new-file "test" "foo6.c" contents 'raw #f)
+      (check-exn exn:fail? (lambda () (write-file "test" "foo6.c" #"Hello World 2.0!" #f tag))))
+
+    (test-case "Read file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (new-file "test" "foo7.c" contents 'raw #f)
+      (define-values (data checksum _) (read-file "test" "foo7.c"))
+      (check-equal? checksum tag))
+
+    (test-case "Write file, check MD5 tag."
+      (define contents #"Hello World!")
+      (define tag (call-with-input-bytes contents md5))
+      (new-file "test" "foo8.c" #"" 'raw #f)
+      (define checksum (write-file "test" "foo8.c" contents #f))
+      (check-equal? checksum tag))
 
     ;; Normalizing newlines will ensure newline before EOF
     (test-case "Create a file, with a data URL and normalized newlines"
-      (new-file "test" "foo5.c" #"data:,apple juice" 'url #t)
-      (define-values (contents history) (read-file "test" "foo5.c"))
-      (check-equal? contents #"apple juice\n"))
+      (new-file "test" "foo9.c" #"data:,apple juice" 'url #t)
+      (define-values (data _1 _2) (read-file "test" "foo9.c"))
+      (check-equal? data #"apple juice\n"))
 
     (test-case "Create a file, with a data URL and already-normalized newlines"
-      (new-file "test" "foo6.c" #"data:,apple juice\n\n" 'url #t)
-      (define-values (contents history) (read-file "test" "foo6.c"))
-      (check-equal? contents #"apple juice\n\n"))
-    
+      (new-file "test" "foo10.c" #"data:,apple juice\n\n" 'url #t)
+      (define-values (data _1 _2) (read-file "test" "foo10.c"))
+      (check-equal? data #"apple juice\n\n"))
+
     (test-case "Create a file, with a data URL and windows newlines"
-      (new-file "test" "foo7.c" #"data:,apple juice\r\n" 'url #t)
-      (define-values (contents history) (read-file "test" "foo7.c"))
-      (check-equal? contents #"apple juice\n"))
+      (new-file "test" "foo11.c" #"data:,apple juice\r\n" 'url #t)
+      (define-values (data _1 _2) (read-file "test" "foo11.c"))
+      (check-equal? data #"apple juice\n"))
 
     (test-case "Create and save a file, ensuring that the history exists"
-      (new-file "test" "foo8.c" #"" 'raw #f)
-      (write-file "test" "foo8.c" #"" #"sample history\n")
-      (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo8.c.history"))
-      (define-values (contents history) (read-file "test" "foo8.c"))
-      (check-equal? history #"sample history\n"))
+      (new-file "test" "foo12.c" #"" 'raw #f)
+      (write-file "test" "foo12.c" #"" "sample history\n")
+      (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo12.c.history"))
+      (define-values (contents _ history) (read-file "test" "foo12.c"))
+      (check-equal? history "sample history\n"))
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

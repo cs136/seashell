@@ -39,7 +39,7 @@ include_directories( ${CLANG_BINARY_INCLUDE_DIRS} )
 add_definitions( ${LLVM_DEFINITIONS} )
 
 # Set the required flags
-SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
+SET(CMAKE_CXX_FLAGS "${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 # C++ 11 mode.
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")

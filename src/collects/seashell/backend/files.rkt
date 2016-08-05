@@ -31,7 +31,8 @@
          file/unzip
          openssl/md5)
 
-(provide exn:project:file
+(provide (struct-out exn:project:file)
+         (struct-out exn:project:file:checksum)
          new-file
          new-directory
          remove-file
@@ -45,6 +46,7 @@
          write-settings)
 
 (struct exn:project:file exn:project ())
+(struct exn:project:file:checksum exn:project:file ())
 
 ;; (new-file project file) -> void?
 ;; Creates a new file inside a project.
@@ -54,18 +56,21 @@
 ;;  file - name of new file.
 ;;  normalize - boolean, whether or not to convert newlines to Unix
 ;;
+;; Returns:
+;;  MD5 checksum of file written.
+;;
 ;; Raises:
 ;;  exn:project:file if file exists.
-(define/contract (new-file project file contents encoding normalize?)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? void?)
+(define/contract (new-file project file contents encoding normalize? [history #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project
+         (raise (exn:project:file
                   (format "File already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (define to-write
+    (define data
       (with-input-from-bytes contents
         (lambda () 
           (cond
@@ -81,10 +86,14 @@
             [else
               ;; no-op (ignore port)
               contents]))))
-    (if normalize?
-      (display-lines-to-file (call-with-input-string (bytes->string/utf-8 to-write) port->lines) path #:exists 'error)
-      (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
-  (void))
+    (define to-write
+      (if normalize?
+        (with-output-to-bytes
+          (lambda ()
+            (display-lines (call-with-input-bytes data port->lines))))
+        data))
+    (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)
+    (call-with-input-bytes to-write md5)))
 
 
 (define/contract (new-directory project dir)
@@ -92,7 +101,7 @@
   (with-handlers
     [(exn:fail:filesystem?
       (lambda (exn)
-        (raise (exn:project
+        (raise (exn:project:file
           (format "Directory already exists, or some other filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
     (make-directory*
@@ -108,18 +117,30 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file does not exist.
-(define/contract (remove-file project file)
-  (-> (and/c project-name? is-project?) path-string? void?)
-  (define file-path (check-and-build-path (build-project-path project) file))
-  (define history-path (get-history-path file-path))
-  (with-handlers 
+(define/contract (remove-file project file [tag #f])
+  (->* ((and/c project-name? is-project?) path-string?) ((or/c string? #f)) void?)
+  (define file-to-write (check-and-build-path (build-project-path project) file))
+  (define history-path (get-history-path file-to-write))
+  (with-handlers
     [(exn:fail:filesystem?
        (lambda (exn)
-         (raise (exn:project
+         (raise (exn:project:file
                   (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks)))))]
-    (logf 'info "Deleting file ~a!" (some-system-path->string (check-and-build-path (build-project-path project) file)))
-    (delete-file file-path))
+    (call-with-file-lock/timeout file-to-write 'exclusive
+                                 (lambda ()
+                                   (when tag
+                                     (define expected-tag (call-with-input-file file-to-write md5))
+                                     (unless (equal? tag expected-tag)
+                                       (raise (exn:project:file:checksum
+                                                (format "Could not write delete file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                        (current-continuation-marks)))))
+                                    (logf 'info "Deleting file ~a!" (some-system-path->string file-to-write))
+                                    (delete-file file-to-write))
+                                 (lambda ()
+                                   (raise (exn:project:file
+                                          (format "Could not delete file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                  (current-continuation-marks))))))
   (when (file-exists? history-path)
     (delete-file history-path))
   (void))
@@ -132,7 +153,7 @@
   (with-handlers
     [(exn:fail:filesystem?
       (lambda (exn)
-        (raise (exn:project
+        (raise (exn:project:file
           (format "Filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
     (logf 'info "Deleting directory ~a!" (some-system-path->string (check-and-build-path (build-project-path project) dir)))
@@ -147,35 +168,54 @@
 ;;  file - name of file to read.
 ;;
 ;; Returns:
-;;   (values contents undoHistory)
+;;  Contents of the file as a bytestring, and the MD5 checksum of the file, and the history.
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? (values bytes? bytes?))
-  (define content-data (with-input-from-file (check-and-build-path (build-project-path project) file)
-                        port->bytes))
+  (-> (and/c project-name? is-project?) path-string? (values bytes? string? string?))
+  (define data (with-input-from-file (check-and-build-path (build-project-path project) file)
+                                      port->bytes))
   (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
   (define undo-history-data (if (file-exists? history-path)
-                                (with-input-from-file history-path port->bytes)
-                                #""))
-  (values content-data undo-history-data))
+                                (with-input-from-file history-path port->string)
+                                ""))
+  (values data (call-with-input-bytes data md5) undo-history-data))
 
-
-;; (write-file project file contents) -> void?
+;; (write-file project file contents) -> string?
 ;; Writes a file from a Racket bytestring.
 ;;
 ;; Arguments:
 ;;  project - project.
 ;;  file - name of file to write.
 ;;  contents - contents of file.
-(define/contract (write-file project file contents history)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c bytes? #f) void?)
-  (with-output-to-file (check-and-build-path (build-project-path project) file)
-                       (lambda () (write-bytes contents))
-                       #:exists 'must-truncate)
-  ;(when history
-    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-                         (lambda () (write-bytes history))
-                         #:exists 'replace);)
-  (void))
+;;  tag - MD5 of expected contents before file write, or #f
+;;        to force write.
+;;  history - History of file.
+;; Returns:
+;;  MD5 checksum of resulting file.
+(define/contract (write-file project file contents [history #f] [tag #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes?)
+       ((or/c #f string?) (or/c #f string?))
+       string?)
+  (define file-to-write (check-and-build-path (build-project-path project) file))
+  (call-with-file-lock/timeout file-to-write 'exclusive
+                               (lambda ()
+                                 (when tag
+                                   (define expected-tag (call-with-input-file file-to-write md5))
+                                   (unless (equal? tag expected-tag)
+                                     (raise (exn:project:file:checksum
+                                              (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                      (current-continuation-marks)))))
+                                 (with-output-to-file (check-and-build-path (build-project-path project) file)
+                                                      (lambda () (write-bytes contents))
+                                                      #:exists 'must-truncate)
+                                 (when history
+                                   (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
+                                                        (lambda () (write-bytes (string->bytes/utf-8 history)))
+                                                        #:exists 'replace)))
+                               (lambda ()
+                                 (raise (exn:project:file
+                                          (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                  (current-continuation-marks)))))
+  (call-with-input-bytes contents md5))
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
@@ -198,11 +238,15 @@
 ;;  dir - optional, subdirectory within project to start at.
 ;;      Mainly used for recursive calls.
 ;; Returns:
-;;  (listof string?) - Files and directories in project.
+;;  (listof (string? boolean? number? string?)) - Files and directories in a project
+;;            \------|--------|-------|---------  Name.
+;;                   \--------|-------|---------  Is directory?
+;;                            \-------|---------  Last modification time.
+;;                                    \---------  Checksum, if file.
 (define/contract (list-files project [dir #f])
   (->* ((and/c project-name? is-project?))
     ((or/c #f (and/c string? path-string?)))
-    (listof (list/c (and/c string? path-string?) boolean? number?)))
+    (listof (list/c (and/c string? path-string?) boolean? number? (or/c #f string?))))
   (define start-path (if dir (check-and-build-path
     (build-project-path project) dir) (build-project-path project)))
   (foldl (lambda (path rest)
@@ -211,11 +255,12 @@
     (define modified (* (file-or-directory-modify-seconds current) 1000))
     (cond
       [(and (directory-exists? current) (not (file-or-directory-hidden? current)))
-        (cons (list (some-system-path->string relative) #t modified) (append (list-files project
-          relative) rest))]
-      [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
+        (cons (list (some-system-path->string relative) #t modified #f)
+              (append (list-files project relative) rest))]
+      [(and (file-exists? current) (not (file-or-directory-hidden? current)))
        ; directory-hidden should work for files as well (can rename if so)
-        (cons (list (some-system-path->string relative) #f modified) rest)]
+        (cons (list (some-system-path->string relative) #f modified
+                    (call-with-input-file current md5)) rest)]
       [else rest]))
     '() (directory-list start-path)))
 
@@ -233,16 +278,17 @@
 ;;  old-file - The original name of the file
 ;;  new-file - The desired new name of the file
 ;; Returns:
-;;  void?
+;;  string? - checksum of file
 (define/contract (rename-file project old-file new-file)
-  (-> (and/c project-name? is-project?) path-string? path-string? void?)
+  (-> (and/c project-name? is-project?) path-string? path-string? string?)
   (define proj-path (check-and-build-path (build-project-path project)))
   (with-handlers
     [(exn:fail:filesystem? (lambda (e)
       (raise (exn:project "File could not be renamed." (current-continuation-marks)))))]
     (unless (equal? old-file new-file)
       (rename-file-or-directory (check-and-build-path proj-path old-file)
-                                (check-and-build-path proj-path new-file)))))
+                                (check-and-build-path proj-path new-file)))
+    (call-with-input-file (check-and-build-path proj-path new-file) md5)))
 
 ;; (restore-file-from-template project file template)
 ;; Restores a file from a skeleton/template.

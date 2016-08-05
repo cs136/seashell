@@ -24,9 +24,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
   // Main controller
   .controller('FrontendController', ['$scope', 'socket', '$q', 'error-service',
     '$modal', 'LoginModal', 'ConfirmationMessageModal', '$cookies', '$window',
-    'settings-service', '$location', '$css',
+    'settings-service', '$location', '$css', 'projects', '$rootScope',
       function ($scope, ws, $q, errors, $modal, LoginModal, confirm,
-        $cookies, $window, settings, $location, $css) {
+        $cookies, $window, settings, $location, $css, projects, $rootScope) {
         "use strict";
         var self = this;
         self.timeout = false;
@@ -37,7 +37,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         if(cookie) {
           self.host = cookie.host;
         }
-
+        // Refresh function
+        self.refresh = function () {
+          $rootScope.$broadcast('projects-refreshed');
+        };
         // Help function
         self.help = function () {
           $modal.open({
@@ -62,12 +65,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             .then(function() {
               $q.when(ws.archiveProjects())
                 .then(function() {
-                  // look at all these callbacks
-                  $location.path("/");
-                  $window.location.reload();
+                   self.refresh();
                  }).catch(function(err) {
                    self.errors.report(err, "Failed to archive projects.");
                  });
+            });
+        };
+        // Sync all
+        self.syncAll = function() {
+          confirm("Sync all projects",
+              "Confirming will download all files for use in offline mode. You should only have to do this once per browser.")
+            .then(function() {
+              $q.when(ws.syncAll()).then(function () {
+                })
+                .catch(function (err) {
+                  self.errors.report(err, "Failed to sync all projects.");
+                });
             });
         };
         // Logout
@@ -90,7 +103,6 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         // Open login dialog window after disconnection
         self.login = function() {
           new LoginModal().then(function() {
-            self.refresh();
           });
         };
 
@@ -116,18 +128,17 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           } else {
             $css.removeAll();
             $css.add("css/light.css");
-          } 
+          }
         }, true);
       }])
   .config(['hotkeysProvider', function(hotkeysProvider) {
     hotkeysProvider.includeCheatSheet = false;
   }])
-  .run(['$cookies', 'socket', 'settings-service', 'error-service', 'projects', 
-        '$window', '$document', '$rootScope',
-        function($cookies, ws, settings, errors, projects, $window, $document, $rootScope) {
-    ws.connect()
-        .then(function () {
-        });
+  .run(['$cookies', 'socket', 'settings-service', 'error-service', 'projects',
+        '$window', '$document', '$rootScope', 'localfiles',
+        function($cookies, ws, settings, errors, projects, $window, $document, $rootScope,
+                localfiles) {
+    ws.connect();
     // Reload settings on (re)connect.
     ws.register_callback('connected', function () {
       return settings.load().catch(function (error) {
