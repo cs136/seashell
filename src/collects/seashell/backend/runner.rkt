@@ -116,25 +116,19 @@
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
-       ;; Read asan error message.
-       ;; For tests (instead of clicking run button), we append a special string
-       ;; so that the front end (console.js) can extract it and parse the json string.
-       ;; Otherwise, students will see a bunch of jibberish.
-       (define asan-marker-string #"this_is_a_special_asan_marker_string_7f84028cdd719df7570532dbf54cd10c3b5a1cc1b4bb62193079da701fdd9acb")
-       (set-program-asan! pgrm (bytes-append asan-marker-string
-                                             (asan->json (delete-read-asan pid))
-                                             asan-marker-string))
+       ;; Read asan error message and convert it to json (stored as Bytes)
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
        
        (define stdout (port->bytes buf-stdout))
-       (define stderr (bytes-append (port->bytes buf-stderr)
-                                    (program-asan pgrm)))
+       (define stderr (port->bytes buf-stderr))
+       (define asan-output (program-asan pgrm))
 
        (match (subprocess-status handle)
          [0
           ;; Three cases:
           (cond
             [(not expected)
-             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
+             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr ,asan-output)) out-stdout)]
             [(equal? stdout expected)
              (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
             [else
@@ -142,8 +136,8 @@
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
               ;; hotfix: diff with empty because it's slow
-              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout)) out-stdout)])]
-         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
+         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,asan-output)) out-stdout)])
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
       [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
@@ -343,7 +337,6 @@
                           "allocator_may_return_null=1:
                            detect_leaks=1:
                            log_path='/tmp/seashell-asan':
-                           stack_trace_format='{\"frame\": %n, \"module\": \"%m\", \"offset\": \"%o\", \"function\": \"%f\", \"function_offset\": \"%q\", \"file\": \"%s\", \"line\": %l, \"column\": %c}'
                            detect_stack_use_after_return=1")
                   (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
                   (subprocess #f #f #f binary)]
@@ -369,7 +362,7 @@
                                       raw-stdin raw-stdout raw-stderr
                                       handle #f #f destroyed-semaphore
                                       (if test 'test 'run) run-custodian
-                                      (bytes)))
+                                      #""))
               (define control-thread
                 (thread
                   (lambda ()
@@ -535,5 +528,5 @@
          (define contents (file->bytes path))
          (delete-file path)
          contents]
-        [else (bytes)]))
+        [else #""]))
 

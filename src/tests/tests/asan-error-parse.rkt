@@ -74,7 +74,7 @@ HERE
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "30"))
 
     ;; This next test really should be an underflow, but ASAN for some reason thinks that
-    ;; we're overflowing the parameter x.
+    ;; we're overflowing the parameter x (and it doesn't report the variable name).
     (test-case "Stack Overflow Test 3"
       (define student-code #<<HERE
 void g(int x) { char carr[30]; carr[x] = 111; }

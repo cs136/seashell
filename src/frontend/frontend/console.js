@@ -31,7 +31,6 @@ angular.module('frontend-app')
     // Buffers
     self.stdout = "";
     self.stderr = "";
-    self.asan_parse = false;
     self._contents = "";
     var ind = "";
     var spl ="";
@@ -44,12 +43,11 @@ angular.module('frontend-app')
       "254":"Program was killed",
       "255":"Timeout"
     };
-    var asan_contents = [];
 
     // err is a json object (parsed & filtered in backend, only printed here)
     // TODO: better logic (self.write or something?)
     function maybe_log(string){
-      var debugmode = true;
+      var debugmode = false;
       if(debugmode) { console.log(string); }
     }
 
@@ -64,9 +62,8 @@ angular.module('frontend-app')
       // frame: column, file, frame#, function, function_offset, line, module, offset
       // raw message
       maybe_log(err);
-      if(err.error_type == "unknown") { return; }
+      if(err.error_type == "unknown" && err.raw_message === "") { return; }
       var to_print = [];
-      to_print.push("================================================");
       to_print.push("Memory error occurred! Type of error: " + err.error_type);
       for (var current_stack = 0; current_stack < err.call_stacks.length; current_stack++) {
         maybe_log('current stack: ' + current_stack);
@@ -76,17 +73,15 @@ angular.module('frontend-app')
         to_print.push('current framelist: ' + current_stack);
         for (var i = 0; i < framelist.length; i++){
           maybe_log('current framelist: ' + i);
-          //to_print.push('framelist: ' + i);
           // print each frame
-          // TODO: re-arrange these & decide not to print some out
-          to_print.push('\tframe: '      + framelist[i].frame);
-          to_print.push('\t\tfile: '     + framelist[i].file.replace(/^.*[\\\/]/, ''));
-          //to_print.push('\t\tmodule: ' + framelist[i].module);
-          //to_print.push('\t\toffset: ' + framelist[i].offset);
-          to_print.push('\t\tfunction: ' + framelist[i].function);
-          //to_print.push('\t\tfunction_offset: ' + framelist[i].function_offset);
-          to_print.push('\t\tline: '     + framelist[i].line);
-          to_print.push('\t\tcolumn: '   + framelist[i].column);
+          var framelist_indent = '\t  ';
+          if(framelist.length <= 1) { framelist_indent = '\t'; }
+          to_print.push(framelist_indent + 'frame ' + framelist[i].frame + ':' +
+                        ' function ' + framelist[i].function +
+                        ' in file ' + framelist[i].file.replace(/^.*[\\\/]/, '') +
+                        ' at line ' + framelist[i].line +
+                        ('column' in framelist[i] ? ', column '+framelist[i].column : ''));
+
         }
         // print misc (Second item)
         for (var key in err.call_stacks[current_stack].misc) {
@@ -123,22 +118,8 @@ angular.module('frontend-app')
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
         if (ind > -1) {
-          if (!self.asan_parse) {
-            self._write(self.stderr);
-          } else {
-            io.message = self.stderr + io.message;
-          }
+          self._write(self.stderr);
           spl = io.message.split("\n");
-          while (spl.length>1) {
-            if (!self.asan_parse && /^=+$/.test(spl[0])) {
-              self.asan_parse = true;
-            }
-            else if (!self.asan_parse) {
-              self._write(spl.shift() + "\n");
-            } else {
-              asan_contents.push(spl.shift());
-            }
-          }
           self.stderr = spl[0];
         } else {
           self.stderr += io.message;
@@ -182,14 +163,6 @@ angular.module('frontend-app')
     socket.register_callback("test", function(res) {
       self.PIDs = _.without(self.PIDs, res.pid);
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
-      // Try to parse res.stderr for ASAN error output
-      // This string is defined in runner.rkt and should equal it.
-      var asan_marker_string = "this_is_a_special_asan_marker_string_7f84028cdd719df7570532dbf54cd10c3b5a1cc1b4bb62193079da701fdd9acb";
-      var asan_split_result = res.stderr.split(asan_marker_string);
-      var asan_json_string = "";
-      if(asan_split_result.length == 3) {
-        asan_json_string = asan_split_result[1];
-      }
 
       if(res.result==="passed") {
         self.write('----------------------------------\n');
@@ -207,39 +180,38 @@ angular.module('frontend-app')
         printExpectedFromDiff(res);   
         self.write('---\n');
         self.write('Produced errors (stderr):\n');
-        if(asan_json_string) {
-          self.write(asan_split_result[0]);
-          self.write(asan_split_result[2]);
-          print_asan_error(JSON.parse(asan_json_string));
-        } else {
-          self.write(res.stderr);
-        }
+        self.write(res.stderr);
         self.write('\n');
+        if('asan_output' in res) {
+            // Parse the ASAN json string that the backend gives us.
+            self.write("AddressSanitizer Output:\n");
+            print_asan_error(JSON.parse(res.asan_output));
+            self.write('\n');
+        }
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
         self.write('Produced output (stderr):\n');
-        if(asan_json_string) {
-          self.write(asan_split_result[0]);
-          self.write(asan_split_result[2]);
-          print_asan_error(JSON.parse(asan_json_string));
-        } else {
-          self.write(res.stderr);
-        }
+        self.write(res.stderr);
         self.write('\n');
+        if('asan_output' in res) {
+            // Parse the ASAN json string that the backend gives us.
+            self.write("AddressSanitizer Output:\n");
+            print_asan_error(JSON.parse(res.asan_output));
+            self.write('\n');
+        }
       } else if(res.result==="no-expect") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" produced output (stdout):\n", res.test_name));
         self.write(res.stdout);
         self.write('Produced output (stderr):\n');
-        if(asan_json_string) {
-          self.write(asan_split_result[0]);
-          self.write(asan_split_result[2]);
-          print_asan_error(JSON.parse(asan_json_string));
-        } else {
-          self.write(res.stderr);
+        self.write(res.stderr);
+        if('asan_output' in res) {
+            // Parse the ASAN json string that the backend gives us.
+            self.write("AddressSanitizer Output:\n");
+            print_asan_error(JSON.parse(res.asan_output));
+            self.write('\n');
         }
-        self.write('\n');
       } else if(res.result==="timeout") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" timed out.\n", res.test_name));

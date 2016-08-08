@@ -1,8 +1,6 @@
 #lang typed/racket
 
-(require/typed json [jsexpr->string (JSExpr -> String)]
-               [string->jsexpr (String -> JSExpr)]
-               [jsexpr? (Any -> Boolean)])
+(require typed/json)
 (require/typed racket/string [string-prefix? (String String -> Boolean)])
 (require/typed racket/hash [hash-union (JSHash JSHash -> JSHash)])
 (require/typed racket/base [regexp-match (PRegexp String -> (U False (Listof String)))]
@@ -22,7 +20,7 @@
 ;; polymorphic type errors).
 (define-type JSHash (HashTable Symbol JSExpr))
 (define-type JSList (Listof JSExpr))
-(define-type JSExpr (U String Integer JSList JSHash))
+;(define-type JSExpr (U String Integer JSList JSHash))
 
 (: jsexpr-add (JSHash Symbol JSExpr -> JSHash))
 (define (jsexpr-add jsexpr key value)
@@ -319,13 +317,28 @@
 
 (: try-parse-stack-line (String -> (U JSHash False)))
 (define (try-parse-stack-line aline)
-  (with-handlers ([exn:fail? (lambda (exn) #f)])
-    ;; string->jsexpr may return eof (and possible other values?)
-    (define result (string->jsexpr aline))
-    (if (and (jsexpr? result) (hash? result))
-        result #f)))
+  ;; The default ASAN stack frame format sometimes do not print the column number
+  ;; Also, the file name may have colons in it (and colons are also used to separate the file path from
+  ;; the line numbers), so be careful with the colons here.
+  (define with-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:alnum:]_]+) (.+):(\\d+):(\\d+)$" aline))
+  (define no-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:alnum:]_]+) (.+):(\\d+)$" aline))
+  (cond [(and (cons? with-col-match) (>= (length with-col-match) 7))
+         (jsexpr `((frame ,(second with-col-match))
+                   (offset ,(third with-col-match))
+                   (function ,(fourth with-col-match))
+                   (file ,(fifth with-col-match))
+                   (line ,(sixth with-col-match))
+                   (column ,(seventh with-col-match))))]
+        [(and (cons? no-col-match) (>= (length no-col-match) 6))
+         (jsexpr `((frame ,(second no-col-match))
+                   (offset ,(third no-col-match))
+                   (function ,(fourth no-col-match))
+                   (file ,(fifth no-col-match))
+                   (line ,(sixth no-col-match))))]
+        [else #f]))
 
-;; Tries to extract a stack frame
+
+;; Tries to extract a list of stack frames
 ;; returns: List of parsed stack frames
 ;;          Unparsed lines from lines
 (: try-parse-stack-frame (->* ((Listof String)) ((Listof JSHash)) (values (Listof JSHash) (Listof String))))
