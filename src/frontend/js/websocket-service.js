@@ -300,6 +300,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.listProject = make_offline_enabled('listProject');
       self.readFile = make_offline_enabled('readFile');
       self.getFileToRun = make_offline_enabled('getFileToRun');
+      self.getSettings = make_offline_enabled('getSettings');
+      self.getMostRecentlyUsed = make_offline_enabled('getMostRecentlyUsed');
       // These functions:
       //  - invoke the offline version if offline
       //  - invoke the both the offline version and the online
@@ -311,6 +313,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.deleteFile = make_offline_enabled('deleteFile', true);
       self.renameFile = make_offline_enabled('renameFile', true);
       self.setFileToRun = make_offline_enabled('setFileToRun', true);
+      self.saveSettings = make_offline_enabled('saveSettings', true);
+      self.updateMostRecentlyUsed = make_offline_enabled('updateMostRecentlyUsed', true);
 
       self.compileAndRunProject = function(project, question, file, tests, deferred) {
           if(!self.isOffline()) {
@@ -370,44 +374,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           pid.startIO();
           return $q.when();
         } else {
-          return self._socket.startIO(pid, contents);
-        }
-      };
-
-
-      self.getMostRecentlyUsed = function(project, directory, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.getMostRecentlyUsed(project, directory, deferred);
-        } else {
-          return $q.when(false);
-        }
-      };
-
-      self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
-        // TODO: store this in offline mode 
-        if (!self.isOffline()) {
-          return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.saveSettings = function(settings, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.saveSettings(settings, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.getSettings = function(deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.getSettings(deferred);
-        } else {
-          return $q.when();
+          return self._socket.startIO(project, pid);
         }
       };
 
