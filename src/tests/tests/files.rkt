@@ -2,7 +2,7 @@
 
 (require seashell/backend/project
          seashell/backend/files
-         rackunit
+         seashell/backend/backup
          seashell/seashell-config
          openssl/md5
          rackunit)
@@ -120,6 +120,41 @@
       (check-pred file-exists? (check-and-build-path (build-project-path "test") ".foo12.c.history"))
       (define-values (contents _ history) (read-file "test" "foo12.c"))
       (check-equal? history #"sample history\n"))
+
+    (test-case "Create a file backup (with directory) and ensure it exists"
+      (new-file "test" "foo13.c" #"back-this-up" 'raw #f)
+      (write-backup "test" "foo13.c")
+      (check-equal? (length (list-files "test" ".foo13.c_backup")) 1)
+      (check-equal? (length (list-backups "test" "foo13.c")) 1))
+
+    (test-case "Create a file backup and restore the file from the backup"
+      (new-file "test" "foo14.c" #"original" 'raw #f)
+      (write-backup "test" "foo14.c")
+      (write-file "test" "foo14.c" #"writing over stuff" #"")
+      (restore-from-backup "test" "foo14.c" (car (list-backups "test" "foo14.c")))
+      (define-values (contents checksum history) (read-file "test" "foo14.c"))
+      (check-equal? contents #"original"))
+
+    (test-case "Ensure smart backups don't allow for duplicates"
+      (new-file "test" "foo15.c" #"unchanged" 'raw #f)
+      (write-backup-if-changed "test" "foo15.c")
+      (check-equal? (length (list-backups "test" "foo15.c")) 1)
+      (write-backup-if-changed "test" "foo15.c")
+      (check-equal? (length (list-backups  "test" "foo15.c")) 1)
+      (write-file "test" "foo15.c" #"changing some stuff" #"")
+      (write-backup-if-changed "test" "foo15.c")
+      (check-equal? (length (list-backups "test" "foo15.c")) 2))
+
+    (test-case "Make several backups and clean most of them out"
+      (new-file "test" "foo16.c" #"contents" 'raw #f)
+      (write-backup "test" "foo16.c")
+      (write-backup "test" "foo16.c")
+      (write-backup "test" "foo16.c")
+      (write-backup "test" "foo16.c")
+      (write-backup "test" "foo16.c")
+      (write-backup "test" "foo16.c")
+      (clean-backups "test" "foo16.c" 0 0 3) ; keep 3 from the last 24 hours, 0 from the last week and month
+      (check-equal? (length (list-backups "test" "foo16.c")) 3)) ; should have 3 total
 
     (test-case "Delete a file"
       (remove-file "test" "bad.c")

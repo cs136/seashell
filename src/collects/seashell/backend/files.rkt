@@ -28,6 +28,9 @@
          racket/match
          racket/file
          racket/path
+         racket/date
+         racket/generator
+         racket/string
          file/unzip
          openssl/md5)
 
@@ -211,6 +214,8 @@
                                    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                                                         (lambda () (write-bytes history))
                                                         #:exists 'replace)))
+                                 ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
+                                 ;(write-backup project file)
                                (lambda ()
                                  (raise (exn:project:file
                                           (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))

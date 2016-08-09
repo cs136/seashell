@@ -65,8 +65,9 @@
              (logf 'info "Shutting down compiler place due to request.")
              (quit #f)]
             [(list write-end cflags ldflags sources objects)
+             (assert (place-channel? write-end))
              (seashell-compiler-place/thread
-               (cast write-end Place-Channel)
+               write-end
                (cast cflags (Listof String))
                (cast ldflags (Listof String))
                (cast sources (Listof Path))
