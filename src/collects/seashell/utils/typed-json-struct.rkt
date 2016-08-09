@@ -96,7 +96,8 @@
 ;; Returns:
 ;;  (-> T JSExpr)
 (define-syntax (->json T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null HashTable JSExpr Number)
+    [(_ JSExpr) #'values]
     [(_ Integer) #'(lambda ([x : Integer]) : JSExpr x)]
     [(_ Boolean) #'(lambda ([x : Boolean]) : JSExpr x)]
     [(_ String) #'(lambda ([x : String]) : JSExpr x)]
@@ -118,6 +119,12 @@
     [(_ (Listof T1))
      #`(lambda ([l : (Listof T1)]) : JSExpr
          (map (->json T1) l))]
+    [(_ (HashTable Symbol V))
+     #`(lambda ([h : (HashTable Symbol V)]) : JSExpr
+         (make-immutable-hash
+           (hash-map h
+            (lambda ([k : Symbol] [v : V]) : (Pair Symbol JSExpr)
+              ((inst cons Symbol JSExpr) k ((->json V) v))))))]
     [(_ T) (+-> #'T 'json)]))
 
 ;; (json-> T)
@@ -127,7 +134,8 @@
 ;; Returns:
 ;;  (-> JSExpr T)
 (define-syntax (json-> T)
-  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null)
+  (syntax-case T (List Listof Integer Inexact-Real Boolean String Option null HashTable JSExpr)
+    [(_ JSExpr) #'values]
     [(_ Integer) #`(lambda ([x : JSExpr]) : Integer
                      (check-type Integer x))]
     [(_ Boolean) #`(lambda ([x : JSExpr]) : Boolean
@@ -150,6 +158,15 @@
               (cond
                 [(list? l) l]
                 [else (raise-json-error "Expected (list) ~a, got ~s." '#,(syntax->datum #'T) l)])))]
+    [(_ (HashTable Symbol V))
+     #`(lambda ([x : JSExpr]) : (HashTable Symbol V)
+         (cond
+           [(hash? x)
+            (make-immutable-hash
+              (hash-map x
+                (lambda ([k : Symbol] [v : JSExpr]) : (Pair Symbol V)
+                  ((inst cons Symbol V) k ((json-> V) v)))))]
+           [else (raise-json-error "Expected (hash ~a), got ~s." '#,(syntax->datum #'V) x)]))]
     [(_ T) (+-> 'json #'T)]))
 
 ;; (make->json name fields types [parent #f])
@@ -222,8 +239,7 @@
                   #`(cond
                       [(hash-has-key? obj '#,field)
                        (define field-value (hash-ref obj '#,field))
-                       (check-type #,type
-                                   ((json-> #,type) field-value))]
+                       ((json-> #,type) field-value)]
                       [else
                        (#,opt-thunk)]))
                 (syntax->list fields)
@@ -290,3 +306,5 @@
 ;(json->foobar #{'#hash() :: JSExpr})
 ;(json-struct foo ([x : 'null]))
 ;(json->foo (foo->json (foo 'null)))
+;(json-struct faz ([x : (HashTable Symbol Integer)]) #:transparent)
+;(json->faz (string->jsexpr "{\"x\" : {\"y\": 1, \"z\": 2}}"))
