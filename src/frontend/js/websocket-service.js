@@ -397,7 +397,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               changes: changes}));
           })
           .then(function(result) {
-            return $q.when(localfiles.applyChanges(result.changes, result.newProjects, result.deletedProjects))
+            return $q.when(localfiles.applyChanges(result.changes, result.newProjects, result.deletedProjects, result.updatedProjects))
               .then(function () {
                 return result.changes;
               });

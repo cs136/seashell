@@ -280,6 +280,10 @@
             self.deleteProject(name, true);
           });
           self.database.changelog.clear();
+          Dexie.currentTransaction.on('abort', function(ev) {
+            console.log("applyChanges transaction aborted", ev);
+            throw ev.target.error;
+          });
         });
       };
 

@@ -32,7 +32,8 @@
 (unsafe-require/typed (submod "." untyped-helper)
                       [date-nanosecond (-> date Integer)])
 (require/typed seashell/backend/project
-               [list-projects (-> (Listof (List String Number)))]
+               [list-projects (-> (Listof (List String Integer)))]
+               [read-project-settings (-> String JSExpr)]
                [build-project-path (-> String Path)]
                [check-path (-> Path Path)]
                [is-project? (-> String Boolean)]
@@ -48,11 +49,14 @@
                [#:struct (exn:project:file:checksum exn:project:file) ()])
 
 ;; External datatypes (to send back to the frontend)
+(json-struct off:project ([name : String]
+                          [last_modified : Integer]
+                          [settings : (Option String)]) #:transparent)
 (json-struct off:file ([project : String] [file : String] [checksum : (Option String)]) #:transparent)
 (json-struct off:change ([type : String] [file : off:file]
                          [contents : (Option String)] [checksum : (Option String)])
              #:transparent)
-(json-struct off:changes ([projects : (Listof String)]
+(json-struct off:changes ([projects : (Listof off:project)]
                           [files : (Listof off:file)]
                           [changes : (Listof off:change)])
              #:transparent)
@@ -64,7 +68,8 @@
 (json-struct off:response ([conflicts : (Listof off:conflict)]
                            [changes : (Listof off:change)]
                            [newProjects : (Listof String)]
-                           [deletedProjects : (Listof String)])
+                           [deletedProjects : (Listof String)]
+                           [updatedProjects : (Listof off:project)])
              #:transparent)
 
 ;; Internal datatypes.
@@ -252,6 +257,12 @@
   (match f
     [(off:file project file _) (off:file project file #f)]))
 
+(: list-off-projects (-> (Listof off:project)))
+(define (list-off-projects)
+  (map (lambda ([p : (List String Integer)])
+        (off:project (first p) (second p) (jsexpr->string (read-project-settings (car p)))))
+       (list-projects)))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
@@ -274,10 +285,24 @@
   ;; Apply changes, collect conflicts.
   (define conflicts (apply-offline-changes their-changes))
   ;; Collect list of new projects.
-  (define our-projects (map (lambda ([l : (List String Number)]) (first l))
-                            (list-projects)))
-  (define deleted-projects (remove* our-projects their-projects))
-  (define new-projects (remove* their-projects our-projects))
+  (define our-projects (list-off-projects))
+  (define our-projects-name (map (lambda ([l : off:project]) (off:project-name l))
+                              our-projects))
+  (define their-projects-name (map off:project-name their-projects))
+  (define deleted-projects (remove* our-projects-name their-projects-name))
+  (define new-projects (remove* their-projects-name our-projects-name))
+
+  ;; Overwrite project settings that are newer in the offline storage
+  (define updated-projects
+    (map (lambda ([l : (Listof off:project)]) (first l))
+      (filter (lambda ([l : (Listof off:project)])
+                (and (= (length l) 2) (> (off:project-last_modified (first l))
+                                         (off:project-last_modified (second l)))))
+        (map (lambda ([p : off:project]) (cons p
+            (filter (lambda ([pp : off:project]) (string=? (off:project-name pp) (off:project-name p)))
+                    their-projects)))
+          our-projects))))
+
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
 
@@ -322,4 +347,5 @@
                         conflict-information
                         (append our-delete-change our-edit-changes)
                         new-projects
-                        deleted-projects)))
+                        deleted-projects
+                        updated-projects)))

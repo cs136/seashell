@@ -67,7 +67,8 @@
          racket/string
          racket/list
          racket/port
-         racket/set)
+         racket/set
+         racket/hash)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -687,22 +688,39 @@
   (rename-file-or-directory proj-root dir-path)
   (make-directory proj-root))
 
+;; Lists the questions in a given project
+(define/contract (list-questions project)
+  (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
+  (define start-path (build-project-path project))
+  (filter (lambda (q) (and (directory-exists? q) (not (equal? (build-path start-path "common") q))))
+    (directory-list (build-project-path project))))
 
 ;; (read-project-settings project)
 ;; Reads the project settings from the project root.
-;; If the file does not exist, false is returned
+;;
+;; For now, this fetches all of the most recently used files separately.
+;; As a result of this, most recently used data is stored redundantly
+;; in the project settings file.
+;; TODO: consolidate most recently used purely as a project setting
 ;; 
 ;; Returns:
-;;   settings - the project settings, or false
+;;   settings - the project settings
 (define/contract (read-project-settings project)
-  (-> (and/c project-name? is-project?) (or/c #f hash-eq?))
+  (-> (and/c project-name? is-project?) hash-eq?)
   (define filename (read-config 'project-settings-filename))
-  (cond 
+  (define from-file (cond 
     [(file-exists? (build-path (build-project-path project) filename))
      (with-input-from-file 
        (build-path (build-project-path project) filename)
        (lambda () (read)))]
-    [else #f]))
+    [else (hasheq)]))
+  (define q-rec-used
+    (make-hasheq (map (lambda (q) (cons q (get-most-recently-used project q)))
+      (list-questions project))))
+  (hash-union from-file
+    (hasheq 'most_recently_used q-rec-used
+            'most_recently_used_dir (get-most-recently-used project #f))
+    #:combine/key (lambda (k v0 v) v)))
 
 
 ;; (write-project-settings project settings)

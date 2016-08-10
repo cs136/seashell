@@ -129,27 +129,30 @@ HERE
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))
 
-    (test-case "Read from nonexistent project settings"
-      (new-project "test-project")
-      (check-false (read-project-settings "test-project")))
-
     (test-case "update nonexistent project settings"
       (new-project "test-project-2")
       (write-project-settings/key "test-project-2" 'key "val")
-      (check-equal? (read-project-settings "test-project-2") #hasheq((key . "val"))))
+      (define settings (read-project-settings "test-project-2"))
+      (check-equal? (hash-ref settings 'key) "val"))
 
     (test-case "Write project settings"
+      (new-project "test-project")
       (write-project-settings "test-project" #hasheq((A . 5) (B . 6)))
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 5) (B . 6))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 5)
+      (check-equal? (hash-ref settings 'B) 6))
 
     (test-case "Overwrite project settings"
       (write-project-settings "test-project" #hasheq((A . 22)))
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 22))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 22))
 
     (test-case "Update project settings"
       (write-project-settings/key "test-project" 'A 55)
       (write-project-settings/key "test-project" 'boost "boost")
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 55) (boost . "boost"))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 55)
+      (check-equal? (hash-ref settings 'boost) "boost"))
 
     (test-case "Fetch template (from HTTP)"
       (new-project-from "test-project-template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip")
