@@ -386,9 +386,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
        */
       self.syncAll = function() {
         console.log("syncAll invoked");
-        return $q.all([localfiles.getProjects(), localfiles.listAllProjectsForSync(),localfiles.getOfflineChanges()])
+        return $q.all([localfiles.getProjectsForSync(), localfiles.listAllProjectsForSync(),localfiles.getOfflineChanges()])
           .then(function(result) {
-            var projects = _.map(result[0], function (p) { return p[0]; });
+            var projects = result[0];
             var files = result[1];
             var changes = result[2];
             return $q.when(self._socket.sync({

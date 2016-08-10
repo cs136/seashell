@@ -666,6 +666,8 @@
                       (result . ,(exn-message exn))))]
             [exn:fail:contract?
              (lambda (exn)
+               (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
+                     (format-stack-trace (exn-continuation-marks exn)))
                `#hash((id . ,id)
                       (success . #f)
                       (result . ,(format "Bad argument: ~a." (exn-message exn)))))]

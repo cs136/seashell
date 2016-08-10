@@ -250,6 +250,23 @@
         });
       };
 
+      // expects a project object in the form described in collects/seashell/backend/offline.rkt
+      self.updateProject = function(project) {
+        project.settings = JSON.parse(project.settings);
+        return self.database.transaction('rw', self.database.projects, function() {
+          self.database.projects.put(project);
+        });
+      };
+
+      self.getProjectsForSync = function() {
+        return self.database.projects.toArray(function(projects) {
+          return projects.map(function(project) {
+            project.settings = JSON.stringify(project.settings);
+            return project;
+          });
+        });
+      };
+
       self.getProjects = function () {
         return self.database.projects.toCollection().toArray(function (projects) {
           return projects.map(function (project) {
@@ -258,7 +275,7 @@
         });
       };
 
-      self.applyChanges = function (changes, newProjects, deletedProjects) {
+      self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects) {
         return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, function () {
           // TODO: how to sync project settings?  Probably with last-modified-time...
           // TODO: send back project settings with project
@@ -277,7 +294,10 @@
             }
           });
           deletedProjects.forEach(function (project) {
-            self.deleteProject(name, true);
+            self.deleteProject(project, true);
+          });
+          updatedProjects.forEach(function(project) {
+            self.updateProject(project);
           });
           self.database.changelog.clear();
           Dexie.currentTransaction.on('abort', function(ev) {
