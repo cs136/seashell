@@ -131,9 +131,11 @@
           });
         };
 
-        self.getSettings = function() {
+        self.getSettings = function(get_all) {
           return self.database.settings.get("settings").then(function(settings) {
-            if(settings)
+            if(settings && get_all)
+              return settings;
+            else if(settings)
               return settings.values;
             return {};
           });
@@ -274,10 +276,8 @@
         });
       };
 
-      self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects) {
-        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, function () {
-          // TODO: how to sync project settings?  Probably with last-modified-time...
-          // TODO: send back project settings with project
+      self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects, settings) {
+        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, self.database.settings, function () {
           newProjects.forEach(function (project) {
             self.newProject(project);
           });
@@ -298,6 +298,9 @@
           updatedProjects.forEach(function(project) {
             self.updateProject(project);
           });
+          if(settings) {
+            self.saveSettings(JSON.parse(settings));
+          }
           self.database.changelog.clear();
           Dexie.currentTransaction.on('abort', function(ev) {
             console.log("applyChanges transaction aborted", ev);

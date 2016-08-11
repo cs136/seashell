@@ -47,6 +47,8 @@
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
+               [read-settings (-> (Values Any Integer))]
+               [write-settings (-> JSExpr Void)]
                [#:struct (exn:project:file exn:project) ()]
                [#:struct (exn:project:file:checksum exn:project:file) ()])
 
@@ -58,9 +60,11 @@
 (json-struct off:change ([type : String] [file : off:file]
                          [contents : (Option String)] [checksum : (Option String)])
              #:transparent)
+(json-struct off:settings ([modified : Integer] [values : String]) #:transparent)
 (json-struct off:changes ([projects : (Listof off:project)]
                           [files : (Listof off:file)]
-                          [changes : (Listof off:change)])
+                          [changes : (Listof off:change)]
+                          [settings : off:settings])
              #:transparent)
 (json-struct off:conflict ([type : String]
                            [file : off:file]
@@ -71,7 +75,8 @@
                            [changes : (Listof off:change)]
                            [newProjects : (Listof String)]
                            [deletedProjects : (Listof String)]
-                           [updatedProjects : (Listof off:project)])
+                           [updatedProjects : (Listof off:project)]
+                           [settings : (Option String)])
              #:transparent)
 
 ;; Internal datatypes.
@@ -286,7 +291,7 @@
   (define timestamp (make-timestamp))
   (define changeset (json->off:changes js-changeset))
   (match-define
-    (off:changes their-projects their-files their-changes)
+    (off:changes their-projects their-files their-changes their-settings)
     changeset)
   ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
   ;; before looking at projects/files.
@@ -299,6 +304,17 @@
 
   ;; Apply changes, collect conflicts.
   (define conflicts (apply-offline-changes their-changes))
+
+  ;; Sync global settings
+  (define-values (our-settings our-settings-modified) (read-settings))
+  (logf 'debug "local mod: ~a" (off:settings-modified their-settings))
+  (logf 'debug "serve mod: ~a" our-settings-modified)
+  (define result-settings
+    (if (and our-settings (< (off:settings-modified their-settings) our-settings-modified))
+        (jsexpr->string (cast our-settings JSExpr))
+        #f))
+  (unless result-settings
+    (write-settings (string->jsexpr (off:settings-values their-settings))))
 
   ;; Collect list of new projects.
   (define our-projects (list-off-projects))
@@ -374,9 +390,11 @@
                            (if is-new-file? #f checksum))))
            backend-changed-files)))
   ;; Generate changes to send back.
-  (off:response->json (off:response
-                        conflict-information
-                        (append our-delete-change our-edit-changes)
-                        new-projects
-                        deleted-projects
-                        updated-projects)))
+  (off:response->json
+      (off:response
+        conflict-information
+        (append our-delete-change our-edit-changes)
+        new-projects
+        deleted-projects
+        updated-projects
+        result-settings)))

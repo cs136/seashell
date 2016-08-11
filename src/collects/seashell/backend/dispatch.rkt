@@ -581,9 +581,10 @@
       [(hash-table
         ('id id)
         ('type "getSettings"))
+       (define-values (settings x) (read-settings))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(read-settings)))]
+              (result . ,settings))]
       [(hash-table
         ('id id)
         ('project project)
