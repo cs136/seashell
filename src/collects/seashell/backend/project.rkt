@@ -67,8 +67,7 @@
          racket/string
          racket/list
          racket/port
-         racket/set
-         racket/hash)
+         racket/set)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
