@@ -148,12 +148,12 @@
           return self.database.settings.put(data);
         };
 
-        self.getMostRecentlyUsed = function(project, dir) {
+        self.getMostRecentlyUsed = function(project, question) {
           return self.database.transaction('rw', self.database.projects, function() {
             return self.database.projects.get(project).then(function(current) {
-              if(dir) {
-                if(current.settings[dir+"_most_recently_used"])
-                  return current.settings[dir+"_most_recently_used"];
+              if(question) {
+                if(current.settings[question+"_most_recently_used"])
+                  return current.settings[question+"_most_recently_used"];
                 return false;
               }
               return current.settings.most_recently_used ?
@@ -162,14 +162,14 @@
           });
         };
 
-        self.updateMostRecentlyUsed = function(project, dir, pred, data) {
+        self.updateMostRecentlyUsed = function(project, question, file) {
           return self.database.transaction('rw', self.database.projects, function() {
             self.database.projects.get(project).then(function(current) {
-              if(dir) {
-                current.settings[dir+"_most_recently_used"] = data;
+              if(question) {
+                current.settings[question+"_most_recently_used"] = file;
               }
               else {
-                current.settings.most_recently_used = data;
+                current.settings.most_recently_used = file;
               }
               return self.database.projects.put(current);
             });

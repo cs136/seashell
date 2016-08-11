@@ -114,8 +114,12 @@ HERE
       (export-project "foo"))
 
     (test-case "Most Recently Used"
-      (update-most-recently-used "foo" #f '("fexists" "error.c") "some data")
-      (check string=? (get-most-recently-used "foo" #f) "some data"))
+      (define dpath (check-and-build-path (build-project-path "foo") "testdir"))
+      (unless (directory-exists? dpath) (make-directory dpath))
+      (update-most-recently-used "foo" #f "testdir")
+      (check string=? (get-most-recently-used "foo" #f) "testdir")
+      (update-most-recently-used "foo" #f "testdir2")
+      (check-false (get-most-recently-used "foo" #f)))
 
     (test-case "Delete a Project"
       (delete-project "foo")

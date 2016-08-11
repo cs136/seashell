@@ -536,18 +536,17 @@
         ('id id)
         ('type "getMostRecentlyUsed")
         ('project project)
-        ('directory directory))
+        ('question question))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(get-most-recently-used project directory)))]
+              (result . ,(get-most-recently-used project question)))]
       [(hash-table
         ('id id)
         ('type "updateMostRecentlyUsed")
         ('project project)
-        ('directory directory)
-        ('predicate predicate)
-        ('data data))
-       (update-most-recently-used project directory predicate data)
+        ('question question)
+        ('file file))
+       (update-most-recently-used project question file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

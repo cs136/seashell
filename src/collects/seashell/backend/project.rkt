@@ -609,73 +609,35 @@
       (delete-directory/files tmpzip #:must-exist? #f)
       (delete-directory/files tmpdir #:must-exist? #f))))
 
-;; (get-most-recently-used project directory)
+;; (get-most-recently-used project question)
 ;; Reads the most recently used information for the specified project/question.
 ;;
 ;; Arguments:
 ;;  project - the project to look in
-;;  directory - the directory to check the information in, #f if at root.
+;;  question - the directory to check the information in, #f if at root.
 ;; Returns:
 ;;  Either the most recently used information, or #f if not set yet.
-(define/contract (get-most-recently-used project directory)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) jsexpr?)
-  (define key (if directory (string->symbol (string-append directory "_most_recently_used")) 'most_recently_used))
-  (define data (read-project-settings/key project key))
-  ;; TODO: edit this to return false when file/dir does not exist
-  data)
-;  (cond
-;    [directory (read-project-settings/key project )
-;  (define recent (build-path (read-config 'seashell) "recent.txt"))
-;  (define directory-path (if (not directory)
-;                             (build-project-path project)
-;                             (check-and-build-path (build-project-path project) directory)))
-;  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-;  (cond
-;   [(not (file-exists? recent)) #f]
-;   [(not (directory-exists? directory-path)) #f]
-;   [else
-;     (let/ec escape
-;       (match-define `(,predicate ,data) (hash-ref (with-input-from-file recent read)
-;                                                   directory-hash
-;                                                   (lambda () (escape #f))))
-;       (match predicate
-;         [`("dexists" ,name)
-;           (if (directory-exists? (check-and-build-path (build-project-path project) name)) data #f)]
-;         [`("fexists" ,name)
-;           (if (file-exists? (check-and-build-path (build-project-path project) name)) data #f)]))]))
+(define/contract (get-most-recently-used project question)
+  (-> (and/c project-name? is-project?) (or/c #f path-string?) (or/c #f string?))
+  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
+  (define file (read-project-settings/key project key))
+  (define path (if file (check-and-build-path (build-project-path project) file) #f))
+  (if (and file (or (and question (file-exists? path))
+                    (and (not question) (directory-exists? path)))) file #f))
 
-;; (update-recent project directory data)
-;; Updates the most recently used information for the specified directory.
+;; (update-recent project question file)
+;; Updates the most recently used information for the specified question.
 ;;
 ;; Arguments:
 ;;  project - the project to update.
-;;  directory - the directory to update, or #f if at root.
-;;  predicate - A predicate, either:
-;;            ("dexists" name)
-;;            ("fexists" name)
-;;  data - The data to write.
+;;  question - the directory to update, or #f if at root.
+;;  file - The data to write.
 ;; Returns:
 ;;  Nothing.
-(define/contract (update-most-recently-used project directory predicate data)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) (list/c (or/c "dexists" "fexists") path-string?) jsexpr? void?)
-  (define key (if directory (string->symbol (string-append directory "_most_recently_used")) 'most_recently_used))
-  (write-project-settings/key project key data))
-;  (define recent-file (build-path (read-config 'seashell) "recent.txt"))
-;  (define recent-hash 
-;    (if (file-exists? recent-file) (with-input-from-file recent-file read) `#hash()))
-;  (define directory-path (if (not directory)
-;                             (build-project-path project)
-;                             (check-and-build-path (build-project-path project) directory)))
-;  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-;  (when (directory-exists? directory-path)
-;    (with-output-to-file recent-file 
-;                         (lambda ()
-;                           (write
-;                             (hash-set (if (hash? recent-hash) recent-hash `#hash())
-;                                       directory-hash
-;                                       (list predicate data))))
-;                         #:exists 'truncate))
-;  (void))
+(define/contract (update-most-recently-used project question file)
+  (-> (and/c project-name? is-project?) (or/c #f path-string?) path-string? void?)
+  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
+  (write-project-settings/key project key file))
 
 ;; (archive-projects archive-name) moves all existing project files into a
 ;;   directory called archive-name
@@ -718,17 +680,17 @@
   (define filename (read-config 'project-settings-filename))
   (cond 
     [(file-exists? (build-path (build-project-path project) filename))
-     (define hsh (with-input-from-file 
-       (build-path (build-project-path project) filename)
-       (lambda () (read))))
-     (logf 'debug "~a" hsh) hsh]
+     ;(define hsh
+     (with-input-from-file 
+       (build-path (build-project-path project) filename) read)]
+     ;(logf 'debug "~a" hsh) hsh]
     [else (hasheq)]))
 
 ;; (read-project-settings/key project key)
 ;; Retrieves the value of a specific key in the project settings.
 ;; Returns false if the key does not exist.
 (define/contract (read-project-settings/key project key)
-  (-> (and/c project-name? is-project?) symbol? string?)
+  (-> (and/c project-name? is-project?) symbol? (or/c #f string? number?))
   (hash-ref (read-project-settings project) key #f))
 
 
@@ -752,7 +714,7 @@
 ;; Equivalent to a hash-set.
 ;; Returns: nothing
 (define/contract (write-project-settings/key project key val)
-  (-> (and/c project-name? is-project?) symbol? string? void?)
+  (-> (and/c project-name? is-project?) symbol? (or/c string? number?) void?)
   (define old-settings (read-project-settings project)) 
   (define new-settings 
     (hash-set (if old-settings old-settings #hasheq())  key val))
@@ -770,12 +732,11 @@
 ;;   A string indicating the file to run
 (define/contract (get-file-to-run project question)
   (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
-  (define settings-hash (read-project-settings project))
+  (define file-to-run
+    (read-project-settings/key project
+              (string->symbol (string-append question "_runner_file"))))
   (cond 
-    [settings-hash
-      (define file-to-run
-        (hash-ref settings-hash 
-                  (string->symbol (string-append question "_runner_file"))))
+    [file-to-run
       (if (not (file-exists? (build-path (build-project-path project)
                                           file-to-run)))
         (raise (exn:project (format "File ~a does not exist." file-to-run)

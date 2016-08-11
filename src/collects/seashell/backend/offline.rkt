@@ -33,8 +33,9 @@
                       [date-nanosecond (-> date Integer)])
 (require/typed seashell/backend/project
                [list-projects (-> (Listof (List String Integer)))]
-               [read-project-settings (-> String JSExpr)]
-               [write-project-settings (-> String Any Void)]
+               ;; specifying the return type of this as other than Any seems to cause problems
+               [read-project-settings (-> String Any)]
+               [write-project-settings (-> String Settings Void)]
                [build-project-path (-> String Path)]
                [check-path (-> Path Path)]
                [is-project? (-> String Boolean)]
@@ -80,6 +81,8 @@
                   [file : String]
                   [contents : (Option String)]
                   [reason : Conflict-Reason]) #:transparent #:type-name Conflict-Type)
+
+(define-type Settings (HashTable Symbol (U String Number)))
 
 ;; Exception types.
 (struct exn:project:sync exn:project ())
@@ -261,10 +264,20 @@
 (: list-off-projects (-> (Listof off:project)))
 (define (list-off-projects)
   (map (lambda ([p : (List String Integer)])
-        (logf 'debug "~a" (read-project-settings (car p)))
-        (logf 'debug "survived")
-        (off:project (first p) (second p) (jsexpr->string (read-project-settings (car p)))))
+        ;(logf 'debug "~a" (read-project-settings (car p)))
+        ;(logf 'debug "survived")
+        (off:project (first p) (second p) (jsexpr->string (cast (read-project-settings (car p)) JSExpr))))
        (list-projects)))
+
+(: sanitize-settings (-> (HashTable Symbol Any) Settings))
+(define (sanitize-settings hsh)
+  (make-hasheq
+    (cast (filter (lambda ([pair : (Pairof Symbol Any)]) (or (string? (cdr pair)) (number? (cdr pair))))
+            (hash->list hsh)) (Listof (Pairof Symbol (U String Number))))))
+
+(: empty-settings (-> Settings))
+(define (empty-settings)
+  (hasheq))
 
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
@@ -324,8 +337,9 @@
          (logf 'debug "~a" (off:project-settings p))
          (write-project-settings (off:project-name p)
               ((lambda ([p : off:project]) (if (off:project-settings p)
-                  (string->jsexpr (off:project-settings p))
-                  (hasheq))) p)))
+                  (sanitize-settings (cast (string->jsexpr (off:project-settings p))
+                                       (HashTable Symbol Any)))
+                  (empty-settings))) p)))
        offline-updated-projects)
 
   ;; Resolve conflicts (add .conflict for each file)

@@ -388,20 +388,19 @@ SeashellWebsocket.prototype.renameFile = function(project, oldName, newName) {
     newName: newName});
 };
 
-SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, directory) {
+SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, question) {
   return this.sendMessage({
     type : "getMostRecentlyUsed",
     project : project,
-    directory : directory});
+    question : question});
 };
 
-SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, directory, predicate, data) {
+SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, question, file) {
   return this.sendMessage({
     type : "updateMostRecentlyUsed",
     project : project,
-    directory : directory,
-    predicate : predicate,
-    data : data});
+    question : question,
+    file : file});
 };
 
 SeashellWebsocket.prototype.saveSettings = function(settings) {
