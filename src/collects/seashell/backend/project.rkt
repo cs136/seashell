@@ -619,24 +619,30 @@
 ;;  Either the most recently used information, or #f if not set yet.
 (define/contract (get-most-recently-used project directory)
   (-> (and/c project-name? is-project?) (or/c #f path-string?) jsexpr?)
-  (define recent (build-path (read-config 'seashell) "recent.txt"))
-  (define directory-path (if (not directory)
-                             (build-project-path project)
-                             (check-and-build-path (build-project-path project) directory)))
-  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-  (cond
-   [(not (file-exists? recent)) #f]
-   [(not (directory-exists? directory-path)) #f]
-   [else
-     (let/ec escape
-       (match-define `(,predicate ,data) (hash-ref (with-input-from-file recent read)
-                                                   directory-hash
-                                                   (lambda () (escape #f))))
-       (match predicate
-         [`("dexists" ,name)
-           (if (directory-exists? (check-and-build-path (build-project-path project) name)) data #f)]
-         [`("fexists" ,name)
-           (if (file-exists? (check-and-build-path (build-project-path project) name)) data #f)]))]))
+  (define key (if directory (string->symbol (string-append directory "_most_recently_used")) 'most_recently_used))
+  (define data (read-project-settings/key project key))
+  ;; TODO: edit this to return false when file/dir does not exist
+  data)
+;  (cond
+;    [directory (read-project-settings/key project )
+;  (define recent (build-path (read-config 'seashell) "recent.txt"))
+;  (define directory-path (if (not directory)
+;                             (build-project-path project)
+;                             (check-and-build-path (build-project-path project) directory)))
+;  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
+;  (cond
+;   [(not (file-exists? recent)) #f]
+;   [(not (directory-exists? directory-path)) #f]
+;   [else
+;     (let/ec escape
+;       (match-define `(,predicate ,data) (hash-ref (with-input-from-file recent read)
+;                                                   directory-hash
+;                                                   (lambda () (escape #f))))
+;       (match predicate
+;         [`("dexists" ,name)
+;           (if (directory-exists? (check-and-build-path (build-project-path project) name)) data #f)]
+;         [`("fexists" ,name)
+;           (if (file-exists? (check-and-build-path (build-project-path project) name)) data #f)]))]))
 
 ;; (update-recent project directory data)
 ;; Updates the most recently used information for the specified directory.
@@ -652,22 +658,24 @@
 ;;  Nothing.
 (define/contract (update-most-recently-used project directory predicate data)
   (-> (and/c project-name? is-project?) (or/c #f path-string?) (list/c (or/c "dexists" "fexists") path-string?) jsexpr? void?)
-  (define recent-file (build-path (read-config 'seashell) "recent.txt"))
-  (define recent-hash 
-    (if (file-exists? recent-file) (with-input-from-file recent-file read) `#hash()))
-  (define directory-path (if (not directory)
-                             (build-project-path project)
-                             (check-and-build-path (build-project-path project) directory)))
-  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-  (when (directory-exists? directory-path)
-    (with-output-to-file recent-file 
-                         (lambda ()
-                           (write
-                             (hash-set (if (hash? recent-hash) recent-hash `#hash())
-                                       directory-hash
-                                       (list predicate data))))
-                         #:exists 'truncate))
-  (void))
+  (define key (if directory (string->symbol (string-append directory "_most_recently_used")) 'most_recently_used))
+  (write-project-settings/key project key data))
+;  (define recent-file (build-path (read-config 'seashell) "recent.txt"))
+;  (define recent-hash 
+;    (if (file-exists? recent-file) (with-input-from-file recent-file read) `#hash()))
+;  (define directory-path (if (not directory)
+;                             (build-project-path project)
+;                             (check-and-build-path (build-project-path project) directory)))
+;  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
+;  (when (directory-exists? directory-path)
+;    (with-output-to-file recent-file 
+;                         (lambda ()
+;                           (write
+;                             (hash-set (if (hash? recent-hash) recent-hash `#hash())
+;                                       directory-hash
+;                                       (list predicate data))))
+;                         #:exists 'truncate))
+;  (void))
 
 ;; (archive-projects archive-name) moves all existing project files into a
 ;;   directory called archive-name
@@ -708,19 +716,20 @@
 (define/contract (read-project-settings project)
   (-> (and/c project-name? is-project?) hash-eq?)
   (define filename (read-config 'project-settings-filename))
-  (define from-file (cond 
+  (cond 
     [(file-exists? (build-path (build-project-path project) filename))
-     (with-input-from-file 
+     (define hsh (with-input-from-file 
        (build-path (build-project-path project) filename)
-       (lambda () (read)))]
+       (lambda () (read))))
+     (logf 'debug "~a" hsh) hsh]
     [else (hasheq)]))
-  (define q-rec-used
-    (make-hasheq (map (lambda (q) (cons q (get-most-recently-used project q)))
-      (list-questions project))))
-  (hash-union from-file
-    (hasheq 'most_recently_used q-rec-used
-            'most_recently_used_dir (get-most-recently-used project #f))
-    #:combine/key (lambda (k v0 v) v)))
+
+;; (read-project-settings/key project key)
+;; Retrieves the value of a specific key in the project settings.
+;; Returns false if the key does not exist.
+(define/contract (read-project-settings/key project key)
+  (-> (and/c project-name? is-project?) symbol? string?)
+  (hash-ref (read-project-settings project) key #f))
 
 
 ;; (write-project-settings project settings)
@@ -731,6 +740,7 @@
 ;; Returns: nothing
 (define/contract (write-project-settings project settings)
   (-> (and/c project-name? is-project?) hash-eq? void?)
+  (logf 'debug "~a" settings)
   (with-output-to-file
     (build-path (build-project-path project) (read-config 'project-settings-filename))
     (lambda () (write settings))
@@ -742,7 +752,7 @@
 ;; Equivalent to a hash-set.
 ;; Returns: nothing
 (define/contract (write-project-settings/key project key val)
-  (-> (and/c project-name? is-project?) symbol? any/c void?)
+  (-> (and/c project-name? is-project?) symbol? string? void?)
   (define old-settings (read-project-settings project)) 
   (define new-settings 
     (hash-set (if old-settings old-settings #hasheq())  key val))
@@ -765,7 +775,7 @@
     [settings-hash
       (define file-to-run
         (hash-ref settings-hash 
-                  (string->symbol (string-append question "-runner"))))
+                  (string->symbol (string-append question "_runner_file"))))
       (if (not (file-exists? (build-path (build-project-path project)
                                           file-to-run)))
         (raise (exn:project (format "File ~a does not exist." file-to-run)
@@ -795,7 +805,7 @@
     (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
                         (current-continuation-marks)))
     (write-project-settings/key project
-                                (string->symbol (string-append question "-runner"))
+                                (string->symbol (string-append question "_runner_file"))
                                 (path->string (build-path (if (string=? folder (read-config 'common-subdirectory))
                                                               (read-config 'common-subdirectory)
                                                               question)

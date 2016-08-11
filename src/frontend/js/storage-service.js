@@ -115,7 +115,7 @@
         self.getFileToRun = function (name, question) {
           return self.database.projects.get(name)
             .then(function (project) {
-              return project.settings.runner_files[question];
+              return project.settings[question+"_runner_file"];
             });
         };
 
@@ -125,7 +125,7 @@
           }
           return self.database.transaction('rw', self.database.projects, function () {
             self.database.projects.get(name).then(function (current) {
-              current.settings.runner_files[question] = folder === "question" ? sprintf("%s/%s", question, file) : sprintf("%s/%s", folder, file);
+              current.settings[question+"_runner_file"] = folder === "question" ? sprintf("%s/%s", question, file) : sprintf("%s/%s", folder, file);
               return self.database.projects.put(current);
             });
           });
@@ -152,11 +152,12 @@
           return self.database.transaction('rw', self.database.projects, function() {
             return self.database.projects.get(project).then(function(current) {
               if(dir) {
-                if(current.settings.most_recently_used && current.settings.most_recently_used[dir])
-                  return current.settings.most_recently_used[dir];
+                if(current.settings[dir+"_most_recently_used"])
+                  return current.settings[dir+"_most_recently_used"];
                 return false;
               }
-              return current.settings.most_recently_used_dir;
+              return current.settings.most_recently_used ?
+                current.settings.most_recently_used : false;
             });
           });
         };
@@ -165,12 +166,10 @@
           return self.database.transaction('rw', self.database.projects, function() {
             self.database.projects.get(project).then(function(current) {
               if(dir) {
-                if(!current.settings.most_recently_used)
-                  current.settings.most_recently_used = {};
-                current.settings.most_recently_used[dir] = data;
+                current.settings[dir+"_most_recently_used"] = data;
               }
               else {
-                current.settings.most_recently_used_dir = data;
+                current.settings.most_recently_used = data;
               }
               return self.database.projects.put(current);
             });
@@ -238,7 +237,7 @@
       };
 
       self.newProject = function (name) {
-        return self.database.projects.add({name: name, settings: {runner_files: {}}, last_modified: Date.now()});
+        return self.database.projects.add({name: name, settings: {}, last_modified: Date.now()});
       };
 
       self.deleteProject = function (name, online) {

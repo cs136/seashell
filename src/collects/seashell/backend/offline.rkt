@@ -34,6 +34,7 @@
 (require/typed seashell/backend/project
                [list-projects (-> (Listof (List String Integer)))]
                [read-project-settings (-> String JSExpr)]
+               [write-project-settings (-> String Any Void)]
                [build-project-path (-> String Path)]
                [check-path (-> Path Path)]
                [is-project? (-> String Boolean)]
@@ -260,6 +261,8 @@
 (: list-off-projects (-> (Listof off:project)))
 (define (list-off-projects)
   (map (lambda ([p : (List String Integer)])
+        (logf 'debug "~a" (read-project-settings (car p)))
+        (logf 'debug "survived")
         (off:project (first p) (second p) (jsexpr->string (read-project-settings (car p)))))
        (list-projects)))
 
@@ -284,6 +287,9 @@
 
   ;; Apply changes, collect conflicts.
   (define conflicts (apply-offline-changes their-changes))
+
+  (logf 'debug "come on")
+
   ;; Collect list of new projects.
   (define our-projects (list-off-projects))
   (define our-projects-name (map (lambda ([l : off:project]) (off:project-name l))
@@ -291,6 +297,8 @@
   (define their-projects-name (map off:project-name their-projects))
   (define deleted-projects (remove* our-projects-name their-projects-name))
   (define new-projects (remove* their-projects-name our-projects-name))
+
+  (logf 'debug "boop")
 
   ;; Overwrite project settings that are newer in the offline storage
   (define updated-projects
@@ -302,6 +310,23 @@
             (filter (lambda ([pp : off:project]) (string=? (off:project-name pp) (off:project-name p)))
                     their-projects)))
           our-projects))))
+
+  (logf 'debug "beep")
+
+  (define updated-projects-name (map off:project-name updated-projects))
+  (define offline-updated-projects
+    (filter (lambda ([p : off:project])
+              (not (member (off:project-name p) updated-projects-name)))
+            their-projects))
+
+  ;; update projects that were modified locally while offline
+  (map (lambda ([p : off:project])
+         (logf 'debug "~a" (off:project-settings p))
+         (write-project-settings (off:project-name p)
+              ((lambda ([p : off:project]) (if (off:project-settings p)
+                  (string->jsexpr (off:project-settings p))
+                  (hasheq))) p)))
+       offline-updated-projects)
 
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
