@@ -680,10 +680,8 @@
   (define filename (read-config 'project-settings-filename))
   (cond 
     [(file-exists? (build-path (build-project-path project) filename))
-     ;(define hsh
      (with-input-from-file 
        (build-path (build-project-path project) filename) read)]
-     ;(logf 'debug "~a" hsh) hsh]
     [else (hasheq)]))
 
 ;; (read-project-settings/key project key)
@@ -702,7 +700,6 @@
 ;; Returns: nothing
 (define/contract (write-project-settings project settings)
   (-> (and/c project-name? is-project?) hash-eq? void?)
-  (logf 'debug "~a" settings)
   (with-output-to-file
     (build-path (build-project-path project) (read-config 'project-settings-filename))
     (lambda () (write settings))
