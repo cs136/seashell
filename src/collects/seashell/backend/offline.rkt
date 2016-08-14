@@ -38,11 +38,11 @@
                [is-project? (-> String Boolean)]
                [#:struct (exn:project exn:fail:user) ()])
 (require/typed seashell/backend/files
-               [new-file (->* (String Path-String Bytes (U 'raw 'url) Boolean) ((U False String)) String)]
+               [new-file (->* (String Path-String Bytes (U 'raw 'url) Boolean) ((U False Bytes)) String)]
                ;(->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
                ;[new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (->* (String Path-String) ((U False String)) Void)]
-               [read-file (-> String Path-String (Values Bytes String String))]
+               [read-file (-> String Path-String (Values Bytes String Bytes))]
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
@@ -77,7 +77,7 @@
                   [file : String]
                   [contents : (Option String)]
                   [reason : Conflict-Reason]
-                  [history : (Option String)]) #:transparent #:type-name Conflict-Type)
+                  [history : (Option Bytes)]) #:transparent #:type-name Conflict-Type)
 
 ;; Exception types.
 (struct exn:project:sync exn:project ())
@@ -122,7 +122,7 @@
                              (off:file-file file)
                              (off:change-contents change)
                              (exn-message exn)
-                             (off:change-history change))
+                             (if (off:change-history change) (string->bytes/utf-8 (off:change-history change)) #""))
                    conflicts))])
         (match change
           [(off:change "deleteFile"
@@ -163,7 +163,7 @@
                  (with-handlers
                    ([exn:project:file?
                       (lambda ([exn : exn])
-                        (cons (conflict type project file contents 'checksum history) conflicts))])
+                        (cons (conflict type project file contents 'checksum (if history (string->bytes/utf-8 history) #"")) conflicts))])
                    (cond
                      [(equal? type "editFile")
                        (write-file project file (string->bytes/utf-8 contents) #f checksum)]
@@ -175,7 +175,7 @@
                  (with-handlers
                    ([exn:fail:filesystem?
                       (lambda ([exn: exn])
-                        (cons (conflict type project file contents 'missing-directory history) conflicts))])
+                        (cons (conflict type project file contents 'missing-directory (if history (string->bytes/utf-8 history) #"")) conflicts))])
                    (parameterize ([current-directory (build-project-path project)])
                      (make-directory* base))
                    ;; Everything OK, write file
@@ -320,11 +320,11 @@
                              (off:change (if is-new-file? "newFile" "editFile")
                                          f #f
                                          (if is-new-file? #f checksum)
-                                         (if is-new-file? #f history)))])
+                                         (if is-new-file? #f (bytes->string/utf-8 history))))])
                (off:change (if is-new-file? "newFile" "editFile")
                            f (bytes->string/utf-8 contents)
                            (if is-new-file? #f checksum)
-                           (if is-new-file? #f history))))
+                           (if is-new-file? #f (bytes->string/utf-8 history)))))
            backend-changed-files)))
   ;; Generate changes to send back.
   (off:response->json (off:response

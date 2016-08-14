@@ -62,7 +62,7 @@
 ;; Raises:
 ;;  exn:project:file if file exists.
 (define/contract (new-file project file contents encoding normalize? [history #f])
-  (->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
+  (->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f bytes?)) string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
@@ -170,13 +170,13 @@
 ;; Returns:
 ;;  Contents of the file as a bytestring, and the MD5 checksum of the file, and the history.
 (define/contract (read-file project file)
-  (-> (and/c project-name? is-project?) path-string? (values bytes? string? string?))
+  (-> (and/c project-name? is-project?) path-string? (values bytes? string? bytes?))
   (define data (with-input-from-file (check-and-build-path (build-project-path project) file)
                                       port->bytes))
   (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
   (define undo-history-data (if (file-exists? history-path)
-                                (with-input-from-file history-path port->string)
-                                ""))
+                                (with-input-from-file history-path port->bytes)
+                                #""))
   (values data (call-with-input-bytes data md5) undo-history-data))
 
 ;; (write-file project file contents) -> string?
@@ -193,7 +193,7 @@
 ;;  MD5 checksum of resulting file.
 (define/contract (write-file project file contents [history #f] [tag #f])
   (->* ((and/c project-name? is-project?) path-string? bytes?)
-       ((or/c #f string?) (or/c #f string?))
+       ((or/c #f bytes?) (or/c #f string?))
        string?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
   (call-with-file-lock/timeout file-to-write 'exclusive
@@ -209,7 +209,7 @@
                                                       #:exists 'must-truncate)
                                  (when history
                                    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-                                                        (lambda () (write-bytes (string->bytes/utf-8 history)))
+                                                        (lambda () (write-bytes  history))
                                                         #:exists 'replace)))
                                (lambda ()
                                  (raise (exn:project:file
