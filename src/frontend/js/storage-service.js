@@ -137,7 +137,7 @@
               return settings;
             else if(settings)
               return settings.values;
-            return {};
+            return get_all ? {values:{}, modified: 0, name: "settings"} : {};
           });
         };
 
