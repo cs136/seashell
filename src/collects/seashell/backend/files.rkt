@@ -28,6 +28,9 @@
          racket/match
          racket/file
          racket/path
+         racket/date
+         racket/generator
+         racket/string
          file/unzip
          openssl/md5)
 
@@ -171,11 +174,14 @@
   (with-output-to-file (check-and-build-path (build-project-path project) file)
                        (lambda () (write-bytes contents))
                        #:exists 'must-truncate)
-  ;(when history
+  (when history
     (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                          (lambda () (write-bytes history))
-                         #:exists 'replace);)
+                         #:exists 'replace))
+  ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
+  ;(write-backup project file)
   (void))
+
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
@@ -214,7 +220,6 @@
         (cons (list (some-system-path->string relative) #t modified) (append (list-files project
           relative) rest))]
       [(and (file-exists? current) (not (file-or-directory-hidden? current))) 
-       ; directory-hidden should work for files as well (can rename if so)
         (cons (list (some-system-path->string relative) #f modified) rest)]
       [else rest]))
     '() (directory-list start-path)))
