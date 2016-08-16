@@ -1170,7 +1170,6 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
 
   char *ofile;
   ofile = strdup(path[path.size()-1].c_str());
-  //ofile = strcpy(ofile, path[path.size()-1].c_str());
   seg = strtok_r(ofile, ".", &saveptr);
   std::vector<std::string> file;
   do {
@@ -1185,37 +1184,37 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.insert(path.begin(), preprocessor->question_dir);
   path.insert(path.begin(), preprocessor->project_dir);
 
+  // attempt question folder .c file
   file.pop_back();
   file.push_back("c");
   path.pop_back();
   path.push_back(join(file, '.'));
   std::string attempt = join(path, '/');
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
+  // attempt question folder .o file
   file.pop_back();
   file.push_back("o");
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
+  // attempt common folder .c file
   file.pop_back();
   file.push_back("c");
   path.pop_back();
   path.push_back(join(file, '.'));
   path[1] = "common";
   attempt = join(path, '/');
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
+  // attempt common folder .o file
   file.pop_back();
   file.push_back("o");
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
   return "";

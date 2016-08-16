@@ -55,15 +55,6 @@
                 (seashell_preprocessor_get_diagnostic_line pp k)
                 (seashell_preprocessor_get_diagnostic_column pp k)
                 (seashell_preprocessor_get_diagnostic_message pp k))))))
-          ;'()))
-          ;(make-hash (build-list (seashell_preprocessor_get_include_count pp)
-          ;  (lambda ([n : Index]) (build-list (seashell_preprocessor_get_diagnostic_count pp n)
-          ;    (lambda ([k : Index]) (seashell_diagnostic
-          ;         (seashell_preprocessor_get_diagnostic_error pp n k)
-          ;         (seashell_preprocessor_get_diagnostic_file pp n k)
-          ;         (seashell_preprocessor_get_diagnostic_line pp n k)
-          ;         (seashell_preprocessor_get_diagnostic_column pp n k)
-          ;         (seashell_preprocessor_get_diagnostic_message pp n k)))))))))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
