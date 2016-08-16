@@ -42,12 +42,19 @@
            seashell_compiler_object_arch
            seashell_compiler_object_os
            seashell_compiler-ptr?
+
            seashell_preprocessor_make
            seashell_preprocessor_free
            seashell_preprocessor_set_main_file
            seashell_preprocessor_get_include_count
            seashell_preprocessor_get_include
            seashell_preprocessor_run
+           seashell_preprocessor_get_diagnostic_count
+           seashell_preprocessor_get_diagnostic_error
+           seashell_preprocessor_get_diagnostic_file
+           seashell_preprocessor_get_diagnostic_line
+           seashell_preprocessor_get_diagnostic_column
+           seashell_preprocessor_get_diagnostic_message
            seashell_preprocessor-ptr?)
 
   (define-ffi-definer define-clang
@@ -110,7 +117,19 @@
   (define-clang seashell_preprocessor_get_include
                 (_fun _seashell_preprocessor-ptr _int -> _string/utf-8))
   (define-clang seashell_preprocessor_run
-                (_fun _seashell_preprocessor-ptr -> _int)))
+                (_fun _seashell_preprocessor-ptr -> _int))
+  (define-clang seashell_preprocessor_get_diagnostic_count
+                (_fun _seashell_preprocessor-ptr -> _int))
+  (define-clang seashell_preprocessor_get_diagnostic_error
+                (_fun _seashell_preprocessor-ptr _int -> _bool))
+  (define-clang seashell_preprocessor_get_diagnostic_file
+                (_fun _seashell_preprocessor-ptr _int -> _string))
+  (define-clang seashell_preprocessor_get_diagnostic_line
+                (_fun _seashell_preprocessor-ptr _int -> _int))
+  (define-clang seashell_preprocessor_get_diagnostic_column
+                (_fun _seashell_preprocessor-ptr _int -> _int))
+  (define-clang seashell_preprocessor_get_diagnostic_message
+                (_fun _seashell_preprocessor-ptr _int -> _string)))
 
 (require/typed (submod "." untyped)
                [#:opaque Seashell-Compiler-Ptr seashell_compiler-ptr?]
@@ -138,7 +157,13 @@
                [seashell_preprocessor_set_main_file (-> Seashell-Preprocessor-Ptr String Void)]
                [seashell_preprocessor_get_include_count (-> Seashell-Preprocessor-Ptr Index)]
                [seashell_preprocessor_get_include (-> Seashell-Preprocessor-Ptr Nonnegative-Integer String)]
-               [seashell_preprocessor_run (-> Seashell-Preprocessor-Ptr Integer)])
+               [seashell_preprocessor_run (-> Seashell-Preprocessor-Ptr Integer)]
+               [seashell_preprocessor_get_diagnostic_count (-> Seashell-Preprocessor-Ptr Nonnegative-Integer)]
+               [seashell_preprocessor_get_diagnostic_error (-> Seashell-Preprocessor-Ptr Nonnegative-Integer Boolean)]
+               [seashell_preprocessor_get_diagnostic_file (-> Seashell-Preprocessor-Ptr Nonnegative-Integer String)]
+               [seashell_preprocessor_get_diagnostic_line (-> Seashell-Preprocessor-Ptr Nonnegative-Integer Index)]
+               [seashell_preprocessor_get_diagnostic_column (-> Seashell-Preprocessor-Ptr Nonnegative-Integer Index)]
+               [seashell_preprocessor_get_diagnostic_message (-> Seashell-Preprocessor-Ptr Nonnegative-Integer String)])
 
   (provide seashell_compiler_free
            seashell_compiler_make
@@ -165,4 +190,10 @@
            seashell_preprocessor_get_include_count
            seashell_preprocessor_get_include
            seashell_preprocessor_run
+           seashell_preprocessor_get_diagnostic_count
+           seashell_preprocessor_get_diagnostic_error
+           seashell_preprocessor_get_diagnostic_file
+           seashell_preprocessor_get_diagnostic_line
+           seashell_preprocessor_get_diagnostic_column
+           seashell_preprocessor_get_diagnostic_message
            seashell_preprocessor-ptr?)

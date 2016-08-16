@@ -39,14 +39,31 @@
 
 ;; (seashell-resolve-dependencies file)
 ;; Invokes the internal preprocessor to resolve dependencies
-(: seashell-resolve-dependencies (-> Path (Listof Path)))
+(: seashell-resolve-dependencies (-> Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
 (define (seashell-resolve-dependencies file)
   (define pp (seashell_preprocessor_make))
   (seashell_preprocessor_set_main_file pp (some-system-path->string file))
   (seashell_preprocessor_run pp)
   (define srcs (build-list (seashell_preprocessor_get_include_count pp)
     (lambda ([n : Nonnegative-Integer]) (seashell_preprocessor_get_include pp n))))
-  (map string->path srcs))
+  (values (map string->path srcs)
+          (build-list (seashell_preprocessor_get_diagnostic_count pp)
+            (lambda ([k : Nonnegative-Integer])
+              (seashell-diagnostic
+                (seashell_preprocessor_get_diagnostic_error pp k)
+                (seashell_preprocessor_get_diagnostic_file pp k)
+                (seashell_preprocessor_get_diagnostic_line pp k)
+                (seashell_preprocessor_get_diagnostic_column pp k)
+                (seashell_preprocessor_get_diagnostic_message pp k))))))
+          ;'()))
+          ;(make-hash (build-list (seashell_preprocessor_get_include_count pp)
+          ;  (lambda ([n : Index]) (build-list (seashell_preprocessor_get_diagnostic_count pp n)
+          ;    (lambda ([k : Index]) (seashell_diagnostic
+          ;         (seashell_preprocessor_get_diagnostic_error pp n k)
+          ;         (seashell_preprocessor_get_diagnostic_file pp n k)
+          ;         (seashell_preprocessor_get_diagnostic_line pp n k)
+          ;         (seashell_preprocessor_get_diagnostic_column pp n k)
+          ;         (seashell_preprocessor_get_diagnostic_message pp n k)))))))))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -71,7 +88,14 @@
 (: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
 (define (seashell-compile-files user-cflags user-ldflags resolve-sources extra-objects)
-  (define raw (remove-duplicates (append* (cons extra-objects (map seashell-resolve-dependencies resolve-sources)))))
+
+  (define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
+    (define-values (srcs msgs) (seashell-resolve-dependencies path))
+    (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
+    (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
+    resolve-sources))
+
+  (define raw (remove-duplicates (append extra-objects (car pp-result))))
   (define sources (filter
                     (lambda ([file : Path])
                       (equal? (filename-extension file) #"c")) raw))
@@ -115,17 +139,18 @@
                               (hash-ref table (car message) (lambda () '()))))
               table))
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
-        (list*
-         `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
-         (for*/list : (Listof (Pair Path Seashell-Diagnostic))
-                    ([i : Index #{(in-range (length sources)) :: (Sequenceof Index)}]
-                     [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
-           `(,(vector-ref file-vec i) .
-                                      ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
-                                                            (seashell_compiler_get_diagnostic_file compiler i j)
-                                                            (seashell_compiler_get_diagnostic_line compiler i j)
-                                                            (seashell_compiler_get_diagnostic_column compiler i j)
-                                                            (seashell_compiler_get_diagnostic_message compiler i j)))))))
+        (append (cdr pp-result)
+          (list*
+           `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
+           (for*/list : (Listof (Pair Path Seashell-Diagnostic))
+                      ([i : Index #{(in-range (length sources)) :: (Sequenceof Index)}]
+                       [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
+             `(,(vector-ref file-vec i) .
+                                        ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
+                                                              (seashell_compiler_get_diagnostic_file compiler i j)
+                                                              (seashell_compiler_get_diagnostic_line compiler i j)
+                                                              (seashell_compiler_get_diagnostic_column compiler i j)
+                                                              (seashell_compiler_get_diagnostic_message compiler i j))))))))
      ;; Grab the object - note that it may not exist yet.
      (define object (seashell_compiler_get_object compiler))
      (cond

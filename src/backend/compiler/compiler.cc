@@ -1099,6 +1099,48 @@ extern "C" int seashell_preprocessor_run(struct seashell_preprocessor* preproces
 #endif
 }
 
+extern "C" int seashell_preprocessor_get_diagnostic_count(struct seashell_preprocessor *preprocessor) {
+  return preprocessor->messages.size();
+}
+
+extern "C" bool seashell_preprocessor_get_diagnostic_error(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return false;
+  return preprocessor->messages[k].error;
+}
+
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+#else
+std::string seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+#endif
+  if(preprocessor->messages.size() <= k)
+    return NULL;
+  return preprocessor->messages[k].file.c_str();
+}
+
+extern "C" int seashell_preprocessor_get_diagnostic_line(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return 0;
+  return preprocessor->messages[k].line;
+}
+
+extern "C" int seashell_preprocessor_get_diagnostic_column(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return 0;
+  return preprocessor->messages[k].col;
+}
+
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+#else
+std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+#endif
+  if(preprocessor->messages.size() <= k)
+    return NULL;
+  return preprocessor->messages[k].mesg.c_str();
+}
+
 static std::string join(std::vector<std::string> vec, char a) {
   std::string res = "";
   for(std::vector<std::string>::iterator it = vec.begin(); it != vec.end(); it++) {
@@ -1117,7 +1159,6 @@ static std::string join(std::vector<std::string> vec, char a) {
 static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname,
     std::string currentfile, uint line, uint col) {
 
-  fprintf(stderr, "resolve_include invoked\n");
   char *orig;
   orig = strcpy(orig, fname.c_str());
   char *saveptr;
@@ -1126,27 +1167,19 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   do {
     path.push_back(seg);
   } while(seg = strtok_r(NULL, "/", &saveptr));
-  fprintf(stderr, "first split done\n");
-  for(std::vector<std::string>::iterator it = path.begin(); it != path.end(); it++) {
-    fprintf(stderr, "%s\n", it->c_str());
-  }
 
   char *ofile;
   ofile = strdup(path[path.size()-1].c_str());
   //ofile = strcpy(ofile, path[path.size()-1].c_str());
-  fprintf(stderr, "strcpy completed; %s\n", ofile);
   seg = strtok_r(ofile, ".", &saveptr);
-  fprintf(stderr, "initial strtok_r completed\n");
   std::vector<std::string> file;
   do {
-    fprintf(stderr, "iter: %s\n", seg);
     file.push_back(seg);
   } while(seg = strtok_r(NULL, ".", &saveptr));
-  fprintf(stderr, "second split done\n");
 
   // check for include of non .h files
   if(file[file.size()-1] != "h") {
-    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead including file " + fname, line, col));
+    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found " + fname, line, col));
   }
 
   path.insert(path.begin(), preprocessor->question_dir);
@@ -1157,7 +1190,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   std::string attempt = join(path, '/');
-  fprintf(stderr, "Trying %s\n", attempt.c_str());
+  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
   file.pop_back();
@@ -1165,7 +1198,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  fprintf(stderr, "Trying %s\n", attempt.c_str());
+  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
   file.pop_back();
@@ -1174,7 +1207,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.push_back(join(file, '.'));
   path[1] = "common";
   attempt = join(path, '/');
-  fprintf(stderr, "Trying %s\n", attempt.c_str());
+  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
   file.pop_back();
@@ -1182,7 +1215,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  fprintf(stderr, "Trying %s\n", attempt.c_str());
+  //fprintf(stderr, "Trying %s\n", attempt.c_str());
   if(std::ifstream(attempt)) return attempt;
 
   return "";
@@ -1207,20 +1240,22 @@ public:
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
-      //if(iter==3) exit(1);
       std::string path = FileName.str();
       std::string result = resolve_include(_pp, path, _sm.getFilename(HashLoc),
           _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc));
       if(result.length()) {
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
-        if(res.second) {
-          fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
-          _wl.push_back(result);
+        if(result.length() >= 2 && result[result.length()-1] == 'c' && result[result.length()-2] == '.') {
+          if(res.second) {
+            fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
+            _wl.push_back(result);
+          }
         }
       }
       else {
-        fprintf(stderr, "Could not find matching source for include of \"%s\"\n", path.c_str());
-        // TODO possibly error out here
+        _pp->messages.push_back(seashell_diag(true, _sm.getFilename(HashLoc),
+            "No source file found matching included " + FileName.str(),
+            _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc)));
       }
     }
   }
