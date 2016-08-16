@@ -1178,7 +1178,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
 
   // check for include of non .h files
   if(file[file.size()-1] != "h") {
-    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found " + fname, line, col));
+    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
   }
 
   path.insert(path.begin(), preprocessor->question_dir);
@@ -1252,8 +1252,8 @@ public:
         }
       }
       else {
-        _pp->messages.push_back(seashell_diag(true, _sm.getFilename(HashLoc),
-            "No source file found matching included " + FileName.str(),
+        _pp->messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
+            "No source file found matching included '" + FileName.str() + "'",
             _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc)));
       }
     }
