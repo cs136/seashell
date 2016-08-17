@@ -31,6 +31,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <poll.h>
@@ -1141,6 +1142,13 @@ std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preproc
   return preprocessor->messages[k].mesg.c_str();
 }
 
+static bool fexists(std::string fname) {
+  struct stat buf;
+  int ret = stat(fname.c_str(), &buf);
+  if(ret) return false;
+  return S_ISREG(buf.st_mode);
+}
+
 static std::string join(std::vector<std::string> vec, char a) {
   std::string res = "";
   for(std::vector<std::string>::iterator it = vec.begin(); it != vec.end(); it++) {
@@ -1160,7 +1168,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
     std::string currentfile, uint line, uint col) {
 
   char *orig;
-  orig = strcpy(orig, fname.c_str());
+  orig = strdup(fname.c_str());
   char *saveptr;
   char *seg = strtok_r(orig, "/", &saveptr);
   std::vector<std::string> path;
@@ -1190,7 +1198,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   std::string attempt = join(path, '/');
-  if(std::ifstream(attempt)) return attempt;
+  if(fexists(attempt)) return attempt;
 
   // attempt question folder .o file
   file.pop_back();
@@ -1198,7 +1206,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  if(std::ifstream(attempt)) return attempt;
+  if(fexists(attempt)) return attempt;
 
   // attempt common folder .c file
   file.pop_back();
@@ -1207,7 +1215,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.push_back(join(file, '.'));
   path[1] = "common";
   attempt = join(path, '/');
-  if(std::ifstream(attempt)) return attempt;
+  if(fexists(attempt)) return attempt;
 
   // attempt common folder .o file
   file.pop_back();
@@ -1215,7 +1223,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   attempt = join(path, '/');
-  if(std::ifstream(attempt)) return attempt;
+  if(fexists(attempt)) return attempt;
 
   return "";
 }
