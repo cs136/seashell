@@ -278,6 +278,10 @@
 
       self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects, settings) {
         return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, self.database.settings, function () {
+          Dexie.currentTransaction.on('abort', function(ev) {
+            console.log("applyChanges transaction aborted", ev);
+            throw ev.target.error;
+          });
           newProjects.forEach(function (project) {
             self.newProject(project);
           });
@@ -302,10 +306,6 @@
             self.saveSettings(JSON.parse(settings));
           }
           self.database.changelog.clear();
-          Dexie.currentTransaction.on('abort', function(ev) {
-            console.log("applyChanges transaction aborted", ev);
-            throw ev.target.error;
-          });
         });
       };
 
