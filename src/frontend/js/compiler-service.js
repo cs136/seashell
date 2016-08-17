@@ -53,7 +53,7 @@ angular.module('seashell-compiler', [])
           },
           kill: function () {
             runner.terminate();
-            io_cb(null, {'type': done, status: 255});
+            io_cb(null, {'type': 'done', status: 255});
           },
           sendEOF: function () {
             runner.postMessage(null);

@@ -27,7 +27,8 @@
         self.database.version(1).stores({
           changelog: '++id',
           files: '[project+file], project',
-          projects: 'name'
+          projects: 'name',
+          settings: 'name'
         });
         /*
          * Save a file to local storage.
@@ -44,7 +45,7 @@
             if (checksum !== undefined) {
               return self.database.files.update(key,
                   {contents: contents, history: history, checksum: checksum,
-                   last_modified: new Date()})
+                   last_modified: Date.now()})
                 .then(function (result) {
                   if (!result) {
                     throw sprintf("Storage.writeFile: file %s/%s not found!", name, file);
@@ -60,7 +61,7 @@
                                                contents: contents});
                   self.database.files.update(key,
                     {contents: contents, history: history, checksum: offline_checksum,
-                     last_modified: new Date()});
+                     last_modified: Date.now()});
                   return offline_checksum;
                 });
             }
@@ -94,7 +95,7 @@
         self.renameFile = function (name, file, new_file, checksum) {
           var key = [name, file];
           return self.database.transaction('rw', self.database.files, self.database.changelog, function () {
-            return self.database.files.get({project: name, file: file})
+            return self.database.files.get(key)
               .then(function (result) {
                 self.deleteFile(name, file, checksum);
                 result.file = new_file;
@@ -130,12 +131,65 @@
           });
         };
 
+        self.getSettings = function() {
+          return self.database.settings.get("settings").then(function(settings) {
+            if(settings)
+              return settings.values;
+            return {};
+          });
+        };
+
+        self.saveSettings = function(settings) {
+          var data = {
+            name: "settings",
+            values: settings,
+            modified: (new Date()).getTime()
+          };
+          return self.database.settings.put(data);
+        };
+
+        self.getMostRecentlyUsed = function(project, dir) {
+          return self.database.transaction('rw', self.database.projects, function() {
+            return self.database.projects.get(project).then(function(current) {
+              if(dir) {
+                if(current.settings.most_recently_used && current.settings.most_recently_used[dir])
+                  return current.settings.most_recently_used[dir];
+                return false;
+              }
+              return current.settings.most_recently_used_dir;
+            });
+          });
+        };
+
+        self.updateMostRecentlyUsed = function(project, dir, pred, data) {
+          return self.database.transaction('rw', self.database.projects, function() {
+            self.database.projects.get(project).then(function(current) {
+              if(dir) {
+                if(!current.settings.most_recently_used)
+                  current.settings.most_recently_used = {};
+                current.settings.most_recently_used[dir] = data;
+              }
+              else {
+                current.settings.most_recently_used_dir = data;
+              }
+              return self.database.projects.put(current);
+            });
+          });
+        };
+
         self.listProject = function (name) {
-          return self.database.files.where('project').equals(name).toArray(
-          function (files) {
-            return files.map(
-              function (file) {
-                return [file.file, false, file.last_modified.getUTCMilliseconds(), file.checksum];
+          // this is called when we open a project, so we will update the last modified time here as well
+          return self.database.transaction('rw', self.database.projects, self.database.files, function() {
+            self.database.projects.get(name).then(function(current) {
+              current.last_modified = Date.now();
+              return self.database.projects.put(current);
+            });
+            return self.database.files.where('project').equals(name).toArray(
+              function (files) {
+                return files.map(
+                  function (file) {
+                    return [file.file, false, file.last_modified, file.checksum];
+                  });
               });
           });
       };
@@ -167,7 +221,7 @@
             return self.database.files.add({project: name, file: file,
                                             contents: contents, history: "",
                                             checksum: checksum,
-                                            last_modified: new Date()})
+                                            last_modified: Date.now()})
               .then(function () {
                 return checksum;
               });
@@ -177,14 +231,14 @@
                                          contents: contents});
             self.database.files.add({project: name, file: file,
                             contents: contents, history: "", checksum: checksum,
-                            last_modified: new Date()});
+                            last_modified: Date.now()});
             return checksum;
           }
         });
       };
 
       self.newProject = function (name) {
-        return self.database.projects.add({name: name, settings: {runner_files: {}}, last_modified: new Date()});
+        return self.database.projects.add({name: name, settings: {runner_files: {}}, last_modified: Date.now()});
       };
 
       self.deleteProject = function (name, online) {
@@ -199,7 +253,7 @@
       self.getProjects = function () {
         return self.database.projects.toCollection().toArray(function (projects) {
           return projects.map(function (project) {
-            return [project.name, project.last_modified.getUTCMilliseconds()];
+            return [project.name, project.last_modified];
           });
         });
       };
