@@ -440,6 +440,7 @@ angular.module('frontend-app')
 
             if(!warn_only && res[4].endsWith("undefined reference to `main'")) {
                 main_undefined = true;
+                self.console.write("Cannot find the 'main' function.\n");
             }
           });
         }
