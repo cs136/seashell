@@ -430,9 +430,9 @@ angular.module('frontend-app')
             // If students forget to define a main function, clang spits out a bunch of
             // error messages that aren't informative and confuses students. Don't
             // print these useless error messages.
-            var main_undefined_spam = main_undefined
-                                      && (res[4].endsWith("In function `_start':")
-                                          || /relocation \d+ has invalid symbol index \d+$/.test(res[4]));
+            var main_undefined_spam = main_undefined &&
+                                      (res[4].endsWith("In function `_start':") ||
+                                         /relocation \d+ has invalid symbol index \d+$/.test(res[4]));
 
             if(!main_undefined_spam) {
               self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
