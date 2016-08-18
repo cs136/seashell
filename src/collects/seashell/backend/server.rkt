@@ -26,7 +26,7 @@
          seashell/log
          seashell/seashell-config
          seashell/support-native
-         seashell/overrides/ssl-unit-tcp
+         seashell/overrides/web-server-ssl
          seashell/backend/dispatch
          seashell/backend/project
          seashell/backend/http-dispatchers
@@ -77,7 +77,7 @@
               ;; but it avoids issues when the UDP server responds with a different
               ;; IP address...
               ;;
-              ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port 
+              ;; We send a 32-bit integer, and we expect the result to be that 32-bit integer XOR the target's TCP port
               (define ticket (random 4294967087))
               (define challenge (integer->integer-bytes ticket 4 #f))
               (define response (bitwise-xor ticket port))
@@ -89,7 +89,7 @@
                                               (thread
                                                 (lambda ()
                                                   (let loop ()
-                                                    (udp-receive! sock result) 
+                                                    (udp-receive! sock result)
                                                     (logf 'debug "Got ping back: ~v" result)
                                                     (unless (equal? result expected)
                                                       (loop)))))))
@@ -125,7 +125,7 @@
              (define result (read))
              (if (or (eof-object? result)
                      (not (try-and-lock-file lock-file))
-                     (not (creds-valid? 
+                     (not (creds-valid?
                             (with-handlers
                               ([exn:fail? (lambda (exn)
                                             (raise exn:creds "Invalid contents in credentials file!"))])
@@ -183,7 +183,7 @@
           (lambda ()
             (define ticket (integer-bytes->integer challenge #f))
             (define response (bitwise-xor ticket our-port))
-            (define result (integer->integer-bytes response 4 #f)) 
+            (define result (integer->integer-bytes response 4 #f))
             (logf 'debug "Ping from ~a! (~a ^ ~a -> ~a)::~v" client-host ticket our-port response result)
             (udp-send-to sock client-host client-port result)))
         (loop))))
@@ -195,69 +195,68 @@
 ;; This function is invoked directly from login-process.c
 (define (backend-main)
   (define ssl-unit #f)
-  
+
   (with-handlers
-      ([exn:fail? 
+      ([exn:fail?
         (lambda (exn)
           (fprintf (current-error-port) "Exception raised in startup code: ~a~n" (exn-message exn))
           (exit-from-seashell 2))])
     ;; Load configuration.
     (config-refresh!)
-    
+
     ;; Install SSL keys.
     (set! ssl-unit
-          (make-ssl-tcp@
+          (pfs:make-ssl-connect@
            (read-config 'ssl-cert)
-           (read-config 'ssl-key)
-           #f #f #f #f #f))
-    
+           (read-config 'ssl-key)))
+
     ;; Dropping permissions.
     (unless (= 0 (seashell_drop_permissions))
       (fprintf (current-error-port) "Failed to drop permissions!  Exiting...~n")
       (exit-from-seashell 1))
-    
+
     ;; Directory setup.
     (init-environment)
     (init-projects)
-    
+
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
                                           #:exists 'append))
     ;; Note: tunnel.c does not loop until EOF on stderr, so it's OK to leave the old file descriptor
     ;;  open.
-    
+
     ;; Unbuffered mode for output ports.
     (file-stream-buffer-mode (current-output-port) 'none)
     (file-stream-buffer-mode (current-error-port) 'none)
-    
+
     ;; Install umask.
     ;; NOTE: This will not affect the permissions set for the ~/.seashell/{projects,runtime-files} directories.
     (seashell_set_umask)
-    
+
     ;; Logging setup.
     (standard-logger-setup))
-  
+
   (with-handlers
-      ([exn:fail? 
+      ([exn:fail?
         (lambda (exn)
           (logf 'error "Exception raised in Seashell: ~a~n" (exn-message exn))
           (exit-from-seashell 3))])
-    
+
     (logf 'info "Starting up.")
-    
+
     ;; If another instance of the server is running, send credentials for that instance and exit-from-seashell
     (define credentials-file (build-path (read-config 'seashell) (read-config 'seashell-creds-name)))
     (define credentials-port #f)
     (define shutdown-server void)
     (define shutdown-listener void)
-    
+
     ;; Note: (exit-from-seashell ...) does not unwind the continuation stack.
     (dynamic-wind
      void
      (lambda ()
       (call-with-continuation-barrier
        (lambda ()
-        (call-with-limits 
+        (call-with-limits
          #f (read-config 'server-memory-limit)
          (lambda ()
           ;; Install credentials or quit.
@@ -271,7 +270,7 @@
                    (lambda ()
                     ;; Try to read the file...
                     (with-handlers
-                        ([exn:fail:filesystem? 
+                        ([exn:fail:filesystem?
                           (lambda (exn)
                             (cond
                               ;; Case 1: File does not exist.
@@ -295,15 +294,15 @@
                      ([exn:fail:filesystem? (lambda (exn) (abort-current-continuation repeat))])
                      (open-output-file credentials-file #:exists 'must-truncate)))
                    repeat
-                   (lambda () 
+                   (lambda ()
                     (sleep (expt 2 tries))
                     (loop (add1 tries))))))
-          
+
           ;; Global dispatcher.
           (define seashell-dispatch
             (sequence:make
              request-logging-dispatcher
-             (filter:make #rx"^/$" (make-websocket-dispatcher 
+             (filter:make #rx"^/$" (make-websocket-dispatcher
                                     (lambda (conn state)
                                       (conn-dispatch keepalive-sema conn state))
                                     #:conn-headers (lambda (method url headers)
@@ -318,46 +317,46 @@
                 (serve
                  #:dispatch seashell-dispatch
                  #:port 0
-                 #:tcp@ ssl-unit
+                 #:dispatch-server-connect@ ssl-unit
                  #:listen-ip #f
                  #:confirmation-channel conf-chan))
           (define start-result (async-channel-get conf-chan))
           (when (exn? start-result)
             (raise start-result))
-          
+
           ;; Start the UDP ping listener.
           (define-values (ping-port udp-custodian)
             (make-udp-ping-listener start-result))
           (set! shutdown-listener
                 (lambda () (custodian-shutdown-all udp-custodian)))
-          
+
           ;; Get current username
           (define username (or (seashell_get_username) "unknown_user"))
-          
+
           ;; Generate and send credentials, write lock file
           (define host (read))
           (logf 'debug "Read hostname '~a' from login server." host)
           (define key (seashell-crypt-make-key))
           (install-server-key! key)
-          (define creds 
+          (define creds
             `#hash((key . ,(seashell-crypt-key->client key))
                    (host . ,host)
                    (port . ,start-result)
                    (pid . ,(getpid))
                    (ping-port . ,ping-port)
                    (user . ,username)))
-          
+
           ;; Write credentials back to file and to tunnel.
           (write (serialize creds))
           (write (serialize creds) credentials-port)
-          
+
           ;; Detach from backend, and close the credentials port.
           (close-output-port credentials-port)
           (detach)
-          
+
           ;; Write out the listening port
           (logf 'info "Listening on port ~a." start-result)
-          
+
           ;; Loop and serve requests.
           (with-handlers
               ([exn:break? (lambda(e) (logf 'info "Terminating on break."))])
@@ -378,6 +377,6 @@
       ;; Delete lock file - but suppress any errors.
       (with-handlers ([exn:fail:filesystem? (lambda (exn) (void))])
         (delete-file credentials-file))))
-    
-    (logf 'info "Graceful shutdown.") 
+
+    (logf 'info "Graceful shutdown.")
     (exit-from-seashell 0)))

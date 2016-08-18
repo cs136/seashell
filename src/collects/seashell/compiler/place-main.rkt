@@ -50,21 +50,28 @@
     ;; These two things should not fail.
     (config-refresh!)
     (standard-logger-setup)
-    (let loop : Any ()
-      (with-handlers
-        ([exn:fail?
-          (lambda ([exn : exn])
-            (logf 'error "Compiler place got error: ~a~n" (exn-message exn))
-            (place-channel-put channel (list #t #f (exn-message exn))))])
-        (match-define
-          (list write-end cflags ldflags sources objects) (place-channel-get channel))
-        (seashell-compiler-place/thread
-          (cast write-end Place-Channel)
-          (cast cflags (Listof String))
-          (cast ldflags (Listof String))
-          (cast sources (Listof Path))
-          (cast objects (Listof Path))))
-      (loop))))
+    (let/ec quit : Any
+      (let loop : Any ()
+        (with-handlers
+          ([exn:fail?
+            (lambda ([exn : exn])
+              (logf 'error "Compiler place got error: ~a~n" (exn-message exn))
+              (place-channel-put channel (list #t #f (exn-message exn))))])
+          (match (sync/timeout (read-config-nonnegative-real 'compiler-ttl) channel)
+            [#f
+             (logf 'info "Shutting down compiler place due to TTL expiry.")
+             (quit #f)]
+            ['quit
+             (logf 'info "Shutting down compiler place due to request.")
+             (quit #f)]
+            [(list write-end cflags ldflags sources objects)
+             (seashell-compiler-place/thread
+               (cast write-end Place-Channel)
+               (cast cflags (Listof String))
+               (cast ldflags (Listof String))
+               (cast sources (Listof Path))
+               (cast objects (Listof Path)))])
+          (loop))))))
 
 
 (require (submod "." typed-place))

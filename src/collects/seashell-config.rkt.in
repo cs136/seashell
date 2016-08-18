@@ -242,6 +242,9 @@
       (cons 'linker-flag-prefix            "-Wl,")
       ;; Default logfile path for logging login issues.
       (cons 'seashell-login-logfile        #f)
+      ;; Default TTL for the compiler place.
+      ;; This needs to be long enough for a file to compile.
+      (cons 'compiler-ttl                60)
       )))
   config-hash)
 
@@ -295,7 +298,7 @@
   (: read-config-string (-> Symbol String))
   (define (read-config-string symbol)
     (define result (read-config symbol))
-    (cond [(path? result) (path->string result)]
+    (cond [(path? result) (some-system-path->string result)]
           [else (cast result String)]))
   (: read-config-strings (-> Symbol (Listof String)))
   (define (read-config-strings symbol)

@@ -159,7 +159,7 @@ angular.module('frontend-app')
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
       function ($modal, errors) {
-        return function (project, question, common_files, notify) {
+        return function (project, question, question_files, common_files, notify) {
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/new-file-template.html",
@@ -169,6 +169,7 @@ angular.module('frontend-app')
               $scope.new_file_folder = question;
               $scope.new_file_upload = [];
               $scope.question = question;
+              $scope.question_files = question_files;
               $scope.common_files = common_files;
               $scope.inputError = false;
               $scope.normalize = false;
@@ -185,16 +186,16 @@ angular.module('frontend-app')
                   return false;
                 // case (2)
                 } else if ($scope.new_file_upload.length > 0 && $scope.new_file_name.length === 0) {
-                  // check if the filename exists in the "common" directory
+                  // check if the filename exists in the "common" or question directory
                   var conflicts = _.map(_.filter($scope.new_file_upload, function(uploadFile) {
-                     return common_files.some(function(commonFileGroup) {
-                        return commonFileGroup.files.some(function(name) {return name === uploadFile.name;  });
+                     return common_files.concat(question_files).some(function(aFileGroup) {
+                        return aFileGroup.files.some(function(name) {console.log(name);return name === uploadFile.name;  });
                      });
                   }), function(uploadFile) {
                      return uploadFile.name;
                   });
                   if (conflicts.length > 0) {
-                     $scope.inputError = 'Please avoid uploading a file with a name that exists in the "common/" directory. Could not upload: "' + conflicts.join('", "') + '".';
+                     $scope.inputError = 'Please avoid uploading a file with a name that exists in the "common/" or question directory. Could not upload: "' + conflicts.join('", "') + '".';
                      return false;
                   }
                   // Check passes. For each file, upload.
@@ -228,10 +229,10 @@ angular.module('frontend-app')
                 } else if ($scope.new_file_upload.length === 0 && $scope.new_file_name.length > 0) {
                   var filename = $scope.new_file_name;
                   // Check if the filename exists in the "common" directory
-                  if (common_files.some(function(commonFileGroup) {
-                        return commonFileGroup.files.some(function(name) {return name === filename;});
+                  if (common_files.concat(question_files).some(function(aFileGroup) {
+                        return aFileGroup.files.some(function(name) {return name === filename;});
                      })) {
-                     $scope.inputError = 'Please avoid using a filename that exists in the "common/" directory. Could not create: "' + filename + '".';
+                     $scope.inputError = 'Please avoid using a filename that exists in the "common/" or question directory. Could not create: "' + filename + '".';
                      return false;
                   }
                   // Disallow creating a file outside the question 

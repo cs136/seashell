@@ -63,6 +63,7 @@
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
             <span ng-repeat="group in editView.common_files">
+                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
               <a ng-repeat-start="file in group.files" ng-if="$first"
                  ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
                  ui-sref-active='file-link-active'
