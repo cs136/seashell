@@ -115,7 +115,7 @@
         self.getFileToRun = function (name, question) {
           return self.database.projects.get(name)
             .then(function (project) {
-              return project.settings.runner_files[question];
+              return project.settings[question+"_runner_file"];
             });
         };
 
@@ -125,17 +125,19 @@
           }
           return self.database.transaction('rw', self.database.projects, function () {
             self.database.projects.get(name).then(function (current) {
-              current.settings.runner_files[question] = folder === "question" ? sprintf("%s/%s", question, file) : sprintf("%s/%s", folder, file);
+              current.settings[question+"_runner_file"] = folder === "question" ? sprintf("%s/%s", question, file) : sprintf("%s/%s", folder, file);
               return self.database.projects.put(current);
             });
           });
         };
 
-        self.getSettings = function() {
+        self.getSettings = function(get_all) {
           return self.database.settings.get("settings").then(function(settings) {
-            if(settings)
+            if(settings && get_all)
+              return settings;
+            else if(settings)
               return settings.values;
-            return {};
+            return get_all ? {values:{}, modified: 0, name: "settings"} : {};
           });
         };
 
@@ -148,29 +150,28 @@
           return self.database.settings.put(data);
         };
 
-        self.getMostRecentlyUsed = function(project, dir) {
+        self.getMostRecentlyUsed = function(project, question) {
           return self.database.transaction('rw', self.database.projects, function() {
             return self.database.projects.get(project).then(function(current) {
-              if(dir) {
-                if(current.settings.most_recently_used && current.settings.most_recently_used[dir])
-                  return current.settings.most_recently_used[dir];
+              if(question) {
+                if(current.settings[question+"_most_recently_used"])
+                  return current.settings[question+"_most_recently_used"];
                 return false;
               }
-              return current.settings.most_recently_used_dir;
+              return current.settings.most_recently_used ?
+                current.settings.most_recently_used : false;
             });
           });
         };
 
-        self.updateMostRecentlyUsed = function(project, dir, pred, data) {
+        self.updateMostRecentlyUsed = function(project, question, file) {
           return self.database.transaction('rw', self.database.projects, function() {
             self.database.projects.get(project).then(function(current) {
-              if(dir) {
-                if(!current.settings.most_recently_used)
-                  current.settings.most_recently_used = {};
-                current.settings.most_recently_used[dir] = data;
+              if(question) {
+                current.settings[question+"_most_recently_used"] = file;
               }
               else {
-                current.settings.most_recently_used_dir = data;
+                current.settings.most_recently_used = file;
               }
               return self.database.projects.put(current);
             });
@@ -238,7 +239,7 @@
       };
 
       self.newProject = function (name) {
-        return self.database.projects.add({name: name, settings: {runner_files: {}}, last_modified: Date.now()});
+        return self.database.projects.add({name: name, settings: {}, last_modified: Date.now()});
       };
 
       self.deleteProject = function (name, online) {
@@ -250,6 +251,23 @@
         });
       };
 
+      // expects a project object in the form described in collects/seashell/backend/offline.rkt
+      self.updateProject = function(project) {
+        project.settings = JSON.parse(project.settings);
+        return self.database.transaction('rw', self.database.projects, function() {
+          self.database.projects.put(project);
+        });
+      };
+
+      self.getProjectsForSync = function() {
+        return self.database.projects.toArray(function(projects) {
+          return projects.map(function(project) {
+            project.settings = JSON.stringify(project.settings);
+            return project;
+          });
+        });
+      };
+
       self.getProjects = function () {
         return self.database.projects.toCollection().toArray(function (projects) {
           return projects.map(function (project) {
@@ -258,10 +276,12 @@
         });
       };
 
-      self.applyChanges = function (changes, newProjects, deletedProjects) {
-        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, function () {
-          // TODO: how to sync project settings?  Probably with last-modified-time...
-          // TODO: send back project settings with project
+      self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects, settings) {
+        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, self.database.settings, function () {
+          Dexie.currentTransaction.on('abort', function(ev) {
+            console.log("applyChanges transaction aborted", ev);
+            throw ev.target.error;
+          });
           newProjects.forEach(function (project) {
             self.newProject(project);
           });
@@ -277,8 +297,14 @@
             }
           });
           deletedProjects.forEach(function (project) {
-            self.deleteProject(name, true);
+            self.deleteProject(project, true);
           });
+          updatedProjects.forEach(function(project) {
+            self.updateProject(project);
+          });
+          if(settings) {
+            self.saveSettings(JSON.parse(settings));
+          }
           self.database.changelog.clear();
         });
       };

@@ -541,11 +541,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.mostRecentlyUsed = function (question) {
           var self = this;
-          return $q.when(ws.getMostRecentlyUsed(self.name, (question && self._getPath(question)) || false))
+          return $q.when(ws.getMostRecentlyUsed(self.name, question || false))
             .then(function (recent) {
               if (recent) {
-                if (question && self.hasFile(question, recent.part, recent.file)) {
-                  return recent;
+                if (question && self.root.find(recent)) {
+                  var arr = recent.split("/");
+                  var res = { part: "question", file: arr[arr.length-1] };
+                  if(arr.length == 3) res.part = "tests";
+                  if(arr[0] == "common") res.part = "common";
+                  return res;
                 } else if (!question && self.hasQuestion(recent)) {
                   return recent;
                 } else {
@@ -565,16 +569,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.updateMostRecentlyUsed = function (question, part, file) {
           var self = this;
-          var qpath = "";
-          if (question && part && file) {
+          if(question && part && file) {
             var path = self._getPath(question, part, file);
-            qpath = self._getPath(question);
-
-            return $q.all([ws.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question),
-                           ws.updateMostRecentlyUsed(self.name, qpath, ["fexists", path], {part: part, file: file})]);
-          } else if (question) {
-            qpath = self._getPath(question);
-            return ws.updateMostRecentlyUsed(self.name, false, ["dexists", qpath], question);
+            return $q.all([ws.updateMostRecentlyUsed(self.name, false, question),
+                           ws.updateMostRecentlyUsed(self.name, question, path)]);
+          } else if(question) {
+            return ws.updateMostRecentlyUsed(self.name, false, question);
           }
         };
 

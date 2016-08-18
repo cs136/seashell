@@ -536,18 +536,17 @@
         ('id id)
         ('type "getMostRecentlyUsed")
         ('project project)
-        ('directory directory))
+        ('question question))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(get-most-recently-used project directory)))]
+              (result . ,(get-most-recently-used project question)))]
       [(hash-table
         ('id id)
         ('type "updateMostRecentlyUsed")
         ('project project)
-        ('directory directory)
-        ('predicate predicate)
-        ('data data))
-       (update-most-recently-used project directory predicate data)
+        ('question question)
+        ('file file))
+       (update-most-recently-used project question file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -582,9 +581,10 @@
       [(hash-table
         ('id id)
         ('type "getSettings"))
+       (define-values (settings x) (read-settings))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(read-settings)))]
+              (result . ,settings))]
       [(hash-table
         ('id id)
         ('project project)
@@ -666,6 +666,8 @@
                       (result . ,(exn-message exn))))]
             [exn:fail:contract?
              (lambda (exn)
+               (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
+                     (format-stack-trace (exn-continuation-marks exn)))
                `#hash((id . ,id)
                       (success . #f)
                       (result . ,(format "Bad argument: ~a." (exn-message exn)))))]

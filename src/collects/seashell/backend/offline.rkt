@@ -32,7 +32,10 @@
 (unsafe-require/typed (submod "." untyped-helper)
                       [date-nanosecond (-> date Integer)])
 (require/typed seashell/backend/project
-               [list-projects (-> (Listof (List String Number)))]
+               [list-projects (-> (Listof (List String Integer)))]
+               ;; specifying the return type of this as other than Any seems to cause problems
+               [read-project-settings (-> String Any)]
+               [write-project-settings (-> String Settings Void)]
                [build-project-path (-> String Path)]
                [check-path (-> Path Path)]
                [is-project? (-> String Boolean)]
@@ -44,17 +47,24 @@
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
+               [read-settings (-> (Values Any Integer))]
+               [write-settings (-> JSExpr Void)]
                [#:struct (exn:project:file exn:project) ()]
                [#:struct (exn:project:file:checksum exn:project:file) ()])
 
 ;; External datatypes (to send back to the frontend)
+(json-struct off:project ([name : String]
+                          [last_modified : Integer]
+                          [settings : (Option String)]) #:transparent)
 (json-struct off:file ([project : String] [file : String] [checksum : (Option String)]) #:transparent)
 (json-struct off:change ([type : String] [file : off:file]
                          [contents : (Option String)] [checksum : (Option String)])
              #:transparent)
-(json-struct off:changes ([projects : (Listof String)]
+(json-struct off:settings ([modified : Integer] [values : String]) #:transparent)
+(json-struct off:changes ([projects : (Listof off:project)]
                           [files : (Listof off:file)]
-                          [changes : (Listof off:change)])
+                          [changes : (Listof off:change)]
+                          [settings : off:settings])
              #:transparent)
 (json-struct off:conflict ([type : String]
                            [file : off:file]
@@ -64,7 +74,9 @@
 (json-struct off:response ([conflicts : (Listof off:conflict)]
                            [changes : (Listof off:change)]
                            [newProjects : (Listof String)]
-                           [deletedProjects : (Listof String)])
+                           [deletedProjects : (Listof String)]
+                           [updatedProjects : (Listof off:project)]
+                           [settings : (Option String)])
              #:transparent)
 
 ;; Internal datatypes.
@@ -74,6 +86,8 @@
                   [file : String]
                   [contents : (Option String)]
                   [reason : Conflict-Reason]) #:transparent #:type-name Conflict-Type)
+
+(define-type Settings (HashTable Symbol (U String Number)))
 
 ;; Exception types.
 (struct exn:project:sync exn:project ())
@@ -252,6 +266,23 @@
   (match f
     [(off:file project file _) (off:file project file #f)]))
 
+(: list-off-projects (-> (Listof off:project)))
+(define (list-off-projects)
+  (map (lambda ([p : (List String Integer)])
+        (off:project (first p) (second p)
+          (jsexpr->string (cast (read-project-settings (car p)) JSExpr))))
+       (list-projects)))
+
+(: sanitize-settings (-> (HashTable Symbol Any) Settings))
+(define (sanitize-settings hsh)
+  (make-hasheq
+    (cast (filter (lambda ([pair : (Pairof Symbol Any)]) (or (string? (cdr pair)) (number? (cdr pair))))
+            (hash->list hsh)) (Listof (Pairof Symbol (U String Number))))))
+
+(: empty-settings (-> Settings))
+(define (empty-settings)
+  (hasheq))
+
 (: sync-offline-changes (-> JSExpr JSExpr))
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
@@ -260,7 +291,7 @@
   (define timestamp (make-timestamp))
   (define changeset (json->off:changes js-changeset))
   (match-define
-    (off:changes their-projects their-files their-changes)
+    (off:changes their-projects their-files their-changes their-settings)
     changeset)
   ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
   ;; before looking at projects/files.
@@ -273,11 +304,52 @@
 
   ;; Apply changes, collect conflicts.
   (define conflicts (apply-offline-changes their-changes))
+
+  ;; Sync global settings
+  (define-values (our-settings our-settings-modified) (read-settings))
+  (logf 'debug "local mod: ~a" (off:settings-modified their-settings))
+  (logf 'debug "serve mod: ~a" our-settings-modified)
+  (define result-settings
+    (if (and our-settings (< (off:settings-modified their-settings) our-settings-modified))
+        (jsexpr->string (cast our-settings JSExpr))
+        #f))
+  (unless result-settings
+    (write-settings (string->jsexpr (off:settings-values their-settings))))
+
   ;; Collect list of new projects.
-  (define our-projects (map (lambda ([l : (List String Number)]) (first l))
-                            (list-projects)))
-  (define deleted-projects (remove* our-projects their-projects))
-  (define new-projects (remove* their-projects our-projects))
+  (define our-projects (list-off-projects))
+  (define our-projects-name (map (lambda ([l : off:project]) (off:project-name l))
+                              our-projects))
+  (define their-projects-name (map off:project-name their-projects))
+  (define deleted-projects (remove* our-projects-name their-projects-name))
+  (define new-projects (remove* their-projects-name our-projects-name))
+
+  ;; Overwrite project settings that are newer in the offline storage
+  (define updated-projects
+    (map (lambda ([l : (Listof off:project)]) (first l))
+      (filter (lambda ([l : (Listof off:project)])
+                (and (= (length l) 2) (> (off:project-last_modified (first l))
+                                         (off:project-last_modified (second l)))))
+        (map (lambda ([p : off:project]) (cons p
+            (filter (lambda ([pp : off:project]) (string=? (off:project-name pp) (off:project-name p)))
+                    their-projects)))
+          our-projects))))
+
+  (define updated-projects-name (map off:project-name updated-projects))
+  (define offline-updated-projects
+    (filter (lambda ([p : off:project])
+              (not (member (off:project-name p) updated-projects-name)))
+            their-projects))
+
+  ;; update projects that were modified locally while offline
+  (map (lambda ([p : off:project])
+         (write-project-settings (off:project-name p)
+              ((lambda ([p : off:project]) (if (off:project-settings p)
+                  (sanitize-settings (cast (string->jsexpr (off:project-settings p))
+                                       (HashTable Symbol Any)))
+                  (empty-settings))) p)))
+       offline-updated-projects)
+
   ;; Resolve conflicts (add .conflict for each file)
   (define conflict-information (resolve-conflicts timestamp conflicts))
 
@@ -318,8 +390,11 @@
                            (if is-new-file? #f checksum))))
            backend-changed-files)))
   ;; Generate changes to send back.
-  (off:response->json (off:response
-                        conflict-information
-                        (append our-delete-change our-edit-changes)
-                        new-projects
-                        deleted-projects)))
+  (off:response->json
+      (off:response
+        conflict-information
+        (append our-delete-change our-edit-changes)
+        new-projects
+        deleted-projects
+        updated-projects
+        result-settings)))

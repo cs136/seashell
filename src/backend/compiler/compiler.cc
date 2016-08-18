@@ -31,6 +31,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <poll.h>
@@ -1024,8 +1025,8 @@ void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preproces
   
   preprocessor->question_dir = vec[vec.size()-2];
   preprocessor->main_file = vec[vec.size()-1];
-  preprocessor->project_dir = "/" + std::string(vec[0]);
-  for(int i=1; i<vec.size()-2; i++) {
+  //preprocessor->project_dir = "/" + std::string(vec[0]);
+  for(int i=0; i<vec.size()-2; i++) {
     preprocessor->project_dir += "/";
     preprocessor->project_dir += vec[i];
   }
@@ -1099,27 +1100,131 @@ extern "C" int seashell_preprocessor_run(struct seashell_preprocessor* preproces
 #endif
 }
 
+extern "C" int seashell_preprocessor_get_diagnostic_count(struct seashell_preprocessor *preprocessor) {
+  return preprocessor->messages.size();
+}
+
+extern "C" bool seashell_preprocessor_get_diagnostic_error(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return false;
+  return preprocessor->messages[k].error;
+}
+
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+#else
+std::string seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+#endif
+  if(preprocessor->messages.size() <= k)
+    return NULL;
+  return preprocessor->messages[k].file.c_str();
+}
+
+extern "C" int seashell_preprocessor_get_diagnostic_line(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return 0;
+  return preprocessor->messages[k].line;
+}
+
+extern "C" int seashell_preprocessor_get_diagnostic_column(struct seashell_preprocessor *preprocessor, int k) {
+  if(preprocessor->messages.size() <= k)
+    return 0;
+  return preprocessor->messages[k].col;
+}
+
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+#else
+std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+#endif
+  if(preprocessor->messages.size() <= k)
+    return NULL;
+  return preprocessor->messages[k].mesg.c_str();
+}
+
+static bool fexists(std::string fname) {
+  struct stat buf;
+  int ret = stat(fname.c_str(), &buf);
+  if(ret) return false;
+  return S_ISREG(buf.st_mode);
+}
+
+static std::string join(std::vector<std::string> vec, char a) {
+  std::string res = "";
+  for(std::vector<std::string>::iterator it = vec.begin(); it != vec.end(); it++) {
+    res += *it + a;
+  }
+  if(res.length())
+    res.resize(res.length()-1);
+  return res;
+}
+
 /*
   This function contains the logic to resolve a local include using Seashell's
     inclusion rules (ie. question folder, then common, looking at same-named
     .c and .o files)
 */
-static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname) {
-  // TODO do this better sometime in the future
-  fname[fname.length()-1]='c';
-  std::string attempt = preprocessor->project_dir + "/" +
-      preprocessor->question_dir + "/" + fname;
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
-  if(std::ifstream(attempt)) return attempt;
-  attempt[attempt.length()-1]='o';
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
-  if(std::ifstream(attempt)) return attempt;
-  attempt = preprocessor->project_dir + "/common/" + fname;
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
-  if(std::ifstream(attempt)) return attempt;
-  attempt[attempt.length()-1]='o';
-  //fprintf(stderr, "Trying %s\n", attempt.c_str());
-  if(std::ifstream(attempt)) return attempt;
+static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname,
+    std::string currentfile, uint line, uint col) {
+
+  char *orig;
+  orig = strdup(fname.c_str());
+  char *saveptr;
+  char *seg = strtok_r(orig, "/", &saveptr);
+  std::vector<std::string> path;
+  do {
+    path.push_back(seg);
+  } while(seg = strtok_r(NULL, "/", &saveptr));
+
+  char *ofile;
+  ofile = strdup(path[path.size()-1].c_str());
+  seg = strtok_r(ofile, ".", &saveptr);
+  std::vector<std::string> file;
+  do {
+    file.push_back(seg);
+  } while(seg = strtok_r(NULL, ".", &saveptr));
+
+  // check for include of non .h files
+  if(file[file.size()-1] != "h") {
+    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
+  }
+
+  path.insert(path.begin(), preprocessor->question_dir);
+  path.insert(path.begin(), preprocessor->project_dir);
+
+  // attempt question folder .c file
+  file.pop_back();
+  file.push_back("c");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  std::string attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
+  // attempt question folder .o file
+  file.pop_back();
+  file.push_back("o");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
+  // attempt common folder .c file
+  file.pop_back();
+  file.push_back("c");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  path[1] = "common";
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
+  // attempt common folder .o file
+  file.pop_back();
+  file.push_back("o");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
   return "";
 }
 
@@ -1129,10 +1234,11 @@ class PPCallbacks : public clang::PPCallbacks {
   std::set<std::string> &_deps;
   std::list<std::string> &_wl;
   struct seashell_preprocessor *_pp;
+  clang::SourceManager &_sm;
 
 public:
   static int iter;
-  PPCallbacks(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { iter++; }
+  PPCallbacks(clang::SourceManager &sm, std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _sm(sm), _deps(deps), _wl(wl), _pp(pp) { iter++; }
 
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
     clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
@@ -1141,19 +1247,22 @@ public:
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
-      //if(iter==3) exit(1);
       std::string path = FileName.str();
-      std::string result = resolve_include(_pp, path);
+      std::string result = resolve_include(_pp, path, _sm.getFilename(HashLoc),
+          _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc));
       if(result.length()) {
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
-        if(res.second) {
-          fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
-          _wl.push_back(result);
+        if(result.length() >= 2 && result[result.length()-1] == 'c' && result[result.length()-2] == '.') {
+          if(res.second) {
+            fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
+            _wl.push_back(result);
+          }
         }
       }
       else {
-        fprintf(stderr, "Could not find matching source for include of \"%s\"\n", path.c_str());
-        // TODO possibly error out here
+        _pp->messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
+            "No source file found matching included '" + FileName.str() + "'",
+            _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc)));
       }
     }
   }
@@ -1181,7 +1290,7 @@ public:
   }
 
   virtual void ExecuteAction() {
-    PPCallbacks *ppc = new PPCallbacks(_deps, _wl, _pp);
+    PPCallbacks *ppc = new PPCallbacks(_ci->getSourceManager(), _deps, _wl, _pp);
     clang::Preprocessor &pp(_ci->getPreprocessor());
     pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
     clang::Token token;

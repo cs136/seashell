@@ -38,6 +38,8 @@ std::string seashell_compiler_object_os (struct seashell_compiler* compiler);
 void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, std::string file);
 std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
 std::string seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
+std::string seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k);
+std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k);
 #else
 extern "C" const char* seashell_clang_version();
 extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file);
@@ -52,6 +54,8 @@ extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* co
 extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char *file);
 extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
 extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
+extern "C" const char *seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k);
+extern "C" const char *seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k);
 #endif
 
 extern "C" struct seashell_compiler* seashell_compiler_make (void);
@@ -68,4 +72,8 @@ extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void);
 extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor);
 extern "C" int seashell_preprocessor_get_include_count(struct seashell_preprocessor *preprocessor);
 extern "C" int seashell_preprocessor_run(struct seashell_preprocessor *preprocessor);
+extern "C" int seashell_preprocessor_get_diagnostic_count(struct seashell_preprocessor *preprocessor);
+extern "C" int seashell_preprocessor_get_diagnostic_line(struct seashell_preprocessor *preprocessor, int k);
+extern "C" int seashell_preprocessor_get_diagnostic_column(struct seashell_preprocessor *preprocessor, int k);
+extern "C" bool seashell_preprocessor_get_diagnostic_error(struct seashell_preprocessor *preprocessor, int k);
 #endif

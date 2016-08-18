@@ -349,12 +349,15 @@
 ;; Returns:
 ;;  settings - JSON object representing the user's settings, or "notexists" if
 ;;             the settings file doesn't exist
+;;  last_modified - the time the settings file was last modified (in ms), or #f
+;;                  if it does not exist
 (define/contract (read-settings)
-  (-> jsexpr?)
+  (-> (values jsexpr? (or/c #f number?)))
+  (define path (build-path (read-config 'seashell) "settings.txt"))
   (cond
-    [(file-exists? (build-path (read-config 'seashell) "settings.txt"))
-      (with-input-from-file (build-path (read-config 'seashell) "settings.txt")
-        (lambda () (read)))]
-    [else #f]))
+    [(file-exists? path)
+      (values (with-input-from-file path read)
+              (* 1000 (file-or-directory-modify-seconds path)))]
+    [else (values #f #f)]))
 
 
