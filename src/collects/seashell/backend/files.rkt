@@ -64,8 +64,8 @@
 ;;
 ;; Raises:
 ;;  exn:project:file if file exists.
-(define/contract (new-file project file contents encoding normalize?)
-  (-> (and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean? string?)
+(define/contract (new-file project file contents encoding normalize? [history #f])
+  (->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f bytes?)) string?)
   (define path (check-and-build-path (build-project-path project) file))
   (with-handlers
     [(exn:fail:filesystem?
@@ -212,7 +212,7 @@
                                                       #:exists 'must-truncate)
                                  (when history
                                    (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-                                                        (lambda () (write-bytes history))
+                                                        (lambda () (write-bytes  history))
                                                         #:exists 'replace)))
                                  ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
                                  ;(write-backup project file)

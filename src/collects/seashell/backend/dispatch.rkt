@@ -451,7 +451,7 @@
         (_ _) ...)
        (define checksum
          (write-file project file (string->bytes/utf-8 contents)
-                     (if history (string->bytes/utf-8 history) "")
+                     (if history (string->bytes/utf-8 history) #"")
                      (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
