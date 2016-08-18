@@ -378,43 +378,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         }
       };
 
-
-      self.getMostRecentlyUsed = function(project, directory, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.getMostRecentlyUsed(project, directory, deferred);
-        } else {
-          return $q.when(false);
-        }
-      };
-
-      self.updateMostRecentlyUsed = function(project, directory, predicate, data, deferred) {
-        // TODO: store this in offline mode 
-        if (!self.isOffline()) {
-          return self._socket.updateMostRecentlyUsed(project, directory, predicate, data, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.saveSettings = function(settings, deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.saveSettings(settings, deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
-      self.getSettings = function(deferred) {
-        // TODO: offline mode
-        if (!self.isOffline()) {
-          return self._socket.getSettings(deferred);
-        } else {
-          return $q.when();
-        }
-      };
-
       /**
        * Sync everything, to be called when we first connect to the websocket.
        * Should only be called after offlineEnabled() has been checked.
