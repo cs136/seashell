@@ -2,6 +2,9 @@
 (require typed/racket/date)
 (provide prepare-compile-file make-script-section make-style-section)
 
+(require/typed racket/base
+               [copy-file (->* (Path-String Path-String) (Boolean) Any)])
+
 (: read-resource-file (-> Path-String (Listof String)))
 (define (read-resource-file path)
   (with-input-from-file path
@@ -14,6 +17,18 @@
 (: local-resource? (-> String Boolean))
 (define (local-resource? resource)
   (not (regexp-match "^//" resource)))
+
+(: compile-resource? (-> String Boolean))
+(define (compile-resource? resource)
+  (not (not (regexp-match "^C:" resource))))
+
+(: split-compile-resource (-> String (Values String String)))
+(define (split-compile-resource resource)
+  (define result (regexp-match "^C:(.*)[.]([^.]*)$" resource))
+  (match-define (list _1 _2 _3) result)
+  (assert (string? _2))
+  (assert (string? _3))
+  (values _2 _3))
 
 (: compile-js-resources (->* ((Listof String)) (Boolean String (Option String)) (Listof String)))
 (define (compile-js-resources resources [minify? #f] [target ""] [uglifyjs-path #f])
@@ -50,6 +65,51 @@
                                 local-resources))))
       (list* target-css other-resources)]))
 
+(: process-extra-resources (->* ((Listof String)) (Boolean (Option String) (Option String)) (Listof String)))
+(define (process-extra-resources resources [minify? #f] [uglifyjs-path #f] [uglifycss-path #f])
+  (for/list : (Listof String)
+    ([resource resources])
+    (cond
+      ;; Regular resource -- skip
+      [(not (compile-resource? resource)) resource]
+      ;; Compile resource -- process
+      [else
+        (define-values (base ext) (split-compile-resource resource))
+        (define source (format "~a.~a" base ext))
+        (cond
+          ;; Minification disabled -- copy
+          [(not minify?)
+           (define target (format "~a.min.~a" base ext))
+           (copy-file source target #t)
+           target]
+          ;; CSS file
+          [(and uglifycss-path (equal? ext "css"))
+           (define target-css (string-append base ".min.css"))
+           (with-output-to-file target-css #:exists 'truncate
+            (thunk
+              (apply system* (list uglifycss-path
+                                   source))))
+           target-css]
+          ;; JavaScript file
+          [(and uglifyjs-path (equal? ext "js"))
+           (define target-js (string-append base ".min.js"))
+           (define target-map (string-append base ".js.map"))
+           (apply system* (list uglifyjs-path
+                            "-o" target-js
+                            "--source-map" target-map
+                            "--compress"
+                            "--mangle"
+                            "--keep-fnames"
+                            "--"
+                            source))
+           target-js]
+          ;; Fallthrough
+          [else
+           (define target (format "~a.min.~a" base ext))
+           (copy-file source target #t)
+           target])])))
+
+
 (: make-manifest-file (-> Path-String (Listof String) Any))
 (define (make-manifest-file target resources)
   (with-output-to-file target #:exists 'truncate
@@ -68,8 +128,9 @@
                               [minify? #f] [uglifyjs-path #f] [uglifycss-path #f])
   (define js-resources (read-resource-file js-resource-file))
   (define css-resources (read-resource-file css-resource-file))
-  (define extra-resources (read-resource-file extra-resource-file))
+  (define raw-extra-resources (read-resource-file extra-resource-file))
   (define manifest-target (string-append target ".manifest"))
+  (define extra-resources (process-extra-resources raw-extra-resources minify? uglifyjs-path uglifycss-path))
   (cond
     [(not minify?)
       (make-manifest-file manifest-target (append js-resources (append css-resources (append extra-resources))))

@@ -23,7 +23,7 @@ angular.module('seashell-compiler', [])
       var self = this;
       self.compile = function(file_array, runner) {
         var defer = $q.defer();
-        var compiler = new Worker('js/offline-compile.js');
+        var compiler = new Worker('js/offline-compile.min.js');
         compiler.onmessage = function (result) {
           if (result.data.status === "compile-failed") {
             defer.reject(result.data);
@@ -43,7 +43,7 @@ angular.module('seashell-compiler', [])
       var self = this;
 
       self.run = function (object, io_cb) {
-        var runner = new Worker('js/offline-run.js');
+        var runner = new Worker('js/offline-run.min.js');
         runner.onmessage = function (result) {
           io_cb(null, result.data);
         };

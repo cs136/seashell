@@ -1,7 +1,7 @@
-frontend/css/dark.css
-frontend/css/light.css
-js/offline-compile.js
-js/offline-run.js
+C:frontend/css/dark.css
+C:frontend/css/light.css
+C:js/offline-compile.js
+C:js/offline-run.js
 js/crt-headers.data
 js/seashell-clang.js.mem
 js/seashell-runner.js.mem
