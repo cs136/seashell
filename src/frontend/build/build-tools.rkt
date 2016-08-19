@@ -15,18 +15,17 @@
 (define (local-resource? resource)
   (not (regexp-match "^//" resource)))
 
-(: compile-js-resources (->* ((Listof String)) (Boolean String) (Listof String)))
-(define (compile-js-resources resources [minify? #f] [target ""])
+(: compile-js-resources (->* ((Listof String)) (Boolean String (Option String)) (Listof String)))
+(define (compile-js-resources resources [minify? #f] [target ""] [uglifyjs-path #f])
   (define local-resources (filter local-resource? resources))
   (define other-resources (filter (compose not local-resource?) resources))
   (cond
     [(not minify?) resources]
+    [(not uglifyjs-path) resources]
     [else
       (define target-js (string-append target ".min.js"))
       (define target-js-map (string-append target ".js.map"))
-      (define uglifyjs (find-executable-path "uglifyjs"))
-      (assert (path? uglifyjs))
-      (apply system* (list* (path->string uglifyjs)
+      (apply system* (list* uglifyjs-path
                             "-o" target-js
                             "--source-map" target-js-map
                             "--compress"
@@ -48,9 +47,10 @@
       (printf "*~n"))))
 
 (: prepare-compile-file (->* (String Path-String Path-String Path-String)
-                             (Boolean)
+                             (Boolean (Option String) (Option String))
                              (Values (Listof String) (Listof String))))
-(define (prepare-compile-file target js-resource-file css-resource-file extra-resource-file [minify? #f])
+(define (prepare-compile-file target js-resource-file css-resource-file extra-resource-file
+                              [minify? #f] [uglifyjs-path #f] [uglifycss-path #f])
   (define js-resources (read-resource-file js-resource-file))
   (define css-resources (read-resource-file css-resource-file))
   (define extra-resources (read-resource-file extra-resource-file))
@@ -60,7 +60,7 @@
       (make-manifest-file manifest-target (append js-resources (append css-resources (append extra-resources))))
      (values js-resources css-resources)]
     [else
-      (define minified-js-resources (compile-js-resources js-resources #t target))
+      (define minified-js-resources (compile-js-resources js-resources #t target uglifyjs-path))
       (make-manifest-file manifest-target (append minified-js-resources (append css-resources (append extra-resources))))
       (values minified-js-resources js-resources)]))
 

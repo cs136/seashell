@@ -30,6 +30,23 @@ add_custom_target(seashell-frontend-copy
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/lib/jslib" "${CMAKE_CURRENT_BINARY_DIR}/js/lib"
   SOURCES ${seashell_js} ${seashell_html} ${seashell_css})
 
+find_program(JS_MINIFY uglifyjs)
+find_program(CSS_MINIFY uglifycss)
+
+if (JS_MINIFY)
+  message("JavaScript compressor found: ${JS_MINIFY}")
+  set(JSMIN_ARG "\"${JS_MINIFY}\"")
+else()
+  set(JSMIN_ARG "")
+endif()
+
+if (CSS_MINIFY)
+  message("CSS compressor found: ${CSS_MINIFY}")
+  set(CSSMIN_ARG "\"${CSS_MINIFY}\"")
+else()
+  set(CSSMIN_ARG "")
+endif()
+
 # Custom build rules
 function(html_compile filename)
   get_filename_component(base ${filename} NAME_WE)
@@ -48,7 +65,8 @@ function(html_compile filename)
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"
-          (not SEASHELL_DEBUG)))'
+          (not SEASHELL_DEBUG)
+          ${JSMIN_ARG} ${CSSMIN_ARG}))'
     -o ${output} ${filename}
     DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
