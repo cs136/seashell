@@ -43,7 +43,9 @@
       (printf "CACHE MANIFEST~n")
       (printf "# Generated on: ~a~n" (date->string (current-date) #t))
       (for ([r resources])
-        (printf "~a~n" r)))))
+        (printf "~a~n" r))
+      (printf "NETWORK:~n")
+      (printf "*~n"))))
 
 (: prepare-compile-file (->* (String Path-String Path-String Path-String)
                              (Boolean)
