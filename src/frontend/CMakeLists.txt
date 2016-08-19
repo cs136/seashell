@@ -43,12 +43,12 @@ function(html_compile filename)
     -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")'
     -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")'
     -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")'
-    -E '(define SEASHELL_DEBUG (= 0 ${SEASHELL_DEBUG}))'
+    -E '(define SEASHELL_DEBUG (= 1 ${SEASHELL_DEBUG}))'
     -E '(define-values (scripts styles) (prepare-compile-file \"${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"
-          SEASHELL_DEBUG))'
+          (not SEASHELL_DEBUG)))'
     -o ${output} ${filename}
     DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
@@ -79,7 +79,7 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-if (SEASHELL_DEBUG)
+if (NOT SEASHELL_DEBUG)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.js.map
     DESTINATION ${SEASHELL_FRONTEND})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.js
