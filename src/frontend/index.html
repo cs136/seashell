@@ -5,12 +5,12 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Seashell</title>
+    @(make-script-section scripts)
+    @(make-style-section styles)
     <script type='text/javascript'>
       var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
       var SEASHELL_API_VERSION=@(values SEASHELL_API_VERSION);
     </script>
-
-    @(include "index/includes/styles.html")
 	</head>
   <body>
     <header>
@@ -41,6 +41,5 @@
         </div>
       </form>
     </div>
-    @(include "index/includes/scripts.html")
 	</body>
 </html>
