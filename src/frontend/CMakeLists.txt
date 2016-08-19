@@ -47,7 +47,8 @@ function(html_compile filename)
     -E '(define-values (scripts styles) (prepare-compile-file \"${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"
-          \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"))'
+          \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"
+          SEASHELL_DEBUG))'
     -o ${output} ${filename}
     DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
@@ -67,10 +68,24 @@ endif (JS_LINTER)
 # Files to install.
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
   DESTINATION ${SEASHELL_FRONTEND})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.manifest
+  DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
+  DESTINATION ${SEASHELL_FRONTEND})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.manifest
   DESTINATION ${SEASHELL_FRONTEND})
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/css DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+if (SEASHELL_DEBUG)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.js.map
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.js
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.js.map
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.js
+    DESTINATION ${SEASHELL_FRONTEND})
+endif (SEASHELL_DEBUG)
