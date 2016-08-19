@@ -17,12 +17,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 project(seashell-frontend)
 cmake_minimum_required(VERSION 2.6)
-
 # Global Destinations
 set(SEASHELL_FRONTEND share/frontend)
-
 # Global Definitions
 find_program(SEASHELL_MZTEXT mztext)
+# Copy to build directory.
+file(GLOB_RECURSE seashell_js *.js)
+file(GLOB_RECURSE seashell_html *.html)
+file(GLOB_RECURSE seashell_css *.css)
+add_custom_target(seashell-frontend-copy
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/lib/jslib" "${CMAKE_CURRENT_BINARY_DIR}/js/lib"
+  SOURCES ${seashell_js} ${seashell_html} ${seashell_css})
 
 # Custom build rules
 function(html_compile filename)
@@ -31,9 +37,11 @@ function(html_compile filename)
   set(output ${base_abs}.html)
   add_custom_target(
     ${base} ALL
-    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")' -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")' -o ${output} ${filename})
+    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")' -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")' -o ${output} ${filename}
+    DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
+
 
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
@@ -50,8 +58,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
   DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
   DESTINATION ${SEASHELL_FRONTEND})
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/css DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/css DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
