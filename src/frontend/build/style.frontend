@@ -40,7 +40,7 @@
 //fonts.googleapis.com/css?family=Unkempt:700
 
 # Hotkeys
-css/lib/hotkeys.min.css
+frontend/css/lib/hotkeys.min.css
 
 # Local CSS files
-css/common.css
+frontend/css/common.css

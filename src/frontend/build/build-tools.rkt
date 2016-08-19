@@ -35,6 +35,21 @@
                             local-resources))
       (list* target-js other-resources)]))
 
+(: compile-css-resources (->* ((Listof String)) (Boolean String (Option String)) (Listof String)))
+(define (compile-css-resources resources [minify? #f] [target ""] [uglifycss-path #f])
+  (define local-resources (filter local-resource? resources))
+  (define other-resources (filter (compose not local-resource?) resources))
+  (cond
+    [(not minify?) resources]
+    [(not uglifycss-path) resources]
+    [else
+      (define target-css (string-append target ".min.css"))
+      (with-output-to-file target-css #:exists 'truncate
+        (thunk
+          (apply system* (list* uglifycss-path
+                                local-resources))))
+      (list* target-css other-resources)]))
+
 (: make-manifest-file (-> Path-String (Listof String) Any))
 (define (make-manifest-file target resources)
   (with-output-to-file target #:exists 'truncate
@@ -61,8 +76,9 @@
      (values js-resources css-resources)]
     [else
       (define minified-js-resources (compile-js-resources js-resources #t target uglifyjs-path))
-      (make-manifest-file manifest-target (append minified-js-resources (append css-resources (append extra-resources))))
-      (values minified-js-resources js-resources)]))
+      (define minified-css-resources (compile-css-resources css-resources #t target uglifycss-path))
+      (make-manifest-file manifest-target (append minified-js-resources (append minified-css-resources (append extra-resources))))
+      (values minified-js-resources minified-css-resources)]))
 
 (: make-script-section (-> (Listof String) String))
 (define (make-script-section jsfiles)

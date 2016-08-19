@@ -21,12 +21,14 @@ cmake_minimum_required(VERSION 2.6)
 set(SEASHELL_FRONTEND share/frontend)
 # Global Definitions
 find_program(SEASHELL_MZTEXT mztext)
-# Copy to build directory.
+# Copy (JS/CSS) to build directory (for minification step).
 file(GLOB_RECURSE seashell_js *.js)
-file(GLOB_RECURSE seashell_html *.html)
 file(GLOB_RECURSE seashell_css *.css)
+file(GLOB_RECURSE seashell_html *.html)
 add_custom_target(seashell-frontend-copy
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/frontend" "${CMAKE_CURRENT_BINARY_DIR}/frontend"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/index" "${CMAKE_CURRENT_BINARY_DIR}/index"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/js" "${CMAKE_CURRENT_BINARY_DIR}/js"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/lib/jslib" "${CMAKE_CURRENT_BINARY_DIR}/js/lib"
   SOURCES ${seashell_js} ${seashell_html} ${seashell_css})
 
@@ -53,9 +55,9 @@ function(html_compile filename)
   set(base_abs ${CMAKE_CURRENT_BINARY_DIR}/${base})
   set(output ${base_abs}.html)
   add_custom_target(
-    ${base} ALL
+    html_${base} ALL
     COMMAND ${SEASHELL_MZTEXT}
-    -E '(require \"build/build-tools.rkt\")'
+    -E '(require (file \"${CMAKE_CURRENT_SOURCE_DIR}/build/build-tools.rkt\"))'
     -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})'
     -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")'
     -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")'
@@ -71,7 +73,6 @@ function(html_compile filename)
     DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
-
 
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
 html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
@@ -92,9 +93,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
   DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.manifest
   DESTINATION ${SEASHELL_FRONTEND})
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/css DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
 if (NOT SEASHELL_DEBUG)
@@ -102,8 +101,12 @@ if (NOT SEASHELL_DEBUG)
     DESTINATION ${SEASHELL_FRONTEND})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.js
     DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.css
+    DESTINATION ${SEASHELL_FRONTEND})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.js.map
     DESTINATION ${SEASHELL_FRONTEND})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.js
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.css
     DESTINATION ${SEASHELL_FRONTEND})
 endif (SEASHELL_DEBUG)

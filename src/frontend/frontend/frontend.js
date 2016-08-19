@@ -124,10 +124,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         settings.addWatcher(function () {
           if (settings.settings.theme_style === "dark") {
             $css.removeAll();
-            $css.add("css/dark.css");
+            $css.add("frontend/css/dark.css");
           } else {
             $css.removeAll();
-            $css.add("css/light.css");
+            $css.add("frontend/css/light.css");
           }
         }, true);
       }])

@@ -1,5 +1,5 @@
-css/dark.css
-css/light.css
+frontend/css/dark.css
+frontend/css/light.css
 js/offline-compile.js
 js/offline-run.js
 js/crt-headers.data
