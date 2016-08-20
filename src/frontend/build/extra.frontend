@@ -10,6 +10,7 @@ js/seashell-runner.js.mem
 js/seashell-clang-js/bin/crt-headers.js
 js/seashell-clang-js/bin/seashell-clang.js
 js/seashell-clang-js/bin/seashell-runner.js
+js/seashell-clang-js/bin/seashell-crt.bc
 # Templates for Bootstrap/Angular.
 frontend/templates/project-editor-editview-template.html
 frontend/templates/project-editor-template.html
