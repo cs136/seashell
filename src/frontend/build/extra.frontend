@@ -1,10 +1,30 @@
+# Dynamically Loaded CSS/JS files.
 C:frontend/css/dark.css
 C:frontend/css/light.css
 C:js/offline-compile.js
 C:js/offline-run.js
+# Resources for the C compiler.
 js/crt-headers.data
 js/seashell-clang.js.mem
 js/seashell-runner.js.mem
 js/seashell-clang-js/bin/crt-headers.js
 js/seashell-clang-js/bin/seashell-clang.js
 js/seashell-clang-js/bin/seashell-runner.js
+# Templates for Bootstrap/Angular.
+frontend/templates/project-editor-editview-template.html
+frontend/templates/project-editor-template.html
+frontend/templates/confirmation-template.html
+frontend/templates/new-question.template.html
+frontend/templates/rename-file-template.html
+frontend/templates/marmoset-results-template.html
+frontend/templates/help-template.html
+frontend/templates/settings-template.html
+frontend/templates/delete-project-template.html
+frontend/templates/project-template.html
+frontend/templates/project-list-template.html
+frontend/templates/new-file-template.html
+frontend/templates/new-test-template.html
+frontend/templates/commit-project-template.html
+frontend/templates/new-project-template.html
+frontend/templates/login-template.html
+frontend/templates/marmoset-submit-template.html
