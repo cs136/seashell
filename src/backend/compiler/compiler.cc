@@ -1167,22 +1167,22 @@ static std::string join(std::vector<std::string> vec, char a) {
 static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname,
     std::string currentfile, uint line, uint col) {
 
-  char *orig;
-  orig = strdup(fname.c_str());
+  char *orig = strdup(fname.c_str());
   char *saveptr;
   char *seg = strtok_r(orig, "/", &saveptr);
   std::vector<std::string> path;
   do {
     path.push_back(seg);
   } while(seg = strtok_r(NULL, "/", &saveptr));
+  free(orig);
 
-  char *ofile;
-  ofile = strdup(path[path.size()-1].c_str());
+  char *ofile = strdup(path[path.size()-1].c_str());
   seg = strtok_r(ofile, ".", &saveptr);
   std::vector<std::string> file;
   do {
     file.push_back(seg);
   } while(seg = strtok_r(NULL, ".", &saveptr));
+  free(ofile);
 
   // check for include of non .h files
   if(file[file.size()-1] != "h") {
