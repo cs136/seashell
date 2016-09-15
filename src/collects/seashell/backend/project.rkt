@@ -693,9 +693,7 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
-              (map (lambda (p) (copy-file (check-and-build-path common-dir p)
-                                          (check-and-build-path tmpdir p)))
-                (directory-list common-dir)))
+              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))
