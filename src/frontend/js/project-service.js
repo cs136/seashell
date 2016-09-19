@@ -33,7 +33,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
-      var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s";
+      var USERNAME = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
+      var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s&user="+USERNAME;
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
      
@@ -747,7 +748,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.listSkelFiles = function() {
           var self = this;
           if (! self._listSkelFiles) {
-            self._listSkelFiles = $http({url: self.skelURL}).then(function(result) {
+            self._listSkelFiles = $http({url: self.skelURL, user: USERNAME}).then(function(result) {
               return result.data.result.map(function(path) {
                 // remove the project name from the start
                 return path.replace(new RegExp("^"+self.name+"/"), "");
@@ -755,7 +756,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 // remove paths with trailing slash (only want files, no directory)
                 return path.length > 0 && path[path.length-1] !== '/';
               }).sort();
-            });
+            }).catch(function(err) { /* if this fails, ignore for now */ });
           }
           return self._listSkelFiles;
         };
@@ -769,8 +770,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.inSkeleton = function() {
           var self = this;
           if (! self._inSkeleton) {
-            self._inSkeleton = listSkelProjects().then(function(names) {
-              return false || _.find(names, function(a){return a === self.name;});
+            self._inSkeleton = $q.all([listSkelProjects(), userWhitelist(), projectWhitelist()])
+              .then(function(result) {
+                var names = result[0];
+                var users = result[1];
+                var wlnames = result[2];
+                var ans = false || _.find(names, function(a){return a === self.name;});
+                if(_.find(users, function(u) { return u === USERNAME; })) {
+                  ans = ans || _.find(wlnames, function(a){return a === self.name;});
+                }
+                return ans;
             });
           }
           return self._inSkeleton;
@@ -854,7 +863,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          
          Deffered type: [String]
       */
-      self.userWhitelist = function() {
+      var userWhitelist = function() {
          if (! self._userWhitelist) {
             self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
                return result.data;
@@ -865,6 +874,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          }
          return self._userWhitelist;
       };
+      self.userWhitelist = userWhitelist;
  
        /* Returns a list of projects in the whitelist. 
          This method only send requests to the server once when it's initially called.
@@ -872,7 +882,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          
          Deffered type: [String], eg ["A1", "A2"]
       */     
-      self.projectWhitelist = function() {
+      var projectWhitelist = function() {
          if (! self._projectWhitelist) {
             self._projectWhitelist = $http.get(PROJ_WHITE_LIST_URL).then(function(result) {
                return result.data;
@@ -883,6 +893,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
          }
          return self._projectWhitelist;
       };
+      self.projectWhitelist = projectWhitelist;
 
       /**
        * Fetches new assignments.
