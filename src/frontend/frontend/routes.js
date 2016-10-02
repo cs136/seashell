@@ -32,31 +32,36 @@ angular.module('frontend-app')
             return new function () {
               var self = this;
               self.list = [];
+              
               /** Run this every time the state associated with this controller is loaded.
                *  Returns a deferred that resolves when the state is properly loaded */
-              self.refresh = function () {
-                return projects.fetch().catch(function (projects) {
-                  var type = projects.error ? 
-                    (projects.error.indexOf("503")===-1 ? "seashell" : "webserver")
-                    : "seashell";
-                  errors.report(projects, 'Could not fetch projects.', type);
-                }).then(function () {
-                  return projects.list().then(function (projects_list) {
+              self.refresh = function() {
+                function listProjects() {
+                  return projects.list().then(function(projects_list) {
                     function compareTime(a, b) {
-                      if(a[1] === b[1]){
+                      if (a[1] === b[1]) {
                         return 0;
-                      }
-                      else {
+                      } else {
                         return (a[1] > b[1]) ? -1 : 1;
                       }
                     }
                     projects_list.sort(compareTime);
                     self.list = projects_list;
-                  }).catch(function (error) {
+                  }).catch(function(error) {
                     errors.report(error, "Could not generate list of projects.");
                   });
-                });
+                }
+
+                if (ws.isOffline()) {
+                  return listProjects();
+                } else {
+                  return projects.fetch().catch(function(projects) {
+                    var type = projects.error ? (projects.error.indexOf("503") === -1 ? "seashell" : "webserver") : "seashell";
+                    errors.report(projects, 'Could not fetch projects.', type);
+                  }).then(listProjects);
+                }
               };
+
               /** Store the key into our callback [this is important, as a new object
                *  is created every time into this state, and we'll have to remove the CB
                *  as to not leave a dangling reference]. 
