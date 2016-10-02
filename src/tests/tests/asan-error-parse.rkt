@@ -75,7 +75,8 @@ HERE
 
     ;; This next test really should be an underflow, but ASAN for some reason thinks that
     ;; we're overflowing the parameter x (and it doesn't report the variable name).
-    (test-case "Stack Overflow Test 3"
+    ;; Fixed in Clang 3.9
+    (test-case "Stack Underflow Test 3"
       (define student-code #<<HERE
 void g(int x) { char carr[30]; carr[x] = 111; }
 int main() {
@@ -85,7 +86,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-overflow"))
+      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-underflow"))
 
 ;; ---- STACK UNDERFLOW TESTS ---------------------------
     (test-case "Stack Underflow Test 1"

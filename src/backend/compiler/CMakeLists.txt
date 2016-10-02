@@ -25,7 +25,7 @@ if( NOT EXISTS ${LLVM_ROOT}/include/llvm )
 endif()
 
 # We incorporate the CMake features provided by LLVM:
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_ROOT}/share/llvm/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_ROOT}/cmake/modules/CMakeFiles")
 include(LLVMConfig)
 
 # Now set the header and library paths:

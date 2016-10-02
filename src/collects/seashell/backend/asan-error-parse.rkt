@@ -158,8 +158,7 @@
                                           (list 'overflow_distance_in_bytes_from_end_of_array (number->string (- access-location array-upper-bound))))
                                       `((array_size_in_bytes ,(number->string (- array-upper-bound array-lower-bound)))
                                         (array_variable_name ,(fourth match-result))))))
-     (SectionData (if (and (equal? error-type "stack-buffer-overflow") (< access-location array-upper-bound))
-                      "stack-buffer-underflow" #f)
+     (SectionData #f ; overflow/underflow taken care of as of clang >=3.9
                   #f ; frame list
                   (if (not (equal? (fourth match-result) "")) extra-info #f)
                   #f)))) ; lines left
@@ -260,6 +259,7 @@
   (list (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: SEGV on unknown address 0x0+ " "segmentation-fault-on-null-address")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: SEGV" "segmentation-fault")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-buffer-overflow" "stack-buffer-overflow")
+        (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-buffer-underflow" "stack-buffer-underflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: global-buffer-overflow" "global-buffer-overflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-buffer-overflow" "heap-buffer-overflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-use-after-free"  "heap-use-after-free")
