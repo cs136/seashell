@@ -54,8 +54,10 @@ ExternalProject_Add(
   INSTALL_COMMAND "")
 
 # External projects (CMake based)
-# Global overrides 
-set(CMAKE_BUILD_TYPE "MinSizeRel")
+# Global overrides
+if(NOT DEFINED TRAVIS_BUILD OR NOT TRAVIS_BUILD)
+  set(CMAKE_BUILD_TYPE "MinSizeRel")
+endif()
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
