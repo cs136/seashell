@@ -910,6 +910,7 @@ static int compile_module (seashell_compiler* compiler,
       return 1;
     }
 
+#ifndef __EMSCRIPTEN__
     LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
       compiler->context.getDiagnosticHandler();
     void *OldDiagnosticContext = compiler->context.getDiagnosticContext();
@@ -919,8 +920,13 @@ static int compile_module (seashell_compiler* compiler,
       raw_string_ostream Stream(*Message);
       DiagnosticPrinterRawOStream DP(Stream);
       DI.print(DP);}, &Message, true);
+#else
+    std::string Message = "Error linking modules!  Make sure there are no multiply-defined symbols!";
+#endif
     Success = !llvm::Linker::linkModules(*module, std::move(mod));
+#ifndef __EMSCRIPTEN__
     compiler->context.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
+#endif
     if (!Success) {
       PUSH_DIAGNOSTIC(Message);
       return 1;

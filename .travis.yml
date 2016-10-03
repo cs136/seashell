@@ -29,8 +29,8 @@ before_install:
   - sudo ln -s `which ccache` /usr/lib/ccache/clang++
   # Grab cmake
   - wget https://cmake.org/files/v3.6/cmake-3.6.2-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.2-Linux_x86_64.tar.gz
-  - mv cmake-3.6.2-Linux_x86_64.tar.gz cmake
+  - tar xf cmake-3.6.2-Linux-x86_64.tar.gz
+  - mv cmake-3.6.2-Linux-x86_64 cmake
 script:
   - mkdir build >/dev/null
   - cd build >/dev/null
