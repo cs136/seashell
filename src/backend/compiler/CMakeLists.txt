@@ -57,10 +57,7 @@ llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES native nativecodegen) ## FIX
 
 # Link.
 add_library(seashell-clang SHARED compiler.cc)
-target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGen
-                              clangSerialization clangDriver
-                              clangTooling clangParse clangSema clangAnalysis
-                              clangEdit clangAST clangLex clangBasic
+target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
                               clangStaticAnalyzerFrontend
                               ${REQ_LLVM_LIBRARIES}
                               ${CMAKE_DL_LIBS})
