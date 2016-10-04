@@ -33,6 +33,7 @@
  *  has everything installed to /bin */
 #define SEASHELL_MAIN (INSTALL_PREFIX "/bin/seashell-main")
 #define SEASHELL_DEBUG_MAIN (BUILD_DIR "/src/backend/user/seashell-main")
+#define SEASHELL_STATIC_ANALYSIS @ENABLE_STATIC_ANALYSIS@
 
 #if SEASHELL_LIGHTWEIGHT_LAUNCHERS
 #ifdef __linux__

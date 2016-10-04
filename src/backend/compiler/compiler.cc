@@ -882,6 +882,7 @@ static int compile_module (seashell_compiler* compiler,
     Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
 #endif
 
+#if SEASHELL_STATIC_ANALYSIS
     /** Run the static analysis pass. */
     clang::ento::AnalysisAction Analyze;
     Success = Clang.ExecuteAction(Analyze);
@@ -891,6 +892,7 @@ static int compile_module (seashell_compiler* compiler,
                   std::back_inserter(compile_messages));
       return 1;
     }
+#endif
 
     clang::EmitLLVMOnlyAction CodeGen(&compiler->context);
     Success = Clang.ExecuteAction(CodeGen);

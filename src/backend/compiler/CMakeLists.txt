@@ -57,10 +57,17 @@ llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES native nativecodegen) ## FIX
 
 # Link.
 add_library(seashell-clang SHARED compiler.cc)
-target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
-                              clangStaticAnalyzerFrontend
-                              ${REQ_LLVM_LIBRARIES}
-                              ${CMAKE_DL_LIBS})
+if (SEASHELL_STATIC_ANALYSIS)
+  target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
+                                clangStaticAnalyzerFrontend
+                                ${REQ_LLVM_LIBRARIES}
+                                ${CMAKE_DL_LIBS})
+else()
+  target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
+                                ${REQ_LLVM_LIBRARIES}
+                                ${CMAKE_DL_LIBS})
+endif()
+
 add_executable(seashell-test-clang driver.cc)
 target_link_libraries(seashell-test-clang seashell-clang ${CMAKE_DL_LIBS})
 INSTALL(TARGETS seashell-clang LIBRARY DESTINATION lib)

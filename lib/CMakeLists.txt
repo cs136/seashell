@@ -64,6 +64,13 @@ set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
+set(CLANG_ENABLE_ARCMT OFF CACHE STRING "Build Clang ARCMT." FORCE)
+if (ENABLE_STATIC_ANALYSIS)
+  set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE STRING "Build Clang Static Analysis." FORCE)
+else()
+  set(CLANG_ENABLE_STATIC_ANALYZER OFF CACHE STRING "Build Clang Static Analysis." FORCE)
+endif()
+
 add_subdirectory(llvm EXCLUDE_FROM_ALL)
 add_custom_target(_build_clang ALL)
 add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen llvm-tblgen compiler-rt clang-headers)
