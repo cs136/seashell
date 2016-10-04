@@ -57,6 +57,7 @@ ExternalProject_Add(
 # Global overrides
 # Build behaviour for TravisCI builds.
 if(NOT DEFINED TRAVIS_BUILD OR NOT TRAVIS_BUILD)
+else()
   message( "Building on TravisCI infrastructure..." )
 endif()
 set(CMAKE_BUILD_TYPE "MinSizeRel")
