@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
+
 /* jshint supernew: true */
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
@@ -577,9 +579,9 @@ angular.module('frontend-app')
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts.data;
-            if((self.ext === 'rkt' && /\s*;;\s*THIS FILE IS READONLY/i.test(self.contents)) || // racket files
-               ((self.ext === 'c' || self.ext === 'h') && /\s*\/\/\s*THIS FILE IS READONLY/i.test(self.contents))  || // c files
-               ((self.ext === undefined || self.ext === 'txt') && /\s*THIS FILE IS READONLY/i.test(self.contents))) // plaintext files
+            if((self.ext === 'rkt' && RegExp("\\s*;;\\s*"+SEASHELL_READONLY_STRING).test(self.contents)) || // racket files
+               ((self.ext === 'c' || self.ext === 'h') && RegExp("\\s*\/\/\\s*"+SEASHELL_READONLY_STRING).test(self.contents))  || // c files
+               ((self.ext === undefined || self.ext === 'txt') && RegExp("\\s*"+SEASHELL_READONLY_STRING).test(self.contents))) // plaintext files
             {
                 self.fileReadOnly = true;
             }
