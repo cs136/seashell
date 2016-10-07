@@ -25,10 +25,13 @@
                [#:opaque Environment-Variable-Set environment-variables?]
                [current-environment-variables (Parameterof Environment-Variable-Set)]
                [environment-variables-copy (-> Environment-Variable-Set Environment-Variable-Set)])
+(require/typed "asan-error-parse.rkt"
+               [asan->json (-> Bytes Bytes)])
 
 (provide run-program program-stdin program-stdout program-stderr
          program-wait-evt program-kill program-status program-destroy-handle
-         program-mode)
+         program-mode
+         program-asan-message)
 
 ;; Global definitions and concurrency control primitives.
 (struct program ([in-stdin : Input-Port] [in-stdout : Input-Port] [in-stderr : Input-Port]
@@ -36,7 +39,8 @@
                  [raw-stdin : Output-Port] [raw-stdout : Input-Port] [raw-stderr : Input-Port]
                  [handle : Subprocess] [control : (U False Thread)] [exit-status : (U False Exact-Nonnegative-Integer)]
                  [destroyed-semaphore : Semaphore]
-                 [_mode : (U 'test 'run)] [custodian : Custodian]) #:transparent #:mutable #:type-name Program)
+                 [_mode : (U 'test 'run)] [custodian : Custodian]
+                 [asan : Bytes]) #:transparent #:mutable #:type-name Program)
 (struct exn:program:run exn:fail:user ())
 
 (: program-table (HashTable Integer Program))
@@ -60,7 +64,8 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore mode custodian)
+                         destroyed-semaphore mode custodian
+                         asan)
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
@@ -111,15 +116,19 @@
        ;; Read stdout, stderr.
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
+       ;; Read asan error message and convert it to json (stored as Bytes)
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
+       
        (define stdout (port->bytes buf-stdout))
        (define stderr (port->bytes buf-stderr))
+       (define asan-output (program-asan pgrm))
 
        (match (subprocess-status handle)
          [0
           ;; Three cases:
           (cond
             [(not expected)
-             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr)) out-stdout)]
+             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr ,asan-output)) out-stdout)]
             [(equal? stdout expected)
              (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
             [else
@@ -127,8 +136,8 @@
               (define output-lines (regexp-split #rx"\n" stdout))
               (define expected-lines (regexp-split #rx"\n" expected))
               ;; hotfix: diff with empty because it's slow
-              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout)) out-stdout)])]
-         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr)) out-stdout)])
+              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
+         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,asan-output)) out-stdout)])
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
       [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
@@ -165,7 +174,8 @@
                          out-stdin out-stdout out-stderr
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
-                         destroyed-semaphore mode custodian)
+                         destroyed-semaphore mode custodian
+                         asan)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -229,6 +239,7 @@
            (port->bytes raw-stderr)))
        (unless (eof-object? read-stderr)
          (write-bytes read-stderr out-stderr))
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
@@ -323,8 +334,10 @@
                   ;; Behaviour is inconsistent if we just exec directly.
                   ;; This seems to work.  (why: who knows?)
                   (putenv "ASAN_OPTIONS"
-                          "allocator_may_return_null=1:detect_leaks=1:stack_trace_format=\"{'frame': %n, 'module': '%m', 'offset': '%o', 'function': '%f', 'function_offset': '%q', 'file': '%s', 'line': %l, 'column': %c}\"
-                            detect_stack_use_after_return=1")
+                          "allocator_may_return_null=1:
+                           detect_leaks=1:
+                           log_path='/tmp/seashell-asan':
+                           detect_stack_use_after_return=1")
                   (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
                   (subprocess #f #f #f binary)]
                 ['racket (subprocess #f #f #f (read-config-path 'racket-interpreter)
@@ -348,7 +361,8 @@
                                       out-stdin out-stdout out-stderr
                                       raw-stdin raw-stdout raw-stderr
                                       handle #f #f destroyed-semaphore
-                                      (if test 'test 'run) run-custodian))
+                                      (if test 'test 'run) run-custodian
+                                      #""))
               (define control-thread
                 (thread
                   (lambda ()
@@ -460,6 +474,17 @@
 (define (program-status pid)
   (program-exit-status (hash-ref program-table pid)))
 
+;; (program-asan-message pid)
+;; Returns the asan error message of the program.
+;;
+;; Arguments:
+;;  pid - PID of program.
+;; Returns:
+;;  #f if program is not done, exit status otherwise
+(: program-asan-message (-> Integer (U False Bytes)))
+(define (program-asan-message pid)
+  (program-asan (hash-ref program-table pid)))  
+
 ;; (program-destroy-handle pid) -> void?
 ;;
 ;; Arguments:
@@ -479,7 +504,8 @@
                              out-stdin out-stdout out-stderr
                              raw-stdin raw-stdout raw-stderr
                              handle control exit-status
-                             destroyed-semaphore mode custodian)
+                             destroyed-semaphore mode custodian
+                             asan)
         pgrm)
 
       ;; Note: ports are Racket pipes and therefore GC'd.
@@ -492,3 +518,15 @@
 
       ;; Post the destroyed semaphore
       (semaphore-post destroyed-semaphore))))
+
+;; Retrieve asan error message at "/tmp/seashell-asan.{pid}"
+;;  this is set in "run-program"
+(: delete-read-asan (-> Integer Bytes))
+(define (delete-read-asan pid)
+  (define path (string->path (format "/tmp/seashell-asan.~a" pid)))
+  (cond [(file-exists? path)
+         (define contents (file->bytes path))
+         (delete-file path)
+         contents]
+        [else #""]))
+

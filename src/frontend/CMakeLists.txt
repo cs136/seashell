@@ -17,12 +17,37 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 project(seashell-frontend)
 cmake_minimum_required(VERSION 2.6)
-
 # Global Destinations
 set(SEASHELL_FRONTEND share/frontend)
-
 # Global Definitions
 find_program(SEASHELL_MZTEXT mztext)
+# Copy (JS/CSS) to build directory (for minification step).
+file(GLOB_RECURSE seashell_js *.js)
+file(GLOB_RECURSE seashell_css *.css)
+file(GLOB_RECURSE seashell_html *.html)
+add_custom_target(seashell-frontend-copy
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/frontend" "${CMAKE_CURRENT_BINARY_DIR}/frontend"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/index" "${CMAKE_CURRENT_BINARY_DIR}/index"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/js" "${CMAKE_CURRENT_BINARY_DIR}/js"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/lib/jslib" "${CMAKE_CURRENT_BINARY_DIR}/js/lib"
+  SOURCES ${seashell_js} ${seashell_html} ${seashell_css})
+
+find_program(JS_MINIFY uglifyjs)
+find_program(CSS_MINIFY uglifycss)
+
+if (JS_MINIFY)
+  message("JavaScript compressor found: ${JS_MINIFY}")
+  set(JSMIN_ARG "\"${JS_MINIFY}\"")
+else()
+  set(JSMIN_ARG "")
+endif()
+
+if (CSS_MINIFY)
+  message("CSS compressor found: ${CSS_MINIFY}")
+  set(CSSMIN_ARG "\"${CSS_MINIFY}\"")
+else()
+  set(CSSMIN_ARG "")
+endif()
 
 # Custom build rules
 function(html_compile filename)
@@ -30,8 +55,22 @@ function(html_compile filename)
   set(base_abs ${CMAKE_CURRENT_BINARY_DIR}/${base})
   set(output ${base_abs}.html)
   add_custom_target(
-    ${base} ALL
-    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")' -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")' -o ${output} ${filename})
+    html_${base} ALL
+    COMMAND ${SEASHELL_MZTEXT}
+    -E '(require (file \"${CMAKE_CURRENT_SOURCE_DIR}/build/build-tools.rkt\"))'
+    -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})'
+    -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")'
+    -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")'
+    -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")'
+    -E '(define SEASHELL_DEBUG (= 1 ${SEASHELL_DEBUG}))'
+    -E '(define-values (scripts styles) (prepare-compile-file \"${base}\"
+          \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
+          \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"
+          \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"
+          (not SEASHELL_DEBUG)
+          ${JSMIN_ARG} ${CSSMIN_ARG}))'
+    -o ${output} ${filename}
+    DEPENDS seashell-frontend-copy)
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
 
@@ -48,10 +87,26 @@ endif (JS_LINTER)
 # Files to install.
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
   DESTINATION ${SEASHELL_FRONTEND})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.manifest
+  DESTINATION ${SEASHELL_FRONTEND})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
   DESTINATION ${SEASHELL_FRONTEND})
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/css DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/img DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.manifest
+  DESTINATION ${SEASHELL_FRONTEND})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
+if (NOT SEASHELL_DEBUG)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.js.map
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.js
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.css
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.js.map
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.js
+    DESTINATION ${SEASHELL_FRONTEND})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.css
+    DESTINATION ${SEASHELL_FRONTEND})
+endif (NOT SEASHELL_DEBUG)

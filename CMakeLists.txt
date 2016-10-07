@@ -67,6 +67,13 @@ if(GIT_DIRTY)
 endif()
 set(SEASHELL_API_VERSION "7")
 
+option(ENABLE_STATIC_ANALYSIS "Enable static analysis" OFF)
+if (ENABLE_STATIC_ANALYSIS)
+  set(SEASHELL_STATIC_ANALYSIS 1)
+else ()
+  set(SEASHELL_STATIC_ANALYSIS 0)
+endif (ENABLE_STATIC_ANALYSIS)
+
 # Build our components.
 add_subdirectory(doc)
 add_subdirectory(lib)

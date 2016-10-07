@@ -41,7 +41,9 @@
                [is-project? (-> String Boolean)]
                [#:struct (exn:project exn:fail:user) ()])
 (require/typed seashell/backend/files
-               [new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
+               [new-file (->* (String Path-String Bytes (U 'raw 'url) Boolean) ((U False Bytes)) String)]
+               ;(->* ((and/c project-name? is-project?) path-string? bytes? (or/c 'raw 'url) boolean?) ((or/c #f string?)) string?)
+               ;[new-file (-> String Path-String Bytes (U 'raw 'url) Boolean String)]
                [remove-file (->* (String Path-String) ((U False String)) Void)]
                [read-file (-> String Path-String (Values Bytes String Bytes))]
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
@@ -58,7 +60,8 @@
                           [settings : (Option String)]) #:transparent)
 (json-struct off:file ([project : String] [file : String] [checksum : (Option String)]) #:transparent)
 (json-struct off:change ([type : String] [file : off:file]
-                         [contents : (Option String)] [checksum : (Option String)])
+                         [contents : (Option String)] [checksum : (Option String)]
+                         [history : (Option String)])
              #:transparent)
 (json-struct off:settings ([modified : Integer] [values : String]) #:transparent)
 (json-struct off:changes ([projects : (Listof off:project)]
@@ -85,7 +88,8 @@
                   [project : String]
                   [file : String]
                   [contents : (Option String)]
-                  [reason : Conflict-Reason]) #:transparent #:type-name Conflict-Type)
+                  [reason : Conflict-Reason]
+                  [history : (Option Bytes)]) #:transparent #:type-name Conflict-Type)
 
 (define-type Settings (HashTable Symbol (U String Number)))
 
@@ -131,13 +135,15 @@
                              (off:file-project file)
                              (off:file-file file)
                              (off:change-contents change)
-                             (exn-message exn))
+                             (exn-message exn)
+                             (if (off:change-history change) (string->bytes/utf-8 (off:change-history change)) #""))
                    conflicts))])
         (match change
           [(off:change "deleteFile"
                        (off:file project file checksum)
                        #f
-                       checksum)
+                       checksum
+                       _) ; deleting a file doesn't need history
            (assert (path-string? file))
            (cond
              ;; Missing project: ignore (delete on local, as cannot create project offline)
@@ -146,7 +152,7 @@
                (with-handlers
                  ([exn:project:file?
                     (lambda ([exn : exn])
-                      (cons (conflict "deleteFile" project file #f 'checksum) conflicts))])
+                      (cons (conflict "deleteFile" project file #f 'checksum #f) conflicts))])
                  (remove-file project file checksum)
                  conflicts)]
              [else
@@ -155,7 +161,8 @@
           [(off:change (and type (or "newFile" "editFile"))
                        (off:file project file _)
                        contents
-                       checksum)
+                       checksum
+                       history)
            (assert (path-string? file))
            [cond
              ;; Missing project: ignore (delete on local, as cannot create project offline)
@@ -170,7 +177,7 @@
                  (with-handlers
                    ([exn:project:file?
                       (lambda ([exn : exn])
-                        (cons (conflict type project file contents 'checksum) conflicts))])
+                        (cons (conflict type project file contents 'checksum (if history (string->bytes/utf-8 history) #"")) conflicts))])
                    (cond
                      [(equal? type "editFile")
                        (write-file project file (string->bytes/utf-8 contents) #f checksum)]
@@ -182,7 +189,7 @@
                  (with-handlers
                    ([exn:fail:filesystem?
                       (lambda ([exn: exn])
-                        (cons (conflict type project file contents 'missing-directory) conflicts))])
+                        (cons (conflict type project file contents 'missing-directory (if history (string->bytes/utf-8 history) #"")) conflicts))])
                    (parameterize ([current-directory (build-project-path project)])
                      (make-directory* base))
                    ;; Everything OK, write file
@@ -199,7 +206,7 @@
 (define (resolve-conflicts timestamp conflicts)
   (for/list : (Listof off:conflict)
     ([cft : Conflict-Type conflicts])
-    (match-define (conflict type project file contents reason) cft)
+    (match-define (conflict type project file contents reason history) cft)
     (with-handlers
       ;; Ignore errors when handling conflicts,
       ;; but record that resolving the conflict failed.
@@ -362,7 +369,7 @@
   (define backend-new-files (list->set (remove* their-files/w-c our-files/w-c)))
   (define backend-deleted-files (remove* our-files/w-c their-files/w-c))
   (define our-delete-change
-    (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f))
+    (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f #f))
          backend-deleted-files))
   ;; Collect list of new/edited files (in the backend).
   ;; NOTE: The checksum matters for this calculation.
@@ -384,10 +391,12 @@
                ([exn:fail? (lambda ([exn : exn])
                              (off:change (if is-new-file? "newFile" "editFile")
                                          f #f
-                                         (if is-new-file? #f checksum)))])
+                                         (if is-new-file? #f checksum)
+                                         (if is-new-file? #f (bytes->string/utf-8 history))))])
                (off:change (if is-new-file? "newFile" "editFile")
                            f (bytes->string/utf-8 contents)
-                           (if is-new-file? #f checksum))))
+                           (if is-new-file? #f checksum)
+                           (if is-new-file? #f (bytes->string/utf-8 history)))))
            backend-changed-files)))
   ;; Generate changes to send back.
   (off:response->json

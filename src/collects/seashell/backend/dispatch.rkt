@@ -83,6 +83,7 @@
       ;; are Racket pipes and automatically garbage collected.
       (define stdout (program-stdout pid))
       (define stderr (program-stderr pid))
+      (define asan-output (program-asan-message pid))
       (define stdin (program-stdin pid))
       (define wait-evt (program-wait-evt pid))
       (define socket-closed-evt (ws-connection-closed-evt connection))
@@ -109,17 +110,19 @@
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
-           [(list pid test-name "error" exit-code stderr)
+           [(list pid test-name "error" exit-code stderr asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
                                                                         (exit_code . ,exit-code)
-                                                                        (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
-           [(list pid test-name "no-expect" stdout stderr)
+                                                                        (stderr . ,(bytes->string/utf-8 stderr #\?))
+                                                                        (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
+           [(list pid test-name "no-expect" stdout stderr asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
-                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
-           [(list pid test-name "failed" diff stderr stdout)
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))
+                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
+           [(list pid test-name "failed" diff stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
                                                            (diff . ,(map
@@ -132,7 +135,8 @@
                                                                   (bytes->string/utf-8 x #\?)))
                                                               diff))
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
-                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))))))])))))
+                                                           (stderr . ,(bytes->string/utf-8 stderr #\?))
+                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))])))))
 
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
@@ -212,6 +216,7 @@
                              (result . 
                                #hash((type . "done")
                                      (pid . ,pid)
+                                     (asan . ,(bytes->string/utf-8 (program-asan-message pid)))
                                      (status . ,(program-status pid))))))
                     ;; Flush ports.  This will work as the writing side
                     ;; of the pipes will be closed.
@@ -451,7 +456,7 @@
         (_ _) ...)
        (define checksum
          (write-file project file (string->bytes/utf-8 contents)
-                     (if history (string->bytes/utf-8 history) "")
+                     (if history (string->bytes/utf-8 history) #"")
                      (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)

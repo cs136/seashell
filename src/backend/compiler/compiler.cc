@@ -49,6 +49,8 @@
 
 #ifndef __EMSCRIPTEN__
 #include <seashell-config.h>
+#else
+#define SEASHELL_STATIC_ANALYSIS 0
 #endif
 
 #include <clang/Basic/Version.h>
@@ -87,7 +89,6 @@
 #include <llvm/MC/SubtargetFeature.h>
 #include <llvm/Option/ArgList.h>
 #include <llvm/Pass.h>
-#include <llvm/PassManager.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/FileSystem.h>
@@ -104,25 +105,17 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/raw_os_ostream.h>
-#include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Bitcode/ReaderWriter.h>
-
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/Target/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
-#include <llvm/Linker/Linker.h>
-#include <llvm/IR/DebugInfo.h>
-#include <llvm/IR/DIBuilder.h>
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
-#include <llvm/Linker.h>
-#include <llvm/DebugInfo.h>
-#include <llvm/DIBuilder.h>
+#include <llvm/IR/LegacyPassManager.h>
+
+#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 9
 #else
 #error "Unsupported version of clang."
 #endif
@@ -224,7 +217,7 @@ static void seashell_llvm_setup() {
     initializeCodeGen(*Registry);
     initializeLoopStrengthReducePass(*Registry);
     initializeLowerIntrinsicsPass(*Registry);
-    initializeUnreachableBlockElimPass(*Registry);
+    initializeUnreachableBlockElimLegacyPassPass(*Registry);
 #else
     // Compiler bug in emcc (as of 7 April/15)
     llvm_assume(true);
@@ -878,7 +871,7 @@ public:
     bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
 #ifndef _NDEBUG
     fprintf(stderr, "Got diagnostic %s\n", OutStr.c_str());
-#endif    
+#endif
     if (SM) {
       clang::PresumedLoc PLoc = SM->getPresumedLoc(Loc);
 
@@ -950,7 +943,7 @@ static int final_link_step (struct seashell_compiler* compiler)
   /** Grab a copy of the target. */
   std::unique_ptr<TargetMachine>
     target(TheTarget->createTargetMachine(TheTriple.getTriple(),
-                                          "generic", "", Options));
+                                          "generic", "", Options, llvm::None)); // FIXME: llvm Reloc optional argument now?
   if (!target.get()) {
     compiler->linker_messages = "libseashell-clang: couldn't get machine for target: " + TheTriple.getTriple() + ".";
     return 1;
@@ -960,42 +953,19 @@ static int final_link_step (struct seashell_compiler* compiler)
   /** Set up the code generator. */
   llvm::legacy::PassManager PM;
 
-  TargetLibraryInfo *TLI = new TargetLibraryInfo(TheTriple);
-  PM.add(TLI);
-  Target.addAnalysisPasses(PM);
-
   /** Drive the code generator. */
-  std::string result;
-  llvm::raw_string_ostream raw(result);
-  llvm::formatted_raw_ostream adapt(raw);
+  llvm::SmallString<128> result;
+  llvm::raw_svector_ostream raw(result);
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
-  if (const DataLayout *TD = Target.getSubtargetImpl()->getDataLayout())
-    mod->setDataLayout(TD);
-  PM.add(new DataLayoutPass());
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 5
-  if (const DataLayout *TD = Target.getDataLayout())
-    mod->setDataLayout(TD);
-  PM.add(new DataLayoutPass(mod));
-#elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
-  if (const DataLayout *TD = Target.getDataLayout())
-    PM.add(new DataLayout(*TD));
-  else
-    PM.add(new DataLayout(mod));
-#else
-#error "Unsupported version of clang."
-#endif
-
-  if (Target.addPassesToEmitFile(PM, adapt, llvm::TargetMachine::CGFT_ObjectFile)) {
+  if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
     compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
     return 1;
   }
 
   PM.run(*mod);
-  adapt.flush();
 #else
-  std::string result;
-  llvm::raw_string_ostream raw(result);
+  llvm::SmallString<128> result;
+  llvm::raw_svector_ostream raw(result);
   llvm::WriteBitcodeToFile(mod, raw);
 #endif
 
@@ -1003,7 +973,6 @@ static int final_link_step (struct seashell_compiler* compiler)
    *  We'll do this in Racket.  Pass back the completed object file
    *  in memory.
    */
-  raw.flush();
   compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
 
   return 0;
@@ -1015,19 +984,25 @@ static int final_link_step (struct seashell_compiler* compiler)
  *
  * see clang/tools/driver/driver.cpp
  */
-clang::DiagnosticOptions * CreateAndPopulateDiagOpts(const char *const *start, const char *const *end) {
+static clang::DiagnosticOptions * CreateAndPopulateDiagOpts(ArrayRef<const char *> argv) {
   auto *DiagOpts = new clang::DiagnosticOptions;
   std::unique_ptr<llvm::opt::OptTable> Opts(clang::driver::createDriverOptTable());
   unsigned MissingArgIndex, MissingArgCount;
-  std::unique_ptr<llvm::opt::InputArgList> Args(Opts->ParseArgs(
-        start, end, MissingArgIndex, MissingArgCount));
+  llvm::opt::InputArgList Args =
+      Opts->ParseArgs(argv.slice(1), MissingArgIndex, MissingArgCount);
   // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
   // Any errors that would be diagnosed here will also be diagnosed later,
   // when the DiagnosticsEngine actually exists.
-  (void) clang::ParseDiagnosticArgs(*DiagOpts, *Args);
-  return DiagOpts; 
+  (void) clang::ParseDiagnosticArgs(*DiagOpts, Args);
+  return DiagOpts;
 }
 
+static void StringDiagnosticHandler(const DiagnosticInfo &DI, void *C) {
+  auto *Message = reinterpret_cast<std::string *>(C);
+  raw_string_ostream Stream(*Message);
+  DiagnosticPrinterRawOStream DP(Stream);
+  DI.print(DP);
+}
 /**
  * compile_module(
  *  seashell_compiler* compiler,
@@ -1074,8 +1049,8 @@ static int compile_module (seashell_compiler* compiler,
     args.push_back(src_path);
 
     /** Parse Diagnostic Arguments */
-    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
-    
+    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(args));
+
     /* Invoke clang to compile file to LLVM IR. */
     SeashellDiagnosticClient diag_client(&*diag_opts);
 
@@ -1129,6 +1104,7 @@ static int compile_module (seashell_compiler* compiler,
     Clang.getHeaderSearchOpts().AddPath("/include", clang::frontend::System, false, true);
 #endif
 
+#if SEASHELL_STATIC_ANALYSIS
     /** Run the static analysis pass. */
     clang::ento::AnalysisAction Analyze;
     Success = Clang.ExecuteAction(Analyze);
@@ -1138,6 +1114,7 @@ static int compile_module (seashell_compiler* compiler,
                   std::back_inserter(compile_messages));
       return 1;
     }
+#endif
 
     clang::EmitLLVMOnlyAction CodeGen(&compiler->context);
     Success = Clang.ExecuteAction(CodeGen);
@@ -1157,20 +1134,21 @@ static int compile_module (seashell_compiler* compiler,
       return 1;
     }
 
-    /** Link the module into the one we're building.
-     *  NOTE: We destroy the source as we've taken the module
-     *  (and that for some awful reason, copying modules breaks horribly
-     *   LLVM's DWARF emitter.  Someone really ought to file a bug) */
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 6
-    raw_string_ostream Stream(Error);
-    DiagnosticPrinterRawOStream DP(Stream);
-    Success = !llvm::Linker::LinkModules(module, &*mod, [&](const DiagnosticInfo &DI) { DI.print(DP); });
-    Stream.flush();
+#ifndef __EMSCRIPTEN__
+    LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
+      compiler->context.getDiagnosticHandler();
+    void *OldDiagnosticContext = compiler->context.getDiagnosticContext();
+    std::string Message;
+    compiler->context.setDiagnosticHandler(StringDiagnosticHandler, &Message, true);
 #else
-    Success = !llvm::Linker::LinkModules(module, &*mod, llvm::Linker::DestroySource, &Error);
+    std::string Message = "Error linking modules!  Make sure there are no multiply-defined symbols!";
+#endif
+    Success = !llvm::Linker::linkModules(*module, std::move(mod));
+#ifndef __EMSCRIPTEN__
+    compiler->context.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
 #endif
     if (!Success) {
-      PUSH_DIAGNOSTIC(Error);
+      PUSH_DIAGNOSTIC(Message);
       return 1;
     }
 
@@ -1381,22 +1359,22 @@ static std::string join(std::vector<std::string> vec, char a) {
 static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname,
     std::string currentfile, uint line, uint col) {
 
-  char *orig;
-  orig = strdup(fname.c_str());
+  char *orig = strdup(fname.c_str());
   char *saveptr;
   char *seg = strtok_r(orig, "/", &saveptr);
   std::vector<std::string> path;
   do {
     path.push_back(seg);
   } while(seg = strtok_r(NULL, "/", &saveptr));
+  free(orig);
 
-  char *ofile;
-  ofile = strdup(path[path.size()-1].c_str());
+  char *ofile = strdup(path[path.size()-1].c_str());
   seg = strtok_r(ofile, ".", &saveptr);
   std::vector<std::string> file;
   do {
     file.push_back(seg);
   } while(seg = strtok_r(NULL, ".", &saveptr));
+  free(ofile);
 
   // check for include of non .h files
   if(file[file.size()-1] != "h") {
@@ -1585,7 +1563,7 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     args.push_back(worklist.front().c_str());
 
     /** Parse Diagnostic Arguments */
-    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(&args[0], &args[0] + args.size()));
+    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> diag_opts(CreateAndPopulateDiagOpts(args));
 
     /* Invoke clang to compile file to LLVM IR. */
     SeashellDiagnosticClient diag_client(&*diag_opts);

@@ -54,16 +54,28 @@ ExternalProject_Add(
   INSTALL_COMMAND "")
 
 # External projects (CMake based)
-# Global overrides 
+# Global overrides
+# Build behaviour for TravisCI builds.
+if(NOT DEFINED TRAVIS_BUILD OR NOT TRAVIS_BUILD)
+else()
+  message( "Building on TravisCI infrastructure..." )
+endif()
 set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 # llvm/clang/compiler-rt (overrides).
 set(LLVM_BUILD_TOOLS OFF CACHE STRING "Build LLVM tools." FORCE)
-add_subdirectory(llvm)
+set(CLANG_ENABLE_ARCMT OFF CACHE STRING "Build Clang ARCMT." FORCE)
+if (ENABLE_STATIC_ANALYSIS)
+  set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE STRING "Build Clang Static Analysis." FORCE)
+else()
+  set(CLANG_ENABLE_STATIC_ANALYZER OFF CACHE STRING "Build Clang Static Analysis." FORCE)
+endif()
+
+add_subdirectory(llvm EXCLUDE_FROM_ALL)
 add_custom_target(_build_clang ALL)
-add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/clang-tblgen DESTINATION bin)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/llvm-symbolizer DESTINATION bin)
+add_dependencies(_build_clang clang llvm-symbolizer clang-tblgen llvm-tblgen compiler-rt clang-headers)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/llvm/lib/clang DESTINATION lib)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/llvm/bin/ USE_SOURCE_PERMISSIONS DESTINATION bin/)
 
 # Set include paths.
 set(LIBSSH2_LIBRARIES
@@ -101,6 +113,3 @@ set(CLANG_BINARY_INCLUDE_DIRS
 set(LLVM_CXX_COMPILE_FLAGS
     "-fno-rtti"
     PARENT_SCOPE)
-
-# Install
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/jslib/ DESTINATION share/frontend/js/lib FILES_MATCHING PATTERN "*")
