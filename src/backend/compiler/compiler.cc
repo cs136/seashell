@@ -28,7 +28,6 @@
 #include <fstream>
 #include <algorithm>
 #include <mutex>
-#include <chrono>
 #include <thread>
 
 #include <libgen.h>
