@@ -38,6 +38,7 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
+           seashell_compiler_get_bytecode
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
@@ -105,6 +106,8 @@
                           (memcpy result address size)
                           result]
                         [else #f])))))
+  (define-clang seashell_compiler_get_bytecode
+                (_fun _seashell_compiler-ptr -> _string))
   (define-cpointer-type _seashell_preprocessor-ptr)
   (define-clang seashell_preprocessor_free (_fun _seashell_preprocessor-ptr -> _void)
                 #:wrap (deallocator))
@@ -151,6 +154,7 @@
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))]
+               [seashell_compiler_get_bytecode (-> Seashell-Compiler-Ptr String)]
                [#:opaque Seashell-Preprocessor-Ptr seashell_preprocessor-ptr?]
                [seashell_preprocessor_free (-> Seashell-Preprocessor-Ptr Void)]
                [seashell_preprocessor_make (-> Seashell-Preprocessor-Ptr)]
@@ -180,10 +184,12 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
+           seashell_compiler_get_bytecode
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
            seashell_compiler-ptr?
+           Seashell-Compiler-Ptr
            seashell_preprocessor_make
            seashell_preprocessor_free
            seashell_preprocessor_set_main_file

@@ -109,12 +109,17 @@ self.onmessage = function(msg) {
   var rf = data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
     // TODO handle common files in the way expected by dependency resolution code
-    var file = FS.open("/working/question/"+data.files[i].name, 'w');
-    var len = lengthBytesUTF8(data.files[i].contents)+1;
-    var arr = new Uint8Array(len);
-    var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
-    FS.write(file, arr, 0, copied);
-    FS.close(file);
+    if(data.files[i].contents) {
+      var file = FS.open("/working/question/"+data.files[i].name, 'w');
+      var len = lengthBytesUTF8(data.files[i].contents)+1;
+      var arr = new Uint8Array(len);
+      var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
+      FS.write(file, arr, 0, copied);
+      FS.close(file);
+    }
+    else {
+      console.warn("Binary file "+data.files[i].name+" ignored by offline compiler.");
+    }
   }
 
   if(init) {

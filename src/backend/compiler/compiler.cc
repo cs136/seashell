@@ -557,6 +557,51 @@ std::string seashell_compiler_get_object(struct seashell_compiler* compiler) {
 #endif
 }
 
+class SeashellPrintModulePass : public llvm::ModulePass {
+  llvm::raw_ostream &_os;
+
+public:
+  SeashellPrintModulePass(char &pid, llvm::raw_ostream &os) : ModulePass(pid), _os(os) { };
+
+  bool runOnModule(llvm::Module &M) {
+    llvm::ModulePass *printPass = (ModulePass*)createPrinterPass(_os, "banner");
+    printPass->runOnModule(M);
+    return false;
+  };
+};
+
+/**
+ * seashell_compiler_get_bytecode(struct seashell_compiler* compiler)
+ * Returns a string representing the last file compiled in LLVM IR code
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_compiler_get_bytecode(struct seashell_compiler *compiler) {
+#else
+std::string seashell_compiler_get_bytecode(struct seashell_compiler *compiler) {
+#endif
+  if(compiler->module.size() > 0) {
+    std::string bc;
+    llvm::raw_string_ostream oss(bc);
+    char pid;
+    SeashellPrintModulePass spmp(pid, oss);
+    spmp.runOnModule(compiler->module);
+    //oss << compiler->module;
+    //std::cout << compiler->module.size() << std::endl;
+#ifndef __EMSCRIPTEN__
+    return bc.c_str();
+#else
+    return bc;
+#endif
+  }
+  else {
+#ifndef __EMSCRIPTEN__
+    return NULL;
+#else
+    return std::string();
+#endif
+  }
+}
+
 /**
  * seashell_compiler_object_arch (struct seashell_compiler* compiler)
  * Returns a string representing the resulting object's architecture, if any.
@@ -1200,6 +1245,14 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   std::string attempt = join(path, '/');
   if(fexists(attempt)) return attempt;
 
+  // attempt question folder .ll file
+  file.pop_back();
+  file.push_back("ll");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
   // attempt question folder .o file
   file.pop_back();
   file.push_back("o");
@@ -1214,6 +1267,14 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   path[1] = "common";
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
+  // attempt common folder .ll file
+  file.pop_back();
+  file.push_back("ll");
+  path.pop_back();
+  path.push_back(join(file, '.'));
   attempt = join(path, '/');
   if(fexists(attempt)) return attempt;
 

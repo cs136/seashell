@@ -26,6 +26,7 @@
  Seashell-Diagnostic
  Seashell-Diagnostic-Table
  seashell-compile-files
+ seashell-generate-bytecode
  (struct-out seashell-diagnostic))
 
 (module untyped racket/base
@@ -55,6 +56,28 @@
                 (seashell_preprocessor_get_diagnostic_line pp k)
                 (seashell_preprocessor_get_diagnostic_column pp k)
                 (seashell_preprocessor_get_diagnostic_message pp k))))))
+
+(: diags-fold-function (-> (Pair Path Seashell-Diagnostic) (HashTable Path (Listof Seashell-Diagnostic))
+  (HashTable Path (Listof Seashell-Diagnostic))))
+(define (diags-fold-function message table)
+  (if (not (equal? "" (seashell-diagnostic-message (cdr message))))
+      (hash-set table (car message)
+                (cons (cdr message)
+                      (hash-ref table (car message) (lambda () '()))))
+      table))
+
+(: process-compiler-diagnostics (-> Seashell-Compiler-Ptr (Vectorof Path)
+  (Listof (Pair Path Seashell-Diagnostic))))
+(define (process-compiler-diagnostics compiler sources)
+  (for*/list : (Listof (Pair Path Seashell-Diagnostic))
+             ([i : Index #{(in-range (vector-length sources)) :: (Sequenceof Index)}]
+              [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
+    `(,(vector-ref sources i) .
+                               ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
+                                                     (seashell_compiler_get_diagnostic_file compiler i j)
+                                                     (seashell_compiler_get_diagnostic_line compiler i j)
+                                                     (seashell_compiler_get_diagnostic_column compiler i j)
+                                                     (seashell_compiler_get_diagnostic_message compiler i j)))))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -89,7 +112,8 @@
   (define raw (remove-duplicates (append extra-objects (car pp-result))))
   (define sources (filter
                     (lambda ([file : Path])
-                      (equal? (filename-extension file) #"c")) raw))
+                      (or (equal? (filename-extension file) #"c")
+                          (equal? (filename-extension file) #"ll"))) raw))
   (define objects (filter
                     (lambda ([file : Path])
                       (equal? (filename-extension file) #"o")) raw))
@@ -121,27 +145,13 @@
      (define intermediate-linker-diags (seashell_compiler_get_linker_messages compiler))
      ;; Generate our diagnostics:
      (define compiler-diags
-       (foldl
-        (lambda ([message : (Pair Path Seashell-Diagnostic)]
-                 [table : (HashTable Path (Listof Seashell-Diagnostic))])
-          (if (not (equal? "" (seashell-diagnostic-message (cdr message))))
-              (hash-set table (car message)
-                        (cons (cdr message)
-                              (hash-ref table (car message) (lambda () '()))))
-              table))
+       (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
         (append (cdr pp-result)
           (list*
            `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
-           (for*/list : (Listof (Pair Path Seashell-Diagnostic))
-                      ([i : Index #{(in-range (length sources)) :: (Sequenceof Index)}]
-                       [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
-             `(,(vector-ref file-vec i) .
-                                        ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
-                                                              (seashell_compiler_get_diagnostic_file compiler i j)
-                                                              (seashell_compiler_get_diagnostic_line compiler i j)
-                                                              (seashell_compiler_get_diagnostic_column compiler i j)
-                                                              (seashell_compiler_get_diagnostic_message compiler i j))))))))
+           (process-compiler-diagnostics compiler file-vec)))))
+
      ;; Grab the object - note that it may not exist yet.
      (define object (seashell_compiler_get_object compiler))
      (cond
@@ -219,3 +229,33 @@
             (values #f diags))]
        [else
         (values #f compiler-diags)])]))
+
+;; (seashell-generate-bytecode source)
+;; Generates LLVM IR code from a given C source file
+(: seashell-generate-bytecode (-> Path
+                              (Values (U String False) Seashell-Diagnostic-Table)))
+(define (seashell-generate-bytecode source)
+  (cond
+    [(not (file-exists? source))
+     (values #f (hash (string->path "invalid-input")
+                      (list (seashell-diagnostic #t "" 0 0 "File does not exist!"))))]
+    [(not (equal? (filename-extension source) #"c"))
+     (values #f (hash (string->path "invalid-input")
+                      (list (seashell-diagnostic #t "" 0 0 "File does not have extension .c!"))))]
+    [else
+     ;; Set up the compiler instance.
+     (define compiler (seashell_compiler_make))
+     (define file-vec (list->vector (list source)))
+     (seashell_compiler_clear_files compiler)
+     (seashell_compiler_clear_compile_flags compiler)
+     (seashell_compiler_add_file compiler (some-system-path->string source))
+
+     ;; Run the compiler
+     (define compiler-res (seashell_compiler_run compiler))
+     ;; Generate our diagnostics:
+     (define compiler-diags
+       (foldl diags-fold-function
+        #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
+        (process-compiler-diagnostics compiler (list->vector (list source)))))
+      (define bc (seashell_compiler_get_bytecode compiler))
+      (values (if (zero? compiler-res) bc #f) compiler-diags)]))
