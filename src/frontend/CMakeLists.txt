@@ -24,10 +24,6 @@ set(SEASHELL_FRONTEND share/frontend)
 # Global Definitions
 find_program(SEASHELL_MZTEXT mztext)
 
-if(NOT SEASHELL_WL_PROJ_BASE_URL)
-  set(SEASHELL_WL_PROJ_BASE_URL "")
-endif()
-
 # Custom build rules
 function(html_compile filename)
   get_filename_component(base ${filename} NAME_WE)
