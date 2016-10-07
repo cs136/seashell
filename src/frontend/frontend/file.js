@@ -570,6 +570,12 @@ angular.module('frontend-app')
             } else {
               self.unavailable = true;
             }
+            // .ll files store LLVM bytecode, make these appear as binary files to the user
+            var splitfile = self.file.split(".");
+            if(splitfile[splitfile.length-1] == "ll") {
+              self.isBinaryFile = true;
+              self.contents = null;
+            }
             self.refreshSettings();
           }).catch(function (error) {
             if (typeof error === "string" &&
