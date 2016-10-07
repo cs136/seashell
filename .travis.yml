@@ -34,7 +34,7 @@ script:
   - mkdir build >/dev/null
   - cd build >/dev/null
   - $HOME/cmake/bin/cmake -DSEASHELL_MZTEXT=$HOME/racket/bin/mztext -DSCRIBBLE=$HOME/racket/bin/scribble -DSEASHELL_RACKET=$HOME/racket/bin/racket -DCMAKE_INSTALL_PREFIX=$HOME/install -DPROCESSOR_COUNT=1 .. >/dev/null
-  - SEASHELL_WL_PROJ_BASE_URL=dummy make
+  - make
   - CTEST_OUTPUT_ON_FAILURE=true make test
   - ../src/tests/frontend-tests/node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js
   - make install >/dev/null
