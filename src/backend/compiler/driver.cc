@@ -41,10 +41,12 @@ int main( int argc, char* argv[] ) {
 
     struct seashell_compiler* compiler = seashell_compiler_make();
     seashell_compiler_add_file(compiler, argv[1]);
-    seashell_compiler_run(compiler);
-    const char *bc = seashell_compiler_get_bytecode(compiler);
+    seashell_compiler_run(compiler, true);
+    int len;
+    const char *bc = seashell_compiler_get_object(compiler, &len);
+    std::string res(bc, len);
     std::cout << "Bytecode:" << std::endl;
-    std::cout << bc;
+    std::cout << res;
     seashell_compiler_free(compiler);
   }
 }

@@ -27,8 +27,6 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <mutex>
-#include <thread>
 
 #include <libgen.h>
 #include <unistd.h>
@@ -40,11 +38,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-
-#define STD_OUT_FD STDOUT_FILENO
-#define STD_IN_FD STDIN_FILENO
-#define STD_ERR_FD STDERR_FILENO
 
 #ifndef __EMSCRIPTEN__
 #include <seashell-config.h>
@@ -494,7 +487,7 @@ std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* c
 static int compile_module (seashell_compiler* compiler,
     llvm::Module* module, const char* src_path);
 
-static int final_link_step (seashell_compiler* compiler);
+static int final_link_step (seashell_compiler* compiler, bool gen_bytecode);
 
 /**
  * seashell_compiler_run (struct seashell_compiler* compiler)
@@ -502,6 +495,7 @@ static int final_link_step (seashell_compiler* compiler);
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
+ *  gen_bytecode - true to generate LLVM IR instead of binary code
  *
  * Returns
  *  0 if everything went OK, nonzero otherwise.
@@ -510,7 +504,7 @@ static int final_link_step (seashell_compiler* compiler);
  *  May output some additional error information to stderr.
  *  seashell_llvm_setup must be called before this function.
  */
-extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
+extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode) {
     std::string errors;
 
     compiler->module_messages.clear();
@@ -525,7 +519,7 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
       }
     }
 
-    final_link_step(compiler);
+    final_link_step(compiler, gen_bytecode);
 
     compiler->linker_messages = "";
     return 0;
@@ -555,212 +549,6 @@ extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* 
 std::string seashell_compiler_get_object(struct seashell_compiler* compiler) {
   return std::string(compiler->output_object.begin(), compiler->output_object.end());
 #endif
-}
-
-// This class deals with piping stderr to a string.
-// Taken from a Stack Overflow post and modified
-// TODO: Change to suit more specifically our purpose here
-//  or even better, find a way to get the IR from Clang other than
-//  the dump() method to stderr...
-class StdCapture
-{
-public:
-    static void Init()
-    {
-        // make stdout & stderr streams unbuffered
-        // so that we don't need to flush the streams
-        // before capture and after capture 
-        // (fflush can cause a deadlock if the stream is currently being 
-        std::lock_guard<std::mutex> lock(m_mutex);
-        setvbuf(stdout,NULL,_IONBF,0);
-        setvbuf(stderr,NULL,_IONBF,0);
-    }
-
-    static void BeginCapture()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_capturing)
-            return;
-
-        secure_pipe(m_pipe);
-        m_oldStdOut = secure_dup(STD_OUT_FD);
-        m_oldStdErr = secure_dup(STD_ERR_FD);
-        secure_dup2(m_pipe[WRITE],STD_OUT_FD);
-        secure_dup2(m_pipe[WRITE],STD_ERR_FD);
-        m_capturing = true;
-#ifndef _MSC_VER
-        secure_close(m_pipe[WRITE]);
-#endif
-    }
-    static bool IsCapturing()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_capturing;
-    }
-    static bool EndCapture()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_capturing)
-            return false;
-
-        m_captured.clear();
-        secure_dup2(m_oldStdOut, STD_OUT_FD);
-        secure_dup2(m_oldStdErr, STD_ERR_FD);
-
-        const int bufSize = 1025;
-        char buf[bufSize];
-        int bytesRead = 0;
-        bool fd_blocked(false);
-        do
-        {
-            bytesRead = 0;
-            fd_blocked = false;
-#ifdef _MSC_VER
-            if (!eof(m_pipe[READ]))
-                bytesRead = read(m_pipe[READ], buf, bufSize-1);
-#else
-            bytesRead = read(m_pipe[READ], buf, bufSize-1);
-#endif
-            if (bytesRead > 0)
-            {
-                buf[bytesRead] = 0;
-                m_captured += buf;
-            }
-            else if (bytesRead < 0)
-            {
-                fd_blocked = (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR);
-                if (fd_blocked)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-        }
-        while(fd_blocked || bytesRead == (bufSize-1));
-
-        secure_close(m_oldStdOut);
-        secure_close(m_oldStdErr);
-        secure_close(m_pipe[READ]);
-#ifdef _MSC_VER
-        secure_close(m_pipe[WRITE]);
-#endif
-        m_capturing = false;
-    }
-    static std::string GetCapture()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_captured;
-    }
-private:
-    enum PIPES { READ, WRITE };
-
-    static int secure_dup(int src)
-    {
-        int ret = -1;
-        bool fd_blocked = false;
-        do
-        {
-             ret = dup(src);
-             fd_blocked = (errno == EINTR ||  errno == EBUSY);
-             if (fd_blocked)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-        while (ret < 0);
-        return ret;
-    }
-    static void secure_pipe(int * pipes)
-    {
-        int ret = -1;
-        bool fd_blocked = false;
-        do
-        {
-#ifdef _MSC_VER
-            ret = pipe(pipes, 65536, O_BINARY);
-#else
-            ret = pipe(pipes) == -1;
-#endif
-            fd_blocked = (errno == EINTR ||  errno == EBUSY);
-            if (fd_blocked)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-        while (ret < 0);
-    }
-    static void secure_dup2(int src, int dest)
-    {
-        int ret = -1;
-        bool fd_blocked = false;
-        do
-        {
-             ret = dup2(src,dest);
-             fd_blocked = (errno == EINTR ||  errno == EBUSY);
-             if (fd_blocked)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-        while (ret < 0);
-    }
-
-    static void secure_close(int & fd)
-    {
-        int ret = -1;
-        bool fd_blocked = false;
-        do
-        {
-             ret = close(fd);
-             fd_blocked = (errno == EINTR);
-             if (fd_blocked)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-        while (ret < 0);
-
-        fd = -1;
-    }
-
-    static int m_pipe[2];
-    static int m_oldStdOut;
-    static int m_oldStdErr;
-    static bool m_capturing;
-    static std::mutex m_mutex;
-    static std::string m_captured;
-};
-
-// actually define vars.
-int StdCapture::m_pipe[2];
-int StdCapture::m_oldStdOut;
-int StdCapture::m_oldStdErr;
-bool StdCapture::m_capturing;
-std::mutex StdCapture::m_mutex;
-std::string StdCapture::m_captured;
-
-/**
- * seashell_compiler_get_bytecode(struct seashell_compiler* compiler)
- * Returns a string representing the last file compiled in LLVM IR code
- */
-#ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_compiler_get_bytecode(struct seashell_compiler *compiler) {
-#else
-std::string seashell_compiler_get_bytecode(struct seashell_compiler *compiler) {
-#endif
-  if(compiler->module.size() > 0) {
-    std::string bc;
-    // For now, we have this brutal hack.. redirect stderr to a stringstream,
-    //  then dump the module.. the usual print() method doesn't seem to work
-    //  reliably so I resorted to this. TODO figure out how the API should
-    //  work here
-    StdCapture::Init();
-    StdCapture::BeginCapture();
-    compiler->module.dump();
-    StdCapture::EndCapture();
-    bc = StdCapture::GetCapture();
-#ifndef __EMSCRIPTEN__
-    return bc.c_str();
-#else
-    return bc;
-#endif
-  }
-  else {
-#ifndef __EMSCRIPTEN__
-    return NULL;
-#else
-    return std::string();
-#endif
-  }
 }
 
 /**
@@ -912,7 +700,7 @@ public:
  * Returns:
  *  1 on error, 0 otherwise.
  */
-static int final_link_step (struct seashell_compiler* compiler)
+static int final_link_step (struct seashell_compiler* compiler, bool gen_bytecode)
 {
   Module* mod = &compiler->module;
   /** Compile to Object code if running natively. */
@@ -928,51 +716,61 @@ static int final_link_step (struct seashell_compiler* compiler)
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
+  if(!gen_bytecode) {
 #ifndef __EMSCRIPTEN__
-  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
-  if (!TheTarget) {
-    compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
+    const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+    if (!TheTarget) {
+      compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
 
 
-  /** Code Generation Options - we generate code with standard options. */
-  TargetOptions Options;
+    /** Code Generation Options - we generate code with standard options. */
+    TargetOptions Options;
 
-  /** Grab a copy of the target. */
-  std::unique_ptr<TargetMachine>
-    target(TheTarget->createTargetMachine(TheTriple.getTriple(),
-                                          "generic", "", Options, llvm::None)); // FIXME: llvm Reloc optional argument now?
-  if (!target.get()) {
-    compiler->linker_messages = "libseashell-clang: couldn't get machine for target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
-  TargetMachine &Target = *target.get();
+    /** Grab a copy of the target. */
+    std::unique_ptr<TargetMachine>
+      target(TheTarget->createTargetMachine(TheTriple.getTriple(),
+                                            "generic", "", Options, llvm::None)); // FIXME: llvm Reloc optional argument now?
+    if (!target.get()) {
+      compiler->linker_messages = "libseashell-clang: couldn't get machine for target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
+    TargetMachine &Target = *target.get();
 
-  /** Set up the code generator. */
-  llvm::legacy::PassManager PM;
+    /** Set up the code generator. */
+    llvm::legacy::PassManager PM;
 
-  /** Drive the code generator. */
-  llvm::SmallString<128> result;
-  llvm::raw_svector_ostream raw(result);
+    /** Drive the code generator. */
+    llvm::SmallString<128> result;
+    llvm::raw_svector_ostream raw(result);
 
-  if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
-    compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
+    if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
+      compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
 
-  PM.run(*mod);
+    PM.run(*mod);
 #else
-  llvm::SmallString<128> result;
-  llvm::raw_svector_ostream raw(result);
-  llvm::WriteBitcodeToFile(mod, raw);
+    llvm::SmallString<128> result;
+    llvm::raw_svector_ostream raw(result);
+    llvm::WriteBitcodeToFile(mod, raw);
 #endif
 
-  /** Final link step needs to happen with an invocation to cc.
-   *  We'll do this in Racket.  Pass back the completed object file
-   *  in memory.
-   */
-  compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
+    /** Final link step needs to happen with an invocation to cc.
+     *  We'll do this in Racket.  Pass back the completed object file
+     *  in memory.
+     */
+    compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
+  }
+  // generate IR bytecode
+  else {
+    std::string res;
+    llvm::raw_string_ostream oss(res);
+    compiler->module.print(oss, nullptr);
+    oss.flush();
+    compiler->output_object = std::vector<char>(oss.str().begin(), oss.str().end());
+  }
 
   return 0;
 }

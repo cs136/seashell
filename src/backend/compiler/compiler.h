@@ -29,7 +29,6 @@ std::string seashell_clang_version();
 void seashell_compiler_add_file (struct seashell_compiler* compiler, std::string file);
 void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, std::string flag);
 std::string seashell_compiler_get_object(struct seashell_compiler* compiler);
-std::string seashell_compiler_get_bytecode(struct seashell_compiler* compiler);
 std::string seashell_compiler_get_linker_messages(struct seashell_compiler* compiler);
 std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k);
 std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k);
@@ -46,7 +45,6 @@ extern "C" const char* seashell_clang_version();
 extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file);
 extern "C" void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, const char* flag);
 extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length);
-extern "C" const char * seashell_compiler_get_bytecode(struct seashell_compiler* compiler);
 extern "C" const char * seashell_compiler_get_linker_messages(struct seashell_compiler* compiler);
 extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k);
 extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k);
@@ -68,7 +66,7 @@ extern "C" int seashell_compiler_get_diagnostic_count (struct seashell_compiler*
 extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int n, int k);
 extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int n, int k);
 extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k);
-extern "C" int seashell_compiler_run (struct seashell_compiler* compiler);
+extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode);
 
 extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void);
 extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor);
