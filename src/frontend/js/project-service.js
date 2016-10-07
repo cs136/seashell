@@ -33,8 +33,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
+      var WL_PROJ_ZIP_URL_TEMPLATE = SEASHELL_WL_PROJ_BASE_URL+"%s-seashell.zip";
       var USERNAME = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s&user="+USERNAME;
+      var WL_PROJ_FILE_LIST_URL_TEMPLATE = PROJ_FILE_LIST_URL_TEMPLATE+"&whitelist=true";
       var PROJ_WHITE_LIST_URL = CGI_URL + "project_whitelist.cgi";
       var USER_WHITE_LIST_URL = CGI_URL + "user_whitelist.cgi";
      
@@ -307,10 +309,16 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                   set self.skel to the file skeleton url.
                   eg. self.projectZipURL = "https://.....~cs136/assignments_skeleton/A0/";
                  */
-               self.inSkeleton().then(function(bool) {
-                  if (! bool) {return;}
-                  self.projectZipURL = sprintf(PROJ_ZIP_URL_TEMPLATE, self.name);
-                  self.skelURL = sprintf(PROJ_FILE_LIST_URL_TEMPLATE, self.name);
+               self.inSkeleton().then(function(inSkel) {
+                  if (!inSkel) return;
+                  if(inSkel == "public") {
+                    self.projectZipURL = sprintf(PROJ_ZIP_URL_TEMPLATE, self.name);
+                    self.skelURL = sprintf(PROJ_FILE_LIST_URL_TEMPLATE, self.name);
+                  }
+                  else if(inSkel == "whitelist") {
+                    self.projectZipURL = sprintf(WL_PROJ_ZIP_URL_TEMPLATE, self.name);
+                    self.skelURL = sprintf(WL_PROJ_FILE_LIST_URL_TEMPLATE, self.name);
+                  }
                   self.pullMissingSkelFiles();
                });
                return self;
@@ -748,7 +756,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
         SeashellProject.prototype.listSkelFiles = function() {
           var self = this;
           if (! self._listSkelFiles) {
-            self._listSkelFiles = $http({url: self.skelURL, user: USERNAME}).then(function(result) {
+            self._listSkelFiles = $http({url: self.skelURL, user: USERNAME, whitelist: 'true'}).then(function(result) {
               return result.data.result.map(function(path) {
                 // remove the project name from the start
                 return path.replace(new RegExp("^"+self.name+"/"), "");
@@ -776,8 +784,10 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
                 var users = result[1];
                 var wlnames = result[2];
                 var ans = false || _.find(names, function(a){return a === self.name;});
-                if(_.find(users, function(u) { return u === USERNAME; })) {
+                if(ans) ans = "public";
+                if(!ans && _.find(users, function(u) { return u === USERNAME; })) {
                   ans = ans || _.find(wlnames, function(a){return a === self.name;});
+                  if(ans) ans = "whitelist";
                 }
                 return ans;
             });
@@ -910,27 +920,35 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
             }).then(function (results) {
                var localProjects = projects.map(function(v, k) {return v[0];}).sort();
                // expects a list of project (assignment) names : (listof String)
-               var skels = results.data.sort();
+               var skels = _.map(results.data.sort(),
+                function(skel) {
+                  return [skel, sprintf(PROJ_ZIP_URL_TEMPLATE, skel)];
+                });
                var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
                return self.userWhitelist().then(function(usernames) {
                   if (_.contains(usernames, user)) {
                      return self.projectWhitelist().then(function(more) {
-                        skels = skels.concat(more);
+                        skels = skels.concat(_.map(more,
+                          function(skel) {
+                            return [skel, sprintf(WL_PROJ_ZIP_URL_TEMPLATE, skel)];
+                          }));
                      });
                   }
                }).finally(function() {
-                  var new_projects = _.difference(skels, localProjects);
+                  var new_projects = _.filter(skels, function(skel) {
+                    return -1 == localProjects.indexOf(skel[0]);
+                  });
                   var failed_projects = [];
                   var start = $q.when();
                   return _.foldl(new_projects, function(in_continuation, template) {
                      function clone(failed) {
-                        return $q.when(ws.newProjectFrom(template, 
-                           sprintf(PROJ_ZIP_URL_TEMPLATE, template))).then(function () {
+                        return $q.when(ws.newProjectFrom(template[0], 
+                           template[1])).then(function () {
                               if (failed) {
                                  return $q.reject("Propagating failure...");
                               }
                            }).catch(function (info) {
-                             failed_projects.push(template);
+                             failed_projects.push(template[0]);
                              return $q.reject("Propagating failure...");
                            });
                         }
