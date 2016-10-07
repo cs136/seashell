@@ -38,7 +38,6 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
-           seashell_compiler_get_bytecode
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
@@ -89,7 +88,7 @@
   (define-clang seashell_compiler_get_diagnostic_message
                 (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
   (define-clang seashell_compiler_run
-                (_fun _seashell_compiler-ptr -> _int))
+                (_fun _seashell_compiler-ptr _bool -> _int))
   (define-clang seashell_compiler_object_arch
                 (_fun _seashell_compiler-ptr -> _string))
   (define-clang seashell_compiler_object_os
@@ -106,8 +105,6 @@
                           (memcpy result address size)
                           result]
                         [else #f])))))
-  (define-clang seashell_compiler_get_bytecode
-                (_fun _seashell_compiler-ptr -> _string))
   (define-cpointer-type _seashell_preprocessor-ptr)
   (define-clang seashell_preprocessor_free (_fun _seashell_preprocessor-ptr -> _void)
                 #:wrap (deallocator))
@@ -150,11 +147,10 @@
                [seashell_compiler_get_diagnostic_column (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer Index)]
                [seashell_compiler_get_diagnostic_file (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
                [seashell_compiler_get_diagnostic_message (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
-               [seashell_compiler_run (-> Seashell-Compiler-Ptr Fixnum)]
+               [seashell_compiler_run (-> Seashell-Compiler-Ptr Boolean Fixnum)]
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))]
-               [seashell_compiler_get_bytecode (-> Seashell-Compiler-Ptr String)]
                [#:opaque Seashell-Preprocessor-Ptr seashell_preprocessor-ptr?]
                [seashell_preprocessor_free (-> Seashell-Preprocessor-Ptr Void)]
                [seashell_preprocessor_make (-> Seashell-Preprocessor-Ptr)]
@@ -184,7 +180,6 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
-           seashell_compiler_get_bytecode
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os

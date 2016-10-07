@@ -140,7 +140,7 @@
      (for-each (lambda ([file : String]) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
 
      ;; Run the compiler + intermediate linkage step.
-     (define compiler-res (seashell_compiler_run compiler))
+     (define compiler-res (seashell_compiler_run compiler #f))
      ;; Grab the results of running the intermediate code generation step.
      (define intermediate-linker-diags (seashell_compiler_get_linker_messages compiler))
      ;; Generate our diagnostics:
@@ -233,7 +233,7 @@
 ;; (seashell-generate-bytecode source)
 ;; Generates LLVM IR code from a given C source file
 (: seashell-generate-bytecode (-> Path
-                              (Values (U String False) Seashell-Diagnostic-Table)))
+                              (Values (U Bytes False) Seashell-Diagnostic-Table)))
 (define (seashell-generate-bytecode source)
   (cond
     [(not (file-exists? source))
@@ -251,11 +251,11 @@
      (seashell_compiler_add_file compiler (some-system-path->string source))
 
      ;; Run the compiler
-     (define compiler-res (seashell_compiler_run compiler))
+     (define compiler-res (seashell_compiler_run compiler #t))
      ;; Generate our diagnostics:
      (define compiler-diags
        (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
         (process-compiler-diagnostics compiler (list->vector (list source)))))
-      (define bc (seashell_compiler_get_bytecode compiler))
+      (define bc (seashell_compiler_get_object compiler))
       (values (if (zero? compiler-res) bc #f) compiler-diags)]))
