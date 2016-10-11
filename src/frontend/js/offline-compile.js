@@ -82,7 +82,7 @@ self.onmessage = function(msg) {
     }
     Module.seashell_preprocessor_free(pp);
 
-    var cres = Module.seashell_compiler_run(cc);
+    var cres = Module.seashell_compiler_run(cc, false);
     var diags = diagnostics(cc, sources);
     if(cres === 0) {
       var obj = Module.seashell_compiler_get_object(cc);
@@ -110,6 +110,10 @@ self.onmessage = function(msg) {
   for(var i=0; i<data.files.length; i++) {
     // TODO handle common files in the way expected by dependency resolution code
     if(data.files[i].contents) {
+      var split = data.files[i].name.split(".");
+      if(split[split.length-1] == "ll") {
+        console.log(data.files[i].name, data.files[i].contents);
+      }
       var file = FS.open("/working/question/"+data.files[i].name, 'w');
       var len = lengthBytesUTF8(data.files[i].contents)+1;
       var arr = new Uint8Array(len);
