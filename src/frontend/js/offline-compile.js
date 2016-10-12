@@ -67,7 +67,6 @@ self.onmessage = function(msg) {
   }
 
   function compile(runnerFile) {
-    console.log("compile called");
     var pp = Module.seashell_preprocessor_make();
     Module.seashell_preprocessor_set_main_file(pp, "/working/question/"+runnerFile);
     console.log("Running preprocessor...");
@@ -121,9 +120,6 @@ self.onmessage = function(msg) {
     // TODO handle common files in the way expected by dependency resolution code
     if(data.files[i].contents) {
       var split = data.files[i].name.split(".");
-      if(split[split.length-1] == "ll") {
-        console.log(data.files[i].name, data.files[i].contents);
-      }
       var file = FS.open("/working/question/"+data.files[i].name, 'w');
       var len = lengthBytesUTF8(data.files[i].contents)+1;
       var arr = new Uint8Array(len);
