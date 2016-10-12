@@ -14,9 +14,19 @@ function block_for_libraries(callback) {
     callback();
   }
   catch(e) {
-    setTimeout(function() {
-      block_for_libraries(callback);
-    }, 200);
+    if(e.code != "ENOENT" || e.errno != 2) {
+      // in this case we have an actual error to deal with
+      postMessage({
+        type: 'error',
+        err: (e.stack ? e.stack : e.message ? e.message : "Unknown error")
+      });
+      close();
+    }
+    else {
+      setTimeout(function() {
+        block_for_libraries(callback);
+      }, 200);
+    }
   }
 }
 
