@@ -99,12 +99,17 @@
               .then(function (result) {
                 self.deleteFile(name, file, checksum);
                 result.file = new_file;
+                console.log("adding file from rename", result);
                 if (checksum !== undefined) {
                   self.database.files.add(result);
                 } else {
-                  self.database.changelog.add({file:{project: name, file: new_file},
-                                               type: "editFile",
-                                               contents: result.contents, history: result.history});
+                  var change = {
+                    file:{project: name, file: new_file},
+                    type: "newFile",
+                    contents: result.contents,
+                    history: result.history
+                  };
+                  self.database.changelog.add(change);
                   self.database.files.add(result);
                 }
                 return result.checksum;
@@ -228,7 +233,7 @@
               });
           } else {
             self.database.changelog.add({file: {project: name, file: file},
-                                         type: "editFile",
+                                         type: "newFile",
                                          contents: contents});
             self.database.files.add({project: name, file: file,
                             contents: contents, history: "", checksum: checksum,
