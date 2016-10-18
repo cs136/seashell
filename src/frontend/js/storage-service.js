@@ -219,6 +219,16 @@
       };
 
       self.newFile = function (name, file, contents, encoding, normalize, online_checksum) {
+        // account for base64 encoding
+        var rmatch;
+        if(encoding == "url" &&
+          (rmatch = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/))) {
+          var mime = rmatch[1];
+          var b64 = rmatch[3];
+          if(b64 || mime=="base64") {
+            contents = window.atob(rmatch[4]);
+          }
+        }
         var checksum = (typeof contents === "string" && md5(contents)) || online_checksum || "";
         var key = [name, file];
         return self.database.transaction('rw', self.database.changelog, self.database.files, function () {
