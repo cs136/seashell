@@ -453,7 +453,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           if(self.root.find(question)) {
             return $q.reject("A question with that name already exists.");
           }
-          var dir = new SeashellFile(self, question, null, true);
+          var dir = new SeashellFile(self, question, true);
           return self.root._placeInTree(dir, false, false);
         };
 
