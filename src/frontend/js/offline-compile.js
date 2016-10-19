@@ -39,7 +39,12 @@ function onInit() {
   init_queue = [];
 }
 
-Module = {onRuntimeInitialized:onInit, setStatus:(function (s) {console.log(s);})};
+Module = {
+  onRuntimeInitialized:onInit,
+  setStatus:(function (s) {console.log(s);}),
+  noExitRuntime: true,
+  onExit: function(s) { console.log(s); }
+};
 
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
@@ -90,6 +95,16 @@ self.onmessage = function(msg) {
       Module.seashell_compiler_add_file(cc, source);
     }
     Module.seashell_preprocessor_free(pp);
+
+    // add compiler flags
+    // TODO: import these flags from elsewhere so we don't have them hard coded on both
+    //       backend and frontend.
+    var flags = ["-Wall", "-Werror=int-conversion", "-Werror=int-to-pointer-cast", "-Werror=return-type",
+                 "-Werror=import-preprocessor-directive-pedantic", "-Werror=incompatible-pointer-types",
+                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"];
+    for(var ind = 0; ind<flags.length; ind++) {
+      Module.seashell_compiler_add_compile_flag(cc, flags[ind]);
+    }
 
     var cres = Module.seashell_compiler_run(cc, false);
     var diags = diagnostics(cc, sources);
