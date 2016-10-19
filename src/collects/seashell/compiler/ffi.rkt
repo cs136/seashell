@@ -88,7 +88,7 @@
   (define-clang seashell_compiler_get_diagnostic_message
                 (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
   (define-clang seashell_compiler_run
-                (_fun _seashell_compiler-ptr -> _int))
+                (_fun _seashell_compiler-ptr _bool -> _int))
   (define-clang seashell_compiler_object_arch
                 (_fun _seashell_compiler-ptr -> _string))
   (define-clang seashell_compiler_object_os
@@ -147,7 +147,7 @@
                [seashell_compiler_get_diagnostic_column (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer Index)]
                [seashell_compiler_get_diagnostic_file (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
                [seashell_compiler_get_diagnostic_message (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
-               [seashell_compiler_run (-> Seashell-Compiler-Ptr Fixnum)]
+               [seashell_compiler_run (-> Seashell-Compiler-Ptr Boolean Fixnum)]
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))]
@@ -184,6 +184,7 @@
            seashell_compiler_object_arch
            seashell_compiler_object_os
            seashell_compiler-ptr?
+           Seashell-Compiler-Ptr
            seashell_preprocessor_make
            seashell_preprocessor_free
            seashell_preprocessor_set_main_file

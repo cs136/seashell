@@ -487,7 +487,7 @@ std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* c
 static int compile_module (seashell_compiler* compiler,
     llvm::Module* module, const char* src_path);
 
-static int final_link_step (seashell_compiler* compiler);
+static int final_link_step (seashell_compiler* compiler, bool gen_bytecode);
 
 /**
  * seashell_compiler_run (struct seashell_compiler* compiler)
@@ -495,6 +495,7 @@ static int final_link_step (seashell_compiler* compiler);
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
+ *  gen_bytecode - true to generate LLVM IR instead of binary code
  *
  * Returns
  *  0 if everything went OK, nonzero otherwise.
@@ -503,7 +504,7 @@ static int final_link_step (seashell_compiler* compiler);
  *  May output some additional error information to stderr.
  *  seashell_llvm_setup must be called before this function.
  */
-extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
+extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode) {
     std::string errors;
 
     compiler->module_messages.clear();
@@ -518,7 +519,7 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler) {
       }
     }
 
-    final_link_step(compiler);
+    final_link_step(compiler, gen_bytecode);
 
     compiler->linker_messages = "";
     return 0;
@@ -699,7 +700,7 @@ public:
  * Returns:
  *  1 on error, 0 otherwise.
  */
-static int final_link_step (struct seashell_compiler* compiler)
+static int final_link_step (struct seashell_compiler* compiler, bool gen_bytecode)
 {
   Module* mod = &compiler->module;
   /** Compile to Object code if running natively. */
@@ -715,51 +716,61 @@ static int final_link_step (struct seashell_compiler* compiler)
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
+  if(!gen_bytecode) {
 #ifndef __EMSCRIPTEN__
-  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
-  if (!TheTarget) {
-    compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
+    const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+    if (!TheTarget) {
+      compiler->linker_messages = "libseashell-clang: couldn't look up target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
 
 
-  /** Code Generation Options - we generate code with standard options. */
-  TargetOptions Options;
+    /** Code Generation Options - we generate code with standard options. */
+    TargetOptions Options;
 
-  /** Grab a copy of the target. */
-  std::unique_ptr<TargetMachine>
-    target(TheTarget->createTargetMachine(TheTriple.getTriple(),
-                                          "generic", "", Options, llvm::None)); // FIXME: llvm Reloc optional argument now?
-  if (!target.get()) {
-    compiler->linker_messages = "libseashell-clang: couldn't get machine for target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
-  TargetMachine &Target = *target.get();
+    /** Grab a copy of the target. */
+    std::unique_ptr<TargetMachine>
+      target(TheTarget->createTargetMachine(TheTriple.getTriple(),
+                                            "generic", "", Options, llvm::None)); // FIXME: llvm Reloc optional argument now?
+    if (!target.get()) {
+      compiler->linker_messages = "libseashell-clang: couldn't get machine for target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
+    TargetMachine &Target = *target.get();
 
-  /** Set up the code generator. */
-  llvm::legacy::PassManager PM;
+    /** Set up the code generator. */
+    llvm::legacy::PassManager PM;
 
-  /** Drive the code generator. */
-  llvm::SmallString<128> result;
-  llvm::raw_svector_ostream raw(result);
+    /** Drive the code generator. */
+    llvm::SmallString<128> result;
+    llvm::raw_svector_ostream raw(result);
 
-  if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
-    compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
-    return 1;
-  }
+    if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
+      compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
+      return 1;
+    }
 
-  PM.run(*mod);
+    PM.run(*mod);
 #else
-  llvm::SmallString<128> result;
-  llvm::raw_svector_ostream raw(result);
-  llvm::WriteBitcodeToFile(mod, raw);
+    llvm::SmallString<128> result;
+    llvm::raw_svector_ostream raw(result);
+    llvm::WriteBitcodeToFile(mod, raw);
 #endif
 
-  /** Final link step needs to happen with an invocation to cc.
-   *  We'll do this in Racket.  Pass back the completed object file
-   *  in memory.
-   */
-  compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
+    /** Final link step needs to happen with an invocation to cc.
+     *  We'll do this in Racket.  Pass back the completed object file
+     *  in memory.
+     */
+    compiler->output_object = std::vector<char>(raw.str().begin(), raw.str().end());
+  }
+  // generate IR bytecode
+  else {
+    std::string res;
+    llvm::raw_string_ostream oss(res);
+    compiler->module.print(oss, nullptr);
+    oss.flush();
+    compiler->output_object = std::vector<char>(oss.str().begin(), oss.str().end());
+  }
 
   return 0;
 }
@@ -1178,6 +1189,14 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   std::string attempt = join(path, '/');
   if(fexists(attempt)) return attempt;
 
+  // attempt question folder .ll file
+  file.pop_back();
+  file.push_back("ll");
+  path.pop_back();
+  path.push_back(join(file, '.'));
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
   // attempt question folder .o file
   file.pop_back();
   file.push_back("o");
@@ -1192,6 +1211,14 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   path.pop_back();
   path.push_back(join(file, '.'));
   path[1] = "common";
+  attempt = join(path, '/');
+  if(fexists(attempt)) return attempt;
+
+  // attempt common folder .ll file
+  file.pop_back();
+  file.push_back("ll");
+  path.pop_back();
+  path.push_back(join(file, '.'));
   attempt = join(path, '/');
   if(fexists(attempt)) return attempt;
 

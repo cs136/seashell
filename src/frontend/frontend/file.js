@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
+
 /* jshint supernew: true */
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
@@ -53,7 +55,26 @@ angular.module('frontend-app')
         self.consoleEditor = null;
         self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
-        /** Deregistration code */
+        self.fileReadOnly = false;
+
+        /** Callback key when connected.
+         *  NOTE: This is slightly sketchy -- however, as
+         *  the editor will only be loaded if and only if
+         *  the socket exists in the first place, this is
+         *  fine for now. */
+        var cbC_key = ws.register_callback('connected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", self.editorReadOnly);
+        }, true);
+        var cbF_key = ws.register_callback('failed', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
+        var cbD_key = ws.register_callback('disconnected', function () {
+          if (self.editor)
+            self.editor.setOption("readOnly", true);
+        }, true);
+
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
           if(undefined===self.scrollInfo[self.folder])
@@ -244,7 +265,7 @@ angular.module('frontend-app')
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
-          self.editorReadOnly = !self.ready || self.isBinaryFile || self.unavailable;
+          self.editorReadOnly = !self.ready || self.isBinaryFile || self.fileReadOnly;
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
@@ -573,6 +594,12 @@ angular.module('frontend-app')
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts.data;
+            if((self.ext === 'rkt' && RegExp("\\s*;;\\s*"+SEASHELL_READONLY_STRING).test(self.contents)) || // racket files
+               ((self.ext === 'c' || self.ext === 'h') && RegExp("\\s*\/\/\\s*"+SEASHELL_READONLY_STRING).test(self.contents))  || // c files
+               ((self.ext === undefined || self.ext === 'txt') && RegExp("\\s*"+SEASHELL_READONLY_STRING).test(self.contents))) // plaintext files
+            {
+                self.fileReadOnly = true;
+            }
             self.ready = true;
             if (typeof conts.data === "string") {
               if (conts.data.length === 0) self.loaded = true;
@@ -586,6 +613,12 @@ angular.module('frontend-app')
               }
             } else {
               self.unavailable = true;
+            }
+            // .ll files store LLVM bytecode, make these appear as binary files to the user
+            var splitfile = self.file.split(".");
+            if(splitfile[splitfile.length-1] == "ll") {
+              self.isBinaryFile = true;
+              self.contents = null;
             }
             self.refreshSettings();
           }).catch(function (error) {

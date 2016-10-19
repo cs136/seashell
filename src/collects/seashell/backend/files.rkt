@@ -327,8 +327,8 @@
                                                             (set! ok (md5 md5in)))
                                                           #:exists 'replace))))))
   (when (not ok)
-    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template))
-           (current-continuation-marks)))
+    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template)
+           (current-continuation-marks))))
   ok)
 
 ;; (write-settings font-size editor-mode tab-width use-spaces)

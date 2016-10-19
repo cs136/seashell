@@ -142,7 +142,7 @@
           [(off:change "deleteFile"
                        (off:file project file checksum)
                        #f
-                       checksum
+                       off-checksum
                        _) ; deleting a file doesn't need history
            (assert (path-string? file))
            (cond

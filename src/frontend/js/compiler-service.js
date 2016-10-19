@@ -25,10 +25,18 @@ angular.module('seashell-compiler', [])
         var defer = $q.defer();
         var compiler = new Worker('js/offline-compile.min.js');
         compiler.onmessage = function (result) {
-          if (result.data.status === "compile-failed") {
-            defer.reject(result.data);
-          } else if (result.data.status === "running") {
-            defer.resolve(result.data);
+          if(result.data.type == "result") {
+            if (result.data.status === "compile-failed") {
+              defer.reject(result.data);
+            } else if (result.data.status === "running") {
+              defer.resolve(result.data);
+            }
+          }
+          else if(result.data.type == "error") {
+            defer.reject(result.data.err);
+          }
+          else {
+            defer.reject("Unknown result type received from compiler.");
           }
         };
         compiler.postMessage({

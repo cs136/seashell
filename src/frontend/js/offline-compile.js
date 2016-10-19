@@ -14,9 +14,19 @@ function block_for_libraries(callback) {
     callback();
   }
   catch(e) {
-    setTimeout(function() {
-      block_for_libraries(callback);
-    }, 200);
+    if(e.code != "ENOENT" || e.errno != 2) {
+      // in this case we have an actual error to deal with
+      postMessage({
+        type: 'error',
+        err: (e.stack ? e.stack : e.message ? e.message : "Unknown error")
+      });
+      close();
+    }
+    else {
+      setTimeout(function() {
+        block_for_libraries(callback);
+      }, 200);
+    }
   }
 }
 
@@ -29,7 +39,12 @@ function onInit() {
   init_queue = [];
 }
 
-Module = {onRuntimeInitialized:onInit, setStatus:(function (s) {console.log(s);})};
+Module = {
+  onRuntimeInitialized:onInit,
+  setStatus:(function (s) {console.log(s);}),
+  noExitRuntime: true,
+  onExit: function(s) { console.log(s); }
+};
 
 self.importScripts('seashell-clang-js/bin/crt-headers.js');
 self.importScripts('seashell-clang-js/bin/seashell-clang.js');
@@ -57,7 +72,6 @@ self.onmessage = function(msg) {
   }
 
   function compile(runnerFile) {
-    console.log("compile called");
     var pp = Module.seashell_preprocessor_make();
     Module.seashell_preprocessor_set_main_file(pp, "/working/question/"+runnerFile);
     console.log("Running preprocessor...");
@@ -74,7 +88,8 @@ self.onmessage = function(msg) {
     var cc = Module.seashell_compiler_make();
     var numDeps = Module.seashell_preprocessor_get_include_count(pp);
     var sources = [];
-    for(var ind = 0; ind < numDeps; ind++) {
+    var ind;
+    for(ind = 0; ind < numDeps; ind++) {
       var source = Module.seashell_preprocessor_get_include(pp, ind);
       sources.push(source);
       console.log("Adding "+source+" to compiler");
@@ -82,7 +97,17 @@ self.onmessage = function(msg) {
     }
     Module.seashell_preprocessor_free(pp);
 
-    var cres = Module.seashell_compiler_run(cc);
+    // add compiler flags
+    // TODO: import these flags from elsewhere so we don't have them hard coded on both
+    //       backend and frontend.
+    var flags = ["-Wall", "-Werror=int-conversion", "-Werror=int-to-pointer-cast", "-Werror=return-type",
+                 "-Werror=import-preprocessor-directive-pedantic", "-Werror=incompatible-pointer-types",
+                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"];
+    for(ind = 0; ind<flags.length; ind++) {
+      Module.seashell_compiler_add_compile_flag(cc, flags[ind]);
+    }
+
+    var cres = Module.seashell_compiler_run(cc, false);
     var diags = diagnostics(cc, sources);
     if(cres === 0) {
       var obj = Module.seashell_compiler_get_object(cc);
@@ -109,12 +134,18 @@ self.onmessage = function(msg) {
   var rf = data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
     // TODO handle common files in the way expected by dependency resolution code
-    var file = FS.open("/working/question/"+data.files[i].name, 'w');
-    var len = lengthBytesUTF8(data.files[i].contents)+1;
-    var arr = new Uint8Array(len);
-    var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
-    FS.write(file, arr, 0, copied);
-    FS.close(file);
+    if(data.files[i].contents) {
+      var split = data.files[i].name.split(".");
+      var file = FS.open("/working/question/"+data.files[i].name, 'w');
+      var len = lengthBytesUTF8(data.files[i].contents)+1;
+      var arr = new Uint8Array(len);
+      var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
+      FS.write(file, arr, 0, copied);
+      FS.close(file);
+    }
+    else {
+      console.warn("Binary file "+data.files[i].name+" ignored by offline compiler.");
+    }
   }
 
   if(init) {

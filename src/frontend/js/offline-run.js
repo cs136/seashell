@@ -43,7 +43,7 @@ function runObj(obj) {
   var running = true;
   
   self.onmessage = function(obj) {
-    if (typeof obj === "string")
+    if(typeof obj.data === "string")
       Module._RT_stdin_buffer += obj.data;
     else
       Module._RT_stdin_buffer = null;

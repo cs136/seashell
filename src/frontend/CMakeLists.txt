@@ -63,6 +63,7 @@ function(html_compile filename)
     -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")'
     -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")'
     -E '(define SEASHELL_DEBUG (= 1 ${SEASHELL_DEBUG}))'
+    -E '(define SEASHELL_WL_PROJ_BASE_URL \"${SEASHELL_WL_PROJ_BASE_URL}\")'
     -E '(define-values (scripts styles) (prepare-compile-file \"${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
           \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"

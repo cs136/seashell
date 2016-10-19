@@ -21,9 +21,10 @@
     .service('localfiles', ['$q', '$cookies',
       function($q, $cookies) {
         "use strict";
-        // TODO: per user database.
         var self = this;
-        self.database = new Dexie("seashell-local-files");
+        var USERNAME = $cookies.get(SEASHELL_CREDS_COOKIE).user;
+
+        self.database = new Dexie(USERNAME + "/seashell-local-files");
         self.database.version(1).stores({
           changelog: '++id',
           files: '[project+file], project',
@@ -102,9 +103,13 @@
                 if (checksum !== undefined) {
                   self.database.files.add(result);
                 } else {
-                  self.database.changelog.add({file:{project: name, file: new_file},
-                                               type: "editFile",
-                                               contents: result.contents, history: result.history});
+                  var change = {
+                    file:{project: name, file: new_file},
+                    type: "newFile",
+                    contents: result.contents,
+                    history: result.history
+                  };
+                  self.database.changelog.add(change);
                   self.database.files.add(result);
                 }
                 return result.checksum;
@@ -214,6 +219,16 @@
       };
 
       self.newFile = function (name, file, contents, encoding, normalize, online_checksum) {
+        // account for base64 encoding
+        var rmatch;
+        if(encoding == "url" &&
+          (rmatch = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/))) {
+          var mime = rmatch[1];
+          var b64 = rmatch[3];
+          if(b64 || mime=="base64") {
+            contents = window.atob(rmatch[4]);
+          }
+        }
         var checksum = (typeof contents === "string" && md5(contents)) || online_checksum || "";
         var key = [name, file];
         return self.database.transaction('rw', self.database.changelog, self.database.files, function () {
@@ -228,7 +243,7 @@
               });
           } else {
             self.database.changelog.add({file: {project: name, file: file},
-                                         type: "editFile",
+                                         type: "newFile",
                                          contents: contents});
             self.database.files.add({project: name, file: file,
                             contents: contents, history: "", checksum: checksum,

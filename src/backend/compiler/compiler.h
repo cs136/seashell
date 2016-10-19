@@ -66,7 +66,7 @@ extern "C" int seashell_compiler_get_diagnostic_count (struct seashell_compiler*
 extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int n, int k);
 extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int n, int k);
 extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k);
-extern "C" int seashell_compiler_run (struct seashell_compiler* compiler);
+extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode);
 
 extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void);
 extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor);
