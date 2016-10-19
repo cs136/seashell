@@ -23,7 +23,9 @@
         "use strict";
         // TODO: per user database.
         var self = this;
-        self.database = new Dexie("seashell-local-files");
+        var USERNAME = $cookies.get(SEASHELL_CREDS_COOKIE).user;
+
+        self.database = new Dexie(USERNAME + "/seashell-local-files");
         self.database.version(1).stores({
           changelog: '++id',
           files: '[project+file], project',
