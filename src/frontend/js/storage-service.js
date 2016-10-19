@@ -100,7 +100,6 @@
               .then(function (result) {
                 self.deleteFile(name, file, checksum);
                 result.file = new_file;
-                console.log("adding file from rename", result);
                 if (checksum !== undefined) {
                   self.database.files.add(result);
                 } else {
