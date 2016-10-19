@@ -88,7 +88,8 @@ self.onmessage = function(msg) {
     var cc = Module.seashell_compiler_make();
     var numDeps = Module.seashell_preprocessor_get_include_count(pp);
     var sources = [];
-    for(var ind = 0; ind < numDeps; ind++) {
+    var ind;
+    for(ind = 0; ind < numDeps; ind++) {
       var source = Module.seashell_preprocessor_get_include(pp, ind);
       sources.push(source);
       console.log("Adding "+source+" to compiler");
@@ -102,7 +103,7 @@ self.onmessage = function(msg) {
     var flags = ["-Wall", "-Werror=int-conversion", "-Werror=int-to-pointer-cast", "-Werror=return-type",
                  "-Werror=import-preprocessor-directive-pedantic", "-Werror=incompatible-pointer-types",
                  "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"];
-    for(var ind = 0; ind<flags.length; ind++) {
+    for(ind = 0; ind<flags.length; ind++) {
       Module.seashell_compiler_add_compile_flag(cc, flags[ind]);
     }
 
