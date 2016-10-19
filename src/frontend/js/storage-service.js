@@ -21,7 +21,6 @@
     .service('localfiles', ['$q', '$cookies',
       function($q, $cookies) {
         "use strict";
-        // TODO: per user database.
         var self = this;
         var USERNAME = $cookies.get(SEASHELL_CREDS_COOKIE).user;
 
