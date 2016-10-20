@@ -22,7 +22,7 @@
       function($q, $cookies) {
         "use strict";
         var self = this;
-        var USERNAME = $cookies.get(SEASHELL_CREDS_COOKIE).user;
+        var USERNAME = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
 
         self.database = new Dexie(USERNAME + "/seashell-local-files");
         self.database.version(1).stores({
