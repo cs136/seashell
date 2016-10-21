@@ -20,6 +20,11 @@
     class="alert alert-danger text-center" role="alert">
     Lost contact with the server. You can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>, or logging in <a ng-click="frontend.login()" href="">again</a>.
   </div>
+
+  <div ng-show="frontend.offline_mode" ng-cloak
+    class="alert alert-success text-center" role="alert">
+    Seashell is currently running in offline mode. Changes you make are saved locally to your machine, and will be synchronized with the server when a connection becomes available.
+  </div>
   
   <alert ng-repeat="error in frontend.errors.errors" ng-cloak
     type="danger" close="frontend.errors.suppress($index)" role="alert">
