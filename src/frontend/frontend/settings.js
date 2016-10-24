@@ -21,8 +21,8 @@
 /* jshint supernew: true */
 angular.module('frontend-app')
   // Settings service.
-  .service('settings-service', ['$rootScope', '$modal', 'socket', 'error-service', '$q',
-      function ($rootScope, $modal, ws, errors, $q) {
+  .service('settings-service', ['$rootScope', '$modal', 'socket', 'error-service', '$q', 'ConfirmationMessageModal',
+      function ($rootScope, $modal, ws, errors, $q, confirm) {
         var self = this;
         self.settings =  {
           font : "Consolas",
@@ -74,24 +74,32 @@ angular.module('frontend-app')
           });
         };
 
-        self.save = function () {
+        self.save = function() {
           self.needToLoad = true;
           ws.setOfflineModeSetting(self.settings.offline_mode);
           return $q.when(ws.saveSettings(self.settings)).then(notifyChanges);
         };
 
-        self.dialog = function () {
+        self.dialog = function() {
           return $modal.open({
             templateUrl: "frontend/templates/settings-template.html",
             controller: ['$scope', function ($scope) {
+              self.settings.offline_mode = ws.offline_mode;
               $scope.temp = _.clone(self.settings);
               $scope.saveSettings = function () {
                 $scope.$close();
                 self.settings = $scope.temp;
-                self.save().catch(
-                  function (error) {
-                    errors.report(error, "Could not save settings!");
-                  });
+                if(ws.offline_mode === 0 && self.settings.offline_mode !== 0) {
+                  confirm("Enable Offline Mode",
+                    "Are you sure you want to enable Seashell's offline mode? This will store all of your projects locally so you can work on them and run them while temporarily disconnected form the internet. Only do this if you are on your own personal computer!")
+                    .then(self.save);
+                }
+                else {
+                  self.save().catch(
+                    function (error) {
+                      errors.report(error, "Could not save settings!");
+                    });
+                }
                 return true;
               };}]
             });
