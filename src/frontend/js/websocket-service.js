@@ -107,7 +107,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         if(self.offlineEnabled()) {
           // if offline mode is enabled, we notify the frontend
           //  and proceed as if we are connected
-          return self.invoke_cb('connected', true);
+          return self.invoke_cb('connected', self.offline_mode);
         }
         return self.invoke_cb(type, message);
       };
@@ -217,7 +217,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             self.invoke_cb('syncing');
         }
         else if(self.offline_mode === 2) {
-          self.invoke_cb('connected', self.isOffline());
+          self.invoke_cb('connected', self.offline_mode);
         }
       };
 
@@ -421,7 +421,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           })
           .then(function (changes) {
             if(self.connected) {
-              self.invoke_cb('connected', self.isOffline());
+              self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
             }
             // send the changes back in case we need to act on the files that have
             //  changed within the open project
@@ -438,7 +438,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         if(self.offlineEnabled()) {
           return self.syncAll();
         } else {
-          self.invoke_cb('connected', self.isOffline());
+          self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
         }
       }, true);
     }

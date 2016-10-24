@@ -59,6 +59,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
                 };
               }]});
         };
+        // offline mode info modal
+        self.offline_info = function() {
+          $modal.open({
+            templateUrl: "frontend/templates/offline-info-template.html",
+            controller: ['$scope', function($scope) {
+              $scope.settings = function() {
+                $scope.$dismiss();
+                self.settings();
+              };
+            }]
+          });
+        };
         // confirmation modal for archiving all projects
         self.archive = function() {
           confirm("Archive Projects",
