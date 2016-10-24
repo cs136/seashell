@@ -93,12 +93,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       };
 
       self.invoke_cb = function(type, message) {
-        return _.map(_.filter(callbacks, function(x) {
+        return $q.all(_.map(_.filter(callbacks, function(x) {
             return x && x.type === type;
           }),
           function(x) {
             return x.cb(message);
-          });
+          }));
       };
 
       // wrapper function for invoke_cb meant to be used to call
@@ -215,6 +215,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             self.connect();
           else
             self.invoke_cb('syncing');
+        }
+        else if(self.offline_mode === 2) {
+          self.invoke_cb('connected', self.isOffline());
         }
       };
 
@@ -418,7 +421,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           })
           .then(function (changes) {
             if(self.connected) {
-              self.invoke_cb('connected');
+              self.invoke_cb('connected', self.isOffline());
             }
             // send the changes back in case we need to act on the files that have
             //  changed within the open project
@@ -435,7 +438,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         if(self.offlineEnabled()) {
           return self.syncAll();
         } else {
-          self.invoke_cb('connected');
+          self.invoke_cb('connected', self.isOffline());
         }
       }, true);
     }
