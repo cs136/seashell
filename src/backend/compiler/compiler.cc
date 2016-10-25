@@ -1162,7 +1162,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   std::vector<std::string> path;
   do {
     path.push_back(seg);
-  } while(seg = strtok_r(NULL, "/", &saveptr));
+  } while( (seg = strtok_r(NULL, "/", &saveptr)) );
   free(orig);
 
   char *ofile = strdup(path[path.size()-1].c_str());
@@ -1170,7 +1170,7 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   std::vector<std::string> file;
   do {
     file.push_back(seg);
-  } while(seg = strtok_r(NULL, ".", &saveptr));
+  } while( (seg = strtok_r(NULL, ".", &saveptr)) );
   free(ofile);
 
   // check for include of non .h files

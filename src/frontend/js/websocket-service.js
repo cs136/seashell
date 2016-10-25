@@ -75,7 +75,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
 
         if (type === 'disconnected' && !self.connected && now) {
           $timeout(cb, 0);
-        } else if (type === 'connected' && self.connected && now) {
+        } else if (type === 'connected' && (self.connected || self.isOffline()) && now) {
           $timeout(cb, 0);
         } else if (type === 'failed' && self.failed && now) {
           $timeout(cb, 0);
@@ -93,12 +93,23 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       };
 
       self.invoke_cb = function(type, message) {
-        return _.map(_.filter(callbacks, function(x) {
+        return $q.all(_.map(_.filter(callbacks, function(x) {
             return x && x.type === type;
           }),
           function(x) {
             return x.cb(message);
-          });
+          }));
+      };
+
+      // wrapper function for invoke_cb meant to be used to call
+      //  the websocket failure conditions 'disconnected' and 'failure'
+      self.invoke_cb_failure_om_wrap = function(type, message) {
+        if(self.offlineEnabled()) {
+          // if offline mode is enabled, we notify the frontend
+          //  and proceed as if we are connected
+          return self.invoke_cb('connected', self.offline_mode);
+        }
+        return self.invoke_cb(type, message);
       };
 
       /** Helper function to invoke the I/O callback. */
@@ -130,7 +141,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               self.failed = true;
               $timeout(function() {
                 $interval.cancel(timeout_interval);
-                self.invoke_cb('failed');
+                self.invoke_cb_failure_om_wrap('failed');
               }, 0);
             },
             /** Socket closed - probably want to prompt the user to reconnect? */
@@ -138,13 +149,13 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               self.connected = false;
               $timeout(function() {
                 $interval.cancel(timeout_interval);
-                self.invoke_cb('disconnected');
+                self.invoke_cb_failure_om_wrap('disconnected');
               }, 0);
             });
         } catch (e) {
           self.failed = true;
           $timeout(function() {
-            self.invoke_cb('failed');
+            self.invoke_cb_failure_om_wrap('failed');
           }, 0);
           return $q.reject(e);
         }
@@ -204,6 +215,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             self.connect();
           else
             self.invoke_cb('syncing');
+        }
+        else if(self.offline_mode === 2) {
+          self.invoke_cb('connected', self.offline_mode);
         }
       };
 
@@ -407,7 +421,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           })
           .then(function (changes) {
             if(self.connected) {
-              self.invoke_cb('connected');
+              self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
             }
             // send the changes back in case we need to act on the files that have
             //  changed within the open project
@@ -424,7 +438,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         if(self.offlineEnabled()) {
           return self.syncAll();
         } else {
-          self.invoke_cb('connected');
+          self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
         }
       }, true);
     }

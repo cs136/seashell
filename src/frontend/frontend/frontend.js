@@ -32,6 +32,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.timeout = false;
         self.disconnected = false;
         self.failed = false;
+        self.offline_mode = false;
         self.errors = errors;
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
@@ -57,6 +58,18 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
                   $scope.$dismiss();
                 };
               }]});
+        };
+        // offline mode info modal
+        self.offline_info = function() {
+          $modal.open({
+            templateUrl: "frontend/templates/offline-info-template.html",
+            controller: ['$scope', function($scope) {
+              $scope.settings = function() {
+                $scope.$dismiss();
+                self.settings();
+              };
+            }]
+          });
         };
         // confirmation modal for archiving all projects
         self.archive = function() {
@@ -109,18 +122,22 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         // This won't leak memory, as FrontendController stays in scope all the time.
         ws.register_callback('timein', function () {self.timeout = false;});
         ws.register_callback('timeout', function () {self.timeout = true;});
-        ws.register_callback('connected',
-            function () {self.disconnected = false; self.timeout = false; self.failed = false;}, true);
-        ws.register_callback('disconnected', function () {self.disconnected = true;}, true);
-        ws.register_callback('failed', function () {
+        ws.register_callback('connected', function(offline_mode) {
+          self.disconnected = false; self.timeout = false;
+          self.failed = false; self.offline_mode = offline_mode;
+        }, true);
+        ws.register_callback('disconnected',
+          function() { self.disconnected = true; });
+        ws.register_callback('failed', function() {
           // if on production, redirect to login screen; else, display error and
           // login prompt
           if(SEASHELL_BRANCH === 'stable'){
             window.location = 'https://www.student.cs.uwaterloo.ca/seashell';
-          }else{
+          }else {
             self.failed = true;
           }
         }, true);
+
         settings.addWatcher(function () {
           if (settings.settings.theme_style === "dark") {
             $css.removeAll();
