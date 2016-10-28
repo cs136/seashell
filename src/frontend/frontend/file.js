@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
+
 /* jshint supernew: true */
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
@@ -53,6 +55,7 @@ angular.module('frontend-app')
         self.consoleEditor = null;
         self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
+        self.fileReadOnly = false;
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -263,7 +266,7 @@ angular.module('frontend-app')
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
-          self.editorReadOnly = !self.ready || self.isBinaryFile;
+          self.editorReadOnly = !self.ready || self.isBinaryFile || self.fileReadOnly;
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
@@ -576,6 +579,12 @@ angular.module('frontend-app')
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts.data;
+            if((self.ext === 'rkt' && RegExp("\\s*;;\\s*"+SEASHELL_READONLY_STRING).test(self.contents)) || // racket files
+               ((self.ext === 'c' || self.ext === 'h') && RegExp("\\s*\/\/\\s*"+SEASHELL_READONLY_STRING).test(self.contents))  || // c files
+               ((self.ext === undefined || self.ext === 'txt') && RegExp("\\s*"+SEASHELL_READONLY_STRING).test(self.contents))) // plaintext files
+            {
+                self.fileReadOnly = true;
+            }
             self.ready = true;
             if (conts.data.length === 0) self.loaded = true;
             self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);

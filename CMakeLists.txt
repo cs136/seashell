@@ -67,6 +67,8 @@ if(GIT_DIRTY)
 endif()
 set(SEASHELL_API_VERSION "7")
 
+set(SEASHELL_WL_PROJ_BASE_URL "" CACHE STRING "Location of whitelisted project .zips")
+
 # Build our components.
 add_subdirectory(doc)
 add_subdirectory(lib)
