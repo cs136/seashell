@@ -11,7 +11,7 @@ requires to build and run.
 These dependencies must be present in the build environment,
 and are @bold{not} provided by Seashell.  Seashell will only
 build and run on a relatively modern Linux installation.
-@itemlist[@item[@link["http://racket-lang.org/" "Racket v5.3.6+"]]
+@itemlist[@item[@link["http://racket-lang.org/" "Racket v6.6+"]]
            @item[@link["http://cmake.org" "CMake 2.8+"]]
            @item[@link["http://openssl.org" "OpenSSL 1.0.1+"]]]
 
