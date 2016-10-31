@@ -68,7 +68,8 @@
          racket/string
          racket/list
          racket/port
-         racket/set)
+         racket/set
+         racket/system)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -177,6 +178,14 @@
     (new-project-from name (read-config 'default-project-template)))
   (void))
 
+(define/contract (remote-path-string? str)
+  (-> any/c boolean?)
+  (cond
+    [(string? str)
+      (define res (string-split str ":"))
+      (or (= (length res) 2) (url-string? (first res)) (path-string? (second res)))]
+    [else #f]))
+
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
 ;;
@@ -192,7 +201,7 @@
 ;; Raises:
 ;;  exn:project if the project already exists.
 (define/contract (new-project-from name source)
-  (-> project-name? (or/c project-name? url-string? path-string?) void?)
+  (-> project-name? (or/c project-name? url-string? path-string? remote-path-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
@@ -211,6 +220,13 @@
             (call-with-template source
                                 (lambda (port)
                                   (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
+      [(remote-path-string? source)
+        (define zip-path (string-append (path->string (build-project-path name)) ".zip"))
+        (system* (find-executable-path "scp")
+          "-B" source zip-path)
+        (call-with-template zip-path
+          (lambda (port)
+            (unzip port (make-filesystem-entry-reader #:strip-count 1))))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))
