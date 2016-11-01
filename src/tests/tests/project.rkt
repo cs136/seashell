@@ -158,8 +158,11 @@ HERE
       (new-project-from "test-project-template-file-url" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file-url") "default/main.c"))))
 
+    (test-case "Test remote path predicate"
+      (check-true (remote-path-string? (format "kpalway@ugster25.student.cs.uwaterloo.ca:~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))))
+
     (test-case "Fetch template (via SCP)"
-      (new-project-from "test-project-template-scp" (format "kpalway@ugster25.student.cs.uwaterloo.ca:~/~a/src/tests.template.zip" SEASHELL_SOURCE_PATH))
+      (new-project-from "test-project-template-scp" (format "kpalway@ugster25.student.cs.uwaterloo.ca:~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-scp") "default/main.c"))))
 
     (test-case "Fetch template (from file)"

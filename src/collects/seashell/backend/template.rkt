@@ -32,7 +32,7 @@
          racket/string
          racket/list
          racket/port)
-(provide call-with-template url-string?)
+(provide call-with-template url-string? remote-path-string?)
 
 ;; (url-string? str) -> bool?
 ;; Predicate for testing if a string is a valid URL
@@ -42,6 +42,17 @@
     ([url-exception? (lambda (exn) #f)])
     (define res (string->url str))
     (not (not (url-scheme res)))))
+
+;; (remote-path-string? str)
+;; Predicate determining if str is a valid string representing a remote host/file
+;;  path for use with SCP
+(define/contract (remote-path-string? str)
+  (-> any/c boolean?)
+  (not (not (cond
+    [(string? str)
+      (define res (regexp-match #rx"[a-zA-Z0-9]+@[a-zA-Z0-9\\.]+:(.+)" str))
+      (and res (path-string? (second res)))]
+    [else #f]))))
 
 ;; (call-with-template source thunk)
 ;; Calls thunk, passing an input-port refering to the template located at source.
