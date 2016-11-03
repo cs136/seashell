@@ -25,6 +25,7 @@
          is-project?
          new-project
          new-project-from
+         scp-whitelist-project
          delete-project
          lock-project
          force-lock-project
@@ -179,6 +180,20 @@
     (new-project-from name (read-config 'default-project-template)))
   (void))
 
+;; (scp-whitelist-project name source)
+;; Uses a system call to SCP to copy a whitelist project
+;;  template from the given remote path
+;;
+;; Returns the path of the file copied locally
+(define/contract (scp-whitelist-project name source)
+  (-> project-name? remote-path-string? path-string?)
+  (define zip-path (path->string (make-temporary-file (string-append "rkttmp~a-" name ".zip"))))
+  (if (system* (find-executable-path "scp")
+        "-B" source zip-path)
+      zip-path
+      (raise (exn:fail "Could not SCP whitelist project template file.")
+        (current-continuation-marks))))
+
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
 ;;
@@ -212,12 +227,9 @@
             (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1)))))))
     (cond
       [(remote-path-string? source)
-        (define zip-path (string-append (path->string (build-project-path name)) ".zip"))
-        (if (system* (find-executable-path "scp")
-              "-B" source zip-path)
-          (unzip-from-source zip-path)
-          (raise (exn:fail "Could not SCP whitelist project template file."
-                    (current-continuation-marks))))]
+        (define zip-path (scp-whitelist-project name source))
+        (unzip-from-source zip-path)
+        (delete-file zip-path)]
       [(or (path-string? source) (url-string? source))
         (unzip-from-source source)]
       [(project-name? source)

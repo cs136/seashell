@@ -266,7 +266,9 @@
   (make-directory* dest-dir)
   (define destination (check-and-build-path dest-dir filename))
   (define source (explode-path file))
-  (call-with-template template
+  (define template-file (if (remote-path-string? template)
+                            (scp-whitelist-project project template) #f))
+  (call-with-template (if template-file template-file template)
                       (lambda (port)
                         (unzip port
                                (lambda (name _2 contents)
@@ -283,6 +285,7 @@
   (when (not ok)
     (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template)
            (current-continuation-marks))))
+  (when template-file (delete-file template-file))
   ok)
 
 ;; (write-settings font-size editor-mode tab-width use-spaces)
