@@ -20,12 +20,10 @@
 
 (provide project-name?
          url-string?
-         remote-path-string?
          list-projects
          is-project?
          new-project
          new-project-from
-         scp-whitelist-project
          delete-project
          lock-project
          force-lock-project
@@ -180,20 +178,6 @@
     (new-project-from name (read-config 'default-project-template)))
   (void))
 
-;; (scp-whitelist-project name source)
-;; Uses a system call to SCP to copy a whitelist project
-;;  template from the given remote path
-;;
-;; Returns the path of the file copied locally
-(define/contract (scp-whitelist-project name source)
-  (-> project-name? remote-path-string? path-string?)
-  (define zip-path (path->string (make-temporary-file (string-append "rkttmp~a-" name ".zip"))))
-  (if (system* (find-executable-path "scp")
-        "-B" source zip-path)
-      zip-path
-      (raise (exn:fail "Could not SCP whitelist project template file.")
-        (current-continuation-marks))))
-
 ;; (new-project-from name source)
 ;; Creates a new project from a source.
 ;;
@@ -209,29 +193,23 @@
 ;; Raises:
 ;;  exn:project if the project already exists.
 (define/contract (new-project-from name source)
-  (-> project-name? (or/c project-name? url-string? path-string? remote-path-string?) void?)
+  (-> project-name? (or/c project-name? url-string? path-string?) void?)
   (with-handlers
     ([exn:fail:filesystem?
        (lambda (exn)
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (define (unzip-from-source source)
-      (make-directory (build-project-path name))
-      (with-handlers
-        ([exn:fail? (lambda (exn)
-          (delete-directory/files (build-project-path name) #:must-exist? #f)
-          (raise exn))])
-        (parameterize ([current-directory (build-project-path name)])
-          (call-with-template source
-            (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1)))))))
     (cond
-      [(remote-path-string? source)
-        (define zip-path (scp-whitelist-project name source))
-        (unzip-from-source zip-path)
-        (delete-file zip-path)]
       [(or (path-string? source) (url-string? source))
-        (unzip-from-source source)]
+        (make-directory (build-project-path name))
+        (with-handlers
+          ([exn:fail? (lambda (exn)
+            (delete-directory/files (build-project-path name) #:must-exist? #f)
+            (raise exn))])
+          (parameterize ([current-directory (build-project-path name)])
+            (call-with-template source
+              (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))

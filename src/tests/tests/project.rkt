@@ -158,10 +158,7 @@ HERE
       (new-project-from "test-project-template-file-url" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file-url") "default/main.c"))))
 
-    (test-case "Test remote path predicate"
-      (check-true (remote-path-string? (format "kpalway@ugster25.student.cs.uwaterloo.ca:~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))))
-
-    ;; TODO: Include a test for fetching template via SCP
+    ;; TODO: Include a test for fetching template via SSH
 
     (test-case "Fetch template (from file)"
       (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))

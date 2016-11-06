@@ -33,7 +33,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings'])
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";
       // TODO: update with real template path.
       var PROJ_ZIP_URL_TEMPLATE = SKEL_ROOT_URL + "%s-seashell.zip";
-      var WL_PROJ_ZIP_URL_TEMPLATE = "cs136@linux.student.cs.uwaterloo.ca:/u2/cs136/seashell-support-files/whitelist-skeletons/%s-seashell.zip";
+      var WL_PROJ_ZIP_URL_TEMPLATE = "ssh://cs136@linux.student.cs.uwaterloo.ca:/u2/cs136/seashell-support-files/whitelist-skeletons/%s-seashell.zip";
       var USERNAME = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
       var PROJ_FILE_LIST_URL_TEMPLATE = CGI_URL + "skeleton_file_list.rkt?template=%s&user="+USERNAME;
       var WL_PROJ_FILE_LIST_URL_TEMPLATE = PROJ_FILE_LIST_URL_TEMPLATE+"&whitelist=true";

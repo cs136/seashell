@@ -32,7 +32,7 @@
          racket/string
          racket/list
          racket/port)
-(provide call-with-template url-string? remote-path-string?)
+(provide call-with-template url-string?)
 
 ;; (url-string? str) -> bool?
 ;; Predicate for testing if a string is a valid URL
@@ -42,17 +42,6 @@
     ([url-exception? (lambda (exn) #f)])
     (define res (string->url str))
     (not (not (url-scheme res)))))
-
-;; (remote-path-string? str)
-;; Predicate determining if str is a valid string representing a remote host/file
-;;  path for use with SCP
-(define/contract (remote-path-string? str)
-  (-> any/c boolean?)
-  (not (not (cond
-    [(string? str)
-      (define res (regexp-match #rx"[a-zA-Z0-9]+@[a-zA-Z0-9\\.]+:(.+)" str))
-      (and res (path-string? (second res)))]
-    [else #f]))))
 
 ;; (call-with-template source thunk)
 ;; Calls thunk, passing an input-port refering to the template located at source.
@@ -66,8 +55,14 @@
     [(url-string? source)
      (define surl (string->url source))
      (cond
-       [(equal? (url-scheme surl) "file")
-        (call/input-url surl get-pure-port thunk)]
+       [(string=? (url-scheme surl) "file")
+         (call/input-url surl get-pure-port thunk)]
+       [(string=? (url-scheme surl) "ssh")
+         (match-define (list _ host file) (regexp-match #rx"//(.*@[^:]*):(.*)" source))
+         (define-values (sshproc sshout sshin ssherr)
+           (subprocess #f #f #f (read-config 'ssh-binary)
+             host (string-append "cat " file)))
+         (thunk sshout)]
        [else
          (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
          (dynamic-wind
