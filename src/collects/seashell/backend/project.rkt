@@ -670,7 +670,7 @@
           (define common-dir
             (build-path project-dir (read-config 'common-subdirectory)))
           (parameterize ([current-directory tmpdir])
-            (define (copy-from! base)
+            (define (copy-from! base [dest #f])
               (fold-files
                 (lambda (path type _)
                   (define file (last (explode-path path)))
@@ -687,7 +687,8 @@
                          (values #t #t)]
                         ['file
                          (copy-file path
-                                    (find-relative-path base path))
+                                    (if dest (build-path dest file)
+                                             (find-relative-path base path)))
                          (values #t #t)]
                         [_ (values #t #t)])]))
                 #t
@@ -695,7 +696,9 @@
             
             (copy-from! question-dir)
             (when (directory-exists? common-dir)
-              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
+              (define compath (check-and-build-path tmpdir "common"))
+              (make-directory compath)
+              (copy-from! common-dir compath))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))
