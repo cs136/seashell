@@ -674,8 +674,11 @@
             (define (copy-from! base)
               (fold-files
                 (lambda (path type _)
+                  (define file (last (explode-path path)))
                   (cond
                     [(equal? path base) (values #t #t)]
+                    ;; do not submit hidden files to Marmoset
+                    [(string-prefix? (path->string file) ".") (values #t #t)]
                     [else
                       (match
                         type
