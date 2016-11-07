@@ -68,7 +68,8 @@
          racket/string
          racket/list
          racket/port
-         racket/set)
+         racket/set
+         racket/system)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -203,14 +204,12 @@
       [(or (path-string? source) (url-string? source))
         (make-directory (build-project-path name))
         (with-handlers
-          ([exn:fail?
-             (lambda (exn)
-               (delete-directory/files (build-project-path name) #:must-exist? #f)
-               (raise exn))])
+          ([exn:fail? (lambda (exn)
+            (delete-directory/files (build-project-path name) #:must-exist? #f)
+            (raise exn))])
           (parameterize ([current-directory (build-project-path name)])
             (call-with-template source
-                                (lambda (port)
-                                  (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
+              (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
       [(project-name? source)
        (copy-directory/files (build-project-path source)
                              (build-project-path name))]))

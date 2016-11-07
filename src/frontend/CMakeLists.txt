@@ -31,7 +31,7 @@ function(html_compile filename)
   set(output ${base_abs}.html)
   add_custom_target(
     ${base} ALL
-    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")' -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")' -E '(define SEASHELL_WL_PROJ_BASE_URL \"${SEASHELL_WL_PROJ_BASE_URL}\")' -o ${output} ${filename})
+    COMMAND ${SEASHELL_MZTEXT} -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})' -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")' -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")' -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")' -o ${output} ${filename})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(html_compile filename)
 
