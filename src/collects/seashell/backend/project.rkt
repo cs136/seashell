@@ -670,11 +670,15 @@
           (define common-dir
             (build-path project-dir (read-config 'common-subdirectory)))
           (parameterize ([current-directory tmpdir])
-            (define (copy-from! base)
+            (define (copy-from! base include-hidden [dest #f])
               (fold-files
                 (lambda (path type _)
+                  (define file (last (explode-path path)))
                   (cond
                     [(equal? path base) (values #t #t)]
+                    ;; do not submit hidden files to Marmoset
+                    [(and (not include-hidden) (string-prefix? (path->string file) "."))
+                      (values #t #t)]
                     [else
                       (match
                         type
@@ -684,15 +688,18 @@
                          (values #t #t)]
                         ['file
                          (copy-file path
-                                    (find-relative-path base path))
+                                    (if dest (build-path dest file)
+                                             (find-relative-path base path)))
                          (values #t #t)]
                         [_ (values #t #t)])]))
                 #t
                 base))
             
-            (copy-from! question-dir)
+            (copy-from! question-dir #f)
             (when (directory-exists? common-dir)
-              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
+              (define compath (check-and-build-path tmpdir "common"))
+              (make-directory compath)
+              (copy-from! common-dir #f compath))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))
