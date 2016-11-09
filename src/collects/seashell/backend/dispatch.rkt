@@ -527,7 +527,7 @@
        (define result (rename-file project old-file new-file))
        `#hash((id . ,id)
               (success . #t)
-              (result . result))]
+              (result . ,result))]
       [(hash-table
         ('id id)
         ('type "restoreFileFrom")
