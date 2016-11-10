@@ -228,7 +228,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       function make_offline_disabled(name) {
         return function () {
           if (!self.isOffline()) {
-            return $q.when(self._socket[name].apply(self._socket, arguments));
+            return $q.when(self._socket[name].apply(self._socket, arguments))
+              .then(function() {
+                return self.syncAll();
+              });
           } else {
             return self._rejectOffline(name);
           }
@@ -399,6 +402,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
        * @returns Angular deferred that resolves to true when the sync is done.
        */
       self.syncAll = function() {
+        if(!self.offlineEnabled())
+          return $q.when();
         console.log("syncAll invoked");
         return $q.all([localfiles.getProjectsForSync(), localfiles.listAllProjectsForSync(),localfiles.getOfflineChanges(), localfiles.getSettings(true)])
           .then(function(result) {

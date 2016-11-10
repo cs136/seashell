@@ -345,7 +345,8 @@
   (define updated-projects-name (map off:project-name updated-projects))
   (define offline-updated-projects
     (filter (lambda ([p : off:project])
-              (not (member (off:project-name p) updated-projects-name)))
+              (and (member (off:project-name p) our-projects)
+                   (not (member (off:project-name p) updated-projects-name))))
             their-projects))
 
   ;; update projects that were modified locally while offline
