@@ -246,7 +246,7 @@
       (cons 'seashell-login-logfile        #f)
       ;; Default TTL for the compiler place.
       ;; This needs to be long enough for a file to compile.
-      (cons 'compiler-ttl                60)
+      (cons 'compiler-ttl                  60)
       )))
   config-hash)
 

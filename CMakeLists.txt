@@ -74,8 +74,6 @@ else ()
   set(SEASHELL_STATIC_ANALYSIS 0)
 endif (ENABLE_STATIC_ANALYSIS)
 
-set(SEASHELL_WL_PROJ_BASE_URL "" CACHE STRING "Location of whitelisted project .zips")
-
 # Build our components.
 add_subdirectory(doc)
 add_subdirectory(lib)
