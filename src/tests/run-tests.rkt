@@ -8,6 +8,7 @@
          "tests/project.rkt"
          "tests/crypto.rkt"
          "tests/compiler.rkt"
+         "tests/asan-error-parse.rkt"
          "tests/config.rkt")
 
 (setup-test-environment)
@@ -17,10 +18,13 @@
     (make-test-suite "all-tests"
       (list
         config-suite
+        asan-parser-suite
         compiler-suite
         file-suite
         project-suite
-        crypto-suite))))
+        crypto-suite
+        asan-parser-suite
+        ))))
 (teardown-test-environment)
 
 (exit result)

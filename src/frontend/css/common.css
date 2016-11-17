@@ -587,3 +587,7 @@ label {
 .runner-icon {
   margin-right: -6px;
 }
+
+div.CodeMirror-lint-message-error, div.CodeMirror-lint-message-warning {
+  color: #000;
+}
