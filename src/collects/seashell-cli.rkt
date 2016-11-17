@@ -81,9 +81,9 @@
     (define stdout (program-stdout pid))
     (define run-result (sync/timeout 0 (wrap-evt stdout (compose deserialize read))))
     (match run-result
-     [(and result (list pid _ (and test-res (or "timeout" "killed" "passed")) stdout stderr asan))
+     [(and result (list pid _ (and test-res (or "timeout" "killed" "passed")) stdout stderr))
       (eprintf "Program passed the test.\n")
-      (write-outputs stdout stderr asan)
+      (write-outputs stdout stderr #f)
       (exit 40)]
      [(list pid _ "error" exit-code stderr asan)
       (if (= exit-code 134)
