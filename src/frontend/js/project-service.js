@@ -645,7 +645,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.reject("Attempting to run file that does not exist.");
           }
           if (test && tests.length === 0)
-            return $q.reject("No tests for question!");
+            return $q.when({});
 
           // TODO: rework how we send stuff to the compiler; in particular,
           // we shouldn't need to call file.getDependencies in the websocket service.

@@ -480,9 +480,14 @@ angular.module('frontend-app')
             self.console.clear();
             self.project.run(self.question, true, self.console.IOCallback, self.console.testCallback)
               .then(function(res) {
-                self.console.setRunning(self.project, res.pids, true);
-                handleCompileErr(res.messages, true);
-                self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+                if(!res.pids) {
+                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
+                }
+                else {
+                  self.console.setRunning(self.project, res.pids, true);
+                  handleCompileErr(res.messages, true);
+                  self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+                }
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
