@@ -990,6 +990,37 @@ extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preproc
 }
 
 /**
+ * seashell_preprocessor_set_question_dir(struct seashell_preprocessor* preprocessor, const char *dir)
+ * Sets the question dir to run the preprocessor on
+ *
+ * Arguments:
+ *  preprocessor - A Seashell preprocessor instance.
+ *  dir - Path of question dir the preprocessor is running on
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *preprocessor, const char *dir) {
+#else
+void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *preprocessor, std::string dir) {
+#endif
+  std::vector<const char *> vec;
+#ifndef __EMSCRIPTEN__
+  char *nfile = strdup(dir);
+#else
+  char *nfile = strdup(dir.c_str());
+#endif
+  char *saveptr;
+  char *tok = strtok_r(nfile, "/", &saveptr);
+  do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
+  
+  preprocessor->question_dir = vec[vec.size()-1];
+  for(int i=0; i<vec.size()-1; i++) {
+    preprocessor->project_dir += "/";
+    preprocessor->project_dir += vec[i];
+  }
+  free(nfile);
+}
+
+/**
  * seashell_preprocessor_set_main_file(struct seashell_preprocessor* preprocessor, const char* file)
  * Sets the main file to begin running the preprocessor on
  *
@@ -1012,16 +1043,10 @@ void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preproces
   char *tok = strtok_r(nfile, "/", &saveptr);
   do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
   
-  preprocessor->question_dir = vec[vec.size()-2];
   preprocessor->main_file = vec[vec.size()-1];
-  //preprocessor->project_dir = "/" + std::string(vec[0]);
-  for(int i=0; i<vec.size()-2; i++) {
-    preprocessor->project_dir += "/";
-    preprocessor->project_dir += vec[i];
-  }
   // add the common folder as a place to look for includes
-  preprocessor->compiler_flags.push_back("-I");
-  preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/common");
+  //preprocessor->compiler_flags.push_back("-I");
+  //preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/common");
   free(nfile);
 }
 

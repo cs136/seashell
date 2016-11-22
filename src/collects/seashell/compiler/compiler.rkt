@@ -40,9 +40,10 @@
 
 ;; (seashell-resolve-dependencies file)
 ;; Invokes the internal preprocessor to resolve dependencies
-(: seashell-resolve-dependencies (-> Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
-(define (seashell-resolve-dependencies file)
+(: seashell-resolve-dependencies (-> Path Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
+(define (seashell-resolve-dependencies question-dir file)
   (define pp (seashell_preprocessor_make))
+  (seashell_preprocessor_set_question_dir pp (some-system-path->string question-dir))
   (seashell_preprocessor_set_main_file pp (some-system-path->string file))
   (seashell_preprocessor_run pp)
   (define srcs (build-list (seashell_preprocessor_get_include_count pp)
@@ -99,12 +100,12 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) (Listof Path)
+(: seashell-compile-files (-> (Listof String) (Listof String) Path (Listof Path) (Listof Path)
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files user-cflags user-ldflags resolve-sources extra-objects)
+(define (seashell-compile-files user-cflags user-ldflags question-dir resolve-sources extra-objects)
 
   (define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
-    (define-values (srcs msgs) (seashell-resolve-dependencies path))
+    (define-values (srcs msgs) (seashell-resolve-dependencies question-dir path))
     (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
     (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
     resolve-sources))

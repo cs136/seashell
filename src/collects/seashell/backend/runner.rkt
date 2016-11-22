@@ -141,7 +141,7 @@
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
       [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
-       (logf 'info "Program with PID ~a timed out." pid)
+       (logf 'info "Program with PID ~a timed out after ~a seconds." pid (read-config-nonnegative-real 'program-run-timeout))
        (set-program-exit-status! pgrm 255)
        ;; Kill copy-threads before killing program
        (kill-thread stderr-thread)

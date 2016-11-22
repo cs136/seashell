@@ -13,9 +13,9 @@
 ;; output as a JSON.
 (define (compile-run-wait code [project-name (symbol->string (gensym 'project))])
   (new-project-from project-name (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
-  (with-output-to-file (check-and-build-path (build-project-path project-name) "main.c")
-    (thunk (display code)))
-  (define-values (success hsh) (compile-and-run-project project-name "main.c" '()))
+  (with-output-to-file (check-and-build-path (build-project-path project-name) "default" "main.c")
+    (thunk (display code)) #:exists 'replace)
+  (define-values (success hsh) (compile-and-run-project project-name "default/main.c" "default" '()))
   (sync (program-wait-evt (hash-ref hsh 'pid)))
   (string->jsexpr (bytes->string/utf-8 (program-asan-message (hash-ref hsh 'pid)))))
 

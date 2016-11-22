@@ -70,14 +70,14 @@ HERE
       (check-exn exn:fail? (thunk (delete-project "bar"))))
 
     (test-case "Run a Project"
-      (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
+      (make-directory (check-and-build-path (build-project-path "foo") "q1"))
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
+      (define-values (success hsh) (compile-and-run-project "foo" "q1/test.c" "q1" '()))
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Run a Project with common and tests"
-      (make-directory (check-and-build-path (build-project-path "foo") "q1"))
       (make-directory (check-and-build-path (build-project-path "foo") "q1" "tests"))
       (make-directory (check-and-build-path (build-project-path "foo") "common"))
       (for ([file '("q1/main.c"
@@ -96,7 +96,7 @@ HERE
                             "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
-      (define-values (success hsh) (compile-and-run-project "foo" "q1/main.c" '("pass" "fail" "crash") #f))
+      (define-values (success hsh) (compile-and-run-project "foo" "q1/main.c" "q1" '("pass" "fail" "crash") #f))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed")])
@@ -104,9 +104,9 @@ HERE
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
 
     (test-case "Get a Compilation Error"
-      (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo" "error.c" "q1" '()))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed"))
 
@@ -182,7 +182,7 @@ HERE
 
     (test-case "Test Racket files (from template)"
       (new-project-from "test-racket" (format "~a/src/tests/test-template.zip" SEASHELL_SOURCE_PATH))
-      (define-values (success hsh) (compile-and-run-project "test-racket" "Test/Test.rkt" '("Test")))
+      (define-values (success hsh) (compile-and-run-project "test-racket" "Test/Test.rkt" "Test" '("Test")))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed")])
@@ -191,21 +191,12 @@ HERE
 
     (test-case "Test Marmoset Racket Files (from template)"
       (new-project-from "test-marmoset-racket" (format "~a/src/tests/test-marmoset-racket.zip" SEASHELL_SOURCE_PATH))
-      (define-values (success hsh) (compile-and-run-project (build-project-path "test-marmoset-racket") "Test.rkt" '("Test") #t 'flat))
+      (define-values (success hsh) (compile-and-run-project (build-project-path "test-marmoset-racket") "Test/Test.rkt" "Test" '("Test") #t 'flat))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed")])
         (sync (program-wait-evt pid))
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
-
-    (test-case "Test Marmoset Racket Files (from runner/CLI)"
-      (parameterize ([current-directory (format "~a/src/tests/marmoset-racket-test-runner" SEASHELL_SOURCE_PATH)])
-        (define-values (success hsh) (compile-and-run-project "." "Test.rkt" '("Test") #t 'current-directory))
-        (check-true success)
-        (for ([pid (hash-ref hsh 'pids)]
-              [exp-result '("passed")])
-          (sync (program-wait-evt pid))
-          (check-equal? exp-result (third (deserialize (read (program-stdout pid))))))))
 
     (test-case "Test template does not overwrite existing project."
       (check-exn exn:fail? (thunk (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH)))))

@@ -45,6 +45,7 @@
 
            seashell_preprocessor_make
            seashell_preprocessor_free
+           seashell_preprocessor_set_question_dir
            seashell_preprocessor_set_main_file
            seashell_preprocessor_get_include_count
            seashell_preprocessor_get_include
@@ -110,6 +111,8 @@
                 #:wrap (deallocator))
   (define-clang seashell_preprocessor_make (_fun -> _seashell_preprocessor-ptr)
                 #:wrap (allocator seashell_preprocessor_free))
+  (define-clang seashell_preprocessor_set_question_dir
+                (_fun _seashell_preprocessor-ptr _string/utf-8 -> _void))
   (define-clang seashell_preprocessor_set_main_file
                 (_fun _seashell_preprocessor-ptr _string/utf-8 -> _void))
   (define-clang seashell_preprocessor_get_include_count
@@ -154,6 +157,7 @@
                [#:opaque Seashell-Preprocessor-Ptr seashell_preprocessor-ptr?]
                [seashell_preprocessor_free (-> Seashell-Preprocessor-Ptr Void)]
                [seashell_preprocessor_make (-> Seashell-Preprocessor-Ptr)]
+               [seashell_preprocessor_set_question_dir (-> Seashell-Preprocessor-Ptr String Void)]
                [seashell_preprocessor_set_main_file (-> Seashell-Preprocessor-Ptr String Void)]
                [seashell_preprocessor_get_include_count (-> Seashell-Preprocessor-Ptr Index)]
                [seashell_preprocessor_get_include (-> Seashell-Preprocessor-Ptr Nonnegative-Integer String)]
@@ -187,6 +191,7 @@
            Seashell-Compiler-Ptr
            seashell_preprocessor_make
            seashell_preprocessor_free
+           seashell_preprocessor_set_question_dir
            seashell_preprocessor_set_main_file
            seashell_preprocessor_get_include_count
            seashell_preprocessor_get_include

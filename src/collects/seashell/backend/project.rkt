@@ -326,9 +326,9 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests [full-path #f] [test-location 'tree] [question-name #f])
-  (->* (path-string? (or/c #f path-string?) (listof path-string?))
-       (boolean? (or/c path-string? 'tree 'flat 'current-directory) (or/c #f string?))
+(define/contract (compile-and-run-project name file question-name tests [full-path #f] [test-location 'tree])
+  (->* (path-string? (or/c #f path-string?) path-string? (listof path-string?))
+       (boolean? (or/c path-string? 'tree 'flat 'current-directory))
        (values boolean? hash?))
   (when (or (and (not full-path) (not (is-project? name)))
             (and full-path (not (directory-exists? name))))
@@ -361,17 +361,17 @@
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
   ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
-  (define question-dir-name
-    (let
-      ([simple-file (simplify-path file #f)])
-      (match-define-values (possible-question _ _) (split-path simple-file))
-      (cond
-        [(path? possible-question) possible-question]
-        [else (build-path ".")])))
+  ;(define question-dir-name
+  ;  (let
+  ;    ([simple-file (simplify-path file #f)])
+  ;    (match-define-values (possible-question _ _) (split-path simple-file))
+  ;    (cond
+  ;      [(path? possible-question) possible-question]
+  ;      [else (build-path ".")])))
   ;; Check if we're running a file in common folder
-  (define running-common-file? (and (directory-exists? project-common) (equal? (path->string question-dir-name) "common/")))
-  (when (and running-common-file? (not question-name))
-    (error "No question name given when running a common file."))
+  (define running-common-file?
+    (let ([dlst (explode-path file)])
+      (string=? "common" (path->string (first dlst)))))
 
   (define (compile-c-files)
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
@@ -380,6 +380,7 @@
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm")
+                                    (check-and-build-path project-base question-name)
                                     (list (check-and-build-path project-base file)) '()))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
     (when result
@@ -425,11 +426,11 @@
                                   (build-path temp-dir question-name))]
           [else
            ;; Copy the files over from the question
-           (merge-directory/files base (build-path temp-dir question-dir-name))
+           (merge-directory/files base (build-path temp-dir question-name))
            ;; Copy all files in the common folder to the question folder
            (when (directory-exists? project-common)
-             (merge-directory/files project-common (build-path temp-dir question-dir-name)))])
-    (values (build-path temp-dir) (build-path temp-dir question-dir-name)))
+             (merge-directory/files project-common (build-path temp-dir question-name)))])
+    (values (build-path temp-dir) (build-path temp-dir question-name)))
 
   (define-values (racket-temp-dir
                   racket-target-dir)
@@ -487,7 +488,7 @@
   (if (string=? file-to-run "")
     (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
                         (current-continuation-marks)))
-    (compile-and-run-project name file-to-run tests #f (build-path question (read-config 'tests-subdirectory)) question)))
+    (compile-and-run-project name file-to-run question tests #f (build-path question (read-config 'tests-subdirectory)))))
 
 
 ;; (export-project name) -> bytes?
