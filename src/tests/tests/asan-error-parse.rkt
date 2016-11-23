@@ -19,6 +19,16 @@
   (sync (program-wait-evt (hash-ref hsh 'pid)))
   (string->jsexpr (bytes->string/utf-8 (program-asan-message (hash-ref hsh 'pid)))))
 
+;; Checks the ASAN JSON result has the specified type
+;; and the specified number of "stacks". If a number
+;; of stacks is not specified, checks that there is at
+;; least one.
+(define (has-type-and-stack? result type [stacks #f])
+  (and (string=? (hash-ref result 'error_type) type)
+       (if stacks
+           (= stacks (length (hash-ref result 'call_stacks)))
+           (not (empty? (hash-ref result 'call_stacks))))))
+
 
 (define/provide-test-suite asan-parser-suite
   (test-suite "ASAN Parser Tests"
@@ -42,8 +52,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "memory-leak")
-      (check-equal? (length (hash-ref json-answer 'call_stacks))  3))
+      (check-true (has-type-and-stack? json-answer "memory-leak" 3)))
 
 ;; ---- STACK OVERFLOW TESTS ---------------------------
     (test-case "Stack Overflow Test 1"
@@ -55,7 +64,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-overflow")
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "my_var")
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "80"))
 
@@ -69,7 +78,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-overflow")
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "carr")
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "30"))
 
@@ -85,7 +94,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-overflow"))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow")))
 
 ;; ---- STACK UNDERFLOW TESTS ---------------------------
     (test-case "Stack Underflow Test 1"
@@ -97,7 +106,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-buffer-underflow")
+      (check-true (has-type-and-stack? json-answer "stack-buffer-underflow"))
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "x")
       (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "80"))
 
@@ -116,7 +125,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "stack-use-after-return"))
+      (check-true (has-type-and-stack? json-answer "stack-use-after-return")))
 
 ;; ---- HEAP OVERFLOW TESTS ---------------------------
     (test-case "Heap Overflow Test 1"
@@ -130,7 +139,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "heap-buffer-overflow"))
+      (check-true (has-type-and-stack? json-answer "heap-buffer-overflow")))
 
     (test-case "Heap Overflow Test 2"
       (define student-code #<<HERE
@@ -142,7 +151,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "heap-buffer-overflow"))
+      (check-true (has-type-and-stack? json-answer "heap-buffer-overflow")))
 
 ;; ---- DOUBLE FREE TEST ---------------------------
     (test-case "Double Free Test"
@@ -160,8 +169,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "double-free")
-      (check-equal? (length (hash-ref json-answer 'call_stacks))  3))
+      (check-true (has-type-and-stack? json-answer "double-free" 3)))
 
 ;; ---- HEAP USE AFTER FREE TEST ---------------------------
     (test-case "Heap Use After Free Test"
@@ -176,8 +184,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "heap-use-after-free")
-      (check-equal? (length (hash-ref json-answer 'call_stacks))  3))
+      (check-true (has-type-and-stack? json-answer "heap-use-after-free" 3)))
 
 
 ;; ---- GLOBAL MEMORY TEST ---------------------------
@@ -191,7 +198,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "global-buffer-overflow"))
+      (check-true (has-type-and-stack? json-answer "global-buffer-overflow")))
 
 ;; ---- SEGMENTATION FAULT TESTS ---------------------------
     (test-case "Segmentation Fault Null Test"
