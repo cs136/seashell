@@ -87,8 +87,8 @@
 ;; Arguments:
 ;;  cflags - List of flags to pass to the compiler.
 ;;  ldflags - List of flags to pass to the linker.
-;;  resolve-sources - Paths to target files. Dependencies will be traversed beginning here.
-;;  objects - List of object paths to compile.
+;;  question-dir - the directory of the Seashell question being run, used for dependency resolution.
+;;  source - the source file containing the program entry point.
 ;; Returns:
 ;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
 ;;    returns no binary and the list of messages produced.
@@ -100,24 +100,25 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(: seashell-compile-files (-> (Listof String) (Listof String) Path (Listof Path) (Listof Path)
+(: seashell-compile-files (-> (Listof String) (Listof String) Path Path
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files user-cflags user-ldflags question-dir resolve-sources extra-objects)
+(define (seashell-compile-files user-cflags user-ldflags question-dir source)
 
-  (define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
-    (define-values (srcs msgs) (seashell-resolve-dependencies question-dir path))
-    (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
-    (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
-    resolve-sources))
+  (define-values (pp-srcs pp-msgs) (seashell-resolve-dependencies question-dir source))
+  (define pp-msgs/src (map (lambda ([x : Seashell-Diagnostic]) (cons source x)) pp-msgs))
+  ;(define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
+  ;  (define-values (srcs msgs) (seashell-resolve-dependencies question-dir path))
+  ;  (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
+  ;  (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
+  ;  resolve-sources))
 
-  (define raw (remove-duplicates (append extra-objects (car pp-result))))
   (define sources (filter
                     (lambda ([file : Path])
                       (or (equal? (filename-extension file) #"c")
-                          (equal? (filename-extension file) #"ll"))) raw))
+                          (equal? (filename-extension file) #"ll"))) pp-srcs))
   (define objects (filter
                     (lambda ([file : Path])
-                      (equal? (filename-extension file) #"o")) raw))
+                      (equal? (filename-extension file) #"o")) pp-srcs))
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
   (cond
@@ -148,7 +149,7 @@
      (define compiler-diags
        (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
-        (append (cdr pp-result)
+        (append pp-msgs/src
           (list*
            `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
            (process-compiler-diagnostics compiler file-vec)))))

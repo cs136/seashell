@@ -298,7 +298,7 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (compile-and-run-project name file tests full-path test-location question-name)
+;; (compile-and-run-project name file question-name tests full-path test-location)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
@@ -306,6 +306,7 @@
 ;;  file - Full path and name of file we are compiling from
 ;;         When called from compile-and-run-project/use-runner below, looks like
 ;;         "q1/file.rkt" or "common/file.rkt"
+;;  question-name - Name of the question we are running
 ;;  test - Name of test, or empty to denote no test.
 ;;  full-path - If #f, looks for the project in the standard project location.
 ;;                 #t, assumes name is the full path to the project directory.
@@ -316,8 +317,6 @@
 ;;    'current-directory - Look for the tests in <current-directory>
 ;;    path-string? - Look for the tests in <project-dir>/<test-loc>.
 ;;    By default, 'tree.
-;;  question-name - When running a file in common, pass in the question name here.
-;;    Default is #f, meaning that we're not running a file in common/.
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
 ;;  A hash-map, with the following bindings:
@@ -327,7 +326,7 @@
 ;; Raises:
 ;;  exn:project if project does not exist.
 (define/contract (compile-and-run-project name file question-name tests [full-path #f] [test-location 'tree])
-  (->* (path-string? (or/c #f path-string?) path-string? (listof path-string?))
+  (->* (path-string? (or/c #f path-string?) string? (listof path-string?))
        (boolean? (or/c path-string? 'tree 'flat 'current-directory))
        (values boolean? hash?))
   (when (or (and (not full-path) (not (is-project? name)))
@@ -360,14 +359,6 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
-  ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
-  ;(define question-dir-name
-  ;  (let
-  ;    ([simple-file (simplify-path file #f)])
-  ;    (match-define-values (possible-question _ _) (split-path simple-file))
-  ;    (cond
-  ;      [(path? possible-question) possible-question]
-  ;      [else (build-path ".")])))
   ;; Check if we're running a file in common folder
   (define running-common-file?
     (let ([dlst (explode-path file)])
@@ -381,8 +372,8 @@
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm")
                                     (check-and-build-path project-base question-name)
-                                    (list (check-and-build-path project-base file)) '()))
-    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
+                                    (check-and-build-path project-base file)))
+    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
                            #:exists 'replace

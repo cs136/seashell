@@ -60,13 +60,13 @@
     (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
 
   (standard-logger-setup)
-  (define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t 'current-directory))
+  (define-values (code info) (compile-and-run-project (path->complete-path project-dir) main-file "." (list test-name) #t 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
       (eprintf "Compilation failed. Compiler errors:~n")
       (define compiler-errors (apply string-append (map format-message msgs)))
       (eprintf compiler-errors)
-      (write-outputs #f (string->bytes/utf-8 compiler-errors))
+      (write-outputs #f (string->bytes/utf-8 compiler-errors) #f)
       (exit 10)]
     [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
       (eprintf "Waiting for program to finish...~n")

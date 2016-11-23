@@ -103,6 +103,13 @@ HERE
         (sync (program-wait-evt pid))
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
 
+    (test-case "Run a project with main file in common dir"
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "common" "common-main.c")
+        (thunk (display "int main() { }\n")))
+      (define-values (res hsh) (compile-and-run-project "foo" "common/common-main.c" "q1" '()))
+      (check-true res)
+      (sync (program-wait-evt (hash-ref hsh 'pid))))
+
     (test-case "Get a Compilation Error"
       (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "error.c")
         (thunk (display "great code;")))

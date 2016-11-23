@@ -1042,11 +1042,10 @@ void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preproces
   char *saveptr;
   char *tok = strtok_r(nfile, "/", &saveptr);
   do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
-  
-  preprocessor->main_file = vec[vec.size()-1];
-  // add the common folder as a place to look for includes
-  //preprocessor->compiler_flags.push_back("-I");
-  //preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/common");
+ 
+  preprocessor->main_file = vec[vec.size()-2];
+  preprocessor->main_file += "/";
+  preprocessor->main_file += vec[vec.size()-1];
   free(nfile);
 }
 
@@ -1056,8 +1055,6 @@ extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_prepr
 std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor) {
 #endif
   std::string res = preprocessor->project_dir;
-  res += "/";
-  res += preprocessor->question_dir;
   res += "/";
   res += preprocessor->main_file;
 #ifndef __EMSCRIPTEN__

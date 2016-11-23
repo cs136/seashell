@@ -28,15 +28,15 @@
 
   ;; (seashell-compiler-place/thread write-end . args)
   ;; Thread that actually processes the compilation request.
-  (: seashell-compiler-place/thread (-> Place-Channel (Listof String) (Listof String) Path (Listof Path) (Listof Path) Thread))
-  (define (seashell-compiler-place/thread write-end cflags ldflags question-dir resolve-sources objects)
+  (: seashell-compiler-place/thread (-> Place-Channel (Listof String) (Listof String) Path Path Thread))
+  (define (seashell-compiler-place/thread write-end cflags ldflags question-dir source)
     (thread
       (lambda ()
         (with-handlers
           ([exn:fail?
             (lambda ([exn : exn]) (place-channel-put write-end (serialize (list #t #f (exn-message exn)))))])
           (define-values (result data)
-            (seashell-compile-files cflags ldflags question-dir resolve-sources objects))
+            (seashell-compile-files cflags ldflags question-dir source))
           (place-channel-put write-end (serialize (list #f result data)))))))
 
 
@@ -64,15 +64,14 @@
             ['quit
              (logf 'info "Shutting down compiler place due to request.")
              (quit #f)]
-            [(list write-end cflags ldflags question-dir sources objects)
+            [(list write-end cflags ldflags question-dir source)
              (assert (place-channel? write-end))
              (seashell-compiler-place/thread
                write-end
                (cast cflags (Listof String))
                (cast ldflags (Listof String))
                (cast question-dir Path)
-               (cast sources (Listof Path))
-               (cast objects (Listof Path)))])
+               (cast source Path))])
           (loop))))))
 
 
