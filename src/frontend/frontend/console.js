@@ -99,12 +99,10 @@ angular.module('frontend-app')
         maybe_log('printing outer misc: ' + key2);
         to_print.push(key2.replace(/_/g, " ") + ': ' + err.misc[key2]);
       }
-      //maybe_log('done iterating over everything; to_print has ' + to_print.length + ' items');
-      //to_print.push(err.raw_message);
       for (var j = 0; j < to_print.length; j++){
         self._write(to_print[j] + '\n');
-        //console.log(to_print[j]);
       }
+      self.flush();
     }
 
     socket.register_callback("io", function(io) {
@@ -146,7 +144,6 @@ angular.module('frontend-app')
         self.PIDs = null;
         self.running = false;
       }
-      self.flush();
     });
 
     function printExpectedFromDiff(res) {
@@ -220,6 +217,7 @@ angular.module('frontend-app')
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" was killed.\n", res.test_name));
       }
+      self.flush();
     });
 
     self.setRunning = function(project, PIDs, testing) {
