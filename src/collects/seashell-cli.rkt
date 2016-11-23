@@ -71,7 +71,7 @@
     (eprintf "Compilation failed. Compiler errors:~n")
     (define compiler-errors (apply string-append (map format-message msgs)))
     (eprintf compiler-errors)
-    (write-outputs #f (string->bytes/utf-8 compiler-errors))
+    (write-outputs #f (string->bytes/utf-8 compiler-errors) #f)
     (exit 10)]
   [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
     (eprintf "Waiting for program to finish...~n")
