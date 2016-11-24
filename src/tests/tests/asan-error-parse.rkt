@@ -29,7 +29,6 @@
            (= stacks (length (hash-ref result 'call_stacks)))
            (not (empty? (hash-ref result 'call_stacks))))))
 
-
 (define/provide-test-suite asan-parser-suite
   (test-suite "ASAN Parser Tests"
 

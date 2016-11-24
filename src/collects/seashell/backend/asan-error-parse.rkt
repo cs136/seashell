@@ -205,7 +205,7 @@
      (define line-nbr (eighth mres))
      (define col-nbr (ninth mres))
      (define variable-size (tenth mres))
-     (define extra-info (jsexpr (list (list (string->symbol (string-append "details_of_address_" address))
+     (define extra-info (jsexpr (list (list (string->symbol (string-append "details_of_address_" address "_relative_to_" variable-name))
                                             (third match-result))
                                       (list (string->symbol (string-append variable-name "_is_defined_in_file")) file-name)
                                       (list (string->symbol (string-append variable-name "_definition_line_number")) line-nbr)
@@ -339,14 +339,14 @@
   ;; the line numbers), so be careful with the colons here.
   (define with-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:word:]]+) (.+):(\\d+):(\\d+)$" aline))
   (define no-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:word:]]+) (.+):(\\d+)$" aline))
-  (cond [(and (cons? with-col-match) (>= (length with-col-match) 7))
+  (cond [(cons? with-col-match) ;(>= (length with-col-match) 7))
          (jsexpr `((frame ,(second with-col-match))
                    (offset ,(third with-col-match))
                    (function ,(fourth with-col-match))
                    (file ,(fifth with-col-match))
                    (line ,(sixth with-col-match))
                    (column ,(seventh with-col-match))))]
-        [(and (cons? no-col-match) (>= (length no-col-match) 6))
+        [(cons? no-col-match) ;(>= (length no-col-match) 6))
          (jsexpr `((frame ,(second no-col-match))
                    (offset ,(third no-col-match))
                    (function ,(fourth no-col-match))
@@ -364,11 +364,9 @@
         [else (define result (try-parse-stack-line (first lines)))
               (cond [(and (not result) (cons? frames-list)) (values frames-list lines)]
                     [(not result) (try-parse-stack-frame (rest lines) frames-list)]
-                    [(let* ((filename (jsexpr-ref result 'file))
-                            (seashell-path-string (read-config-path 'seashell))
-                            (seashell-folder (if (string? seashell-path-string)
-                                                 seashell-path-string
-                                                 (path->string seashell-path-string))))
-                       (and (string? filename) (string-prefix? filename seashell-folder)))
+                    ;; TODO: find a reliable way to filter out those stack frames which come from
+                    ;;  libc_start, standard libraries etc that works in normal Seashell as well
+                    ;;  as seashell-cli
+                    [(string? (jsexpr-ref result 'file))
                      (try-parse-stack-frame (rest lines) (cons result frames-list))]
                     [else (try-parse-stack-frame (rest lines) frames-list)])]))
