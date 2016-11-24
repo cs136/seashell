@@ -211,7 +211,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "segmentation-fault-on-null-address"))
+      (check-true (has-type-and-stack? json-answer "segmentation-fault-on-null-address")))
 
     (test-case "Segmentation Fault Test"
       (define student-code #<<HERE
@@ -223,7 +223,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "segmentation-fault"))
+      (check-true (has-type-and-stack? json-answer "segmentation-fault")))
 
 ;; ---- NO ERROR TEST ---------------------------
     (test-case "No Error Test"
@@ -250,7 +250,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-equal? (hash-ref json-answer 'error_type) "unknown")
+      (check-true (has-type-and-stack? json-answer "unknown" 0))
       (check-equal? (hash-ref json-answer 'raw_message) ""))
 
 ))
