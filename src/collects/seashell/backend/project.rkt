@@ -444,6 +444,7 @@
                         (current-continuation-marks))))
 
   (define project-base (if full-path name (build-project-path name)))
+  (define project-base-str (path->string (path->complete-path project-base)))
   (define project-common (if full-path
     (build-path project-base (read-config 'common-subdirectory))
     (check-and-build-path project-base (read-config 'common-subdirectory))))
@@ -565,7 +566,7 @@
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base lang #f real-test-location))
+      (define pid (run-program target base project-base-str lang #f real-test-location))
       (thread
         (lambda ()
           (sync (program-wait-evt pid))
@@ -576,7 +577,7 @@
     [result
       (define pids (map
                      (lambda (test)
-                       (run-program target base lang test real-test-location))
+                       (run-program target base project-base-str lang test real-test-location))
                      tests))
       (thread
         (lambda ()
