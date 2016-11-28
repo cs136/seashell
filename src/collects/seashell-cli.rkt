@@ -43,7 +43,6 @@
   (define plain-asan
     (if (not asan) #f
       (let ([parsed (bytes->jsexpr asan)])
-        (printf "~a~n" (hash-ref parsed 'call_stacks))
         (if (string=? "" (hash-ref parsed 'raw_message))
           #f (hash-ref parsed 'raw_message)))))
   (when stdout
