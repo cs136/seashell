@@ -144,6 +144,7 @@ angular.module('frontend-app')
         self.PIDs = null;
         self.running = false;
       }
+      self.contents = self._contents;
     });
 
     function printExpectedFromDiff(res) {
