@@ -344,14 +344,14 @@
   ;; the line numbers), so be careful with the colons here.
   (define with-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:word:]]+) (.+):(\\d+):(\\d+)$" aline))
   (define no-col-match (regexp-match #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:word:]]+) (.+):(\\d+)$" aline))
-  (cond [(cons? with-col-match) ;(>= (length with-col-match) 7))
+  (cond [(cons? with-col-match)
          (jsexpr `((frame ,(second with-col-match))
                    (offset ,(third with-col-match))
                    (function ,(fourth with-col-match))
                    (file ,(fifth with-col-match))
                    (line ,(sixth with-col-match))
                    (column ,(seventh with-col-match))))]
-        [(cons? no-col-match) ;(>= (length no-col-match) 6))
+        [(cons? no-col-match)
          (jsexpr `((frame ,(second no-col-match))
                    (offset ,(third no-col-match))
                    (function ,(fourth no-col-match))
