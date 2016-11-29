@@ -59,7 +59,6 @@
     (match-define (list error? file line column errstr) msg)
     (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
 
-  (standard-logger-setup)
   (define-values (code info) (compile-and-run-project (path->complete-path project-dir) main-file "." (list test-name) #t 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
@@ -132,5 +131,6 @@
     (printf "  ~a: ~a~n" tool (second props))))
   (exit 1))
 
+(standard-logger-setup)
 ;; invoke main method for tool
 ((first (hash-ref tools (first flags))))
