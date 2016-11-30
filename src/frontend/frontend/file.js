@@ -478,11 +478,14 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.project.run(self.question, true, self.console.IOCallback, self.console.testCallback)
+            self.project.run(self.question, true)
               .then(function(res) {
-                self.console.setRunning(self.project, res.pids, true);
-                handleCompileErr(res.messages, true);
                 self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+                $q.all(res.pids)
+                    .then(function(pids) {
+                        self.console.setRunning(self.project, pids, true);
+                        handleCompileErr(res.messages, true);
+                    });
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
