@@ -6,6 +6,7 @@
 
 var initialized = false;
 var toRun = null;
+var testcase_data = null;
 
 // TODO: Make sure the runtime is initialized before running code.
 function onInit() {
@@ -19,9 +20,23 @@ Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onIni
 self.importScripts("seashell-clang-js/bin/seashell-runner.js");
 
 var stdout = "";
+var stderr = "";
 
 Module._RT_stdout_write = function(str) {
   stdout += str;
+};
+
+Module._RT_stderr_write = function(str) {
+  // If running file, add stderr contents to stdout.
+  // This isn't ideal, but it prevents us from having to
+  // figure out how stderr and stdout contents interleave,
+  // and when running a file, you can't tell the difference
+  // between stdout and stderr anyways.
+  if(testcase_data === null) {
+    stdout += str;
+  } else {
+    stderr += str;
+  }
 };
 
 var req = new XMLHttpRequest();
@@ -54,26 +69,58 @@ function runObj(obj) {
   function run_loop() {
     running = true;
     var loop = runner.run();
-    postMessage({message: stdout,
-                 type: 'stdout'});
-    stdout = "";
+
+    // send stdout contents
+    if(testcase_data === null) {
+      postMessage({message: stdout, type: 'stdout'});
+      stdout = "";
+
+      // send stderr contents
+      postMessage({message: stderr, type: 'stderr'});
+      stderr = "";
+    }
+
+
     if(loop) {
       running = false;
     }
     if(!loop) {
-      postMessage({status: runner.result(),
-                   type: 'done'});
+      if(testcase_data === null) {
+        postMessage({status: runner.result(),
+                    type: 'done'});
+      } else {
+        postMessage({status: runner.result(),
+                    type: 'done',
+                    testname: testcase_data.testname,
+                    input: testcase_data.input,
+                    expect: testcase_data.expect,
+                    stdout: stdout,
+                    stderr: stderr });
+      }
       close();
     }
   }
 
-  run_loop();
+  if(testcase_data === null) {
+    run_loop();
+  } else {
+    run_loop();
+    Module._RT_stdin_buffer += testcase_data.input;
+    if(!running) { run_loop(); }
+    Module._RT_stdin_buffer = null;
+    if(!running) { run_loop(); }
+  }
 }
 
 self.onmessage = function(obj) {
   obj = obj.data;
-  if(initialized)
-    runObj(obj);
-  else
-    toRun = obj;
+  if(typeof obj === 'object' && ('type' in obj) && obj.type === 'testdata') {
+    testcase_data = obj;
+  } else {
+    if(initialized) {
+      runObj(obj);
+    } else {
+      toRun = obj;
+    }
+  }
 };
