@@ -77,4 +77,63 @@ angular.module('seashell-compiler', [])
         });
       };
     }
+  ])
+  .service('offline-tester', ['$q',
+    function ($q) {
+      var self = this;
+
+      self.runTests = function (object, test_cb, testdata) {
+
+        var return_promise_pids = [];
+
+        function spawn_runner(test_contents) {
+            // run this function when both input and expect files are ready
+            var testname = test_contents[0];
+            var input_contents = test_contents[1].contents;
+            var expect_contents = (test_contents[2] === null ? null : test_contents[2].contents);
+
+            // spawn the runner
+            var runner = new Worker('js/offline-run.min.js');
+
+            runner.onmessage = function (message) {
+                test_cb(null, message.data);
+            };
+
+            // Send in the test case input and expected output
+            runner.postMessage({'type': 'testdata',
+                                'testname': testname,
+                                'input': input_contents,
+                                'expect': expect_contents });
+
+            // Return a fake 'pid'. For testing, sending EOF and
+            // stdin from console isn't needed nor possible.
+            return {
+              testname: testname,
+              toString: function () {
+                return "<offline-tester>";
+              },
+              kill: function () {
+                runner.terminate();
+                test_cb(null, {'type': 'done', status: 255});
+              },
+              sendEOF: function(){},
+              programInput: function(){},
+              startIO: function () {
+                runner.postMessage(object);
+              }};
+        }
+
+        // for each test case, spawn a runner
+        for(var i = 0; i < testdata.length; i++) {
+            var testname_promise = $q.when(testdata[i].testname);
+
+            var promise = $q.all([testname_promise, testdata[i].input, testdata[i].expect])
+                .then(spawn_runner);
+
+            return_promise_pids.push(promise);
+        }
+
+        return return_promise_pids;
+      };
+    }
   ]);

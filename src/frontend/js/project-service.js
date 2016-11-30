@@ -731,17 +731,56 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           var testDir = self.root.find(question+"/tests");
           var arr = [];
-          if(testDir && testDir.is_dir) {
-            for(var i=0; i < testDir.children.length; i++) {
-              if(testDir.children[i].ext() == "in") {
-                var name = testDir.children[i].name[testDir.children[i].name.length-1];
-                name = name.split(".");
-                name.pop();
-                arr.push(name.join("."));
+
+          if(ws.isOffline()) {
+              // Offline mode
+              var testcases = {};
+              if(testDir && testDir.is_dir) {
+                    for(var i=0; i < testDir.children.length; i++) {
+
+                        var filename = testDir.children[i].filename();
+                        var type = ""; // input or expect?
+                        if(filename.endsWith(".in")) {
+                            type = 'input';
+                        } else if(filename.endsWith('.expect')) {
+                            type = 'expect';
+                        } else {
+                            // all test files should end with .in or .expect
+                            continue;
+                        }
+
+                        var testname = filename.substr(0, filename.lastIndexOf('.'));
+                        if(!(testname in testcases)) { testcases[testname] = {}; }
+                        testcases[testname][type] = testDir.children[i].toWorker();
+                  }
               }
-            }
+
+              // Convert testcases hash to array
+              Object.keys(testcases).forEach(function(testname) {
+                if('input' in testcases[testname]) {
+                    arr.push({'testname':testname,
+                              'input':testcases[testname].input,
+                              'expect':('expect' in testcases[testname] ? testcases[testname].expect : null)});
+
+                }
+              });
+
+              return arr;
+
+          } else {
+              // Online mode
+              if(testDir && testDir.is_dir) {
+                for(var j=0; j < testDir.children.length; j++) {
+                  if(testDir.children[j].ext() == "in") {
+                    var name = testDir.children[j].name[testDir.children[j].name.length-1];
+                    name = name.split(".");
+                    name.pop();
+                    arr.push(name.join("."));
+                  }
+                }
+              }
+              return arr;
           }
-          return arr;
         };
 
         /**

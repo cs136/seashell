@@ -29,8 +29,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
    *    connect                      - Connects the socket
    *    socket                       - Socket object.  Is invalid after disconnect/fail | before connect.
    */
-  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 'offline-compiler', 'offline-runner',
-    function($q, $interval, $cookies, $timeout, localfiles, compiler, runner) {
+  .service('socket', ['$q', '$interval', '$cookies', '$timeout', 'localfiles', 'offline-compiler', 'offline-runner', 'offline-tester',
+    function($q, $interval, $cookies, $timeout, localfiles, compiler, runner, tester) {
       "use strict";
       var self = this;
       var SEASHELL_OFFLINE_MODE_COOKIE = 'seashell-offline-mode-cookie';
@@ -56,6 +56,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       // these will hold workers for offline mode
       self.compiler = null;
       self.runner = null;
+      self.tester = null;
 
 
       var timeout_count = 0;
@@ -350,14 +351,24 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               })
               .then(function (result) {
                 // Fill in the PID with a fake, offline PID.
-                return runner.run(result.obj,
-                    function (message, data) {
-                      self.io_cb(message, data);
-                    })
-                  .then(function (pid) {
-                    result.pid = pid;
+                if(tests.length === 0) {
+                    return runner.run(result.obj,
+                        function (message, data) {
+                          self.io_cb(message, data);
+                        })
+                      .then(function (pid) {
+                        result.pid = pid;
+                        return result;
+                      });
+                } else {
+                    // Run the tests
+                    result.pids = tester.runTests(result.obj,
+                        function (message, data) {
+                          self.test_cb(message, data);
+                        },
+                        tests);
                     return result;
-                  });
+                }
               });
           }
       };
