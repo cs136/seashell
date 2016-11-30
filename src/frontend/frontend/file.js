@@ -466,6 +466,8 @@ angular.module('frontend-app')
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }
@@ -492,6 +494,8 @@ angular.module('frontend-app')
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }

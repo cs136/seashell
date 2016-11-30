@@ -73,7 +73,7 @@ self.onmessage = function(msg) {
 
   function compile(runnerFile) {
     var pp = Module.seashell_preprocessor_make();
-    Module.seashell_preprocessor_set_main_file(pp, "/working/question/"+runnerFile);
+    Module.seashell_preprocessor_set_main_file(pp, "/"+data.project+"/"+data.question+"/"+runnerFile);
     console.log("Running preprocessor...");
     var pres = Module.seashell_preprocessor_run(pp);
     console.log("Preprocessor finished.");
@@ -128,15 +128,16 @@ self.onmessage = function(msg) {
   }
   
   try {
-    FS.mkdir("/working");
-    FS.mkdir("/working/question");
+    FS.mkdir("/"+data.project);
+    FS.mkdir("/"+data.project+"/"+data.question);
+    FS.mkdir("/"+data.project+"/common");
   } catch(e) { }
   var rf = data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
     // TODO handle common files in the way expected by dependency resolution code
     if(data.files[i].contents) {
       var split = data.files[i].name.split(".");
-      var file = FS.open("/working/question/"+data.files[i].name, 'w');
+      var file = FS.open("/"+data.project+"/"+data.question+"/"+data.files[i].name, 'w');
       var len = lengthBytesUTF8(data.files[i].contents)+1;
       var arr = new Uint8Array(len);
       var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);

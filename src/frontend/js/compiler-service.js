@@ -21,7 +21,7 @@ angular.module('seashell-compiler', [])
   .service('offline-compiler', ['$q',
     function ($q) {
       var self = this;
-      self.compile = function(file_array, runner) {
+      self.compile = function(project, question, file_array, runner) {
         var defer = $q.defer();
         var compiler = new Worker('js/offline-compile.min.js');
         compiler.onmessage = function (result) {
@@ -40,6 +40,8 @@ angular.module('seashell-compiler', [])
           }
         };
         compiler.postMessage({
+          project: project,
+          question: question,
           runnerFile: runner,
           files: file_array});
         return defer.promise;
