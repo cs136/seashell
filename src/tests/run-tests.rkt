@@ -9,7 +9,8 @@
          "tests/crypto.rkt"
          "tests/compiler.rkt"
          "tests/asan-error-parse.rkt"
-         "tests/config.rkt")
+         "tests/config.rkt"
+         "tests/cli.rkt")
 
 (setup-test-environment)
 ;; Run tests
@@ -24,6 +25,7 @@
         project-suite
         crypto-suite
         asan-parser-suite
+        seashell-cli-suite
         ))))
 (teardown-test-environment)
 
