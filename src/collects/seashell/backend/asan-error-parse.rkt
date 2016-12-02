@@ -6,10 +6,8 @@
 (require/typed racket/base [regexp-match (PRegexp String -> (U False (Listof (U False String))))]
                [string->number (String -> Real)])
 
+;; To use the asan-driver.rkt for faster testing, comment out this line.
 (require (submod seashell/seashell-config typed))
-;; use these two lines below instead of the one above to use the driver
-;(: read-config-path (Any -> Path-String))
-;(define (read-config-path x) (build-path (find-system-path 'home-dir) ".seashell"))
 
 (provide asan->json)
 
@@ -270,7 +268,7 @@
 ;; Try to parse a frame
 (define frame-parse : SectionParser
   (match-and-process
-   #px"^\\{\"frame\": "
+   #px"#(\\d+) (0x[[:xdigit:]]+) in ([[:word:]]+) (.+):(\\d+)"
    (lambda ([error-type : String] [lines : (Listof String)] [source-dir : Path-String] [match-result : (Listof (U False String))])
      (define-values (framelist lines-left) (try-parse-stack-frame lines source-dir))
      (SectionData #f ; error type
