@@ -336,7 +336,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
 
       self.compileAndRunProject = function(project, question, file, tests, deferred) {
           if(!self.isOffline()) {
-            return self._socket.compileAndRunProject(project, question, tests, deferred);
+            var testnames = _.map(tests, function(test) {
+              return test.testname;
+            });
+            return self._socket.compileAndRunProject(project, question, testnames, deferred);
           }
           else {
             if(file.ext() == "rkt") {
