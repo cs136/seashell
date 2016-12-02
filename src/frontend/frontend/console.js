@@ -165,73 +165,13 @@ angular.module('frontend-app')
       self.write(output.substring(1));
     }
 
-    // Prints the test results when in offline mode
-    function printTestResultsOffline(res) {
-
-      // true if the runner_ended "normally", ie not by the user
-      // pressing STOP button
-      var runner_ended = ('type' in res) && res.type === 'done' &&
-        ('status' in res) && 'testname' in res;
-
-      if(runner_ended && res.status !== 0) {
-        // Runner ended and the exit code is non-zero
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.testname, res.status));
-        if('stderr' in res) {
-          self.write("Produced output (stderr):\n");
-          self.write(res.stderr);
-        }
-      } else if('stdout' in res && 'expect' in res) {
-        // compare actual output with expected output
-        if(res.expect !== null && res.stdout == res.expect) {
-          // test passed
-          self.write('----------------------------------\n');
-          self.write(sprintf("Test \"%s\" passed.\n", res.testname));
-        } else {
-          // test failed or there was no expect file
-          self.write('----------------------------------\n');
-          if(res.expect === null) {
-            self.write('Test ' + res.testname + ' produced output (stdout):\n');
-          } else {
-            self.write(sprintf("Test \"%s\" failed.\n", res.testname));
-            self.write('Produced output (stdout):\n');
-          }
-          self.write(res.stdout);
-          self.write('\n---\n');
-          if(res.expect !== null) {
-            self.write('Expected output (stdout):\n');
-            self.write(res.expect);
-            self.write('\n---\n');
-          }
-          self.write('Produced errors (stderr):\n');
-          self.write(res.stderr);
-          self.write('\n');
-        }
-      }
-
-      self.flush();
-
-      if(runner_ended) {
-
-        // A runner for one test case has finished. Remove it from the
-        // list of PIDs (similar to what the online mode's code does below)
-        self.PIDs = self.PIDs.filter(function(a_pid) {
-            // filter/keep the pids whose testname do not match the test
-            // that just finished
-            return !('testname' in a_pid && a_pid.testname === res.testname);
-        });
-
-        self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
-      }
-    }
-
     socket.register_callback("test", function(res) {
-      if(socket.isOffline()) {
-        printTestResultsOffline(res);
-        return;
-      }
 
-      self.PIDs = _.without(self.PIDs, res.pid);
+      // When online, PIDs are simple PIDs...
+      //  In offline tests we use test name instead of PID
+      self.PIDs = _.filter(self.PIDs, function(pid) {
+        return pid.toString() != res.pid.toString();
+      });
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       var parsedASAN = res.asan_output ? JSON.parse(res.asan_output) : false;
 

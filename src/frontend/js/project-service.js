@@ -737,7 +737,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                 for(var i=0; i < testDir.children.length; i++) {
 
                     var filename = testDir.children[i].filename();
-                    var type = ""; // input or expect?
+                    var type = ""; // in or expect?
                     if(filename.endsWith(".in")) {
                         type = 'in';
                     } else if(filename.endsWith('.expect')) {
@@ -747,18 +747,18 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                         continue;
                     }
 
-                    var testname = filename.substr(0, filename.lastIndexOf('.'));
-                    if(!(testname in testcases)) { testcases[testname] = {}; }
-                    testcases[testname][type] = testDir.children[i].toWorker();
+                    var test_name = filename.substr(0, filename.lastIndexOf('.'));
+                    if(!(test_name in testcases)) { testcases[test_name] = {}; }
+                    testcases[test_name][type] = testDir.children[i].toWorker();
               }
           }
 
           // Convert testcases hash to array
-          Object.keys(testcases).forEach(function(testname) {
-            if('in' in testcases[testname]) {
-                arr.push({'testname':testname,
-                          'in':testcases[testname].input,
-                          'expect':('expect' in testcases[testname] ? testcases[testname].expect : null)});
+          Object.keys(testcases).forEach(function(test_name) {
+            if('in' in testcases[test_name]) {
+                arr.push({'test_name':test_name,
+                          'in':testcases[test_name].in,
+                          'expect':('expect' in testcases[test_name] ? testcases[test_name].expect : null)});
 
             }
           });
