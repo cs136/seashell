@@ -73,7 +73,8 @@ self.onmessage = function(msg) {
 
   function compile(runnerFile) {
     var pp = Module.seashell_preprocessor_make();
-    Module.seashell_preprocessor_set_main_file(pp, "/"+data.project+"/"+data.question+"/"+runnerFile);
+    Module.seashell_preprocessor_set_question_dir(pp, "/"+data.project+"/"+data.question);
+    Module.seashell_preprocessor_set_main_file(pp, data.question+"/"+runnerFile);
     console.log("Running preprocessor...");
     var pres = Module.seashell_preprocessor_run(pp);
     console.log("Preprocessor finished.");

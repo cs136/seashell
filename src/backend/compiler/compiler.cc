@@ -169,7 +169,8 @@ struct seashell_preprocessor {
   /** Preprocessor messages */
   std::vector<seashell_diag> messages;
 
-  // name of runner file within question dir
+  // name of runner file within project dir,
+  // ie. q1/main.c or common/aos.c
   std::string main_file;
 
   // name of question dir in project dir
@@ -995,7 +996,7 @@ extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preproc
  *
  * Arguments:
  *  preprocessor - A Seashell preprocessor instance.
- *  dir - Path of question dir the preprocessor is running on
+ *  dir - Absolute path of the question dir the preprocessor is running on
  */
 #ifndef __EMSCRIPTEN__
 extern "C" void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *preprocessor, const char *dir) {
@@ -1026,7 +1027,8 @@ void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *prepro
  *
  * Arguments:
  *  preprocessor - A Seashell preprocessor instance.
- *  file - Pathname of file to add.
+ *  file - Pathname of runner file to run preprocessor on. Can be absolute or of
+ *   the form {question}/{file}
  */
 #ifndef __EMSCRIPTEN__
 extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char* file) {
