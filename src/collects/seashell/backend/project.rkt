@@ -339,6 +339,7 @@
   (define project-common (if full-path
     (build-path project-base (read-config 'common-subdirectory))
     (check-and-build-path project-base (read-config 'common-subdirectory))))
+  (define project-question (build-path project-base question-name))
 
   (define project-common-list
     (if (directory-exists? project-common)
@@ -370,9 +371,10 @@
     ;; if everything succeeds.
     (define-values (result messages)
       (seashell-compile-files/place `(,@(read-config 'compiler-flags)
+                                      "-I" ,(some-system-path->string project-question)
                                       ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
                                     '("-lm")
-                                    (check-and-build-path project-base question-name)
+                                    project-question
                                     (check-and-build-path project-base file)))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
     (when result

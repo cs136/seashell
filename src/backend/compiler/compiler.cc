@@ -1019,6 +1019,12 @@ void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *prepro
     preprocessor->project_dir += vec[i];
   }
   free(nfile);
+
+  // Add directories to look for includes
+  preprocessor->compiler_flags.push_back("-I");
+  preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/common");
+  preprocessor->compiler_flags.push_back("-I");
+  preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/"+preprocessor->question_dir);
 }
 
 /**
