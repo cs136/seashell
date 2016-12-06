@@ -1,12 +1,9 @@
 /*
   This file will be run as a web worker to compile and run code offline.
-  TODO implement running tests with the compiled code. Do this after we
-     have the offline FS implemented.
 */
 
 var init = false;
 var init_queue = [];
-
 
 function block_for_libraries(callback) {
   try {
@@ -71,13 +68,11 @@ self.onmessage = function(msg) {
     return res;
   }
 
-  function compile(runnerFile) {
+  function compile(runnerFile, includeFlags) {
     var pp = Module.seashell_preprocessor_make();
-    Module.seashell_preprocessor_set_question_dir(pp, "/"+data.project+"/"+data.question);
-    Module.seashell_preprocessor_set_main_file(pp, data.question+"/"+runnerFile);
-    console.log("Running preprocessor...");
+    Module.seashell_preprocessor_set_question_dir(pp, "/seashell/"+data.project+"/"+data.question);
+    Module.seashell_preprocessor_set_main_file(pp, runnerFile);
     var pres = Module.seashell_preprocessor_run(pp);
-    console.log("Preprocessor finished.");
     // TODO handle this error case better.. return an actual message
     if(pres !== 0) {
       Module.seashell_preprocessor_free(pp);
@@ -103,7 +98,7 @@ self.onmessage = function(msg) {
     //       backend and frontend.
     var flags = ["-Wall", "-Werror=int-conversion", "-Werror=int-to-pointer-cast", "-Werror=return-type",
                  "-Werror=import-preprocessor-directive-pedantic", "-Werror=incompatible-pointer-types",
-                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"];
+                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"].concat(includeFlags);
     for(ind = 0; ind<flags.length; ind++) {
       Module.seashell_compiler_add_compile_flag(cc, flags[ind]);
     }
@@ -127,18 +122,20 @@ self.onmessage = function(msg) {
                status: 'compile-failed' };
     }
   }
+
+  var includeFlags = ["-I", "/seashell/"+data.project+"/"+data.question,
+                      "-I", "/seashell/"+data.project+"/common"];
   
   try {
-    FS.mkdir("/"+data.project);
-    FS.mkdir("/"+data.project+"/"+data.question);
-    FS.mkdir("/"+data.project+"/common");
+    FS.mkdir("/seashell");
+    FS.mkdir("/seashell/"+data.project);
+    FS.mkdir("/seashell/"+data.project+"/"+data.question);
+    FS.mkdir("/seashell/"+data.project+"/common");
   } catch(e) { }
   var rf = data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
-    // TODO handle common files in the way expected by dependency resolution code
     if(data.files[i].contents) {
-      var split = data.files[i].name.split(".");
-      var file = FS.open("/"+data.project+"/"+data.question+"/"+data.files[i].name, 'w');
+      var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
       var len = lengthBytesUTF8(data.files[i].contents)+1;
       var arr = new Uint8Array(len);
       var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
@@ -151,13 +148,13 @@ self.onmessage = function(msg) {
   }
 
   if(init) {
-    var res = compile(rf);
+    var res = compile(rf, includeFlags);
     postMessage(res);
     close();
   }
   else {
     init_queue.push(function() {
-      var res = compile(rf);
+      var res = compile(rf, includeFlags);
       postMessage(res);
       close();
     });

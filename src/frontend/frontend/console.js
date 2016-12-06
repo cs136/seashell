@@ -121,8 +121,9 @@ angular.module('frontend-app')
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
         if (ind > -1) {
-          self._write(self.stderr);
           spl = io.message.split("\n");
+          self._write(self.stderr);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
         } else {
           self.stderr += io.message;

@@ -78,23 +78,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellFile.prototype.toWorker = function() {
           var self = this;
           return self.read().then(function(conts) {
-            var obj = { name: self.name[self.name.length-1],
+            var obj = { name: self.name.join("/"),
                         contents: conts.data };
             return obj;
           });
         };
 
-        // for now, bundle everything together from question and common
-        SeashellFile.prototype.getDependencies = function() {
+        // bundle everything together from question and common
+        SeashellFile.prototype.getDependencies = function(question) {
           var self = this;
           var deps = [];
-          var question = self.project.root.find(self.name.slice(0,1));
+          var qFile = self.project.root.find(question);
           var common = self.project.root.find("common");
-          deps = deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
+          deps = deps.concat(_.filter(qFile.children, function(f) { return !f.is_dir; }));
           if(common)
             deps = deps.concat(common.children);
-          return $q.all(_.map(deps, function(d) { return d.read(); }))
-            .then(function() { return deps; });
+          return deps;
         };
 
         /**

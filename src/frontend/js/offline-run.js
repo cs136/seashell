@@ -32,11 +32,12 @@ Module._RT_stderr_write = function(str) {
   // figure out how stderr and stdout contents interleave,
   // and when running a file, you can't tell the difference
   // between stdout and stderr anyways.
-  if(testcase_data === null) {
+  /*if(testcase_data === null) {
     stdout += str;
   } else {
     stderr += str;
-  }
+  }*/
+  stderr += str;
 };
 
 var req = new XMLHttpRequest();

@@ -345,12 +345,12 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             if(file.ext() == "rkt") {
               return $q.reject("Racket files cannot be run in offline mode.");
             }
-            return $q.when(file.getDependencies())
+            return $q.when(file.getDependencies(question))
               .then(function(deps) {
                 return $q.all(_.map(deps, function(f) { return f.toWorker(); }));
               })
               .then(function (file_arr) {
-                return compiler.compile(project, question, file_arr, file.filename());
+                return compiler.compile(project, question, file_arr, file.fullname());
               })
               .then(function (result) {
                 // Fill in the PID with a fake, offline PID.
