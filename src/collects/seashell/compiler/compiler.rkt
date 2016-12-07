@@ -38,26 +38,6 @@
                 #:type-name Seashell-Diagnostic])
 (define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
 
-;; (seashell-resolve-dependencies file)
-;; Invokes the internal preprocessor to resolve dependencies
-;(: seashell-resolve-dependencies (-> Path Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
-;(define (seashell-resolve-dependencies question-dir file)
-;  (define pp (seashell_preprocessor_make))
-;  (seashell_preprocessor_set_question_dir pp (some-system-path->string question-dir))
-;  (seashell_preprocessor_set_main_file pp (some-system-path->string file))
-;  (seashell_preprocessor_run pp)
-;  (define srcs (build-list (seashell_preprocessor_get_include_count pp)
-;    (lambda ([n : Nonnegative-Integer]) (seashell_preprocessor_get_include pp n))))
-;  (values (map string->path srcs)
-;          (build-list (seashell_preprocessor_get_diagnostic_count pp)
-;            (lambda ([k : Nonnegative-Integer])
-;              (seashell-diagnostic
-;                (seashell_preprocessor_get_diagnostic_error pp k)
-;                (seashell_preprocessor_get_diagnostic_file pp k)
-;                (seashell_preprocessor_get_diagnostic_line pp k)
-;                (seashell_preprocessor_get_diagnostic_column pp k)
-;                (seashell_preprocessor_get_diagnostic_message pp k))))))
-
 (: process-preprocessor-diagnostics (-> Seashell-Compiler-Ptr (Listof Seashell-Diagnostic)))
 (define (process-preprocessor-diagnostics compiler)
   (build-list (seashell_compiler_get_preprocessor_diagnostic_count compiler)
@@ -68,7 +48,6 @@
         (seashell_compiler_get_preprocessor_diagnostic_line compiler k)
         (seashell_compiler_get_preprocessor_diagnostic_column compiler k)
         (seashell_compiler_get_preprocessor_diagnostic_message compiler k)))))
-  
 
 (: diags-fold-function (-> (Pair Path Seashell-Diagnostic) (HashTable Path (Listof Seashell-Diagnostic))
   (HashTable Path (Listof Seashell-Diagnostic))))
@@ -117,21 +96,7 @@
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
 (define (seashell-compile-files user-cflags user-ldflags source-dirs source)
 
-  ;(define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
-  ;  (define-values (srcs msgs) (seashell-resolve-dependencies question-dir path))
-  ;  (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
-  ;  (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
-  ;  resolve-sources))
-
-  #|(define sources (filter
-                    (lambda ([file : Path])
-                      (or (equal? (filename-extension file) #"c")
-                          (equal? (filename-extension file) #"ll"))) pp-srcs))
-  (define objects (filter
-                    (lambda ([file : Path])
-                      (equal? (filename-extension file) #"o")) pp-srcs))|#
-  ;; Check that we're not compiling an empty set of sources.
-  ;; Bad things happen.
+  ;; Check that we're compiling a valid source
   (cond
     [(not (file-exists? source))
      (values #f (hash (string->path "final-link-result")
@@ -153,7 +118,6 @@
      (seashell_compiler_set_main_file compiler (some-system-path->string source))
      (for-each (lambda ([dir : Path])
          (seashell_compiler_add_source_dir compiler (some-system-path->string dir))) source-dirs)
-     ;(for-each (lambda ([file : String]) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
 
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler #f))
@@ -190,7 +154,6 @@
           (apply subprocess #f #f #f (read-config-path 'system-linker)
                  `("-o" ,(some-system-path->string result-file)
                    ,(some-system-path->string object-file)
-                   ;,@(map some-system-path->string objects)
                    "-fsanitize=address"
                    ,@(map
                        append-linker-flag

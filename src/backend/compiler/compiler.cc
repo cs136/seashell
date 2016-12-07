@@ -1063,7 +1063,9 @@ static const char *source_exts[] = { ".c", ".ll", ".o" };
 /*
   This function contains the logic to resolve a local include using Seashell's
     inclusion rules (ie. question folder, then common, looking at same-named
-    .c and .o files)
+    .c, .ll, and .o files). This ordering is defined by the order the source
+    paths are added to the seashell_compiler and the order of these file
+    extensions in the above source_exts array.
 */
 static std::string resolve_include(struct seashell_compiler *compiler, std::string fname,
     std::string currentfile, uint line, uint col) {
