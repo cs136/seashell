@@ -462,7 +462,8 @@ std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* c
 static int compile_module (seashell_compiler* compiler,
     llvm::Module* module, const char* src_path);
 
-static int final_link_step (seashell_compiler* compiler, bool gen_bytecode);
+static int final_link_step(seashell_compiler *compiler, bool gen_bytecode);
+static int resolve_dependencies(seashell_compiler *compiler);
 
 /**
  * seashell_compiler_run (struct seashell_compiler* compiler)
@@ -494,7 +495,7 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
 
     if(!gen_bytecode) {
       // resolve the dependencies of the main file
-      if(seashell_compiler_resolve_dependencies(compiler)) {
+      if(resolve_dependencies(compiler)) {
         return 1;
       }
     }
@@ -981,7 +982,7 @@ void seashell_compiler_add_source_dir(struct seashell_compiler *compiler, std::s
 static int preprocess_file(struct seashell_compiler *, const char *);
 
 /**
- * seashell_compiler_resolve_dependencies(struct seashell_compiler *compiler)
+ * resolve_dependencies(struct seashell_compiler *compiler)
  * Runs the Seashell preprocessor to resolve dependencies from the main file.
  *
  * Arguments:
@@ -994,7 +995,7 @@ static int preprocess_file(struct seashell_compiler *, const char *);
  *  May output some additional error information to stderr.
  *  seashell_llvm_setup must be called before this function.
  */
-extern "C" int seashell_compiler_resolve_dependencies(struct seashell_compiler *compiler) {
+static int resolve_dependencies(struct seashell_compiler *compiler) {
   return preprocess_file(compiler, compiler->main_file.c_str());
 }
 
