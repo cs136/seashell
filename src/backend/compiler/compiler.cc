@@ -156,11 +156,8 @@ struct seashell_compiler {
   /** Files to compile, populated by preprocessing step */
   std::vector<std::string> source_paths;
 
-  /** Preprocessor (dependency resolution) messages */
-  std::vector<seashell_diag> pp_messages;
-
   /** Module compilation messages. */
-  std::vector<std::vector<seashell_diag>> module_messages;
+  std::vector<seashell_diag> messages;
 
   /** Linking messages. */
   std::string linker_messages;
@@ -327,116 +324,90 @@ std::string seashell_compiler_get_linker_messages(struct seashell_compiler* comp
 }
 
 /**
- * seashell_compiler_get_diagnostic_count (struct seashell_compiler* compiler, int n)
- * Gets the number of compilation diagnostic messages available for the nth file.
+ * seashell_compiler_get_diagnostic_count(struct seashell_compiler* compiler)
+ * Gets the number of compilation diagnostic messages available.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  */
-extern "C" int seashell_compiler_get_diagnostic_count (struct seashell_compiler* compiler, int n) {
-  if (compiler->module_messages.size() <= n) {
-    return 0;
-  } else {
-    return compiler->module_messages.at(n).size();
-  }
+extern "C" int seashell_compiler_get_diagnostic_count(struct seashell_compiler *compiler) {
+  return compiler->messages.size();
 }
 
 /**
- * seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int n, int k)
- * Gets the line number of the kth available diagnostic message for the nth file.
+ * seashell_compiler_get_diagnostic_line(struct seashell_compiler* compiler, int k)
+ * Gets the line number of the kth available diagnostic message.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  */
-extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int n, int k) {
-  if (compiler->module_messages.size() <= n) {
+extern "C" int seashell_compiler_get_diagnostic_line(struct seashell_compiler *compiler, int k) {
+  if(compiler->messages.size() <= k) {
     return 0;
   } else {
-    if(compiler->module_messages.at(n).size() <= k) {
-      return 0;
-    } else {
-      return compiler->module_messages.at(n).at(k).line;
-    }
+    return compiler->messages.at(k).line;
   }
 }
 
 /**
- * seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int n, int k)
- * Gets the column number of the kth available diagnostic message for the nth file.
+ * seashell_compiler_get_diagnostic_column(struct seashell_compiler *compiler, int k)
+ * Gets the column number of the kth available diagnostic message.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  */
-extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int n, int k) {
-  if (compiler->module_messages.size() <= n) {
+extern "C" int seashell_compiler_get_diagnostic_column(struct seashell_compiler *compiler, int k) {
+  if(compiler->messages.size() <= k) {
     return 0;
   } else {
-    if(compiler->module_messages.at(n).size() <= k) {
-      return 0;
-    } else {
-      return compiler->module_messages.at(n).at(k).col;
-    }
+    return compiler->messages.at(k).col;
   }
 }
 
 /**
- * seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k)
- * Gets if the kth available diagnostic message for the nth file is an error.
+ * seashell_compiler_get_diagnostic_error(struct seashell_compiler *compiler, int k)
+ * Gets if the kth available diagnostic message is an error.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  */
-extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k) {
-  if (compiler->module_messages.size() <= n) {
+extern "C" bool seashell_compiler_get_diagnostic_error(struct seashell_compiler *compiler, int k) {
+  if(compiler->messages.size() <= k) {
     return 0;
   } else {
-    if(compiler->module_messages.at(n).size() <= k) {
-      return 0;
-    } else {
-      return compiler->module_messages.at(n).at(k).error;
-    }
+    return compiler->messages.at(k).error;
   }
 }
 
 /**
- * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k)
- * Gets the file name for the kth available diagnostic message for the nth file.
+ * seashell_compiler_get_diagnostic_file(struct seashell_compiler *compiler, int k)
+ * Gets the file name for the kth available diagnostic message.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  */
 #ifndef __EMSCRIPTEN__
-extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k) {
+extern "C" const char *seashell_compiler_get_diagnostic_file(struct seashell_compiler *compiler, int k) {
 #else
-std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k) {
+std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler *compiler, int k) {
 #endif
-  if (compiler->module_messages.size() <= n) {
+  if(compiler->messages.size() <= k) {
     return NULL;
   } else {
-    if(compiler->module_messages.at(n).size() <= k) {
-      return NULL;
-    } else {
-      return compiler->module_messages.at(n).at(k).file.c_str();
-    }
+    return compiler->messages.at(k).file.c_str();
   }
 }
 
 /**
- * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k)
- * Gets the message for the kth available diagnostic message for the nth file.
+ * seashell_compiler_get_diagnostic_message(struct seashell_compiler *compiler, int k)
+ * Gets the message for the kth available diagnostic message.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
- *  n - Index into currently added files list.
  *  k - Index into file diagnostics list.
  *
  * Note:
@@ -444,18 +415,14 @@ std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* comp
  *  of seashell_compiler_run.
  */
 #ifndef __EMSCRIPTEN__
-extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k) {
+extern "C" const char *seashell_compiler_get_diagnostic_message(struct seashell_compiler *compiler, int k) {
 #else
-std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k) {
+std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int k) {
 #endif
-  if (compiler->module_messages.size() <= n) {
+  if(compiler->messages.size() <= k) {
     return NULL;
   } else {
-    if(compiler->module_messages.at(n).size() <= k) {
-      return NULL;
-    } else {
-      return compiler->module_messages.at(n).at(k).mesg.c_str();
-    }
+    return compiler->messages.at(k).mesg.c_str();
   }
 }
 
@@ -483,8 +450,7 @@ static int resolve_dependencies(seashell_compiler *compiler);
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode) {
     std::string errors;
 
-    compiler->module_messages.clear();
-    compiler->pp_messages.clear();
+    compiler->messages.clear();
 
     // add include directories to compiler flags
     for(std::vector<std::string>::iterator dir = compiler->source_dirs.begin();
@@ -505,7 +471,6 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
           path != compiler->source_paths.end();
           ++path)
     {
-      compiler->module_messages.push_back(std::vector<seashell_diag>());
       if (compile_module(compiler, &compiler->module, path->c_str())) {
         return 1;
       }
@@ -819,14 +784,7 @@ static int compile_module (seashell_compiler* compiler,
     std::vector<const char*> args;
     size_t index;
 
-    /** Look up the right compilation message handle. */
-    for (index = 0; index < compiler->module_messages.size(); index++) {
-      if (compiler->source_paths[index] == src_path)
-        break;
-    }
-    if (index >= compiler->module_messages.size())
-      return 1;
-    std::vector<seashell_diag>& compile_messages = compiler->module_messages[index];
+    std::vector<seashell_diag> &compile_messages = compiler->messages;
 
     #define PUSH_DIAGNOSTIC(x) compile_messages.push_back(seashell_diag(true, src_path, (x)))
     /** Set up compilation arguments. */
@@ -999,48 +957,6 @@ static int resolve_dependencies(struct seashell_compiler *compiler) {
   return preprocess_file(compiler, compiler->main_file.c_str());
 }
 
-extern "C" int seashell_compiler_get_preprocessor_diagnostic_count(struct seashell_compiler *compiler) {
-  return compiler->pp_messages.size();
-}
-
-extern "C" bool seashell_compiler_get_preprocessor_diagnostic_error(struct seashell_compiler *compiler, int k) {
-  if(compiler->pp_messages.size() <= k)
-    return false;
-  return compiler->pp_messages[k].error;
-}
-
-#ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_compiler_get_preprocessor_diagnostic_file(struct seashell_compiler *compiler, int k) {
-#else
-std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler *compiler, int k) {
-#endif
-  if(compiler->pp_messages.size() <= k)
-    return NULL;
-  return compiler->pp_messages[k].file.c_str();
-}
-
-extern "C" int seashell_compiler_get_preprocessor_diagnostic_line(struct seashell_compiler *compiler, int k) {
-  if(compiler->pp_messages.size() <= k)
-    return 0;
-  return compiler->pp_messages[k].line;
-}
-
-extern "C" int seashell_compiler_get_preprocessor_diagnostic_column(struct seashell_compiler *compiler, int k) {
-  if(compiler->pp_messages.size() <= k)
-    return 0;
-  return compiler->pp_messages[k].col;
-}
-
-#ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_compiler_get_preprocessor_diagnostic_message(struct seashell_compiler *compiler, int k) {
-#else
-std::string seashell_compiler_get_preprocessor_diagnostic_message(struct seashell_compiler *compiler, int k) {
-#endif
-  if(compiler->pp_messages.size() <= k)
-    return NULL;
-  return compiler->pp_messages[k].mesg.c_str();
-}
-
 static bool fexists(std::string fname) {
   struct stat buf;
   int ret = stat(fname.c_str(), &buf);
@@ -1090,7 +1006,7 @@ static std::string resolve_include(struct seashell_compiler *compiler, std::stri
 
   // check for include of non .h files
   if(file.size() < 2 || file[file.size()-1] != "h") {
-    compiler->pp_messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
+    compiler->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
   }
 
   file.pop_back();
@@ -1140,7 +1056,7 @@ public:
         }
       }
       else {
-        _cc->pp_messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
+        _cc->messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
             "No source file found matching included '" + FileName.str() + "'",
             _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc)));
       }
@@ -1212,7 +1128,7 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
   sources.insert(src_path);
   std::list<std::string> worklist(1, src_path);
 
-  std::vector<seashell_diag> &pp_messages = compiler->pp_messages;
+  std::vector<seashell_diag> &pp_messages = compiler->messages;
 #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
 
   PPAction::iter = 0;

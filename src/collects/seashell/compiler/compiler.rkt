@@ -38,17 +38,6 @@
                 #:type-name Seashell-Diagnostic])
 (define-type Seashell-Diagnostic-Table (HashTable Path (Listof Seashell-Diagnostic)))
 
-(: process-preprocessor-diagnostics (-> Seashell-Compiler-Ptr (Listof Seashell-Diagnostic)))
-(define (process-preprocessor-diagnostics compiler)
-  (build-list (seashell_compiler_get_preprocessor_diagnostic_count compiler)
-    (lambda ([k : Nonnegative-Integer])
-      (seashell-diagnostic
-        (seashell_compiler_get_preprocessor_diagnostic_error compiler k)
-        (seashell_compiler_get_preprocessor_diagnostic_file compiler k)
-        (seashell_compiler_get_preprocessor_diagnostic_line compiler k)
-        (seashell_compiler_get_preprocessor_diagnostic_column compiler k)
-        (seashell_compiler_get_preprocessor_diagnostic_message compiler k)))))
-
 (: diags-fold-function (-> (Pair Path Seashell-Diagnostic) (HashTable Path (Listof Seashell-Diagnostic))
   (HashTable Path (Listof Seashell-Diagnostic))))
 (define (diags-fold-function message table)
@@ -58,18 +47,17 @@
                       (hash-ref table (car message) (lambda () '()))))
       table))
 
-(: process-compiler-diagnostics (-> Seashell-Compiler-Ptr (Vectorof Path)
-  (Listof (Pair Path Seashell-Diagnostic))))
-(define (process-compiler-diagnostics compiler sources)
-  (for*/list : (Listof (Pair Path Seashell-Diagnostic))
-             ([i : Index #{(in-range (vector-length sources)) :: (Sequenceof Index)}]
-              [j : Index #{(in-range (seashell_compiler_get_diagnostic_count compiler i)) :: (Sequenceof Index)}])
-    `(,(vector-ref sources i) .
-                               ,(seashell-diagnostic (seashell_compiler_get_diagnostic_error compiler i j)
-                                                     (seashell_compiler_get_diagnostic_file compiler i j)
-                                                     (seashell_compiler_get_diagnostic_line compiler i j)
-                                                     (seashell_compiler_get_diagnostic_column compiler i j)
-                                                     (seashell_compiler_get_diagnostic_message compiler i j)))))
+(: process-compiler-diagnostics (-> Seashell-Compiler-Ptr (Listof (Pair Path Seashell-Diagnostic))))
+(define (process-compiler-diagnostics compiler)
+  (build-list (seashell_compiler_get_diagnostic_count compiler)
+    (lambda ([k : Nonnegative-Integer])
+      (define file (seashell_compiler_get_diagnostic_file compiler k))
+      (cons (string->path file) (seashell-diagnostic
+        (seashell_compiler_get_diagnostic_error compiler k)
+        file
+        (seashell_compiler_get_diagnostic_line compiler k)
+        (seashell_compiler_get_diagnostic_column compiler k)
+        (seashell_compiler_get_diagnostic_message compiler k))))))
 
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
@@ -111,7 +99,6 @@
 
      ;; Set up the compiler instance.
      (define compiler (seashell_compiler_make))
-     (define file-vec (list->vector (list source)))
      (seashell_compiler_clear_source_dirs compiler)
      (seashell_compiler_clear_compile_flags compiler)
      (for-each (lambda ([flag : String]) (seashell_compiler_add_compile_flag compiler flag)) cflags)
@@ -121,19 +108,15 @@
 
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler #f))
-     ;; Grab the preprocessor diags
-     (define pp-msgs (map (lambda ([x : Seashell-Diagnostic]) (cons (string->path (seashell-diagnostic-file x)) x))
-                          (process-preprocessor-diagnostics compiler)))
      ;; Grab the results of running the intermediate code generation step.
      (define intermediate-linker-diags (seashell_compiler_get_linker_messages compiler))
      ;; Generate our diagnostics:
      (define compiler-diags
        (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
-        (append pp-msgs
           (list*
            `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
-           (process-compiler-diagnostics compiler file-vec)))))
+           (process-compiler-diagnostics compiler))))
 
      ;; Grab the object - note that it may not exist yet.
      (define object (seashell_compiler_get_object compiler))
@@ -227,7 +210,6 @@
     [else
      ;; Set up the compiler instance.
      (define compiler (seashell_compiler_make))
-     (define file-vec (list->vector (list source)))
      (seashell_compiler_clear_source_dirs compiler)
      (seashell_compiler_clear_compile_flags compiler)
      (seashell_compiler_set_main_file compiler (some-system-path->string source))
@@ -238,6 +220,6 @@
      (define compiler-diags
        (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
-        (process-compiler-diagnostics compiler (list->vector (list source)))))
+        (process-compiler-diagnostics compiler)))
       (define bc (seashell_compiler_get_object compiler))
       (values (if (zero? compiler-res) bc #f) compiler-diags)]))
