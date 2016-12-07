@@ -40,10 +40,10 @@
 ;; seashell-compile-files/place
 ;; Invokes seashell-compile-files in a separate place,
 ;; preserving parallelism in Racket.
-(: seashell-compile-files/place (->* ((Listof String) (Listof String) Path Path)
+(: seashell-compile-files/place (->* ((Listof String) (Listof String) (Listof Path) Path)
                                      (Nonnegative-Integer)
                                      (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files/place user-cflags user-ldflags question-dir source [retries 5])
+(define (seashell-compile-files/place user-cflags user-ldflags source-dirs source [retries 5])
   ;; Set up the place (if it has died/never started)
   (seashell-compile-place/check-and-init)
   (define compiler-place (unbox global-compiler-place))
@@ -52,12 +52,12 @@
       (define-values (read-end write-end) (place-channel))
       (define dead-evt (place-dead-evt compiler-place))
       (place-channel-put compiler-place
-                         (list write-end user-cflags user-ldflags question-dir source))
+                         (list write-end user-cflags user-ldflags source-dirs source))
       (match (sync dead-evt (wrap-evt read-end deserialize))
         [(? (lambda (x) (eq? dead-evt x)))
          (cond
           [(retries . > . 0)
-           (seashell-compile-files/place user-cflags user-ldflags question-dir source (sub1 retries))]
+           (seashell-compile-files/place user-cflags user-ldflags source-dirs source (sub1 retries))]
           [else (raise (exn:fail (format "Compiler place dead!") (current-continuation-marks)))])]
         [(list exn? result data)
          (when exn?

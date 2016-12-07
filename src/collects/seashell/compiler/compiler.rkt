@@ -40,23 +40,35 @@
 
 ;; (seashell-resolve-dependencies file)
 ;; Invokes the internal preprocessor to resolve dependencies
-(: seashell-resolve-dependencies (-> Path Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
-(define (seashell-resolve-dependencies question-dir file)
-  (define pp (seashell_preprocessor_make))
-  (seashell_preprocessor_set_question_dir pp (some-system-path->string question-dir))
-  (seashell_preprocessor_set_main_file pp (some-system-path->string file))
-  (seashell_preprocessor_run pp)
-  (define srcs (build-list (seashell_preprocessor_get_include_count pp)
-    (lambda ([n : Nonnegative-Integer]) (seashell_preprocessor_get_include pp n))))
-  (values (map string->path srcs)
-          (build-list (seashell_preprocessor_get_diagnostic_count pp)
-            (lambda ([k : Nonnegative-Integer])
-              (seashell-diagnostic
-                (seashell_preprocessor_get_diagnostic_error pp k)
-                (seashell_preprocessor_get_diagnostic_file pp k)
-                (seashell_preprocessor_get_diagnostic_line pp k)
-                (seashell_preprocessor_get_diagnostic_column pp k)
-                (seashell_preprocessor_get_diagnostic_message pp k))))))
+;(: seashell-resolve-dependencies (-> Path Path (Values (Listof Path) (Listof Seashell-Diagnostic))))
+;(define (seashell-resolve-dependencies question-dir file)
+;  (define pp (seashell_preprocessor_make))
+;  (seashell_preprocessor_set_question_dir pp (some-system-path->string question-dir))
+;  (seashell_preprocessor_set_main_file pp (some-system-path->string file))
+;  (seashell_preprocessor_run pp)
+;  (define srcs (build-list (seashell_preprocessor_get_include_count pp)
+;    (lambda ([n : Nonnegative-Integer]) (seashell_preprocessor_get_include pp n))))
+;  (values (map string->path srcs)
+;          (build-list (seashell_preprocessor_get_diagnostic_count pp)
+;            (lambda ([k : Nonnegative-Integer])
+;              (seashell-diagnostic
+;                (seashell_preprocessor_get_diagnostic_error pp k)
+;                (seashell_preprocessor_get_diagnostic_file pp k)
+;                (seashell_preprocessor_get_diagnostic_line pp k)
+;                (seashell_preprocessor_get_diagnostic_column pp k)
+;                (seashell_preprocessor_get_diagnostic_message pp k))))))
+
+(: process-preprocessor-diagnostics (-> Seashell-Compiler-Ptr (Listof Seashell-Diagnostic)))
+(define (process-preprocessor-diagnostics compiler)
+  (build-list (seashell_compiler_get_preprocessor_diagnostic_count compiler)
+    (lambda ([k : Nonnegative-Integer])
+      (seashell-diagnostic
+        (seashell_compiler_get_preprocessor_diagnostic_error compiler k)
+        (seashell_compiler_get_preprocessor_diagnostic_file compiler k)
+        (seashell_compiler_get_preprocessor_diagnostic_line compiler k)
+        (seashell_compiler_get_preprocessor_diagnostic_column compiler k)
+        (seashell_compiler_get_preprocessor_diagnostic_message compiler k)))))
+  
 
 (: diags-fold-function (-> (Pair Path Seashell-Diagnostic) (HashTable Path (Listof Seashell-Diagnostic))
   (HashTable Path (Listof Seashell-Diagnostic))))
@@ -87,7 +99,8 @@
 ;; Arguments:
 ;;  cflags - List of flags to pass to the compiler.
 ;;  ldflags - List of flags to pass to the linker.
-;;  question-dir - the directory of the Seashell question being run, used for dependency resolution.
+;;  source-dirs - List of directories to look in when resolving #includes
+;;    and their corresponding sources.
 ;;  source - the source file containing the program entry point.
 ;; Returns:
 ;;  (values #f (hash/c path? (listof seashell-diagnostic?))) - On error,
@@ -100,29 +113,27 @@
 ;;  things may go south if this is running in a place.  It might be
 ;;  worthwhile installing an exception handler in the place main
 ;;  function to deal with this, though.
-(: seashell-compile-files (-> (Listof String) (Listof String) Path Path
+(: seashell-compile-files (-> (Listof String) (Listof String) (Listof Path) Path
                               (Values (U Bytes False) Seashell-Diagnostic-Table)))
-(define (seashell-compile-files user-cflags user-ldflags question-dir source)
+(define (seashell-compile-files user-cflags user-ldflags source-dirs source)
 
-  (define-values (pp-srcs pp-msgs) (seashell-resolve-dependencies question-dir source))
-  (define pp-msgs/src (map (lambda ([x : Seashell-Diagnostic]) (cons source x)) pp-msgs))
   ;(define pp-result (foldl (lambda ([path : Path] [lsts : (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))])
   ;  (define-values (srcs msgs) (seashell-resolve-dependencies question-dir path))
   ;  (cast (cons (append srcs (car lsts)) (append (map (lambda ([x : Seashell-Diagnostic]) (cons path x)) msgs) (cdr lsts))) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic)))))
   ;  (cast (cons '() '()) (Pairof (Listof Path) (Listof (Pairof Path Seashell-Diagnostic))))
   ;  resolve-sources))
 
-  (define sources (filter
+  #|(define sources (filter
                     (lambda ([file : Path])
                       (or (equal? (filename-extension file) #"c")
                           (equal? (filename-extension file) #"ll"))) pp-srcs))
   (define objects (filter
                     (lambda ([file : Path])
-                      (equal? (filename-extension file) #"o")) pp-srcs))
+                      (equal? (filename-extension file) #"o")) pp-srcs))|#
   ;; Check that we're not compiling an empty set of sources.
   ;; Bad things happen.
   (cond
-    [(empty? sources)
+    [(not (file-exists? source))
      (values #f (hash (string->path "final-link-result")
                       (list (seashell-diagnostic #t "" 0 0 "No files passed to compiler!"))))]
     [else
@@ -135,21 +146,27 @@
 
      ;; Set up the compiler instance.
      (define compiler (seashell_compiler_make))
-     (define file-vec (list->vector sources))
-     (seashell_compiler_clear_files compiler)
+     (define file-vec (list->vector (list source)))
+     (seashell_compiler_clear_source_dirs compiler)
      (seashell_compiler_clear_compile_flags compiler)
      (for-each (lambda ([flag : String]) (seashell_compiler_add_compile_flag compiler flag)) cflags)
-     (for-each (lambda ([file : String]) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
+     (seashell_compiler_set_main_file compiler (some-system-path->string source))
+     (for-each (lambda ([dir : Path])
+         (seashell_compiler_add_source_dir compiler (some-system-path->string dir))) source-dirs)
+     ;(for-each (lambda ([file : String]) (seashell_compiler_add_file compiler file)) (map some-system-path->string sources))
 
      ;; Run the compiler + intermediate linkage step.
      (define compiler-res (seashell_compiler_run compiler #f))
+     ;; Grab the preprocessor diags
+     (define pp-msgs (map (lambda ([x : Seashell-Diagnostic]) (cons (string->path (seashell-diagnostic-file x)) x))
+                          (process-preprocessor-diagnostics compiler)))
      ;; Grab the results of running the intermediate code generation step.
      (define intermediate-linker-diags (seashell_compiler_get_linker_messages compiler))
      ;; Generate our diagnostics:
      (define compiler-diags
        (foldl diags-fold-function
         #{(make-immutable-hash) :: (HashTable Path (Listof Seashell-Diagnostic))}
-        (append pp-msgs/src
+        (append pp-msgs
           (list*
            `(,(string->path "intermediate-link-result") . ,(seashell-diagnostic (not (zero? compiler-res)) "" 0 0 intermediate-linker-diags))
            (process-compiler-diagnostics compiler file-vec)))))
@@ -173,7 +190,7 @@
           (apply subprocess #f #f #f (read-config-path 'system-linker)
                  `("-o" ,(some-system-path->string result-file)
                    ,(some-system-path->string object-file)
-                   ,@(map some-system-path->string objects)
+                   ;,@(map some-system-path->string objects)
                    "-fsanitize=address"
                    ,@(map
                        append-linker-flag
@@ -248,9 +265,9 @@
      ;; Set up the compiler instance.
      (define compiler (seashell_compiler_make))
      (define file-vec (list->vector (list source)))
-     (seashell_compiler_clear_files compiler)
+     (seashell_compiler_clear_source_dirs compiler)
      (seashell_compiler_clear_compile_flags compiler)
-     (seashell_compiler_add_file compiler (some-system-path->string source))
+     (seashell_compiler_set_main_file compiler (some-system-path->string source))
 
      ;; Run the compiler
      (define compiler-res (seashell_compiler_run compiler #t))

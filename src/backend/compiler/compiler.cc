@@ -144,9 +144,20 @@ bool operator <(const seashell_diag& d1, const seashell_diag& d2) {
  * to the FFI so garbage collection works properly.
  */
 struct seashell_compiler {
+  /** File to begin dependency resolution from */
+  std::string main_file;
+
+  /** Directories to consider when resolving dependencies */
+  std::vector<std::string> source_dirs;
+
   /** Control flags to the compiler.*/
   std::vector<std::string> compiler_flags;
+
+  /** Files to compile, populated by preprocessing step */
   std::vector<std::string> source_paths;
+
+  /** Preprocessor (dependency resolution) messages */
+  std::vector<seashell_diag> pp_messages;
 
   /** Module compilation messages. */
   std::vector<std::vector<seashell_diag>> module_messages;
@@ -160,27 +171,6 @@ struct seashell_compiler {
   std::vector<char> output_object;
 
   seashell_compiler();
-};
-
-struct seashell_preprocessor {
-  /** Flags to the compiler */
-  std::vector<std::string> compiler_flags;
-
-  /** Preprocessor messages */
-  std::vector<seashell_diag> messages;
-
-  // name of runner file within project dir,
-  // ie. q1/main.c or common/aos.c
-  std::string main_file;
-
-  // name of question dir in project dir
-  std::string question_dir;
-
-  // absolute path to the project directory
-  std::string project_dir;
-
-  /** Produced set of sources */
-  std::vector<std::string> sources;
 };
 
 seashell_compiler::seashell_compiler() :
@@ -280,30 +270,14 @@ extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
 }
 
 /**
- * seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file)
- * Adds a file to be compiled.
- *
- * Arguments:
- *  compiler - A Seashell compiler instance.
- *  file - Pathname of file to add.
- */
-#ifndef __EMSCRIPTEN__
-extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file) {
-#else
-void seashell_compiler_add_file (struct seashell_compiler* compiler, std::string file) {
-#endif
-  compiler->source_paths.push_back(file);
-}
-
-/**
- * seashell_compiler_clear_files (struct seashell_compiler* compiler)
- * Clears the compiler's input file list.
+ * seashell_compiler_clear_source_dirs(struct seashell_compiler* compiler)
+ * Clears the compiler's source dir list.
  *
  * Arguments:
  *  compiler - A Seashell compiler instance.
  */
-extern "C" void seashell_compiler_clear_files (struct seashell_compiler* compiler) {
-  compiler->source_paths.clear();
+extern "C" void seashell_compiler_clear_source_dirs(struct seashell_compiler *compiler) {
+  compiler->source_dirs.clear();
 }
 
 /**
@@ -509,7 +483,23 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
     std::string errors;
 
     compiler->module_messages.clear();
+    compiler->pp_messages.clear();
 
+    // add include directories to compiler flags
+    for(std::vector<std::string>::iterator dir = compiler->source_dirs.begin();
+        dir != compiler->source_dirs.end(); dir++) {
+      compiler->compiler_flags.push_back("-I");
+      compiler->compiler_flags.push_back(*dir);
+    }
+
+    if(!gen_bytecode) {
+      // resolve the dependencies of the main file
+      if(seashell_compiler_resolve_dependencies(compiler)) {
+        return 1;
+      }
+    }
+
+    // compile all sources
     for (std::vector<std::string>::iterator path = compiler->source_paths.begin();
           path != compiler->source_paths.end();
           ++path)
@@ -520,6 +510,7 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
       }
     }
 
+    // link the objects
     final_link_step(compiler, gen_bytecode);
 
     compiler->linker_messages = "";
@@ -955,154 +946,46 @@ static int compile_module (seashell_compiler* compiler,
     #undef PUSH_DIAGNOSTIC
 }
 
-/** seashell_preprocessor methods */
-
 /**
- * seashell_preprocessor_make(void)
- * Creates a new instance of the Seashell preprocessor.
- *
- * Returns:
- *  A new instance.
- *
- * Notes:
- *  It might be worthwhile to assign seashell_preprocessor_free as
- *  the cleanup function for garbage collection in the Racket FFI.
- */
-extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void) {
-  struct seashell_preprocessor *r = new seashell_preprocessor;
-#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
-  printf("[preprocessor] Allocating new preprocessor object at %p\n", r);
-#endif
-  return r;
-}
-
-/**
- * seashell_preprocessor_free(struct seashell_preprocessor *preprocessor)
- * Deletes an instance of the Seashell compiler.
- *
- * Arguments:
- *  preprocessor - A Seashell preprocessor instance.
- */
-extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor) {
-#if defined(__EMSCRIPTEN__) && !defined(NDEBUG)
-  printf("[preprocessor] De-Allocating new preprocessor object at %p\n", preprocessor);
-#endif
-  delete preprocessor;
-}
-
-/**
- * seashell_preprocessor_set_question_dir(struct seashell_preprocessor* preprocessor, const char *dir)
- * Sets the question dir to run the preprocessor on
- *
- * Arguments:
- *  preprocessor - A Seashell preprocessor instance.
- *  dir - Absolute path of the question dir the preprocessor is running on
- */
-#ifndef __EMSCRIPTEN__
-extern "C" void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *preprocessor, const char *dir) {
-#else
-void seashell_preprocessor_set_question_dir(struct seashell_preprocessor *preprocessor, std::string dir) {
-#endif
-  std::vector<const char *> vec;
-#ifndef __EMSCRIPTEN__
-  char *nfile = strdup(dir);
-#else
-  char *nfile = strdup(dir.c_str());
-#endif
-  char *saveptr;
-  char *tok = strtok_r(nfile, "/", &saveptr);
-  do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
-  
-  preprocessor->question_dir = vec[vec.size()-1];
-  for(int i=0; i<vec.size()-1; i++) {
-    preprocessor->project_dir += "/";
-    preprocessor->project_dir += vec[i];
-  }
-  free(nfile);
-
-  // Add directories to look for includes
-  preprocessor->compiler_flags.push_back("-I");
-  preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/common");
-  preprocessor->compiler_flags.push_back("-I");
-  preprocessor->compiler_flags.push_back(preprocessor->project_dir+"/"+preprocessor->question_dir);
-}
-
-/**
- * seashell_preprocessor_set_main_file(struct seashell_preprocessor* preprocessor, const char* file)
+ * seashell_compiler_set_main_file(struct seashell_compiler *compiler, const char* file)
  * Sets the main file to begin running the preprocessor on
  *
  * Arguments:
- *  preprocessor - A Seashell preprocessor instance.
- *  file - Pathname of runner file to run preprocessor on. Can be absolute or of
- *   the form {question}/{file}
+ *  compiler - A Seashell compiler instance.
+ *  file - Full pathname of runner file to run compiler on.
  */
 #ifndef __EMSCRIPTEN__
-extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char* file) {
+extern "C" void seashell_compiler_set_main_file(struct seashell_compiler *compiler, const char* file) {
 #else
-void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, std::string file) {
+void seashell_compiler_set_main_file(struct seashell_compiler *compiler, std::string file) {
 #endif
-  std::vector<const char *> vec;
-#ifndef __EMSCRIPTEN__
-  char *nfile = strdup(file);
-#else
-  char *nfile = strdup(file.c_str());
-#endif
-  char *saveptr;
-  char *tok = strtok_r(nfile, "/", &saveptr);
-  do { vec.push_back(tok); } while( (tok = strtok_r(NULL, "/", &saveptr)) );
- 
-  preprocessor->main_file = vec[vec.size()-2];
-  preprocessor->main_file += "/";
-  preprocessor->main_file += vec[vec.size()-1];
-  free(nfile);
-}
-
-#ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor) {
-#else
-std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor) {
-#endif
-  std::string res = preprocessor->project_dir;
-  res += "/";
-  res += preprocessor->main_file;
-#ifndef __EMSCRIPTEN__
-  return res.c_str();
-#else
-  return res;
-#endif
+  compiler->main_file = file;
 }
 
 /**
- * seashell_preprocessor_get_include_count(struct seashell_preprocessor* preprocessor)
- * Gets the number of include dependencies the preprocessor found
+ * seashell_compiler_add_source_dir(struct seashell_compiler *compiler, const char *dir)
+ * Adds a directory to look for included header files and their corresponding source files.
  *
  * Arguments:
- *  preprocessor - A Seashell preprocessor instance.
- */
-extern "C" int seashell_preprocessor_get_include_count(struct seashell_preprocessor* preprocessor) {
-  return preprocessor->sources.size();
-}
-
-/**
- * seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n)
- * Gets the path of the included source file indexed by n
+ *  compiler - A Seashell compiler instance.
+ *  dir - Full path to the source directory.
  */
 #ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
+extern "C" void seashell_compiler_add_source_dir(struct seashell_compiler *compiler, const char *dir) {
 #else
-std::string seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n) {
+void seashell_compiler_add_source_dir(struct seashell_compiler *compiler, std::string dir) {
 #endif
-  return preprocessor->sources[n].c_str();
+  compiler->source_dirs.push_back(dir);
 }
 
-static int preprocess_file(struct seashell_preprocessor *, const char *);
+static int preprocess_file(struct seashell_compiler *, const char *);
 
 /**
- * seashell_preprocessor_run(struct seashell_preprocessor *preprocessor)
- * Runs the Seashell preprocessor instance.
+ * seashell_compiler_resolve_dependencies(struct seashell_compiler *compiler)
+ * Runs the Seashell preprocessor to resolve dependencies from the main file.
  *
  * Arguments:
- *  preprocessor - A Seashell preprocessor instance.
+ *  compiler - A Seashell compiler instance.
  *
  * Returns
  *  0 if everything went OK, nonzero otherwise.
@@ -1111,54 +994,50 @@ static int preprocess_file(struct seashell_preprocessor *, const char *);
  *  May output some additional error information to stderr.
  *  seashell_llvm_setup must be called before this function.
  */
-extern "C" int seashell_preprocessor_run(struct seashell_preprocessor* preprocessor) {
-#ifndef __EMSCRIPTEN__
-  return preprocess_file(preprocessor, seashell_preprocessor_get_main_file(preprocessor));
-#else
-  return preprocess_file(preprocessor, seashell_preprocessor_get_main_file(preprocessor).c_str());
-#endif
+extern "C" int seashell_compiler_resolve_dependencies(struct seashell_compiler *compiler) {
+  return preprocess_file(compiler, compiler->main_file.c_str());
 }
 
-extern "C" int seashell_preprocessor_get_diagnostic_count(struct seashell_preprocessor *preprocessor) {
-  return preprocessor->messages.size();
+extern "C" int seashell_compiler_get_preprocessor_diagnostic_count(struct seashell_compiler *compiler) {
+  return compiler->pp_messages.size();
 }
 
-extern "C" bool seashell_preprocessor_get_diagnostic_error(struct seashell_preprocessor *preprocessor, int k) {
-  if(preprocessor->messages.size() <= k)
+extern "C" bool seashell_compiler_get_preprocessor_diagnostic_error(struct seashell_compiler *compiler, int k) {
+  if(compiler->pp_messages.size() <= k)
     return false;
-  return preprocessor->messages[k].error;
+  return compiler->pp_messages[k].error;
 }
 
 #ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+extern "C" const char *seashell_compiler_get_preprocessor_diagnostic_file(struct seashell_compiler *compiler, int k) {
 #else
-std::string seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k) {
+std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler *compiler, int k) {
 #endif
-  if(preprocessor->messages.size() <= k)
+  if(compiler->pp_messages.size() <= k)
     return NULL;
-  return preprocessor->messages[k].file.c_str();
+  return compiler->pp_messages[k].file.c_str();
 }
 
-extern "C" int seashell_preprocessor_get_diagnostic_line(struct seashell_preprocessor *preprocessor, int k) {
-  if(preprocessor->messages.size() <= k)
+extern "C" int seashell_compiler_get_preprocessor_diagnostic_line(struct seashell_compiler *compiler, int k) {
+  if(compiler->pp_messages.size() <= k)
     return 0;
-  return preprocessor->messages[k].line;
+  return compiler->pp_messages[k].line;
 }
 
-extern "C" int seashell_preprocessor_get_diagnostic_column(struct seashell_preprocessor *preprocessor, int k) {
-  if(preprocessor->messages.size() <= k)
+extern "C" int seashell_compiler_get_preprocessor_diagnostic_column(struct seashell_compiler *compiler, int k) {
+  if(compiler->pp_messages.size() <= k)
     return 0;
-  return preprocessor->messages[k].col;
+  return compiler->pp_messages[k].col;
 }
 
 #ifndef __EMSCRIPTEN__
-extern "C" const char *seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+extern "C" const char *seashell_compiler_get_preprocessor_diagnostic_message(struct seashell_compiler *compiler, int k) {
 #else
-std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k) {
+std::string seashell_compiler_get_preprocessor_diagnostic_message(struct seashell_compiler *compiler, int k) {
 #endif
-  if(preprocessor->messages.size() <= k)
+  if(compiler->pp_messages.size() <= k)
     return NULL;
-  return preprocessor->messages[k].mesg.c_str();
+  return compiler->pp_messages[k].mesg.c_str();
 }
 
 static bool fexists(std::string fname) {
@@ -1178,12 +1057,15 @@ static std::string join(std::vector<std::string> vec, char a) {
   return res;
 }
 
+// valid file types to use as sources
+static const char *source_exts[] = { ".c", ".ll", ".o" };
+
 /*
   This function contains the logic to resolve a local include using Seashell's
     inclusion rules (ie. question folder, then common, looking at same-named
     .c and .o files)
 */
-static std::string resolve_include(struct seashell_preprocessor *preprocessor, std::string fname,
+static std::string resolve_include(struct seashell_compiler *compiler, std::string fname,
     std::string currentfile, uint line, uint col) {
 
   char *orig = strdup(fname.c_str());
@@ -1204,61 +1086,21 @@ static std::string resolve_include(struct seashell_preprocessor *preprocessor, s
   free(ofile);
 
   // check for include of non .h files
-  if(file[file.size()-1] != "h") {
-    preprocessor->messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
+  if(file.size() < 2 || file[file.size()-1] != "h") {
+    compiler->pp_messages.push_back(seashell_diag(false, currentfile, "Included files should have extension .h, instead found '" + fname + "'", line, col));
   }
 
-  path.insert(path.begin(), preprocessor->question_dir);
-  path.insert(path.begin(), preprocessor->project_dir);
-
-  // attempt question folder .c file
   file.pop_back();
-  file.push_back("c");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  std::string attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
+  std::string basefile = join(file, '.');
 
-  // attempt question folder .ll file
-  file.pop_back();
-  file.push_back("ll");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
-
-  // attempt question folder .o file
-  file.pop_back();
-  file.push_back("o");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
-
-  // attempt common folder .c file
-  file.pop_back();
-  file.push_back("c");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  path[1] = "common";
-  attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
-
-  // attempt common folder .ll file
-  file.pop_back();
-  file.push_back("ll");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
-
-  // attempt common folder .o file
-  file.pop_back();
-  file.push_back("o");
-  path.pop_back();
-  path.push_back(join(file, '.'));
-  attempt = join(path, '/');
-  if(fexists(attempt)) return attempt;
+  for(std::vector<std::string>::iterator it = compiler->source_dirs.begin();
+      it != compiler->source_dirs.end(); it++) {
+    for(size_t i=0; i<sizeof(source_exts)/sizeof(char*); i++) {
+      std::string attempt = *it + "/" + basefile + source_exts[i];
+      if(fexists(attempt))
+        return attempt;
+    }
+  }
 
   return "";
 }
@@ -1268,12 +1110,12 @@ class PPCallbacks : public clang::PPCallbacks {
   
   std::set<std::string> &_deps;
   std::list<std::string> &_wl;
-  struct seashell_preprocessor *_pp;
+  struct seashell_compiler *_cc;
   clang::SourceManager &_sm;
 
 public:
   static int iter;
-  PPCallbacks(clang::SourceManager &sm, std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _sm(sm), _deps(deps), _wl(wl), _pp(pp) { iter++; }
+  PPCallbacks(clang::SourceManager &sm, std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_compiler *cc) : _sm(sm), _deps(deps), _wl(wl), _cc(cc) { iter++; }
 
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
     clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
@@ -1283,7 +1125,7 @@ public:
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
       std::string path = FileName.str();
-      std::string result = resolve_include(_pp, path, _sm.getFilename(HashLoc),
+      std::string result = resolve_include(_cc, path, _sm.getFilename(HashLoc),
           _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc));
       if(result.length()) {
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
@@ -1295,7 +1137,7 @@ public:
         }
       }
       else {
-        _pp->messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
+        _cc->pp_messages.push_back(seashell_diag(false, _sm.getFilename(HashLoc),
             "No source file found matching included '" + FileName.str() + "'",
             _sm.getPresumedLineNumber(HashLoc), _sm.getPresumedColumnNumber(HashLoc)));
       }
@@ -1309,11 +1151,11 @@ class PPAction : public clang::FrontendAction {
   clang::CompilerInstance *_ci;
   std::set<std::string> &_deps;
   std::list<std::string> &_wl;
-  struct seashell_preprocessor *_pp;
+  struct seashell_compiler *_cc;
   
 public:
   static int iter;
-  PPAction(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_preprocessor *pp) : _deps(deps), _wl(wl), _pp(pp) { iter++; }
+  PPAction(std::set<std::string> &deps, std::list<std::string> &wl, struct seashell_compiler *cc) : _deps(deps), _wl(wl), _cc(cc) { iter++; }
 
   virtual bool usesPreprocessorOnly() const {
     return false;
@@ -1325,7 +1167,7 @@ public:
   }
 
   virtual void ExecuteAction() {
-    PPCallbacks *ppc = new PPCallbacks(_ci->getSourceManager(), _deps, _wl, _pp);
+    PPCallbacks *ppc = new PPCallbacks(_ci->getSourceManager(), _deps, _wl, _cc);
     clang::Preprocessor &pp(_ci->getPreprocessor());
     pp.addPPCallbacks(std::unique_ptr<clang::PPCallbacks>(ppc)); 
     clang::Token token;
@@ -1333,32 +1175,31 @@ public:
     do {
       pp.Lex(token);
     } while(token.isNot(clang::tok::eof));
-    //if(iter==3) exit(1);
   }
 };
 
 int PPAction::iter = 0;
 
-static void print_sources(struct seashell_preprocessor *preprocessor) {
+static void print_sources(struct seashell_compiler *compiler) {
   fprintf(stderr, "Sources:\n");
-  for(int i=0; i<preprocessor->sources.size(); i++) {
-    fprintf(stderr, "%s\n", preprocessor->sources[i].c_str());
+  for(int i=0; i<compiler->source_paths.size(); i++) {
+    fprintf(stderr, "%s\n", compiler->source_paths[i].c_str());
   }
 }
 
 /**
- * preprocess_file(seashell_preprocessor* preprocessor, const char* src_path)
+ * preprocess_file(seashell_compiler* compiler, const char* src_path)
  *
  * Compiles a given source file, links it into a module.
  *
  * Arguments:
- *  preprocessor - the Seashell preprocessor object in use
+ *  compiler - the Seashell compiler object in use
  *  src_path - Main file to preprocess.
  *
  * Returns:
  *  1 on error, 0 otherwise.
  */
-static int preprocess_file(struct seashell_preprocessor* preprocessor, const char* src_path)
+static int preprocess_file(struct seashell_compiler *compiler, const char* src_path)
 {
 #ifndef NDEBUG
   fprintf(stderr, "[preprocessor] Preprocessing file: %s\n", src_path);
@@ -1368,7 +1209,7 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
   sources.insert(src_path);
   std::list<std::string> worklist(1, src_path);
 
-  std::vector<seashell_diag>& pp_messages = preprocessor->messages;
+  std::vector<seashell_diag> &pp_messages = compiler->pp_messages;
 #define PUSH_DIAGNOSTIC(x) pp_messages.push_back(seashell_diag(true, src_path, (x)))
 
   PPAction::iter = 0;
@@ -1381,8 +1222,8 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     size_t index;
 
     /** Set up compilation arguments. */
-    for(std::vector<std::string>::iterator p = preprocessor->compiler_flags.begin();
-          p != preprocessor->compiler_flags.end();
+    for(std::vector<std::string>::iterator p = compiler->compiler_flags.begin();
+          p != compiler->compiler_flags.end();
           ++p)
     {
       args.push_back(p->c_str());
@@ -1448,7 +1289,7 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
     Clang.getHeaderSearchOpts().AddPath(".", clang::frontend::Quoted, false, false);
 
     // create instance of action and execute it
-    PPAction act(sources, worklist, preprocessor);
+    PPAction act(sources, worklist, compiler);
     Success = Clang.ExecuteAction(act);
     if(!Success) {
       PUSH_DIAGNOSTIC("libseashell-clang: clang::CompilerInstance::ExecuteAction(PPAction) failed.");
@@ -1463,8 +1304,8 @@ static int preprocess_file(struct seashell_preprocessor* preprocessor, const cha
   }
 
   // convert accumulated set into vector
-  preprocessor->sources = std::vector<std::string>(sources.begin(), sources.end());
-  print_sources(preprocessor);
+  compiler->source_paths = std::vector<std::string>(sources.begin(), sources.end());
+  print_sources(compiler);
 
   /* Success. */
   return 0;

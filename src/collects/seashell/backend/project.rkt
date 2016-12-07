@@ -370,11 +370,10 @@
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place `(,@(read-config 'compiler-flags)
-                                      "-I" ,(some-system-path->string project-question)
-                                      ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '()))
+      (seashell-compile-files/place (read-config 'compiler-flags)
                                     '("-lm")
-                                    project-question
+                                    `(,project-question
+                                      ,@(if (directory-exists? project-common) (list project-common) empty))
                                     (check-and-build-path project-base file)))
     (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
     (when result
