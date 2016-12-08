@@ -267,6 +267,23 @@ extern "C" void seashell_compiler_free (struct seashell_compiler* compiler) {
 }
 
 /**
+ * seashell_compiler_add_file(struct seashell_compiler *compiler, const char *file)
+ * Manually adds a file to the list of sources to be compiled.
+ * NOTE: This list is ignored if the compiler's main file has been set.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  file - path to the source file.
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" void seashell_compiler_add_file(struct seashell_compiler *compiler, const char *file) {
+#else
+void seashell_compiler_add_file(struct seashell_compiler *compiler, std::string file) {
+#endif
+  compiler->source_paths.push_back(file);
+}
+
+/**
  * seashell_compiler_clear_source_dirs(struct seashell_compiler* compiler)
  * Clears the compiler's source dir list.
  *
@@ -448,9 +465,12 @@ static int resolve_dependencies(seashell_compiler *compiler);
  *  seashell_llvm_setup must be called before this function.
  */
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode) {
-    std::string errors;
-
     compiler->messages.clear();
+
+    // if the main file has been set we clear all added files
+    if(compiler->main_file.length()) {
+      compiler->source_paths.clear();
+    }
 
     // add include directories to compiler flags
     for(std::vector<std::string>::iterator dir = compiler->source_dirs.begin();
@@ -459,7 +479,7 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
       compiler->compiler_flags.push_back(*dir);
     }
 
-    if(!gen_bytecode) {
+    if(!gen_bytecode && compiler->main_file.length()) {
       // resolve the dependencies of the main file
       if(resolve_dependencies(compiler)) {
         return 1;

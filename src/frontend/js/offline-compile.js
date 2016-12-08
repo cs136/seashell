@@ -49,18 +49,19 @@ self.importScripts('seashell-clang-js/bin/seashell-clang.js');
 self.onmessage = function(msg) {
   var data = msg.data;
 
-  function diagnostics(cc, files) {
+  function diagnostics(cc) {
     var res = [];
-    for(var i=0; i<files.length; i++) {
-      var n = Module.seashell_compiler_get_diagnostic_count(cc, i);
-      if(n>0) {
-        for(var k=0; k<n; k++) {
+    var n = Module.seashell_compiler_get_diagnostic_count(cc);
+    if(n>0) {
+      for(var k=0; k<n; k++) {
+        var file = Module.seashell_compiler_get_diagnostic_file(cc, k);
+        if(file.startsWith("/seashell/")) {
           res.push([
-            Module.seashell_compiler_get_diagnostic_error(cc, i, k),
-            files[i],
-            Module.seashell_compiler_get_diagnostic_line(cc, i, k),
-            Module.seashell_compiler_get_diagnostic_column(cc, i, k),
-            Module.seashell_compiler_get_diagnostic_message(cc, i, k)
+            Module.seashell_compiler_get_diagnostic_error(cc, k),
+            file,
+            Module.seashell_compiler_get_diagnostic_line(cc, k),
+            Module.seashell_compiler_get_diagnostic_column(cc, k),
+            Module.seashell_compiler_get_diagnostic_message(cc, k)
           ]);
         }
       }
@@ -68,43 +69,25 @@ self.onmessage = function(msg) {
     return res;
   }
 
-  function compile(runnerFile, includeFlags) {
-    var pp = Module.seashell_preprocessor_make();
-    Module.seashell_preprocessor_set_question_dir(pp, "/seashell/"+data.project+"/"+data.question);
-    Module.seashell_preprocessor_set_main_file(pp, runnerFile);
-    var pres = Module.seashell_preprocessor_run(pp);
-    // TODO handle this error case better.. return an actual message
-    if(pres !== 0) {
-      Module.seashell_preprocessor_free(pp);
-      return { messages: [],
-               type: "result",
-               pid: -1,
-               status: "compile-failed" };
-    }
+  function compile(runnerFile, source_dirs) {
     var cc = Module.seashell_compiler_make();
-    var numDeps = Module.seashell_preprocessor_get_include_count(pp);
-    var sources = [];
-    var ind;
-    for(ind = 0; ind < numDeps; ind++) {
-      var source = Module.seashell_preprocessor_get_include(pp, ind);
-      sources.push(source);
-      console.log("Adding "+source+" to compiler");
-      Module.seashell_compiler_add_file(cc, source);
+    Module.seashell_compiler_set_main_file(cc, runnerFile);
+    for(var i=0; i<source_dirs.length; i++) {
+      Module.seashell_compiler_add_source_dir(cc, source_dirs[i]);
     }
-    Module.seashell_preprocessor_free(pp);
 
     // add compiler flags
     // TODO: import these flags from elsewhere so we don't have them hard coded on both
     //       backend and frontend.
     var flags = ["-Wall", "-Werror=int-conversion", "-Werror=int-to-pointer-cast", "-Werror=return-type",
                  "-Werror=import-preprocessor-directive-pedantic", "-Werror=incompatible-pointer-types",
-                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"].concat(includeFlags);
-    for(ind = 0; ind<flags.length; ind++) {
+                 "-O0", "-mdisable-fp-elim", "-fno-common", "-std=c99"];
+    for(var ind = 0; ind<flags.length; ind++) {
       Module.seashell_compiler_add_compile_flag(cc, flags[ind]);
     }
 
     var cres = Module.seashell_compiler_run(cc, false);
-    var diags = diagnostics(cc, sources);
+    var diags = diagnostics(cc);
     if(cres === 0) {
       var obj = Module.seashell_compiler_get_object(cc);
       Module.seashell_compiler_free(cc);
@@ -123,8 +106,8 @@ self.onmessage = function(msg) {
     }
   }
 
-  var includeFlags = ["-I", "/seashell/"+data.project+"/"+data.question,
-                      "-I", "/seashell/"+data.project+"/common"];
+  var source_dirs = ["/seashell/"+data.project+"/"+data.question,
+                     "/seashell/"+data.project+"/common"];
   
   try {
     FS.mkdir("/seashell");
@@ -132,7 +115,7 @@ self.onmessage = function(msg) {
     FS.mkdir("/seashell/"+data.project+"/"+data.question);
     FS.mkdir("/seashell/"+data.project+"/common");
   } catch(e) { }
-  var rf = data.runnerFile;
+  var rf = "/seashell/"+data.project+"/"+data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
     if(data.files[i].contents) {
       var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
@@ -148,13 +131,13 @@ self.onmessage = function(msg) {
   }
 
   if(init) {
-    var res = compile(rf, includeFlags);
+    var res = compile(rf, source_dirs);
     postMessage(res);
     close();
   }
   else {
     init_queue.push(function() {
-      var res = compile(rf, includeFlags);
+      var res = compile(rf, source_dirs);
       postMessage(res);
       close();
     });
