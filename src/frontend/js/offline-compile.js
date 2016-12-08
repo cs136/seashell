@@ -88,6 +88,15 @@ self.onmessage = function(msg) {
 
     var cres = Module.seashell_compiler_run(cc, false);
     var diags = diagnostics(cc);
+    
+    // check for use of .o files
+    if(Module.seashell_compiler_get_object_dep_count(cc) > 0) {
+      diags = [[false,
+        Module.seashell_compiler_get_object_dep(cc, 0),
+        0, 0,
+        "This program depends on an object file, which is not compatible with Seashell's offline mode."
+      ]].concat(diags);
+    }
     if(cres === 0) {
       var obj = Module.seashell_compiler_get_object(cc);
       Module.seashell_compiler_free(cc);
@@ -117,17 +126,14 @@ self.onmessage = function(msg) {
   } catch(e) { }
   var rf = "/seashell/"+data.project+"/"+data.runnerFile;
   for(var i=0; i<data.files.length; i++) {
-    if(data.files[i].contents) {
-      var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
-      var len = lengthBytesUTF8(data.files[i].contents)+1;
-      var arr = new Uint8Array(len);
-      var copied = stringToUTF8Array(data.files[i].contents, arr, 0, len);
-      FS.write(file, arr, 0, copied);
-      FS.close(file);
-    }
-    else {
-      console.warn("Binary file "+data.files[i].name+" ignored by offline compiler.");
-    }
+    var contents = "";
+    if(data.files[i].contents) contents = data.files[i].contents;
+    var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
+    var len = lengthBytesUTF8(contents)+1;
+    var arr = new Uint8Array(len);
+    var copied = stringToUTF8Array(contents, arr, 0, len);
+    FS.write(file, arr, 0, copied);
+    FS.close(file);
   }
 
   if(init) {

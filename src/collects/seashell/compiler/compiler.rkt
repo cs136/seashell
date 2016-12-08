@@ -59,6 +59,12 @@
         (seashell_compiler_get_diagnostic_column compiler k)
         (seashell_compiler_get_diagnostic_message compiler k))))))
 
+(: process-object-deps (-> Seashell-Compiler-Ptr (Listof String)))
+(define (process-object-deps compiler)
+  (build-list (seashell_compiler_get_object_dep_count compiler)
+    (lambda ([k : Nonnegative-Integer])
+      (seashell_compiler_get_object_dep compiler k))))
+
 ;; (seashell-compile-files cflags ldflags source)
 ;; Invokes the internal compiler and external linker to create
 ;; an executable based on the source files.
@@ -137,6 +143,7 @@
           (apply subprocess #f #f #f (read-config-path 'system-linker)
                  `("-o" ,(some-system-path->string result-file)
                    ,(some-system-path->string object-file)
+                   ,@(process-object-deps compiler)
                    "-fsanitize=address"
                    ,@(map
                        append-linker-flag

@@ -42,6 +42,8 @@
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
+           seashell_compiler_get_object_dep_count
+           seashell_compiler_get_object_dep
            seashell_compiler-ptr?)
 
   (define-ffi-definer define-clang
@@ -93,7 +95,11 @@
                           (define result (make-bytes size))
                           (memcpy result address size)
                           result]
-                        [else #f]))))))
+                        [else #f])))))
+  (define-clang seashell_compiler_get_object_dep_count
+                (_fun _seashell_compiler-ptr -> _int))
+  (define-clang seashell_compiler_get_object_dep
+                (_fun _seashell_compiler-ptr _int -> _string/utf-8)))
 
 (require/typed (submod "." untyped)
                [#:opaque Seashell-Compiler-Ptr seashell_compiler-ptr?]
@@ -115,7 +121,9 @@
                [seashell_compiler_run (-> Seashell-Compiler-Ptr Boolean Fixnum)]
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
-               [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))])
+               [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))]
+               [seashell_compiler_get_object_dep_count (-> Seashell-Compiler-Ptr Nonnegative-Integer)]
+               [seashell_compiler_get_object_dep (-> Seashell-Compiler-Ptr Nonnegative-Integer String)])
 
   (provide seashell_compiler_free
            seashell_compiler_make
@@ -136,5 +144,7 @@
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
+           seashell_compiler_get_object_dep_count
+           seashell_compiler_get_object_dep
            seashell_compiler-ptr?
            Seashell-Compiler-Ptr)

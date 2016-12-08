@@ -35,6 +35,7 @@ std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* comp
 std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int k);
 std::string seashell_compiler_object_arch(struct seashell_compiler* compiler);
 std::string seashell_compiler_object_os (struct seashell_compiler* compiler);
+std::string seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
 #else
 extern "C" const char* seashell_clang_version();
 extern "C" void seashell_compiler_set_main_file(struct seashell_compiler *compiler, const char *file);
@@ -47,6 +48,7 @@ extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_c
 extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int k);
 extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler);
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler);
+extern "C" const char *seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
 #endif
 extern "C" struct seashell_compiler* seashell_compiler_make (void);
 extern "C" void seashell_compiler_free (struct seashell_compiler* compiler);
@@ -57,4 +59,5 @@ extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* 
 extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int k);
 extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int k);
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode);
+extern "C" int seashell_compiler_get_object_dep_count(struct seashell_compiler *compiler);
 #endif

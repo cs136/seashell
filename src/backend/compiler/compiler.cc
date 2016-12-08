@@ -156,6 +156,9 @@ struct seashell_compiler {
   /** Files to compile, populated by preprocessing step */
   std::vector<std::string> source_paths;
 
+  /** Object files discovered by dependency resolution */
+  std::vector<std::string> object_paths;
+
   /** Module compilation messages. */
   std::vector<seashell_diag> messages;
 
@@ -483,6 +486,14 @@ extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool g
       // resolve the dependencies of the main file
       if(resolve_dependencies(compiler)) {
         return 1;
+      }
+    }
+
+    if(compiler->object_paths.size()) {
+      compiler->compiler_flags.push_back("-o");
+      for(std::vector<std::string>::iterator obj = compiler->object_paths.begin();
+          obj != compiler->object_paths.end(); obj++) {
+        compiler->compiler_flags.push_back(*obj);
       }
     }
 
@@ -1243,12 +1254,53 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
   }
 
   // convert accumulated set into vector
-  compiler->source_paths = std::vector<std::string>(sources.begin(), sources.end());
+  for(std::set<std::string>::iterator src = sources.begin();
+      src != sources.end(); src++) {
+    // separate objects and sources
+    if('o' == (*src)[src->length()-1]) {
+      compiler->object_paths.push_back(*src);
+    }
+    else {
+      compiler->source_paths.push_back(*src);
+    }
+  }
   print_sources(compiler);
 
   /* Success. */
   return 0;
   #undef PUSH_DIAGNOSTIC
+}
+
+/**
+ * seashell_compiler_get_object_dep_count(struct seashell_compiler *compiler)
+ * Returns the number of dependencies that resolved to object files.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ */
+extern "C" int seashell_compiler_get_object_dep_count(struct seashell_compiler *compiler) {
+  return compiler->object_paths.size();
+}
+
+/**
+ * seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k)
+ * Returns the path to the k-th dependency that resolved to an object file.
+ *
+ * Arguments:
+ *  compiler - A Seashell compiler instance.
+ *  k - An integer 0 <= k < number of object file dependencies
+ */
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k) {
+#else
+std::string seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k) {
+#endif
+  if(compiler->object_paths.size() <= k) {
+    return NULL;
+  }
+  else {
+    return compiler->object_paths.at(k).c_str();
+  }
 }
 
 #ifdef __EMSCRIPTEN__
