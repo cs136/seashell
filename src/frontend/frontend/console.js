@@ -20,7 +20,8 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app')
-  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+  .service('console-service', ['$rootScope', 'socket', '$timeout',
+    function($scope, socket, $timeout) {
     var self = this;
     self.PIDs = null;
     // running is true iff we are running with "run", allows input
@@ -146,6 +147,10 @@ angular.module('frontend-app')
         self.running = false;
       }
       self.contents = self._contents;
+      // Set up an output buffering timeout to prevent output from sitting
+      // in the buffer while the program waits for input/hangs
+      $timeout.cancel(self.flushTimeout);
+      self.flushTimeout = $timeout(self.flush, 100);
     });
 
     function printExpectedFromDiff(res) {
