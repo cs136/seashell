@@ -32,6 +32,7 @@
 (unsafe-require/typed (submod "." untyped-helper)
                       [date-nanosecond (-> date Integer)])
 (require/typed seashell/backend/project
+               [project-base-path (-> Path)]
                [list-projects (-> (Listof (List String Integer)))]
                ;; specifying the return type of this as other than Any seems to cause problems
                [read-project-settings (-> String Any)]
@@ -295,116 +296,129 @@
   ;; TODO: Grab global lock to protect against _all_ operations.
   ;; Do not want other operations modifying state that the offline engine needs to work with.
 
-  (define timestamp (make-timestamp))
-  (define changeset (json->off:changes js-changeset))
-  (match-define
-    (off:changes their-projects their-files their-changes their-settings)
-    changeset)
-  ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
-  ;; before looking at projects/files.
+  ;; Back up the entire projects directory
+  (define temp-projects (build-path (read-config-path 'seashell)
+                          (string-append "projects-" (number->string (current-seconds)))))
+  (copy-directory/files (project-base-path) temp-projects)
 
-  ;; If nontrivial changes exist, record the changeset in case something goes wrong.
-  ;; TODO: Write scripts so instructional support staff can replay/fix changesets
-  ;; that go bad.
-  (when (not (empty? their-changes))
-    (record-offline-changeset timestamp js-changeset))
+  (define sync-result (with-handlers
+    ([exn:fail? (lambda ([err : exn])
+      (delete-directory/files (project-base-path))
+      (rename-file-or-directory temp-projects (project-base-path))
+      (raise err))])
+    (define timestamp (make-timestamp))
+    (define changeset (json->off:changes js-changeset))
+    (match-define
+      (off:changes their-projects their-files their-changes their-settings)
+      changeset)
+    ;; NOTE: We do not expect new projects, hence it is safe to apply the changes first
+    ;; before looking at projects/files.
 
-  ;; Apply changes, collect conflicts.
-  (define conflicts (apply-offline-changes their-changes))
+    ;; If nontrivial changes exist, record the changeset in case something goes wrong.
+    ;; TODO: Write scripts so instructional support staff can replay/fix changesets
+    ;; that go bad.
+    (when (not (empty? their-changes))
+      (record-offline-changeset timestamp js-changeset))
 
-  ;; Sync global settings
-  (define-values (our-settings our-settings-modified) (read-settings))
-  (logf 'debug "local mod: ~a" (off:settings-modified their-settings))
-  (logf 'debug "serve mod: ~a" our-settings-modified)
-  (define result-settings
-    (if (and our-settings (< (off:settings-modified their-settings) our-settings-modified))
-        (jsexpr->string (cast our-settings JSExpr))
-        #f))
-  (unless result-settings
-    (write-settings (string->jsexpr (off:settings-values their-settings))))
+    ;; Apply changes, collect conflicts.
+    (define conflicts (apply-offline-changes their-changes))
 
-  ;; Collect list of new projects.
-  (define our-projects (list-off-projects))
-  (define our-projects-name (map (lambda ([l : off:project]) (off:project-name l))
-                              our-projects))
-  (define their-projects-name (map off:project-name their-projects))
-  (define deleted-projects (remove* our-projects-name their-projects-name))
-  (define new-projects (remove* their-projects-name our-projects-name))
+    ;; Sync global settings
+    (define-values (our-settings our-settings-modified) (read-settings))
+    (logf 'debug "local mod: ~a" (off:settings-modified their-settings))
+    (logf 'debug "serve mod: ~a" our-settings-modified)
+    (define result-settings
+      (if (and our-settings (< (off:settings-modified their-settings) our-settings-modified))
+          (jsexpr->string (cast our-settings JSExpr))
+          #f))
+    (unless result-settings
+      (write-settings (string->jsexpr (off:settings-values their-settings))))
 
-  ;; Overwrite project settings that are newer in the offline storage
-  (define updated-projects
-    (map (lambda ([l : (Listof off:project)]) (first l))
-      (filter (lambda ([l : (Listof off:project)])
-                (and (= (length l) 2) (> (off:project-last_modified (first l))
-                                         (off:project-last_modified (second l)))))
-        (map (lambda ([p : off:project]) (cons p
-            (filter (lambda ([pp : off:project]) (string=? (off:project-name pp) (off:project-name p)))
-                    their-projects)))
-          our-projects))))
+    ;; Collect list of new projects.
+    (define our-projects (list-off-projects))
+    (define our-projects-name (map (lambda ([l : off:project]) (off:project-name l))
+                                our-projects))
+    (define their-projects-name (map off:project-name their-projects))
+    (define deleted-projects (remove* our-projects-name their-projects-name))
+    (define new-projects (remove* their-projects-name our-projects-name))
 
-  (define updated-projects-name (map off:project-name updated-projects))
-  (define offline-updated-projects
-    (filter (lambda ([p : off:project])
-              (and (member (off:project-name p) our-projects)
-                   (not (member (off:project-name p) updated-projects-name))))
-            their-projects))
+    ;; Overwrite project settings that are newer in the offline storage
+    (define updated-projects
+      (map (lambda ([l : (Listof off:project)]) (first l))
+        (filter (lambda ([l : (Listof off:project)])
+                  (and (= (length l) 2) (> (off:project-last_modified (first l))
+                                           (off:project-last_modified (second l)))))
+          (map (lambda ([p : off:project]) (cons p
+              (filter (lambda ([pp : off:project]) (string=? (off:project-name pp) (off:project-name p)))
+                      their-projects)))
+            our-projects))))
 
-  ;; update projects that were modified locally while offline
-  (map (lambda ([p : off:project])
-         (write-project-settings (off:project-name p)
-              ((lambda ([p : off:project]) (if (off:project-settings p)
-                  (sanitize-settings (cast (string->jsexpr (off:project-settings p))
-                                       (HashTable Symbol Any)))
-                  (empty-settings))) p)))
-       offline-updated-projects)
+    (define updated-projects-name (map off:project-name updated-projects))
+    (define offline-updated-projects
+      (filter (lambda ([p : off:project])
+                (and (member (off:project-name p) our-projects)
+                     (not (member (off:project-name p) updated-projects-name))))
+              their-projects))
 
-  ;; Resolve conflicts (add .conflict for each file)
-  (define conflict-information (resolve-conflicts timestamp conflicts))
+    ;; update projects that were modified locally while offline
+    (map (lambda ([p : off:project])
+           (write-project-settings (off:project-name p)
+                ((lambda ([p : off:project]) (if (off:project-settings p)
+                    (sanitize-settings (cast (string->jsexpr (off:project-settings p))
+                                         (HashTable Symbol Any)))
+                    (empty-settings))) p)))
+         offline-updated-projects)
 
-  ;; After this point the changeset has been committed to disk.
-  ;; Collect list of files in the backend.
-  (define our-files (fetch-all-files))
-  (define our-files/w-c (map strip-checksum our-files))
-  (define their-files/w-c (map strip-checksum their-files))
-  ;; Collect list of deleted files (in the backend).
-  (define backend-new-files (list->set (remove* their-files/w-c our-files/w-c)))
-  (define backend-deleted-files (remove* our-files/w-c their-files/w-c))
-  (define our-delete-change
-    (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f #f))
-         backend-deleted-files))
-  ;; Collect list of new/edited files (in the backend).
-  ;; NOTE: The checksum matters for this calculation.
-  (define backend-changed-files (remove* their-files our-files))
-  ;; NOTE: Binary files are ignored when sending back list of new files.
-  ;; TODO: Properly handle binary files (as base64 data: URLs).
-  (define our-edit-changes
-    (foldl
-      (lambda ([change : (U False off:change)]
-               [changes : (Listof off:change)])
-        (if change (cons change changes) changes))
-      '()
-      (map (lambda ([f : off:file]) : (U False off:change)
-             (define-values (contents checksum history)
-               (read-file (off:file-project f) (off:file-file f)))
-             (define is-new-file? (set-member? backend-new-files (strip-checksum f)))
-             (with-handlers
-               ;; Send a placeholder record for binary files (that are not available offline).
-               ([exn:fail? (lambda ([exn : exn])
-                             (off:change (if is-new-file? "newFile" "editFile")
-                                         f #f
-                                         (if is-new-file? #f checksum)
-                                         (if is-new-file? #f (bytes->string/utf-8 history))))])
-               (off:change (if is-new-file? "newFile" "editFile")
-                           f (bytes->string/utf-8 contents)
-                           (if is-new-file? #f checksum)
-                           (if is-new-file? #f (bytes->string/utf-8 history)))))
-           backend-changed-files)))
-  ;; Generate changes to send back.
-  (off:response->json
-      (off:response
-        conflict-information
-        (append our-delete-change our-edit-changes)
-        new-projects
-        deleted-projects
-        updated-projects
-        result-settings)))
+    ;; Resolve conflicts (add .conflict for each file)
+    (define conflict-information (resolve-conflicts timestamp conflicts))
+
+    ;; After this point the changeset has been committed to disk.
+    ;; Collect list of files in the backend.
+    (define our-files (fetch-all-files))
+    (define our-files/w-c (map strip-checksum our-files))
+    (define their-files/w-c (map strip-checksum their-files))
+    ;; Collect list of deleted files (in the backend).
+    (define backend-new-files (list->set (remove* their-files/w-c our-files/w-c)))
+    (define backend-deleted-files (remove* our-files/w-c their-files/w-c))
+    (define our-delete-change
+      (map (lambda ([f : off:file]) : off:change (off:change "deleteFile" f #f #f #f))
+           backend-deleted-files))
+    ;; Collect list of new/edited files (in the backend).
+    ;; NOTE: The checksum matters for this calculation.
+    (define backend-changed-files (remove* their-files our-files))
+    ;; NOTE: Binary files are ignored when sending back list of new files.
+    ;; TODO: Properly handle binary files (as base64 data: URLs).
+    (define our-edit-changes
+      (foldl
+        (lambda ([change : (U False off:change)]
+                 [changes : (Listof off:change)])
+          (if change (cons change changes) changes))
+        '()
+        (map (lambda ([f : off:file]) : (U False off:change)
+               (define-values (contents checksum history)
+                 (read-file (off:file-project f) (off:file-file f)))
+               (define is-new-file? (set-member? backend-new-files (strip-checksum f)))
+               (with-handlers
+                 ;; Send a placeholder record for binary files (that are not available offline).
+                 ([exn:fail? (lambda ([exn : exn])
+                               (off:change (if is-new-file? "newFile" "editFile")
+                                           f #f
+                                           (if is-new-file? #f checksum)
+                                           (if is-new-file? #f (bytes->string/utf-8 history))))])
+                 (off:change (if is-new-file? "newFile" "editFile")
+                             f (bytes->string/utf-8 contents)
+                             (if is-new-file? #f checksum)
+                             (if is-new-file? #f (bytes->string/utf-8 history)))))
+             backend-changed-files)))
+    ;; Generate changes to send back.
+    (off:response->json
+        (off:response
+          conflict-information
+          (append our-delete-change our-edit-changes)
+          new-projects
+          deleted-projects
+          updated-projects
+          result-settings))))
+
+  (delete-directory/files temp-projects)
+  sync-result)
