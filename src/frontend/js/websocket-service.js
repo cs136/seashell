@@ -44,6 +44,9 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.connected = false;
       self.failed = false;
 
+      // used to notify the frontend for progress visual
+      self.isSyncing = false;
+
       // load the offline mode setting, which is stored separately
       //  from other Seashell settings as a cookie.
       self.offline_mode = $cookies.get(SEASHELL_OFFLINE_MODE_COOKIE);
@@ -422,6 +425,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         if(!self.offlineEnabled())
           return $q.when();
         console.log("syncAll invoked");
+        self.isSyncing = true;
         return $q.all([localfiles.getProjectsForSync(), localfiles.listAllProjectsForSync(),localfiles.getOfflineChanges(), localfiles.getSettings(true)])
           .then(function(result) {
             var projects = result[0];
@@ -445,6 +449,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             if(self.connected) {
               self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
             }
+            self.isSyncing = false;
             // send the changes back in case we need to act on the files that have
             //  changed within the open project
             return changes;

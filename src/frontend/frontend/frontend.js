@@ -100,6 +100,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.hasOfflineChanges = function() {
           return ws.hasOfflineChanges();
         };
+        self.isSyncing = function() {
+          return ws.isSyncing;
+        };
         // Logout
         self.logout = function () {
           confirm("Log out of Seashell",
