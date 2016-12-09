@@ -54,6 +54,7 @@
          seashell/compiler
          seashell/backend/runner
          seashell/backend/template
+         seashell/backend/lock
          seashell/utils/misc
          net/url
          net/head
@@ -61,6 +62,7 @@
          file/zip
          file/unzip
          racket/contract
+         racket/function
          racket/file
          racket/path
          racket/match
@@ -199,19 +201,20 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (cond
-      [(or (path-string? source) (url-string? source))
-        (make-directory (build-project-path name))
-        (with-handlers
-          ([exn:fail? (lambda (exn)
-            (delete-directory/files (build-project-path name) #:must-exist? #f)
-            (raise exn))])
-          (parameterize ([current-directory (build-project-path name)])
-            (call-with-template source
-              (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
-      [(project-name? source)
-       (copy-directory/files (build-project-path source)
-                             (build-project-path name))]))
+    (call-with-write-lock (thunk
+      (cond
+        [(or (path-string? source) (url-string? source))
+          (make-directory (build-project-path name))
+          (with-handlers
+            ([exn:fail? (lambda (exn)
+              (delete-directory/files (build-project-path name) #:must-exist? #f)
+              (raise exn))])
+            (parameterize ([current-directory (build-project-path name)])
+              (call-with-template source
+                (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
+        [(project-name? source)
+         (copy-directory/files (build-project-path source)
+                               (build-project-path name))]))))
   (void))
 
 ;; (delete-project name)
@@ -230,7 +233,8 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (delete-directory/files (check-and-build-path (build-project-path name))))
+    (call-with-write-lock (thunk
+      (delete-directory/files (check-and-build-path (build-project-path name))))))
   (void))
 
 ;; (lock-project name)
@@ -624,7 +628,7 @@
   (if (and file (or (and question (file-exists? path))
                     (and (not question) (directory-exists? path)))) file #f))
 
-;; (update-recent project question file)
+;; (update-most-recently-used project question file)
 ;; Updates the most recently used information for the specified question.
 ;;
 ;; Arguments:
@@ -699,10 +703,11 @@
 ;; Returns: nothing
 (define/contract (write-project-settings project settings)
   (-> (and/c project-name? is-project?) hash-eq? void?)
-  (with-output-to-file
-    (build-path (build-project-path project) (read-config 'project-settings-filename))
-    (lambda () (write settings))
-    #:exists 'replace))
+  (call-with-write-lock (thunk
+    (with-output-to-file
+      (build-path (build-project-path project) (read-config 'project-settings-filename))
+      (lambda () (write settings))
+      #:exists 'replace))))
 
 
 ;; (write-project-settings/key project key val)

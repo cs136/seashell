@@ -18,6 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
          (submod seashell/seashell-config typed)
+         seashell/backend/lock
          typed/json
          seashell/utils/typed-json-struct
          typed/racket/date
@@ -295,6 +296,7 @@
 (define (sync-offline-changes js-changeset)
   ;; TODO: Grab global lock to protect against _all_ operations.
   ;; Do not want other operations modifying state that the offline engine needs to work with.
+  (acquire-exclusive-write-lock)
 
   ;; Back up the entire projects directory
   (define temp-projects (build-path (read-config-path 'seashell)
@@ -421,4 +423,6 @@
           result-settings))))
 
   (delete-directory/files temp-projects)
+  (release-exclusive-write-lock)
+
   sync-result)

@@ -18,6 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/backend/project
          seashell/backend/template
+         seashell/backend/lock
          seashell/seashell-config
          seashell/log
          net/uri-codec
@@ -95,7 +96,8 @@
           (lambda ()
             (display-lines (call-with-input-bytes data port->lines))))
         data))
-    (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)
+    (call-with-write-lock
+      (thunk (with-output-to-file path (lambda () (write-bytes to-write)) #:exists 'error)))
     (call-with-input-bytes to-write md5)))
 
 
@@ -107,8 +109,9 @@
         (raise (exn:project:file
           (format "Directory already exists, or some other filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
-    (make-directory*
-      (check-and-build-path (build-project-path project) dir))
+    (call-with-write-lock
+      (thunk (make-directory*
+        (check-and-build-path (build-project-path project) dir))))
     (void)))
 
 ;; (remove-file project file) -> void?
@@ -124,28 +127,29 @@
   (->* ((and/c project-name? is-project?) path-string?) ((or/c string? #f)) void?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
   (define history-path (get-history-path file-to-write))
-  (with-handlers
-    [(exn:fail:filesystem?
-       (lambda (exn)
-         (raise (exn:project:file
-                  (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
-                  (current-continuation-marks)))))]
-    (call-with-file-lock/timeout file-to-write 'exclusive
-                                 (lambda ()
-                                   (when tag
-                                     (define expected-tag (call-with-input-file file-to-write md5))
-                                     (unless (equal? tag expected-tag)
-                                       (raise (exn:project:file:checksum
-                                                (format "Could not write delete file ~a! (file changed on disk)" (some-system-path->string file-to-write))
-                                                        (current-continuation-marks)))))
-                                    (logf 'info "Deleting file ~a!" (some-system-path->string file-to-write))
-                                    (delete-file file-to-write))
-                                 (lambda ()
-                                   (raise (exn:project:file
-                                          (format "Could not delete file ~a! (file locked)" (some-system-path->string file-to-write))
-                                                  (current-continuation-marks))))))
-  (when (file-exists? history-path)
-    (delete-file history-path))
+  (call-with-write-lock
+    (thunk (with-handlers
+      [(exn:fail:filesystem?
+         (lambda (exn)
+           (raise (exn:project:file
+                    (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
+                    (current-continuation-marks)))))]
+      (call-with-file-lock/timeout file-to-write 'exclusive
+                                   (lambda ()
+                                     (when tag
+                                       (define expected-tag (call-with-input-file file-to-write md5))
+                                       (unless (equal? tag expected-tag)
+                                         (raise (exn:project:file:checksum
+                                                  (format "Could not write delete file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                          (current-continuation-marks)))))
+                                      (logf 'info "Deleting file ~a!" (some-system-path->string file-to-write))
+                                      (delete-file file-to-write))
+                                   (lambda ()
+                                     (raise (exn:project:file
+                                            (format "Could not delete file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                    (current-continuation-marks))))))
+    (when (file-exists? history-path)
+      (delete-file history-path))))
   (void))
 
 ;; (remove-directory project dir)
@@ -159,8 +163,9 @@
         (raise (exn:project:file
           (format "Filesystem error occurred: ~a" (exn-message exn))
           (current-continuation-marks)))))]
-    (logf 'info "Deleting directory ~a!" (some-system-path->string (check-and-build-path (build-project-path project) dir)))
-    (delete-directory/files (check-and-build-path (build-project-path project) dir)))
+    (call-with-write-lock (thunk
+      (logf 'info "Deleting directory ~a!" (some-system-path->string (check-and-build-path (build-project-path project) dir)))
+      (delete-directory/files (check-and-build-path (build-project-path project) dir)))))
   (void))
 
 ;; (read-file project file) -> bytes?
@@ -199,27 +204,28 @@
        ((or/c #f bytes?) (or/c #f string?))
        string?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
-  (call-with-file-lock/timeout file-to-write 'exclusive
-                               (lambda ()
-                                 (when tag
-                                   (define expected-tag (call-with-input-file file-to-write md5))
-                                   (unless (equal? tag expected-tag)
-                                     (raise (exn:project:file:checksum
-                                              (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
-                                                      (current-continuation-marks)))))
-                                 (with-output-to-file (check-and-build-path (build-project-path project) file)
-                                                      (lambda () (write-bytes contents))
-                                                      #:exists 'must-truncate)
-                                 (when history
-                                   (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
-                                                        (lambda () (write-bytes  history))
-                                                        #:exists 'replace)))
-                                 ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
-                                 ;(write-backup project file)
-                               (lambda ()
-                                 (raise (exn:project:file
-                                          (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
-                                                  (current-continuation-marks)))))
+  (call-with-write-lock (thunk
+    (call-with-file-lock/timeout file-to-write 'exclusive
+                                 (lambda ()
+                                   (when tag
+                                     (define expected-tag (call-with-input-file file-to-write md5))
+                                     (unless (equal? tag expected-tag)
+                                       (raise (exn:project:file:checksum
+                                                (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
+                                                        (current-continuation-marks)))))
+                                   (with-output-to-file (check-and-build-path (build-project-path project) file)
+                                                        (lambda () (write-bytes contents))
+                                                        #:exists 'must-truncate)
+                                   (when history
+                                     (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
+                                                          (lambda () (write-bytes  history))
+                                                          #:exists 'replace)))
+                                   ;; FOR TESTING ONLY - this should be done less often & have some logic to decide when
+                                   ;(write-backup project file)
+                                 (lambda ()
+                                   (raise (exn:project:file
+                                            (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
+                                                    (current-continuation-marks)))))))
   (call-with-input-bytes contents md5))
 
 ;; (get-history-path path) -> path
@@ -291,8 +297,9 @@
     [(exn:fail:filesystem? (lambda (e)
       (raise (exn:project "File could not be renamed." (current-continuation-marks)))))]
     (unless (equal? old-file new-file)
-      (rename-file-or-directory (check-and-build-path proj-path old-file)
-                                (check-and-build-path proj-path new-file)))
+      (call-with-write-lock (thunk
+        (rename-file-or-directory (check-and-build-path proj-path old-file)
+                                  (check-and-build-path proj-path new-file)))))
     (call-with-input-file (check-and-build-path proj-path new-file) md5)))
 
 ;; (restore-file-from-template project file template)
@@ -319,13 +326,14 @@
                                  (define lname (explode-path (simplify-path (bytes->path name) #f)))
                                  (when (and (not (null? lname))
                                             (equal? source (cdr lname)))
-                                   (call-with-output-file destination
-                                                          (lambda (dport)
-                                                            (define-values (md5in md5out) (make-pipe))
-                                                            (copy-port contents dport md5out)
-                                                            (close-output-port md5out)
-                                                            (set! ok (md5 md5in)))
-                                                          #:exists 'replace))))))
+                                   (call-with-write-lock (thunk
+                                     (call-with-output-file destination
+                                                            (lambda (dport)
+                                                              (define-values (md5in md5out) (make-pipe))
+                                                              (copy-port contents dport md5out)
+                                                              (close-output-port md5out)
+                                                              (set! ok (md5 md5in)))
+                                                            #:exists 'replace))))))))
   (when (not ok)
     (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template)
            (current-continuation-marks))))
@@ -338,8 +346,9 @@
 ;;  settings - JSON object representing the user's settings
 (define/contract (write-settings settings)
   (-> jsexpr? void?)
-  (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-    (lambda () (write settings)) #:exists 'truncate))
+  (call-with-write-lock (thunk
+    (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
+      (lambda () (write settings)) #:exists 'truncate))))
 
 ;; (read-settings)
 ;; Reads the user's seashell settings from ~/.seashell/settings.txt. If the
