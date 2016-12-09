@@ -455,6 +455,10 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         return $q.reject(name + " is not available in offline mode.");
       };
 
+      self.hasOfflineChanges = function() {
+        return localfiles.hasOfflineChanges();
+      };
+
       // Register callback for syncing.
       self.register_callback("syncing", function() {
         if(self.offlineEnabled()) {

@@ -33,6 +33,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.disconnected = false;
         self.failed = false;
         self.offline_mode = false;
+        self.has_offline_changes = false;
         self.errors = errors;
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
@@ -95,6 +96,9 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
                   self.errors.report(err, "Failed to sync all projects.");
                 });
             });
+        };
+        self.hasOfflineChanges = function() {
+          return ws.hasOfflineChanges();
         };
         // Logout
         self.logout = function () {
