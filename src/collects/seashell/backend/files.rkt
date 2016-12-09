@@ -32,6 +32,7 @@
          racket/date
          racket/generator
          racket/string
+         racket/function
          file/unzip
          openssl/md5)
 
