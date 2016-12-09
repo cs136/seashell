@@ -94,6 +94,11 @@ angular.module('frontend-app')
                     "Are you sure you want to enable Seashell's offline mode? This will store all of your projects locally so you can work on them and run them while temporarily disconnected form the internet. Only do this if you are on your own personal computer!")
                     .then(self.save);
                 }
+                else if(ws.offline_mode !== 0 && self.settings.offline_mode === 0) {
+                  confirm("Disable Offline Mode",
+                    "Are you sure you want to disable Seashell's offline mode? This means you will not be able to work offline if your computer loses connection. Any unsynced local changes you have will be lost. To use offline mode again in this browser, you will need to re-enable offline mode and press sync all.")
+                    .then(self.save);
+                }
                 else {
                   self.save().catch(
                     function (error) {
