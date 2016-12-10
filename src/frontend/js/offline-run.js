@@ -32,11 +32,12 @@ Module._RT_stderr_write = function(str) {
   // figure out how stderr and stdout contents interleave,
   // and when running a file, you can't tell the difference
   // between stdout and stderr anyways.
-  if(testcase_data === null) {
+  /*if(testcase_data === null) {
     stdout += str;
   } else {
     stderr += str;
-  }
+  }*/
+  stderr += str;
 };
 
 var req = new XMLHttpRequest();
@@ -91,8 +92,8 @@ function runObj(obj) {
       } else {
         postMessage({status: runner.result(),
                     type: 'done',
-                    testname: testcase_data.testname,
-                    input: testcase_data.input,
+                    test_name: testcase_data.test_name,
+                    in: testcase_data.in,
                     expect: testcase_data.expect,
                     stdout: stdout,
                     stderr: stderr });
@@ -105,7 +106,7 @@ function runObj(obj) {
     run_loop();
   } else {
     run_loop();
-    Module._RT_stdin_buffer += testcase_data.input;
+    Module._RT_stdin_buffer += testcase_data.in;
     if(!running) { run_loop(); }
     Module._RT_stdin_buffer = null;
     if(!running) { run_loop(); }

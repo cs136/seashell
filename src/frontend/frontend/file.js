@@ -466,6 +466,8 @@ angular.module('frontend-app')
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }
@@ -480,16 +482,23 @@ angular.module('frontend-app')
             self.console.clear();
             self.project.run(self.question, true)
               .then(function(res) {
-                self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
-                $q.all(res.pids)
+                if(!res.pids) {
+                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
+                }
+                else {
+                  self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+                  $q.all(res.pids)
                     .then(function(pids) {
-                        self.console.setRunning(self.project, pids, true);
-                        handleCompileErr(res.messages, true);
+                      self.console.setRunning(self.project, pids, true);
+                      handleCompileErr(res.messages, true);
                     });
+                }
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }

@@ -21,7 +21,7 @@ angular.module('seashell-compiler', [])
   .service('offline-compiler', ['$q',
     function ($q) {
       var self = this;
-      self.compile = function(file_array, runner) {
+      self.compile = function(project, question, file_array, runner) {
         var defer = $q.defer();
         var compiler = new Worker('js/offline-compile.min.js');
         compiler.onmessage = function (result) {
@@ -40,6 +40,8 @@ angular.module('seashell-compiler', [])
           }
         };
         compiler.postMessage({
+          project: project,
+          question: question,
           runnerFile: runner,
           files: file_array});
         return defer.promise;
@@ -85,47 +87,61 @@ angular.module('seashell-compiler', [])
         var return_promise_pids = [];
 
         function spawn_runner(test_contents) {
-            // run this function when both input and expect files are ready
-            var testname = test_contents[0];
-            var input_contents = test_contents[1].contents;
-            var expect_contents = (test_contents[2] === null ? null : test_contents[2].contents);
+          // run this function when both input and expect files are ready
+          var test_name = test_contents[0];
+          var input_contents = test_contents[1].contents;
+          var expect_contents = (test_contents[2] === null ? null : test_contents[2].contents);
 
-            // spawn the runner
-            var runner = new Worker('js/offline-run.min.js');
+          // spawn the runner
+          var runner = new Worker('js/offline-run.min.js');
 
-            runner.onmessage = function (message) {
-                test_cb(null, message.data);
-            };
+          runner.onmessage = function (message) { 
+            var msg = message.data;
+            var runner_ended = ('type' in msg) && msg.type === 'done' &&
+              ('status' in msg) && ('test_name' in msg);
+            if(runner_ended && msg.status !== 0)
+              msg.result = 'error';
+            else if('stdout' in msg && 'expect' in msg) {
+              if(msg.expect !== null && msg.stdout == msg.expect)
+                msg.result = 'passed';
+              else if(msg.expect === null)
+                msg.result = 'no-expect';
+              else
+                msg.result = 'failed';
+            }
+            msg.pid = msg.test_name;
+            test_cb(null, msg);
+          };
 
-            // Send in the test case input and expected output
-            runner.postMessage({'type': 'testdata',
-                                'testname': testname,
-                                'input': input_contents,
-                                'expect': expect_contents });
+          // Send in the test case input and expected output
+          runner.postMessage({'type': 'testdata',
+                              'test_name': test_name,
+                              'in': input_contents,
+                              'expect': expect_contents });
 
-            // Return a fake 'pid'. For testing, sending EOF and
-            // stdin from console isn't needed nor possible.
-            return {
-              testname: testname,
-              toString: function () {
-                return "<offline-tester>";
-              },
-              kill: function () {
-                runner.terminate();
-                test_cb(null, {'type': 'done', status: 255});
-              },
-              sendEOF: function(){},
-              programInput: function(){},
-              startIO: function () {
-                runner.postMessage(object);
-              }};
+          // Return a fake 'pid'. For testing, sending EOF and
+          // stdin from console isn't needed nor possible.
+          return {
+            test_name: test_name,
+            toString: function () {
+              return test_name;
+            },
+            kill: function () {
+              runner.terminate();
+              test_cb(null, {'type': 'done', status: 255});
+            },
+            sendEOF: function(){},
+            programInput: function(){},
+            startIO: function () {
+              runner.postMessage(object);
+            }};
         }
 
         // for each test case, spawn a runner
         for(var i = 0; i < testdata.length; i++) {
-            var testname_promise = $q.when(testdata[i].testname);
+            var testname_promise = $q.when(testdata[i].test_name);
 
-            var promise = $q.all([testname_promise, testdata[i].input, testdata[i].expect])
+            var promise = $q.all([testname_promise, testdata[i].in, testdata[i].expect])
                 .then(spawn_runner);
 
             return_promise_pids.push(promise);

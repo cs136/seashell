@@ -21,59 +21,43 @@
 #ifndef __COMPILER_H__
 #define __COMPILER_H__
 struct seashell_compiler;
-struct seashell_preprocessor;
 
 #ifdef __EMSCRIPTEN__
 #include <string>
 std::string seashell_clang_version();
-void seashell_compiler_add_file (struct seashell_compiler* compiler, std::string file);
+void seashell_compiler_set_main_file(struct seashell_compiler *compiler, std::string file);
+void seashell_compiler_add_source_dir(struct seashell_compiler *compiler, std::string dir);
+void seashell_compiler_add_file(struct seashell_compiler *compiler, std::string file);
 void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, std::string flag);
 std::string seashell_compiler_get_object(struct seashell_compiler* compiler);
 std::string seashell_compiler_get_linker_messages(struct seashell_compiler* compiler);
-std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int n, int k);
-std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int n, int k);
+std::string seashell_compiler_get_diagnostic_file(struct seashell_compiler* compiler, int k);
+std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* compiler, int k);
 std::string seashell_compiler_object_arch(struct seashell_compiler* compiler);
 std::string seashell_compiler_object_os (struct seashell_compiler* compiler);
-
-void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, std::string file);
-std::string seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
-std::string seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
-std::string seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k);
-std::string seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k);
+std::string seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
 #else
 extern "C" const char* seashell_clang_version();
-extern "C" void seashell_compiler_add_file (struct seashell_compiler* compiler, const char* file);
+extern "C" void seashell_compiler_set_main_file(struct seashell_compiler *compiler, const char *file);
+extern "C" void seashell_compiler_add_source_dir(struct seashell_compiler *compiler, const char *dir);
+extern "C" void seashell_compiler_add_file(struct seashell_compiler *compiler, const char *file);
 extern "C" void seashell_compiler_add_compile_flag (struct seashell_compiler* compiler, const char* flag);
 extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* compiler, int * length);
 extern "C" const char * seashell_compiler_get_linker_messages(struct seashell_compiler* compiler);
-extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int n, int k);
-extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int n, int k);
+extern "C" const char * seashell_compiler_get_diagnostic_file (struct seashell_compiler* compiler, int k);
+extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashell_compiler* compiler, int k);
 extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler);
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler);
-
-extern "C" void seashell_preprocessor_set_main_file(struct seashell_preprocessor *preprocessor, const char *file);
-extern "C" const char *seashell_preprocessor_get_main_file(struct seashell_preprocessor *preprocessor);
-extern "C" const char *seashell_preprocessor_get_include(struct seashell_preprocessor *preprocessor, int n);
-extern "C" const char *seashell_preprocessor_get_diagnostic_file(struct seashell_preprocessor *preprocessor, int k);
-extern "C" const char *seashell_preprocessor_get_diagnostic_message(struct seashell_preprocessor *preprocessor, int k);
+extern "C" const char *seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
 #endif
-
 extern "C" struct seashell_compiler* seashell_compiler_make (void);
 extern "C" void seashell_compiler_free (struct seashell_compiler* compiler);
-extern "C" void seashell_compiler_clear_files (struct seashell_compiler* compiler);
+extern "C" void seashell_compiler_clear_source_dirs(struct seashell_compiler *compiler);
 extern "C" void seashell_compiler_clear_compile_flags (struct seashell_compiler* compiler);
-extern "C" int seashell_compiler_get_diagnostic_count (struct seashell_compiler* compiler, int n);
-extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int n, int k);
-extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int n, int k);
-extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int n, int k);
+extern "C" int seashell_compiler_get_diagnostic_count (struct seashell_compiler* compiler);
+extern "C" int seashell_compiler_get_diagnostic_line (struct seashell_compiler* compiler, int k);
+extern "C" int seashell_compiler_get_diagnostic_column (struct seashell_compiler* compiler, int k);
+extern "C" bool seashell_compiler_get_diagnostic_error (struct seashell_compiler* compiler, int k);
 extern "C" int seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode);
-
-extern "C" struct seashell_preprocessor *seashell_preprocessor_make(void);
-extern "C" void seashell_preprocessor_free(struct seashell_preprocessor *preprocessor);
-extern "C" int seashell_preprocessor_get_include_count(struct seashell_preprocessor *preprocessor);
-extern "C" int seashell_preprocessor_run(struct seashell_preprocessor *preprocessor);
-extern "C" int seashell_preprocessor_get_diagnostic_count(struct seashell_preprocessor *preprocessor);
-extern "C" int seashell_preprocessor_get_diagnostic_line(struct seashell_preprocessor *preprocessor, int k);
-extern "C" int seashell_preprocessor_get_diagnostic_column(struct seashell_preprocessor *preprocessor, int k);
-extern "C" bool seashell_preprocessor_get_diagnostic_error(struct seashell_preprocessor *preprocessor, int k);
+extern "C" int seashell_compiler_get_object_dep_count(struct seashell_compiler *compiler);
 #endif

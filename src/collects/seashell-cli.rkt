@@ -6,7 +6,8 @@
          seashell/compiler
          seashell/seashell-config
          racket/serialize
-         racket/cmdline)
+         racket/cmdline
+         json)
 
 (define (marmtest-main)
   (define RUN-TIMEOUT (make-parameter #f))
@@ -32,17 +33,23 @@
                   (default-exit-handler exit-code)))
   (config-set! 'runtime-files-path temp-dir-path)
 
-  (define/contract (write-outputs stdout stderr)
-    (-> (or/c bytes? #f) (or/c bytes? #f) void?)
+  (define/contract (write-outputs stdout stderr asan)
+    (-> (or/c bytes? #f) (or/c bytes? #f) (or/c bytes? #f) void?)
+    (define plain-asan
+      (if (not asan) #f
+        (let ([parsed (bytes->jsexpr asan)])
+          (if (string=? "" (hash-ref parsed 'raw_message))
+            #f (hash-ref parsed 'raw_message)))))
     (when stdout
       (eprintf "Writing program stdout to ~s.~n" out-file)
       (with-output-to-file out-file (thunk
         (write-bytes stdout))
         #:exists 'truncate))
-    (when stderr
-      (eprintf "Writing program stderr to ~s.~n" err-file)
+    (when (or stderr plain-asan)
+      (eprintf "Writing program stderr and ASAN output to ~s.~n" err-file)
       (with-output-to-file err-file (thunk
-        (write-bytes stderr))
+        (when stderr (write-bytes stderr))
+        (when plain-asan (display plain-asan)))
         #:exists 'truncate))
     (void))
 
@@ -52,14 +59,13 @@
     (match-define (list error? file line column errstr) msg)
     (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
 
-  (standard-logger-setup)
-  (define-values (code info) (compile-and-run-project project-dir main-file (list test-name) #t 'current-directory))
+  (define-values (code info) (compile-and-run-project (path->complete-path project-dir) main-file "." (list test-name) #t 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
       (eprintf "Compilation failed. Compiler errors:~n")
       (define compiler-errors (apply string-append (map format-message msgs)))
       (eprintf compiler-errors)
-      (write-outputs #f (string->bytes/utf-8 compiler-errors))
+      (write-outputs #f (string->bytes/utf-8 compiler-errors) #f)
       (exit 10)]
     [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
       (eprintf "Waiting for program to finish...~n")
@@ -67,33 +73,35 @@
 
       ;; TODO: separate this block into its own function?
       (define stdout (program-stdout pid))
-      (match (sync/timeout 0 (wrap-evt stdout (compose deserialize read)))
+      (define run-result (sync/timeout 0 (wrap-evt stdout (compose deserialize read))))
+      (match run-result
        [(and result (list pid _ (and test-res (or "timeout" "killed" "passed")) stdout stderr))
         (eprintf "Program passed the test.\n")
-        (write-outputs stdout stderr)
+        (write-outputs stdout stderr #f)
         (exit 40)]
-       [(list pid _ "error" exit-code stderr)
+       [(list pid _ "error" exit-code stderr asan)
         (if (= exit-code 134)
           (eprintf "Program failed an assertion.~n")
           (eprintf "Program crashed at runtime.~n"))
-        (write-outputs #f stderr)
+        (write-outputs #f stderr asan)
         (exit (if (= exit-code 134) 21 20))]
-       [(list pid _ "no-expect" stdout stderr)
+       [(list pid _ "no-expect" stdout stderr asan)
         (eprintf "No expect file for test; program did not crash.~n")
-        (write-outputs stdout stderr)
+        (write-outputs stdout stderr asan)
         (exit 99)]
-       [(list pid _ "failed" diff stderr stdout)
+       [(list pid _ "failed" diff stderr stdout asan)
         (eprintf "Test failed the test (but did not crash)~n")
-        (write-outputs stdout stderr)
+        (write-outputs stdout stderr asan)
         (exit 30)]
        [(list pid _ "timeout")
         (eprintf "Test timed out (but did not crash)~n")
         (exit 50)]
        [x
-        (eprintf "Unknown error occurred: ~a~n" x)
+        (eprintf "Unknown error occurred: ~s~n" x)
         (exit 98)]
        )]
     [x (error (format "Seashell failed: compile-and-run-project returned ~s.~n" x))]))
+
 
 (define (object-main)
   (define args
@@ -123,5 +131,6 @@
     (printf "  ~a: ~a~n" tool (second props))))
   (exit 1))
 
+(standard-logger-setup)
 ;; invoke main method for tool
 ((first (hash-ref tools (first flags))))

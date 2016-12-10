@@ -78,23 +78,22 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellFile.prototype.toWorker = function() {
           var self = this;
           return self.read().then(function(conts) {
-            var obj = { name: self.name[self.name.length-1],
+            var obj = { name: self.name.join("/"),
                         contents: conts.data };
             return obj;
           });
         };
 
-        // for now, bundle everything together from question and common
-        SeashellFile.prototype.getDependencies = function() {
+        // bundle everything together from question and common
+        SeashellFile.prototype.getDependencies = function(question) {
           var self = this;
           var deps = [];
-          var question = self.project.root.find(self.name.slice(0,1));
+          var qFile = self.project.root.find(question);
           var common = self.project.root.find("common");
-          deps = deps.concat(_.filter(question.children, function(f) { return !f.is_dir; }));
+          deps = deps.concat(_.filter(qFile.children, function(f) { return !f.is_dir; }));
           if(common)
             deps = deps.concat(common.children);
-          return $q.all(_.map(deps, function(d) { return d.read(); }))
-            .then(function() { return deps; });
+          return deps;
         };
 
         /**
@@ -645,7 +644,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
             return $q.reject("Attempting to run file that does not exist.");
           }
           if (test && tests.length === 0)
-            return $q.reject("No tests for question!");
+            return $q.when({});
 
           // TODO: rework how we send stuff to the compiler; in particular,
           // we shouldn't need to call file.getDependencies in the websocket service.
@@ -732,55 +731,38 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var testDir = self.root.find(question+"/tests");
           var arr = [];
 
-          if(ws.isOffline()) {
-              // Offline mode
-              var testcases = {};
-              if(testDir && testDir.is_dir) {
-                    for(var i=0; i < testDir.children.length; i++) {
+          var testcases = {};
+          if(testDir && testDir.is_dir) {
+                for(var i=0; i < testDir.children.length; i++) {
 
-                        var filename = testDir.children[i].filename();
-                        var type = ""; // input or expect?
-                        if(filename.endsWith(".in")) {
-                            type = 'input';
-                        } else if(filename.endsWith('.expect')) {
-                            type = 'expect';
-                        } else {
-                            // all test files should end with .in or .expect
-                            continue;
-                        }
+                    var filename = testDir.children[i].filename();
+                    var type = ""; // in or expect?
+                    if(filename.endsWith(".in")) {
+                        type = 'in';
+                    } else if(filename.endsWith('.expect')) {
+                        type = 'expect';
+                    } else {
+                        // all test files should end with .in or .expect
+                        continue;
+                    }
 
-                        var testname = filename.substr(0, filename.lastIndexOf('.'));
-                        if(!(testname in testcases)) { testcases[testname] = {}; }
-                        testcases[testname][type] = testDir.children[i].toWorker();
-                  }
+                    var test_name = filename.substr(0, filename.lastIndexOf('.'));
+                    if(!(test_name in testcases)) { testcases[test_name] = {}; }
+                    testcases[test_name][type] = testDir.children[i].toWorker();
               }
-
-              // Convert testcases hash to array
-              Object.keys(testcases).forEach(function(testname) {
-                if('input' in testcases[testname]) {
-                    arr.push({'testname':testname,
-                              'input':testcases[testname].input,
-                              'expect':('expect' in testcases[testname] ? testcases[testname].expect : null)});
-
-                }
-              });
-
-              return arr;
-
-          } else {
-              // Online mode
-              if(testDir && testDir.is_dir) {
-                for(var j=0; j < testDir.children.length; j++) {
-                  if(testDir.children[j].ext() == "in") {
-                    var name = testDir.children[j].name[testDir.children[j].name.length-1];
-                    name = name.split(".");
-                    name.pop();
-                    arr.push(name.join("."));
-                  }
-                }
-              }
-              return arr;
           }
+
+          // Convert testcases hash to array
+          Object.keys(testcases).forEach(function(test_name) {
+            if('in' in testcases[test_name]) {
+                arr.push({'test_name':test_name,
+                          'in':testcases[test_name].in,
+                          'expect':('expect' in testcases[test_name] ? testcases[test_name].expect : null)});
+
+            }
+          });
+
+          return arr;
         };
 
         /**
