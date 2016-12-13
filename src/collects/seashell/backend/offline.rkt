@@ -51,7 +51,7 @@
                [write-file (->* (String Path-String Bytes) ((U False Bytes) (U False String)) String)]
                [list-files (->* (String) ((U String False))
                                 (Listof (List String Boolean Number (U False String))))]
-               [read-settings (-> (Values Any Integer))]
+               [read-settings (-> (Values Any (U False Integer)))]
                [write-settings (-> JSExpr Void)]
                [#:struct (exn:project:file exn:project) ()]
                [#:struct (exn:project:file:checksum exn:project:file) ()])
@@ -330,7 +330,7 @@
     (logf 'debug "local mod: ~a" (off:settings-modified their-settings))
     (logf 'debug "serve mod: ~a" our-settings-modified)
     (define result-settings
-      (if (and our-settings (< (off:settings-modified their-settings) our-settings-modified))
+      (if (and our-settings (< (off:settings-modified their-settings) (cast our-settings-modified Integer)))
           (jsexpr->string (cast our-settings JSExpr))
           #f))
     (unless result-settings

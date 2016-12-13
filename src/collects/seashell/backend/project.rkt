@@ -683,8 +683,9 @@
   (define filename (read-config 'project-settings-filename))
   (cond 
     [(file-exists? (build-path (build-project-path project) filename))
-     (with-input-from-file 
-       (build-path (build-project-path project) filename) read)]
+     (define res (with-input-from-file 
+       (build-path (build-project-path project) filename) read))
+     (if (eof-object? res) (hasheq) res)]
     [else (hasheq)]))
 
 ;; (read-project-settings/key project key)

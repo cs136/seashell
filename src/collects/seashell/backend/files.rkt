@@ -366,7 +366,8 @@
   (define path (build-path (read-config 'seashell) "settings.txt"))
   (cond
     [(file-exists? path)
-      (values (with-input-from-file path read)
+      (define res (with-input-from-file path read))
+      (values (if (eof-object? res) #f res)
               (* 1000 (file-or-directory-modify-seconds path)))]
     [else (values #f #f)]))
 
