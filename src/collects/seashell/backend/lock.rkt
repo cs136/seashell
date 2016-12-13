@@ -19,6 +19,7 @@
 
 (provide acquire-exclusive-write-lock
          release-exclusive-write-lock
+         call-with-exclusive-write-lock
          acquire-write-lock
          release-write-lock
          call-with-write-lock)
@@ -44,6 +45,15 @@
 (define (release-exclusive-write-lock)
   (for ([i (in-range 1 concurrent-writes)])
     (semaphore-post write-sem)))
+
+;; (call-with-write-lock thunk)
+;; Calls the given thunk with an exclusive write lock
+(: call-with-exclusive-write-lock (All (A) (-> (-> A) A)))
+(define (call-with-exclusive-write-lock thunk)
+  (dynamic-wind
+    acquire-exclusive-write-lock
+    thunk
+    release-exclusive-write-lock))
 
 ;; (acquire-write-lock)
 ;; Acquires a semaphore to write to the projects directory.
