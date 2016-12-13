@@ -5,6 +5,9 @@
          rackunit
          json)
 
+;; TODO: Expand these tests so they are much more exhaustive.
+;;  Should be easier now that a couple are done.
+
 (define/contract (create-changes projects files changes settings)
   (-> (listof (list/c string? integer? (or/c string? #f)))
       (listof (list/c string? string? (or/c string? #f)))
