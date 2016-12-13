@@ -8,9 +8,17 @@
     </div>
     <div class="col-md-6 col-xs-6 text-right" style="padding: 0">
       <ul class="navbar-icons" style="padding-top: 8px;">
+        <li tooltip-placement="bottom" tooltip="you have local changes" style="display: inline"
+          ng-show="frontend.hasOfflineChanges()">
+          <span class="glyphicon glyphicon-asterisk text-danger"></span>
+        </li>
         <li tooltip-placement="bottom" tooltip="help" style="display: inline">
           <a class="custom-glyph" ng-click="frontend.help()" href="">
             <span class="glyphicon glyphicon-question-sign"></span></a>
+        </li>
+        <li tooltip-placement="bottom" tooltip="syncing..." style="display: inline"
+          ng-show="frontend.isSyncing()">
+          <span class="glyphicon glyphicon-option-horizontal text-warning"></span>
         </li>
         <li tooltip-placement="bottom" tooltip="sync all" style="display: inline">
           <a class="custom-glyph" ng-click="frontend.syncAll()" href="">

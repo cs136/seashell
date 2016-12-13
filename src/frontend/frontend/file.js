@@ -456,12 +456,12 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
+            self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
             self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
-                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
@@ -480,13 +480,13 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
+            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
             self.project.run(self.question, true)
               .then(function(res) {
                 if(!res.pids) {
                   self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
                 }
                 else {
-                  self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
                   $q.all(res.pids)
                     .then(function(pids) {
                       self.console.setRunning(self.project, pids, true);

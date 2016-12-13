@@ -31,6 +31,9 @@
           projects: 'name',
           settings: 'name'
         });
+
+        self.has_offline_changes = false;
+
         /*
          * Save a file to local storage.
          * @param {string} name: project name.
@@ -326,6 +329,13 @@
 
       self.getOfflineChanges = function () {
         return self.database.changelog.toArray();
+      };
+
+      self.hasOfflineChanges = function() {
+        self.database.changelog.count().then(function(c) {
+          self.has_offline_changes = c > 0;
+        });
+        return self.has_offline_changes;
       };
     }
   ]);
