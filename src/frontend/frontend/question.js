@@ -23,17 +23,17 @@ angular.module('frontend-app')
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'NewTestModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'NewQuestionModal', 'MarmosetResultsModal', 'console-service',
+      'NewQuestionModal', 'MarmosetResultsModal', 'console-service', 'socket',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, newTestModal,  submitMarmosetModal,
         $interval, marmoset, newQuestionModal,
-        marmosetResultsModal, Console) {
+        marmosetResultsModal, Console, ws) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
         self.common_files = [];
         self.question_files = [];
-        self.runner_file = "";
+        self.runnerFile = "";
         self.test_files = [];
         self.console = Console;
         self.marmoset_short_results = null;
@@ -50,6 +50,7 @@ angular.module('frontend-app')
         $scope.$on('$destroy', function() {
           cancelMarmosetRefresh();
           self.console.clear();
+          ws.unregister_callback(self.refreshKey);
         });
 
         /*
@@ -109,12 +110,10 @@ angular.module('frontend-app')
               groups[groups.length-1] = {
                 files: groups[groups.length-1],
                 isFileToRun: runThisFile
-              }; 
-                
+              };
             }
             return groups;
           }
-          
           self.project.getFileToRun(self.question)
               .then(function (fileToRun) {
                 self.runnerFile = fileToRun;
@@ -140,19 +139,18 @@ angular.module('frontend-app')
             }
           });
         };
-        $scope.refresh = self.refresh;
 
-        /** Handle the setFileToRun broadcast 
+        /** Handle the setFileToRun broadcast
          *  by refreshing the file list
          */
-        $scope.$on('setFileToRun', function () { 
+        $scope.$on('setFileToRun', function () {
             self.refresh();
         });
 
         /** Adds file to the project. */
         self.add_file = function () {
-          newFileModal(self.project, 
-                       self.question, 
+          newFileModal(self.project,
+                       self.question,
                        self.question_files,
                        self.common_files,
                        function () {
@@ -165,7 +163,7 @@ angular.module('frontend-app')
         self.add_test = function () {
           newTestModal(self.project, self.question, function () {
              self.refresh();
-          }); 
+          });
         };
 
         /** Dispatches a function to run when the
@@ -219,24 +217,25 @@ angular.module('frontend-app')
           });
         });};
 
-        /** Displays Marmoset Results. */
-        self.marmoset_results = function () {
-        };
-
         /** Try to load the question, and go back to the project if we can't. */
-        try {
-          self.refresh();
-          self.project.updateMostRecentlyUsed(self.question);
-          self.project.mostRecentlyUsed(self.question)
-            .then(function (recent) {
-              if (recent && $state.is('edit-project.editor')) {
-                $state.go("edit-project.editor.file",
-                          {part: recent.part, file: recent.file},
-                          {location: "replace"});
-              }
-            });
-        } catch (e) {
-          errors.report({}, sprintf("Could not open question %s!", self.question));
-          $state.go("edit-project");
-        }
+        var key = ws.register_callback('connected', function() {
+          try {
+            self.refresh();
+            self.project.updateMostRecentlyUsed(self.question);
+            self.project.mostRecentlyUsed(self.question)
+              .then(function (recent) {
+                if (recent && $state.is('edit-project.editor')) {
+                  $state.go("edit-project.editor.file",
+                            {part: recent.part, file: recent.file},
+                            {location: "replace"});
+                }
+              });
+          } catch (e) {
+            errors.report({}, sprintf("Could not open question %s!", self.question));
+            $state.go("edit-project");
+          }
+        }, true);
+        $scope.$on('$destroy', function() {
+          ws.unregister_callback(key);
+        });
       }]);

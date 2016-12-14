@@ -213,117 +213,87 @@ SeashellWebsocket.prototype.sendMessage = function(message, deferred) {
  *  Consult dispatch.rkt for a full list of functions.
  *  These functions take in arguments as specified in server.rkt
  *  and return a JQuery Deferred object. */
-SeashellWebsocket.prototype.ping = function(deferred) {
+SeashellWebsocket.prototype.ping = function() {
   return this.sendMessage({
-    type : "ping"},
-    deferred);
+    type : "ping"});
 };
 
-SeashellWebsocket.prototype.compileAndRunProject = function(project, question, test, deferred) {
+SeashellWebsocket.prototype.compileAndRunProject = function(project, question, test) {
   return this.sendMessage({
     type : "compileAndRunProject",
     project : project,
     question: question,
-    tests : test},
-    deferred);
+    tests : test});
 };
 
-SeashellWebsocket.prototype.programKill = function(pid, deferred) {
+SeashellWebsocket.prototype.programKill = function(pid) {
   return this.sendMessage({
     type : "programKill",
-    pid : pid},
-    deferred);
+    pid : pid});
 };
 
-SeashellWebsocket.prototype.sendEOF = function(pid, deferred) {
+SeashellWebsocket.prototype.sendEOF = function(pid) {
   return this.sendMessage({
     type : "sendEOF",
-    pid : pid},
-    deferred);
+    pid : pid});
 };
 
-SeashellWebsocket.prototype.compileProject = function(project, file, deferred) {
+SeashellWebsocket.prototype.getProjects = function() {
   return this.sendMessage({
-    type : "compileProject",
-    project : project,
-    file : file},
-    deferred);
+    type : "getProjects"});
 };
 
-SeashellWebsocket.prototype.saveProject = function(project, message, deferred) {
-  return this.sendMessage({
-    type : "saveProject",
-    project: project,
-    message: message},
-    deferred);
-};
-
-SeashellWebsocket.prototype.getProjects = function(deferred) {
-  return this.sendMessage({
-    type : "getProjects"},
-    deferred);
-};
-
-SeashellWebsocket.prototype.listProject = function(name, deferred) {
+SeashellWebsocket.prototype.listProject = function(name) {
   return this.sendMessage({
     type : "listProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.newProject = function(name, deferred) {
+SeashellWebsocket.prototype.newProject = function(name) {
   return this.sendMessage({
     type : "newProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.newProjectFrom = function(name, src_url, deferred) {
+SeashellWebsocket.prototype.newProjectFrom = function(name, src_url) {
   return this.sendMessage({
     type : "newProjectFrom",
     project : name,
-    source : src_url},
-    deferred);
+    source : src_url});
 };
 
-SeashellWebsocket.prototype.deleteProject = function(name, deferred) {
+SeashellWebsocket.prototype.deleteProject = function(name) {
   return this.sendMessage({
     type : "deleteProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.lockProject = function(name, deferred) {
+SeashellWebsocket.prototype.lockProject = function(name) {
   return this.sendMessage({
     type : "lockProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.forceLockProject = function(name, deferred) {
+SeashellWebsocket.prototype.forceLockProject = function(name) {
   return this.sendMessage({
     type : "forceLockProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.unlockProject = function(name, deferred) {
+SeashellWebsocket.prototype.unlockProject = function(name) {
   return this.sendMessage({
     type : "unlockProject",
-    project : name},
-    deferred);
+    project : name});
 };
 
-SeashellWebsocket.prototype.readFile = function(name, file_name, deferred) {
+SeashellWebsocket.prototype.readFile = function(name, file_name) {
   return this.sendMessage({
     type : "readFile",
     project : name,
-    file : file_name},
-    deferred);
+    file : file_name});
 };
 
-SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
-  encoding, normalize, deferred) {
+SeashellWebsocket.prototype.newFile = function(name, file_name, contents, encoding, normalize) {
   if (contents) {
     return this.sendMessage({
       type : "newFile",
@@ -331,15 +301,13 @@ SeashellWebsocket.prototype.newFile = function(name, file_name, contents,
       file : file_name,
       contents : contents,
       encoding : encoding || "raw",
-      normalize : normalize},
-      deferred);
+      normalize : normalize});
    } else {
     return this.sendMessage({
       type : "newFile",
       project : name,
       file : file_name,
-      normalize : false},
-      deferred);
+      normalize : false});
    }
 };
 
@@ -353,151 +321,137 @@ SeashellWebsocket.prototype.restoreFileFrom = function(projectName, fpath, url) 
 };
 
 
-SeashellWebsocket.prototype.newDirectory = function(name, dir_name, deferred) {
+SeashellWebsocket.prototype.newDirectory = function(name, dir_name) {
   return this.sendMessage({
     type : "newDirectory",
     project : name,
-    dir : dir_name },
-    deferred);
+    dir : dir_name });
 };
 
-SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, file_history, deferred) {
+SeashellWebsocket.prototype.writeFile = function(name, file_name, file_content, file_history) {
   if (file_history) {
     return this.sendMessage({
       type : "writeFile",
       project : name,
       file : file_name,
       contents : file_content,
-      history: file_history},
-      deferred);
+      history: file_history});
   } else {
     return this.sendMessage({
       type : "writeFile",
       project : name,
       file : file_name,
       contents : file_content,
-      history: false},
-      deferred);
+      history: false});
   }
 };
 
-SeashellWebsocket.prototype.deleteFile = function(name, file_name, deferred) {
+SeashellWebsocket.prototype.deleteFile = function(name, file_name) {
   return this.sendMessage({
     type : "deleteFile",
     project : name,
-    file : file_name},
-    deferred);
+    file : file_name});
 };
 
-SeashellWebsocket.prototype.deleteDirectory = function(name, dir_name, deferred) {
+SeashellWebsocket.prototype.deleteDirectory = function(name, dir_name) {
   return this.sendMessage({
     type : "deleteDirectory",
     project : name,
-    dir : dir_name },
-    deferred);
+    dir : dir_name });
 };
 
-SeashellWebsocket.prototype.programInput = function(pid, contents, deferred) {
+SeashellWebsocket.prototype.programInput = function(pid, contents) {
   return this.sendMessage({
     type : "programInput",
     pid : pid,
-    contents : contents,
-    deferred : deferred});
+    contents : contents});
 };
 
-SeashellWebsocket.prototype.getExportToken = function(project, deferred) {
+SeashellWebsocket.prototype.getExportToken = function(project) {
   return this.sendMessage({
     type : "getExportToken",
-    project : project},
-    deferred);
+    project : project});
 };
 
-SeashellWebsocket.prototype.getUploadFileToken = function(project, file, deferred) {
+SeashellWebsocket.prototype.getUploadFileToken = function(project, file) {
   return this.sendMessage({
     type : "getUploadFileToken",
     project : project,
-    file: file},
-    deferred);
+    file: file});
 };
 
-SeashellWebsocket.prototype.renameFile = function(project, oldName, newName, deferred) {
+SeashellWebsocket.prototype.renameFile = function(project, oldName, newName) {
   return this.sendMessage({
     type: "renameFile",
     project: project,
     oldName: oldName,
-    newName: newName},
-  deferred);
+    newName: newName});
 };
 
-SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, directory, deferred) {
+SeashellWebsocket.prototype.getMostRecentlyUsed = function (project, question) {
   return this.sendMessage({
     type : "getMostRecentlyUsed",
     project : project,
-    directory : directory},
-    deferred);
+    question : question});
 };
 
-SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, directory, predicate, data, deferred) {
+SeashellWebsocket.prototype.updateMostRecentlyUsed = function (project, question, file) {
   return this.sendMessage({
     type : "updateMostRecentlyUsed",
     project : project,
-    directory : directory,
-    predicate : predicate,
-    data : data},
-    deferred);
+    question : question,
+    file : file});
 };
 
-SeashellWebsocket.prototype.saveSettings = function(settings, deferred) {
+SeashellWebsocket.prototype.saveSettings = function(settings) {
   return this.sendMessage({
     type : "saveSettings",
-    settings : settings},
-    deferred);
+    settings : settings});
 };
 
-SeashellWebsocket.prototype.getSettings = function(deferred) {
+SeashellWebsocket.prototype.getSettings = function() {
   return this.sendMessage({
-    type : "getSettings"},
-    deferred);
+    type : "getSettings"});
 };
 
-SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir, deferred) {
+SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir) {
   return this.sendMessage({
     type : "marmosetSubmit",
     project: project,
     assn: assn,
-    subdir: subdir ? subdir : false},
-    deferred);
+    subdir: subdir ? subdir : false});
 };
 
-SeashellWebsocket.prototype.startIO = function(project, pid, deferred) {
+SeashellWebsocket.prototype.startIO = function(project, pid) {
   return this.sendMessage({
     type : "startIO",
     project : project,
-    pid : pid},
-    deferred);
+    pid : pid});
 };
 
-SeashellWebsocket.prototype.archiveProjects = function(deferred) {
+SeashellWebsocket.prototype.archiveProjects = function() {
   return this.sendMessage({
     type : "archiveProjects",
-    location : false},
-    deferred);
+    location : false});
 };
 
-SeashellWebsocket.prototype.getFileToRun = function(project, question, deferred) {
+SeashellWebsocket.prototype.getFileToRun = function(project, question) {
   return this.sendMessage({
     type: "getFileToRun",
     project: project,
-    question: question},
-    deferred);
+    question: question});
 };
 
-SeashellWebsocket.prototype.setFileToRun = function(project, question, folder, file, deferred) {
+SeashellWebsocket.prototype.setFileToRun = function(project, question, folder, file) {
   return this.sendMessage({
     type: "setFileToRun",
     project: project,
     question: question,
     folder: folder,
-    file: file},
-    deferred);
+    file: file});
+};
+
+SeashellWebsocket.prototype.sync = function(message) {
+  message.type = "sync";
+  return this.sendMessage(message);
 };

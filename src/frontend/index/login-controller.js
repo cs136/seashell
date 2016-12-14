@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with self program.  If not, see <http://www.gnu.org/licenses/>.
  */
-angular.module('login-app', ['ngCookies', 'seashell-websocket'])
-  .controller('LoginController', ['$scope', '$cookies', '$window', 'socket',
-      function($scope, $cookies, $window, ws) {
+angular.module('login-app', ['ngCookies'])
+  .controller('LoginController', ['$scope', '$cookies', '$window',
+      function($scope, $cookies, $window) {
         "use strict";
         var self = this;
         self.error = false;
@@ -46,12 +46,7 @@ angular.module('login-app', ['ngCookies', 'seashell-websocket'])
                   $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure: true});
                   console.assert($cookies.getObject(SEASHELL_CREDS_COOKIE), "You are probably not using https.");
                   console.log("All done login!");
-                  ws.connect().then(function () {
-                    $window.top.location = "frontend.html";
-                  }).catch(function (e) {
-                    self.error = "Could not connect to the websocket!";
-                    console.error(self.error, e);
-                  });
+                  $window.top.location = "frontend.html";
                 } else {
                   self.error = "An internal error occurred: " + textStatus;
                   console.log(error);

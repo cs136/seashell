@@ -177,8 +177,7 @@
                                           (list 'overflow_distance_in_bytes_from_end_of_array (number->string (- access-location array-upper-bound))))
                                       `((array_size_in_bytes ,(number->string (- array-upper-bound array-lower-bound)))
                                         (array_variable_name ,(fourth mres))))))
-     (SectionData (if (and (equal? error-type "stack-buffer-overflow") (< access-location array-upper-bound))
-                      "stack-buffer-underflow" #f)
+     (SectionData #f ; overflow/underflow taken care of as of clang >=3.9
                   #f ; frame list
                   (if (not (equal? (fourth mres) "")) extra-info #f)
                   #f)))) ; lines left
@@ -279,6 +278,7 @@
 ;; A big list of functions to try and parse the input lines.
 (define all-parsers : ParserList
   (list (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-buffer-overflow" "stack-buffer-overflow")
+        (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-buffer-underflow" "stack-buffer-underflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: global-buffer-overflow" "global-buffer-overflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-buffer-overflow" "heap-buffer-overflow")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-use-after-free"  "heap-use-after-free")

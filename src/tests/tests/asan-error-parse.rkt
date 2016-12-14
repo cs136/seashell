@@ -13,9 +13,9 @@
 ;; output as a JSON.
 (define (compile-run-wait code [project-name (symbol->string (gensym 'project))])
   (new-project-from project-name (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
-  (with-output-to-file (check-and-build-path (build-project-path project-name) "main.c")
-    (thunk (display code)))
-  (define-values (success hsh) (compile-and-run-project project-name "main.c" '()))
+  (with-output-to-file (check-and-build-path (build-project-path project-name) "default" "main.c")
+    (thunk (display code)) #:exists 'replace)
+  (define-values (success hsh) (compile-and-run-project project-name "default/main.c" "default" '()))
   (sync (program-wait-evt (hash-ref hsh 'pid)))
   (string->jsexpr (bytes->string/utf-8 (program-asan-message (hash-ref hsh 'pid)))))
 
@@ -83,7 +83,8 @@ HERE
 
     ;; This next test really should be an underflow, but ASAN for some reason thinks that
     ;; we're overflowing the parameter x (and it doesn't report the variable name).
-    (test-case "Stack Overflow Test 3"
+    ;; Fixed in Clang 3.9
+    (test-case "Stack Underflow Test 3"
       (define student-code #<<HERE
 void g(int x) { char carr[30]; carr[x] = 111; }
 int main() {
@@ -93,7 +94,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow")))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-underflow")))
 
 ;; ---- STACK UNDERFLOW TESTS ---------------------------
     (test-case "Stack Underflow Test 1"

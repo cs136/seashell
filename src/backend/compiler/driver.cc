@@ -19,6 +19,8 @@
  */
 #include "compiler.h"
 #include <stdio.h>
+#include <string>
+#include <iostream>
 #include "seashell-config.h"
 
 /** This is an example usage of Seashell's clang interface,
@@ -33,8 +35,14 @@ int main( int argc, char* argv[] ) {
   printf("Is installed: %d.\n", IS_INSTALLED());
   if (argc > 1) {
     struct seashell_compiler* compiler = seashell_compiler_make();
-    seashell_compiler_add_file(compiler, argv[1]);
-    seashell_compiler_run(compiler);
+    seashell_compiler_set_main_file(compiler, argv[1]);
+    seashell_compiler_add_source_dir(compiler, ".");
+    if(seashell_compiler_run(compiler, false)) {
+      printf("Compiler exited with an error.\n");
+    }
+    else {
+      printf("Compiler ran successfully.\n");
+    }
     seashell_compiler_free(compiler);
   }
 }

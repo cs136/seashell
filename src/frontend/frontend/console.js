@@ -20,7 +20,8 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app')
-  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+  .service('console-service', ['$rootScope', 'socket', '$timeout',
+    function($scope, socket, $timeout) {
     var self = this;
     self.PIDs = null;
     // running is true iff we are running with "run", allows input
@@ -121,8 +122,9 @@ angular.module('frontend-app')
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
         if (ind > -1) {
-          self._write(self.stderr);
           spl = io.message.split("\n");
+          self._write(self.stderr);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
         } else {
           self.stderr += io.message;
@@ -145,6 +147,10 @@ angular.module('frontend-app')
         self.running = false;
       }
       self.contents = self._contents;
+      // Set up an output buffering timeout to prevent output from sitting
+      // in the buffer while the program waits for input/hangs
+      $timeout.cancel(self.flushTimeout);
+      self.flushTimeout = $timeout(self.flush, 100);
     });
 
     function printExpectedFromDiff(res) {
@@ -166,7 +172,12 @@ angular.module('frontend-app')
     }
 
     socket.register_callback("test", function(res) {
-      self.PIDs = _.without(self.PIDs, res.pid);
+
+      // When online, PIDs are simple PIDs...
+      //  In offline tests we use test name instead of PID
+      self.PIDs = _.filter(self.PIDs, function(pid) {
+        return pid.toString() != res.pid.toString();
+      });
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       var parsedASAN = res.asan_output ? JSON.parse(res.asan_output) : false;
 
