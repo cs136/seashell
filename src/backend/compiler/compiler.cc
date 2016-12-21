@@ -453,7 +453,7 @@ static int final_link_step(seashell_compiler *compiler, bool gen_bytecode);
 static int resolve_dependencies(seashell_compiler *compiler);
 
 /**
- * seashell_compiler_run (struct seashell_compiler* compiler)
+ * seashell_compiler_run (struct seashell_compiler* compiler, bool gen_bytecode)
  * Runs the Seashell compiler instance.
  *
  * Arguments:

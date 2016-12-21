@@ -26,6 +26,7 @@
   (provide seashell_compiler_free
            seashell_compiler_make
            seashell_compiler_set_main_file
+           seashell_compiler_add_file
            seashell_compiler_add_source_dir
            seashell_compiler_clear_source_dirs
            seashell_compiler_add_compile_flag
@@ -55,6 +56,8 @@
   (define-clang seashell_compiler_make (_fun -> _seashell_compiler-ptr)
                 #:wrap (allocator seashell_compiler_free))
   (define-clang seashell_compiler_set_main_file
+                (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
+  (define-clang seashell_compiler_add_file
                 (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
   (define-clang seashell_compiler_add_source_dir
                 (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
@@ -107,6 +110,7 @@
                [seashell_compiler_free (-> Seashell-Compiler-Ptr Void)]
                [seashell_compiler_make (-> Seashell-Compiler-Ptr)]
                [seashell_compiler_set_main_file (-> Seashell-Compiler-Ptr String Void)]
+               [seashell_compiler_add_file (-> Seashell-Compiler-Ptr String Void)]
                [seashell_compiler_add_source_dir (-> Seashell-Compiler-Ptr String Void)]
                [seashell_compiler_clear_source_dirs (-> Seashell-Compiler-Ptr Void)]
                [seashell_compiler_add_compile_flag (-> Seashell-Compiler-Ptr String Void)]
@@ -128,6 +132,7 @@
   (provide seashell_compiler_free
            seashell_compiler_make
            seashell_compiler_set_main_file
+           seashell_compiler_add_file
            seashell_compiler_add_source_dir
            seashell_compiler_clear_source_dirs
            seashell_compiler_add_compile_flag
