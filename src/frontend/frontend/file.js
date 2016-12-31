@@ -538,7 +538,7 @@ angular.module('frontend-app')
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
               self.console.flushForInput();
-              self.console.write(self.userInput + "\n");
+              // self.console.write(self.userInput + "\n"); -- not needed for a TTY
               self.userInput = "";
             }
           }
