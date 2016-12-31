@@ -359,6 +359,7 @@
                                                      "-u" binary)]))
                        ;; Keep the slave end of the PTY open, so the I/O code doesn't crash on us.
                        ;; (It's automatically closed when the program terminates)
+                       ;; NOTE: this does not work on FreeBSD -- https://stackoverflow.com/questions/23458160/final-output-on-slave-pty-is-lost-if-it-was-not-closed-in-parent-why
                        (values handle pty
                                (assert (or master:stdout r:stdout))
                                (assert (or master:stdin r:stdin))
