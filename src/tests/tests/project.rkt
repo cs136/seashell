@@ -174,15 +174,13 @@ HERE
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file-url") "default/main.c"))))
 
     ;; TODO: Include a test for fetching template via SSH
-#|
-    (test-case "Fetch template from SSH and fail authentication"
+    (test-case "Fetch template from SSH and fail"
       (check-true
         (with-handlers
           ([exn:fail? (thunk* #t)])
             (new-project-from "test-project-template-ssh-fail"
-              "ssh://seashell@ugster25.student.cs.uwaterloo.ca:/home/seashell/template.zip")
+              "ssh://nobody@nonexistant.host:/home/seashell/template.zip")
             #f)))
-|#
 
     (test-case "Fetch template (from file)"
       (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
