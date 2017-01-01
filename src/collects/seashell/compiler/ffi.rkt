@@ -25,8 +25,9 @@
   ;; Exported FFI functions.  See compiler.cc for more details.
   (provide seashell_compiler_free
            seashell_compiler_make
-           seashell_compiler_add_file
-           seashell_compiler_clear_files
+           seashell_compiler_set_main_file
+           seashell_compiler_add_source_dir
+           seashell_compiler_clear_source_dirs
            seashell_compiler_add_compile_flag
            seashell_compiler_clear_compile_flags
            seashell_compiler_get_linker_messages
@@ -41,6 +42,8 @@
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
+           seashell_compiler_get_object_dep_count
+           seashell_compiler_get_object_dep
            seashell_compiler-ptr?)
 
   (define-ffi-definer define-clang
@@ -51,9 +54,11 @@
                 #:wrap (deallocator))
   (define-clang seashell_compiler_make (_fun -> _seashell_compiler-ptr)
                 #:wrap (allocator seashell_compiler_free))
-  (define-clang seashell_compiler_add_file
+  (define-clang seashell_compiler_set_main_file
                 (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
-  (define-clang seashell_compiler_clear_files
+  (define-clang seashell_compiler_add_source_dir
+                (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
+  (define-clang seashell_compiler_clear_source_dirs
                 (_fun _seashell_compiler-ptr -> _void))
   (define-clang seashell_compiler_add_compile_flag
                 (_fun _seashell_compiler-ptr _string/utf-8 -> _void))
@@ -62,19 +67,19 @@
   (define-clang seashell_compiler_get_linker_messages
                 (_fun _seashell_compiler-ptr -> _string/utf-8))
   (define-clang seashell_compiler_get_diagnostic_count
-                (_fun _seashell_compiler-ptr _int -> _int))
-  (define-clang seashell_compiler_get_diagnostic_line
-                (_fun _seashell_compiler-ptr _int _int -> _int))
-  (define-clang seashell_compiler_get_diagnostic_error
-                (_fun _seashell_compiler-ptr _int _int -> _bool))
-  (define-clang seashell_compiler_get_diagnostic_column
-                (_fun _seashell_compiler-ptr _int _int -> _int))
-  (define-clang seashell_compiler_get_diagnostic_file
-                (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
-  (define-clang seashell_compiler_get_diagnostic_message
-                (_fun _seashell_compiler-ptr _int _int -> _string/utf-8))
-  (define-clang seashell_compiler_run
                 (_fun _seashell_compiler-ptr -> _int))
+  (define-clang seashell_compiler_get_diagnostic_line
+                (_fun _seashell_compiler-ptr _int -> _int))
+  (define-clang seashell_compiler_get_diagnostic_error
+                (_fun _seashell_compiler-ptr _int -> _bool))
+  (define-clang seashell_compiler_get_diagnostic_column
+                (_fun _seashell_compiler-ptr _int -> _int))
+  (define-clang seashell_compiler_get_diagnostic_file
+                (_fun _seashell_compiler-ptr _int -> _string/utf-8))
+  (define-clang seashell_compiler_get_diagnostic_message
+                (_fun _seashell_compiler-ptr _int -> _string/utf-8))
+  (define-clang seashell_compiler_run
+                (_fun _seashell_compiler-ptr _bool -> _int))
   (define-clang seashell_compiler_object_arch
                 (_fun _seashell_compiler-ptr -> _string))
   (define-clang seashell_compiler_object_os
@@ -90,31 +95,41 @@
                           (define result (make-bytes size))
                           (memcpy result address size)
                           result]
-                        [else #f]))))))
+                        [else #f])))))
+  (define-clang seashell_compiler_get_object_dep_count
+                (_fun _seashell_compiler-ptr -> _int))
+  (define-clang seashell_compiler_get_object_dep
+                (_fun _seashell_compiler-ptr _int -> _string/utf-8)))
+
 (require/typed (submod "." untyped)
                [#:opaque Seashell-Compiler-Ptr seashell_compiler-ptr?]
                [seashell_clang_version (-> String)]
                [seashell_compiler_free (-> Seashell-Compiler-Ptr Void)]
                [seashell_compiler_make (-> Seashell-Compiler-Ptr)]
-               [seashell_compiler_add_file (-> Seashell-Compiler-Ptr String Void)]
-               [seashell_compiler_clear_files (-> Seashell-Compiler-Ptr Void)]
+               [seashell_compiler_set_main_file (-> Seashell-Compiler-Ptr String Void)]
+               [seashell_compiler_add_source_dir (-> Seashell-Compiler-Ptr String Void)]
+               [seashell_compiler_clear_source_dirs (-> Seashell-Compiler-Ptr Void)]
                [seashell_compiler_add_compile_flag (-> Seashell-Compiler-Ptr String Void)]
                [seashell_compiler_clear_compile_flags (-> Seashell-Compiler-Ptr Void)]
                [seashell_compiler_get_linker_messages (-> Seashell-Compiler-Ptr String)]
-               [seashell_compiler_get_diagnostic_count (-> Seashell-Compiler-Ptr Nonnegative-Integer Index)]
-               [seashell_compiler_get_diagnostic_line (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer Index)]
-               [seashell_compiler_get_diagnostic_error (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer Boolean)]
-               [seashell_compiler_get_diagnostic_column (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer Index)]
-               [seashell_compiler_get_diagnostic_file (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
-               [seashell_compiler_get_diagnostic_message (-> Seashell-Compiler-Ptr Nonnegative-Integer Nonnegative-Integer String)]
-               [seashell_compiler_run (-> Seashell-Compiler-Ptr Fixnum)]
+               [seashell_compiler_get_diagnostic_count (-> Seashell-Compiler-Ptr Index)]
+               [seashell_compiler_get_diagnostic_line (-> Seashell-Compiler-Ptr Nonnegative-Integer Index)]
+               [seashell_compiler_get_diagnostic_error (-> Seashell-Compiler-Ptr Nonnegative-Integer Boolean)]
+               [seashell_compiler_get_diagnostic_column (-> Seashell-Compiler-Ptr Nonnegative-Integer Index)]
+               [seashell_compiler_get_diagnostic_file (-> Seashell-Compiler-Ptr Nonnegative-Integer String)]
+               [seashell_compiler_get_diagnostic_message (-> Seashell-Compiler-Ptr Nonnegative-Integer String)]
+               [seashell_compiler_run (-> Seashell-Compiler-Ptr Boolean Fixnum)]
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
-               [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))])
+               [seashell_compiler_get_object (-> Seashell-Compiler-Ptr (U Bytes False))]
+               [seashell_compiler_get_object_dep_count (-> Seashell-Compiler-Ptr Nonnegative-Integer)]
+               [seashell_compiler_get_object_dep (-> Seashell-Compiler-Ptr Nonnegative-Integer String)])
+
   (provide seashell_compiler_free
            seashell_compiler_make
-           seashell_compiler_add_file
-           seashell_compiler_clear_files
+           seashell_compiler_set_main_file
+           seashell_compiler_add_source_dir
+           seashell_compiler_clear_source_dirs
            seashell_compiler_add_compile_flag
            seashell_compiler_clear_compile_flags
            seashell_compiler_get_linker_messages
@@ -129,4 +144,7 @@
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
-           seashell_compiler-ptr?)
+           seashell_compiler_get_object_dep_count
+           seashell_compiler_get_object_dep
+           seashell_compiler-ptr?
+           Seashell-Compiler-Ptr)

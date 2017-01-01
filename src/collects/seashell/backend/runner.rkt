@@ -26,7 +26,7 @@
                [current-environment-variables (Parameterof Environment-Variable-Set)]
                [environment-variables-copy (-> Environment-Variable-Set Environment-Variable-Set)])
 (require/typed "asan-error-parse.rkt"
-               [asan->json (-> Bytes Bytes)])
+               [asan->json (-> Bytes Path-String Bytes)])
 
 (provide run-program program-stdin program-stdout program-stderr
          program-wait-evt program-kill program-status program-destroy-handle
@@ -40,6 +40,7 @@
                  [handle : Subprocess] [control : (U False Thread)] [exit-status : (U False Exact-Nonnegative-Integer)]
                  [destroyed-semaphore : Semaphore]
                  [_mode : (U 'test 'run)] [custodian : Custodian]
+                 [source-dir : Path-String]
                  [asan : Bytes]) #:transparent #:mutable #:type-name Program)
 (struct exn:program:run exn:fail:user ())
 
@@ -65,7 +66,7 @@
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
                          destroyed-semaphore mode custodian
-                         asan)
+                         source-dir asan)
     pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
@@ -117,7 +118,7 @@
        (close-output-port cp-stderr)
        (close-output-port cp-stdout)
        ;; Read asan error message and convert it to json (stored as Bytes)
-       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
        
        (define stdout (port->bytes buf-stdout))
        (define stderr (port->bytes buf-stderr))
@@ -141,7 +142,7 @@
        (logf 'debug "Done sending test results for program PID ~a." pid)
        (close)]
       [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
-       (logf 'info "Program with PID ~a timed out." pid)
+       (logf 'info "Program with PID ~a timed out after ~a seconds." pid (read-config-nonnegative-real 'program-run-timeout))
        (set-program-exit-status! pgrm 255)
        ;; Kill copy-threads before killing program
        (kill-thread stderr-thread)
@@ -175,7 +176,7 @@
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
                          destroyed-semaphore mode custodian
-                         asan)
+                         source-dir asan)
     pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
@@ -239,7 +240,7 @@
            (port->bytes raw-stderr)))
        (unless (eof-object? read-stderr)
          (write-bytes read-stderr out-stderr))
-       (set-program-asan! pgrm (asan->json (delete-read-asan pid)))
+       (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
        (close)]
       [#f ;; Program timed out (30 seconds pass without any event)
        (logf 'info "Program with PID ~a timed out." pid)
@@ -283,6 +284,7 @@
 ;; Arguments:
 ;;   program   - the filename of the program to be run
 ;;   directory - the directory containing the program
+;;   soruce-dir- the directory containing the program's source files
 ;;   lang      - the language with which to run the program ('C or 'racket)
 ;;   test      - if #f, I/O is done directly with the user. Otherwise, test is
 ;;               a string representing the name of a test to use in tests/.
@@ -299,9 +301,9 @@
 ;;  PID - handle representing the run.  On a test, test results are written
 ;;    to stdout.  On an interactive run, data is forwarded to/from
 ;;    the program.
-(: run-program (->* (Path-String Path-String (U 'C 'racket) (U False String))
+(: run-program (->* (Path-String Path-String Path-String (U 'C 'racket) (U False String))
                     ((U Path-String 'current-directory 'flat 'tree)) Integer))
-(define (run-program binary directory lang test [test-loc 'tree])
+(define (run-program binary directory source-dir lang test [test-loc 'tree])
   (define test-path (cond
                       [(eq? test-loc 'current-directory) (build-path ".")]
                       [(eq? test-loc 'flat) (build-path directory)]
@@ -362,7 +364,7 @@
                                       raw-stdin raw-stdout raw-stderr
                                       handle #f #f destroyed-semaphore
                                       (if test 'test 'run) run-custodian
-                                      #""))
+                                      source-dir #""))
               (define control-thread
                 (thread
                   (lambda ()
@@ -505,7 +507,7 @@
                              raw-stdin raw-stdout raw-stderr
                              handle control exit-status
                              destroyed-semaphore mode custodian
-                             asan)
+                             source-dir asan)
         pgrm)
 
       ;; Note: ports are Racket pipes and therefore GC'd.

@@ -23,6 +23,7 @@
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner
+         seashell/backend/offline
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -273,6 +274,14 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      [(hash-table
+        ('id id)
+        ('type "sync")
+        (_ _) ...)
+       ;; Sync
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,(sync-offline-changes message)))]
       ;; Ping, for timeout checking.
       [(hash-table
         ('id id)
@@ -402,11 +411,12 @@
          ('file file)
          ('normalize normalize)
          (_ _) ...)
-       (new-file project file
-                 (string->bytes/utf-8 (hash-ref message 'contents ""))
-                 (string->symbol (hash-ref message 'encoding "raw"))
-                 normalize)
+       (define tag (new-file project file
+                             (string->bytes/utf-8 (hash-ref message 'contents ""))
+                             (string->symbol (hash-ref message 'encoding "raw"))
+                             normalize))
        `#hash((id . ,id)
+              (checksum . ,tag)
               (success . #t)
               (result . #t))]
       [(hash-table
@@ -442,24 +452,27 @@
         ('project project)
         ('file file)
         ('contents contents)
-        ('history history))
-			 (write-file project file (string->bytes/utf-8 contents)
-									 (if history (string->bytes/utf-8 history)
-										 (string->bytes/utf-8 "0")))
+        ('history history)
+        (_ _) ...)
+       (define checksum
+         (write-file project file (string->bytes/utf-8 contents)
+                     (if history (string->bytes/utf-8 history) #"")
+                     (hash-ref message 'checksum #f)))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . ,checksum))]
       [(hash-table
         ('id id)
         ('type "readFile")
         ('project project)
         ('file file))
-			 (define-values (contents contents_history) (read-file project file))
-				`#hash((id . ,id)
+       (define-values (data checksum history) (read-file project file))
+       `#hash((id . ,id)
               (success . #t)
-              (result . 
-											#hash((data . ,(bytes->string/utf-8 contents))
-														(history . ,(bytes->string/utf-8 contents_history)))))]
+              (result .
+                      #hash((data . ,(bytes->string/utf-8 data))
+                            (history . ,(bytes->string/utf-8 history))
+                            (checksum . ,checksum))))]
       ;; Download/Upload token functions:
       [(hash-table
         ('id id)
@@ -511,10 +524,10 @@
         ('project project)
         ('oldName old-file)
         ('newName new-file))
-       (rename-file project old-file new-file)
+       (define result (rename-file project old-file new-file))
        `#hash((id . ,id)
               (success . #t)
-              (result . #t))]
+              (result . ,result))]
       [(hash-table
         ('id id)
         ('type "restoreFileFrom")
@@ -528,18 +541,17 @@
         ('id id)
         ('type "getMostRecentlyUsed")
         ('project project)
-        ('directory directory))
+        ('question question))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(get-most-recently-used project directory)))]
+              (result . ,(get-most-recently-used project question)))]
       [(hash-table
         ('id id)
         ('type "updateMostRecentlyUsed")
         ('project project)
-        ('directory directory)
-        ('predicate predicate)
-        ('data data))
-       (update-most-recently-used project directory predicate data)
+        ('question question)
+        ('file file))
+       (update-most-recently-used project question file)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -574,9 +586,10 @@
       [(hash-table
         ('id id)
         ('type "getSettings"))
+       (define-values (settings x) (read-settings))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(read-settings)))]
+              (result . ,settings))]
       [(hash-table
         ('id id)
         ('project project)
@@ -658,6 +671,8 @@
                       (result . ,(exn-message exn))))]
             [exn:fail:contract?
              (lambda (exn)
+               (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
+                     (format-stack-trace (exn-continuation-marks exn)))
                `#hash((id . ,id)
                       (success . #f)
                       (result . ,(format "Bad argument: ~a." (exn-message exn)))))]

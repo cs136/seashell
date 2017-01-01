@@ -68,6 +68,16 @@
                  </h3>
                </div>
           </div>
+          <div id="binary-editor-placeholder"
+               ng-show="editFileView.unavailable"
+               style="width: 100%; height: 90%; position: absolute; top: 70px; left:0; z-index: 9"
+               >
+               <div style="position: relative; top: 40%">
+                 <h3 class="text-center text-muted">
+                   <i>file unavailable offline</i>
+                 </h3>
+               </div>
+          </div>
           <textarea ui-codemirror ui-codemirror-opts="editFileView.editorOptions"
             ng-model="editFileView.contents" style="margin-top:70px;"></textarea>
         </div>

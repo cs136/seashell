@@ -61,13 +61,18 @@ ELSE()
   SET(GIT_DIRTY True)
 ENDIF()
 
-set(SEASHELL_VERSION "2.5.7")
+set(SEASHELL_VERSION "3.0.0")
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()
 set(SEASHELL_API_VERSION "7")
 
-set(SEASHELL_WL_PROJ_BASE_URL "" CACHE STRING "Location of whitelisted project .zips")
+option(ENABLE_STATIC_ANALYSIS "Enable static analysis" OFF)
+if (ENABLE_STATIC_ANALYSIS)
+  set(SEASHELL_STATIC_ANALYSIS 1)
+else ()
+  set(SEASHELL_STATIC_ANALYSIS 0)
+endif (ENABLE_STATIC_ANALYSIS)
 
 # Build our components.
 add_subdirectory(doc)

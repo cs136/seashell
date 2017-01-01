@@ -25,7 +25,7 @@ if( NOT EXISTS ${LLVM_ROOT}/include/llvm )
 endif()
 
 # We incorporate the CMake features provided by LLVM:
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_ROOT}/share/llvm/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_ROOT}/cmake/modules/CMakeFiles")
 include(LLVMConfig)
 
 # Now set the header and library paths:
@@ -39,7 +39,7 @@ include_directories( ${CLANG_BINARY_INCLUDE_DIRS} )
 add_definitions( ${LLVM_DEFINITIONS} )
 
 # Set the required flags
-SET(CMAKE_CXX_FLAGS ${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS})
+SET(CMAKE_CXX_FLAGS "${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 # C++ 11 mode.
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
@@ -57,13 +57,17 @@ llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES native nativecodegen) ## FIX
 
 # Link.
 add_library(seashell-clang SHARED compiler.cc)
-target_link_libraries(seashell-clang clangFrontend clangFrontendTool clangCodeGen
-                              clangSerialization clangDriver
-                              clangTooling clangParse clangSema clangAnalysis
-                              clangEdit clangAST clangLex clangBasic
-                              clangStaticAnalyzerFrontend
-                              ${REQ_LLVM_LIBRARIES}
-                              ${CMAKE_DL_LIBS})
+if (SEASHELL_STATIC_ANALYSIS)
+  target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
+                                clangStaticAnalyzerFrontend
+                                ${REQ_LLVM_LIBRARIES}
+                                ${CMAKE_DL_LIBS})
+else()
+  target_link_libraries(seashell-clang clangFrontend clangCodeGen clangDriver
+                                ${REQ_LLVM_LIBRARIES}
+                                ${CMAKE_DL_LIBS})
+endif()
+
 add_executable(seashell-test-clang driver.cc)
 target_link_libraries(seashell-test-clang seashell-clang ${CMAKE_DL_LIBS})
 INSTALL(TARGETS seashell-clang LIBRARY DESTINATION lib)

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="frontend-app">
+<html lang="en" ng-app="frontend-app" manifest="frontend.manifest">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @(include "frontend/includes/styles.html")
-    @(include "frontend/includes/scripts.html")
+    <!-- Add scripts/styles in build/{scripts,styles}.frontend -->
+    @(make-script-section scripts)
+    @(make-style-section styles)
     <title>Seashell</title>
     <script type='text/javascript'>
       var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
       var SEASHELL_BRANCH='@(values SEASHELL_BRANCH)';
       var SEASHELL_API_VERSION=@(values SEASHELL_API_VERSION);
-      var SEASHELL_WL_PROJ_BASE_URL='@(values SEASHELL_WL_PROJ_BASE_URL)';
     </script>
   </head>
   <body ng-controller="FrontendController as frontend">

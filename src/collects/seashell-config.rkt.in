@@ -171,8 +171,10 @@
       ;; Default compiler flags.
       (cons 'compiler-flags               '(;; Warning flags.
                                             "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic" "-Werror=incompatible-pointer-types"
-                                            ;; Compilation flags.
-                                            "-gdwarf-4" "-O0" "-mdisable-fp-elim" "-dwarf-column-info"
+                                            ;; Debugging Compilation flags.
+                                            "-dwarf-column-info" "-debug-info-kind=limited" "-dwarf-version=4" "-debugger-tuning=gdb"
+                                            ;; General compilation flags.
+                                            "-O0" "-mdisable-fp-elim"
                                             ;; Need this to detect global buffer overflow
                                             "-fno-common"
                                             ;; Standard compilation mode
@@ -244,7 +246,7 @@
       (cons 'seashell-login-logfile        #f)
       ;; Default TTL for the compiler place.
       ;; This needs to be long enough for a file to compile.
-      (cons 'compiler-ttl                60)
+      (cons 'compiler-ttl                  60)
       )))
   config-hash)
 

@@ -20,6 +20,16 @@
     class="alert alert-danger text-center" role="alert">
     Lost contact with the server. You can try reconnecting again <a href="" ng-click="frontend.reconnect()">here</a>, or logging in <a ng-click="frontend.login()" href="">again</a>.
   </div>
+
+  <div ng-show="frontend.offline_mode && frontend.offline_mode !== 2" ng-cloak
+    class="alert alert-success text-center" role="alert">
+    Seashell is currently running in <a href="" ng-click="frontend.offline_info()">offline mode</a> because the websocket connection is unavailable. You can try reconnecting <a href="" ng-click="frontend.reconnect()">here</a>, or <a href="" ng-click="frontend.login()">logging in again</a>.
+  </div>
+
+  <div ng-show="frontend.offline_mode === 2" ng-cloak
+    class="alert alert-success text-center" role="alert">
+    Seashell is currently running in forced <a href="" ng-click="frontend.offline_info()">offline mode</a>. Change your <a href="" ng-click="frontend.settings()">settings</a> to go back online.
+  </div>
   
   <alert ng-repeat="error in frontend.errors.errors" ng-cloak
     type="danger" close="frontend.errors.suppress($index)" role="alert">

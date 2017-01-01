@@ -20,7 +20,8 @@
 
 /* jshint supernew: true */
 angular.module('frontend-app')
-  .service('console-service', ['$rootScope', 'socket', function($scope, socket) {
+  .service('console-service', ['$rootScope', 'socket', '$timeout',
+    function($scope, socket, $timeout) {
     var self = this;
     self.PIDs = null;
     // running is true iff we are running with "run", allows input
@@ -65,6 +66,11 @@ angular.module('frontend-app')
       if(err.error_type == "unknown" && err.raw_message === "") { return; }
       var to_print = [];
       to_print.push("Memory error occurred! Type of error: " + err.error_type);
+      if(err.call_stacks.length === 0) {
+        // If no call stack was sent back, fall back to showing the raw ASAN output
+        to_print.push("Raw error message:");
+        to_print.push(err.raw_message);
+      }
       for (var current_stack = 0; current_stack < err.call_stacks.length; current_stack++) {
         maybe_log('current stack: ' + current_stack);
         var framelist = err.call_stacks[current_stack].framelist;
@@ -94,12 +100,10 @@ angular.module('frontend-app')
         maybe_log('printing outer misc: ' + key2);
         to_print.push(key2.replace(/_/g, " ") + ': ' + err.misc[key2]);
       }
-      //maybe_log('done iterating over everything; to_print has ' + to_print.length + ' items');
-      //to_print.push(err.raw_message);
       for (var j = 0; j < to_print.length; j++){
         self._write(to_print[j] + '\n');
-        //console.log(to_print[j]);
       }
+      self.flush();
     }
 
     socket.register_callback("io", function(io) {
@@ -118,8 +122,9 @@ angular.module('frontend-app')
       else if(io.type == "stderr") {
         ind = io.message.indexOf("\n");
         if (ind > -1) {
-          self._write(self.stderr);
           spl = io.message.split("\n");
+          self._write(self.stderr);
+          while(spl.length>1) { self._write(spl.shift() + "\n"); }
           self.stderr = spl[0];
         } else {
           self.stderr += io.message;
@@ -133,7 +138,7 @@ angular.module('frontend-app')
           // Print parsed ASAN output
           print_asan_error(JSON.parse(io.asan));
         }
-        self.write("\nProgram finished with exit code "+io.status);
+        self.write("Program finished with exit code "+io.status);
         if(io.status !== 0 && return_codes[io.status]) {
           self.write(sprintf(" (%s)", return_codes[io.status]));
         }
@@ -141,28 +146,40 @@ angular.module('frontend-app')
         self.PIDs = null;
         self.running = false;
       }
-      self.flush();
+      self.contents = self._contents;
+      // Set up an output buffering timeout to prevent output from sitting
+      // in the buffer while the program waits for input/hangs
+      $timeout.cancel(self.flushTimeout);
+      self.flushTimeout = $timeout(self.flush, 100);
     });
 
     function printExpectedFromDiff(res) {
-        // res.diff is an array of (string || Array)
-        // a string is a line that matches in the diff, so we print 
-        // an array a has a[0] false if it came from the expected output
-        // a[0] true if it came from the actual output
-        // The array contains n lines of text from the lines that differ, n >= 1
-        _.each(res.diff, function(block) {
-            if (_.isString(block)) self.write(block + "\n");
-            else if (block[0] === false) {
-                _.each(block.slice(1), function(line) {
-                    self.write(line + "\n");
-                });
-            }
-        });
+      // res.diff is an array of (string || Array)
+      // a string is a line that matches in the diff, so we print 
+      // an array a has a[0] false if it came from the expected output
+      // a[0] true if it came from the actual output
+      // The array contains n lines of text from the lines that differ, n >= 1
+      var output = "";
+      _.each(res.diff, function(block) {
+        if (_.isString(block)) output += "\n" + block;
+        else if (block[0] === false) {
+          _.each(block.slice(1), function(line) {
+            output += "\n" + line;
+          });
+        }
+      });
+      self.write(output.substring(1));
     }
 
     socket.register_callback("test", function(res) {
-      self.PIDs = _.without(self.PIDs, res.pid);
+
+      // When online, PIDs are simple PIDs...
+      //  In offline tests we use test name instead of PID
+      self.PIDs = _.filter(self.PIDs, function(pid) {
+        return pid.toString() != res.pid.toString();
+      });
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
+      var parsedASAN = res.asan_output ? JSON.parse(res.asan_output) : false;
 
       if(res.result==="passed") {
         self.write('----------------------------------\n');
@@ -173,32 +190,25 @@ angular.module('frontend-app')
         self.write(sprintf("Test \"%s\" failed.\n", res.test_name));
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
-        self.write('\n'); 
-        // need to print a newline so that it matches up with printExpectedFromDiff
         self.write('---\n');
         self.write('Expected output (stdout):\n');
-        printExpectedFromDiff(res);   
+        printExpectedFromDiff(res);
         self.write('---\n');
         self.write('Produced errors (stderr):\n');
         self.write(res.stderr);
-        self.write('\n');
-        if('asan_output' in res) {
-            // Parse the ASAN json string that the backend gives us.
+        if(parsedASAN.raw_message !== "") {
             self.write("AddressSanitizer Output:\n");
-            print_asan_error(JSON.parse(res.asan_output));
-            self.write('\n');
+            print_asan_error(parsedASAN);
         }
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
-        self.write('\n');
-        if('asan_output' in res) {
+        if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
             self.write("AddressSanitizer Output:\n");
-            print_asan_error(JSON.parse(res.asan_output));
-            self.write('\n');
+            print_asan_error(parsedASAN);
         }
       } else if(res.result==="no-expect") {
         self.write('----------------------------------\n');
@@ -206,11 +216,10 @@ angular.module('frontend-app')
         self.write(res.stdout);
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
-        if('asan_output' in res) {
+        if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
             self.write("AddressSanitizer Output:\n");
-            print_asan_error(JSON.parse(res.asan_output));
-            self.write('\n');
+            print_asan_error(parsedASAN);
         }
       } else if(res.result==="timeout") {
         self.write('----------------------------------\n');
@@ -220,6 +229,7 @@ angular.module('frontend-app')
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" was killed.\n", res.test_name));
       }
+      self.flush();
     });
 
     self.setRunning = function(project, PIDs, testing) {

@@ -70,22 +70,23 @@ HERE
       (check-exn exn:fail? (thunk (delete-project "bar"))))
 
     (test-case "Run a Project"
-      (with-output-to-file (check-and-build-path (build-project-path "foo") "test.c")
+      (make-directory (check-and-build-path (build-project-path "foo") "q1"))
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "test.c")
         (thunk (display "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n")))
-      (define-values (success hsh) (compile-and-run-project "foo" "test.c" '()))
+      (define-values (success hsh) (compile-and-run-project "foo" "q1/test.c" "q1" '()))
       (check-true success)
       (sync (program-wait-evt (hash-ref hsh 'pid))))
 
     (test-case "Run a Project with common and tests"
-      (make-directory (check-and-build-path (build-project-path "foo") "tests"))
+      (make-directory (check-and-build-path (build-project-path "foo") "q1" "tests"))
       (make-directory (check-and-build-path (build-project-path "foo") "common"))
-      (for ([file '("main.c"
-                    "add.h" "add.c"
+      (for ([file '("q1/main.c"
+                    "q1/add.h" "q1/add.c"
                     "common/multiply.h" "common/multiply.c"
                     "common/mod2.h" "common/mod2.c"
-                    "tests/pass.in" "tests/pass.expect"
-                    "tests/fail.in" "tests/fail.expect"
-                    "tests/crash.in" "tests/crash.expect")]
+                    "q1/tests/pass.in" "q1/tests/pass.expect"
+                    "q1/tests/fail.in" "q1/tests/fail.expect"
+                    "q1/tests/crash.in" "q1/tests/crash.expect")]
             [contents (list test-main-file
                             test-add-hdr test-add-imp
                             test-mult-hdr test-mult-imp
@@ -95,17 +96,24 @@ HERE
                             "0\n0\n" "0\n")])
         (with-output-to-file (check-and-build-path (build-project-path "foo") file)
           (thunk (display contents))))
-      (define-values (success hsh) (compile-and-run-project "foo" "main.c" '("pass" "fail" "crash")))
+      (define-values (success hsh) (compile-and-run-project "foo" "q1/main.c" "q1" '("pass" "fail" "crash") #f))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
-            [exp-result '("passed" "failed" "error")])
+            [exp-result '("passed")])
         (sync (program-wait-evt pid))
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
 
+    (test-case "Run a project with main file in common dir"
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "common" "common-main.c")
+        (thunk (display "int main() { }\n")))
+      (define-values (res hsh) (compile-and-run-project "foo" "common/common-main.c" "q1" '()))
+      (check-true res)
+      (sync (program-wait-evt (hash-ref hsh 'pid))))
+
     (test-case "Get a Compilation Error"
-      (with-output-to-file (check-and-build-path (build-project-path "foo") "error.c")
+      (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "error.c")
         (thunk (display "great code;")))
-      (define-values (res hsh) (compile-and-run-project "foo" "error.c" '()))
+      (define-values (res hsh) (compile-and-run-project "foo" "error.c" "q1" '()))
       (check-false res)
       (check string=? (hash-ref hsh 'status) "compile-failed"))
 
@@ -113,8 +121,12 @@ HERE
       (export-project "foo"))
 
     (test-case "Most Recently Used"
-      (update-most-recently-used "foo" #f '("fexists" "error.c") "some data")
-      (check string=? (get-most-recently-used "foo" #f) "some data"))
+      (define dpath (check-and-build-path (build-project-path "foo") "testdir"))
+      (unless (directory-exists? dpath) (make-directory dpath))
+      (update-most-recently-used "foo" #f "testdir")
+      (check string=? (get-most-recently-used "foo" #f) "testdir")
+      (update-most-recently-used "foo" #f "testdir2")
+      (check-false (get-most-recently-used "foo" #f)))
 
     (test-case "Delete a Project"
       (delete-project "foo")
@@ -128,27 +140,30 @@ HERE
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "bar")))
       (check-true (directory-exists? (build-path (read-config 'seashell) "archives" "my-archive" "foobar"))))
 
-    (test-case "Read from nonexistent project settings"
-      (new-project "test-project")
-      (check-false (read-project-settings "test-project")))
-
     (test-case "update nonexistent project settings"
       (new-project "test-project-2")
       (write-project-settings/key "test-project-2" 'key "val")
-      (check-equal? (read-project-settings "test-project-2") #hasheq((key . "val"))))
+      (define settings (read-project-settings "test-project-2"))
+      (check-equal? (hash-ref settings 'key) "val"))
 
     (test-case "Write project settings"
+      (new-project "test-project")
       (write-project-settings "test-project" #hasheq((A . 5) (B . 6)))
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 5) (B . 6))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 5)
+      (check-equal? (hash-ref settings 'B) 6))
 
     (test-case "Overwrite project settings"
       (write-project-settings "test-project" #hasheq((A . 22)))
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 22))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 22))
 
     (test-case "Update project settings"
       (write-project-settings/key "test-project" 'A 55)
       (write-project-settings/key "test-project" 'boost "boost")
-      (check-equal? (read-project-settings "test-project") #hasheq((A . 55) (boost . "boost"))))
+      (define settings (read-project-settings "test-project"))
+      (check-equal? (hash-ref settings 'A) 55)
+      (check-equal? (hash-ref settings 'boost) "boost"))
 
     (test-case "Fetch template (from HTTP)"
       (new-project-from "test-project-template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip")
@@ -158,13 +173,23 @@ HERE
       (new-project-from "test-project-template-file-url" (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file-url") "default/main.c"))))
 
+    ;; TODO: Include a test for fetching template via SSH
+
+    (test-case "Fetch template from SSH and fail authentication"
+      (check-true
+        (with-handlers
+          ([exn:fail? (thunk* #t)])
+            (new-project-from "test-project-template-ssh-fail"
+              "ssh://seashell@ugster25.student.cs.uwaterloo.ca:/home/seashell/template.zip")
+            #f)))
+
     (test-case "Fetch template (from file)"
       (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH))
       (check-true (file-exists? (build-path (build-project-path "test-project-template-file") "default/main.c"))))
 
     (test-case "Test Racket files (from template)"
       (new-project-from "test-racket" (format "~a/src/tests/test-template.zip" SEASHELL_SOURCE_PATH))
-      (define-values (success hsh) (compile-and-run-project "test-racket" "Test/Test.rkt" '("Test")))
+      (define-values (success hsh) (compile-and-run-project "test-racket" "Test/Test.rkt" "Test" '("Test")))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed")])
@@ -173,21 +198,12 @@ HERE
 
     (test-case "Test Marmoset Racket Files (from template)"
       (new-project-from "test-marmoset-racket" (format "~a/src/tests/test-marmoset-racket.zip" SEASHELL_SOURCE_PATH))
-      (define-values (success hsh) (compile-and-run-project (build-project-path "test-marmoset-racket") "Test.rkt" '("Test") #t 'flat))
+      (define-values (success hsh) (compile-and-run-project (build-project-path "test-marmoset-racket") "Test/Test.rkt" "Test" '("Test") #t 'flat))
       (check-true success)
       (for ([pid (hash-ref hsh 'pids)]
             [exp-result '("passed")])
         (sync (program-wait-evt pid))
         (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
-
-    (test-case "Test Marmoset Racket Files (from runner/CLI)"
-      (parameterize ([current-directory (format "~a/src/tests/marmoset-racket-test-runner" SEASHELL_SOURCE_PATH)])
-        (define-values (success hsh) (compile-and-run-project "." "Test.rkt" '("Test") #t 'current-directory))
-        (check-true success)
-        (for ([pid (hash-ref hsh 'pids)]
-              [exp-result '("passed")])
-          (sync (program-wait-evt pid))
-          (check-equal? exp-result (third (deserialize (read (program-stdout pid))))))))
 
     (test-case "Test template does not overwrite existing project."
       (check-exn exn:fail? (thunk (new-project-from "test-project-template-file" (format "~a/src/tests/template.zip" SEASHELL_SOURCE_PATH)))))

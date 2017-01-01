@@ -28,8 +28,7 @@
          lock-project
          force-lock-project
          unlock-project
-         exn:project?
-         exn:project
+         (struct-out exn:project)
          check-path
          init-projects
          check-and-build-path
@@ -55,20 +54,23 @@
          seashell/compiler
          seashell/backend/runner
          seashell/backend/template
-         seashell/utils
+         seashell/backend/lock
+         seashell/utils/misc
          net/url
          net/head
          json
          file/zip
          file/unzip
          racket/contract
+         racket/function
          racket/file
          racket/path
          racket/match
          racket/string
          racket/list
          racket/port
-         racket/set)
+         racket/set
+         racket/system)
 
 ;; Global variable, which is a set of currently locked projects
 (define locked-projects (make-hash))
@@ -199,21 +201,20 @@
          (raise (exn:project
                   (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (cond
-      [(or (path-string? source) (url-string? source))
-        (make-directory (build-project-path name))
-        (with-handlers
-          ([exn:fail?
-             (lambda (exn)
-               (delete-directory/files (build-project-path name) #:must-exist? #f)
-               (raise exn))])
-          (parameterize ([current-directory (build-project-path name)])
-            (call-with-template source
-                                (lambda (port)
-                                  (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
-      [(project-name? source)
-       (copy-directory/files (build-project-path source)
-                             (build-project-path name))]))
+    (call-with-write-lock (thunk
+      (cond
+        [(or (path-string? source) (url-string? source))
+          (make-directory (build-project-path name))
+          (with-handlers
+            ([exn:fail? (lambda (exn)
+              (delete-directory/files (build-project-path name) #:must-exist? #f)
+              (raise exn))])
+            (parameterize ([current-directory (build-project-path name)])
+              (call-with-template source
+                (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
+        [(project-name? source)
+         (copy-directory/files (build-project-path source)
+                               (build-project-path name))]))))
   (void))
 
 ;; (delete-project name)
@@ -232,7 +233,8 @@
          (raise (exn:project
                   (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                   (current-continuation-marks))))])
-    (delete-directory/files (check-and-build-path (build-project-path name))))
+    (call-with-write-lock (thunk
+      (delete-directory/files (check-and-build-path (build-project-path name))))))
   (void))
 
 ;; (lock-project name)
@@ -300,114 +302,7 @@
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
 
-;; (get-co-files/rec main-file file-dir common-dir
-;; Produces a list of the user's compilation files, recursively resolving
-;; dependencies
-;;
-;; Arguments:
-;;  c-files    - The .c files being compiled
-;;  file-dir   - The directory containing main-file
-;;  common-dir - The directory containing the common subdirectory
-;;
-;; Returns:
-;;  A list of the .h files included by a program, with the .h extension stripped
-(define/contract (get-co-files/rec c-files o-files file-dir common-dir depth)
-  (-> (listof path-string?) (listof path-string?) path? path? exact-nonnegative-integer? 
-      (values (listof path-string?) (listof path-string?)))
-
-  (logf 'debug "c-files is ~s\n" c-files)
-  (logf 'debug "o-files is ~s\n" o-files)
-
-  (define headers (get-headers c-files file-dir common-dir))
-  (logf 'debug "Header files are ~s." headers)
-
-  (define-values (found-c-files found-o-files) (get-co-files headers))
-  (logf 'debug ".c files are ~s." found-c-files)
-  (logf 'debug ".o files are ~s." found-o-files)
-
-  (cond
-    ;; TODO: off by one on depth? subset? works w.r.t. path-string? vs string?
-    [(or (> depth (read-config 'header-search-depth)) 
-         (and (subset? found-c-files c-files)
-              (subset? found-o-files o-files))) 
-     (values c-files o-files)]
-    [else 
-      (get-co-files/rec (remove-duplicates (append c-files found-c-files)) 
-                       (remove-duplicates (append o-files found-o-files))
-                       file-dir common-dir (add1 depth))]))
-
-
-;; (get-headers c-files file-dir common-dir)
-;; Produces a list of the user's header files included by the files in c-files (without recursively
-;; resovling dependencies
-;;
-;; Arguments:
-;;  c-files    - The .c files being compiled
-;;  file-dir   - The directory containing main-file
-;;  common-dir - The directory containing the common subdirectory
-;;
-;; Returns:
-;;  A list of the .h files included by the files in c-files, with the .h extension stripped
-;; Raises:
-;;  exn:project if an included header is not a .h file
-;; TODO: need to clean up the subprocess and ports?
-(define/contract (get-headers c-files file-dir common-dir)
-  (-> (listof path-string?) path? path? (listof path-string?))
-  (define clang-error (open-output-file "/dev/null" #:exists 'truncate))
-  (define-values (clang clang-output clang-input fake-error)
-    ;; TODO: is 'system-linker the right binary?
-    (apply subprocess #f #f clang-error (read-config 'system-linker) `("-E" ,@c-files "-I" ,common-dir)))
-  (define files
-    (remove-duplicates
-      (filter values
-        (for/list ([line (in-lines clang-output)])
-          (match (regexp-match #rx"^# [0-9]+ \"([^<][^\"]*)\"" line)
-            [(list _ file)
-              (match-define-values (hdrpath hdrname _) (split-path file))
-              (cond
-                [(and (or (equal? (path->directory-path hdrpath) (path->directory-path file-dir))
-                          (equal? (path->directory-path hdrpath) (path->directory-path common-dir)))
-                      (regexp-match #rx"\\.h$" hdrname))
-                  (substring file 0 (- (string-length file) 2))]
-                [else #f])]
-            [#f #f])))))
-  (close-input-port clang-output)
-  (close-output-port clang-input)
-  (close-output-port clang-error)
-  files)
-
-;; (get-co-files headers)
-;; Produces a list of the local .c and .o files to be compiled/linked with a program
-;;
-;; Arguments:
-;;  headers - The list of included local .h files, i.e., produced by get-headers
-;;
-;; Returns:
-;;  A list of the .c files and a list of the .o files to be compiled/linked with a program.
-;; Raises:
-;;  exn:project if an element of headers is not a .h file, if a .h file has no
-;;  corresponding .o or .c file, or if a .h file has both a .c and .o file.
-(define/contract (get-co-files headers)
-  (-> (listof path-string?) (values (listof path?) (listof path?)))
-
-  ;; TODO: object/c files must be in the same directory as the header
-  (logf 'debug "headers in get-co-files: ~s\n" headers)
-  (for/fold ([c-files '()]
-             [o-files '()])
-            ([hdr headers])
-    (match-define-values (basedir hdrname _) (split-path hdr))
-    (match/values (values (file-exists? (string-append hdr ".c"))
-                          (file-exists? (string-append hdr ".o")))
-      [(#t #t) (raise (exn:project (format "You included ~a.h, but provided both ~a.c and ~a.o"
-                                            hdrname hdrname hdrname)
-                                   (current-continuation-marks)))]
-      [(#t #f) (values (cons (string->path (string-append hdr ".c")) c-files) o-files)]
-      [(#f #t) (values c-files (cons (string->path (string-append hdr ".o")) o-files))]
-      [(#f #f) (raise (exn:project (format "You included ~a.h, but did not provide ~a.c or ~a.o"
-                                          hdrname hdrname hdrname)
-                                   (current-continuation-marks)))])))
-
-;; (compile-and-run-project name file tests full-path test-location question-name)
+;; (compile-and-run-project name file question-name tests full-path test-location)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
@@ -415,6 +310,7 @@
 ;;  file - Full path and name of file we are compiling from
 ;;         When called from compile-and-run-project/use-runner below, looks like
 ;;         "q1/file.rkt" or "common/file.rkt"
+;;  question-name - Name of the question we are running
 ;;  test - Name of test, or empty to denote no test.
 ;;  full-path - If #f, looks for the project in the standard project location.
 ;;                 #t, assumes name is the full path to the project directory.
@@ -425,8 +321,6 @@
 ;;    'current-directory - Look for the tests in <current-directory>
 ;;    path-string? - Look for the tests in <project-dir>/<test-loc>.
 ;;    By default, 'tree.
-;;  question-name - When running a file in common, pass in the question name here.
-;;    Default is #f, meaning that we're not running a file in common/.
 ;; Returns:
 ;;  A boolean, denoting if compilation passed/failed.
 ;;  A hash-map, with the following bindings:
@@ -435,9 +329,9 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file tests [full-path #f] [test-location 'tree] [question-name #f])
-  (->* (path-string? (or/c #f path-string?) (listof path-string?))
-       (boolean? (or/c path-string? 'tree 'flat 'current-directory) (or/c #f string?))
+(define/contract (compile-and-run-project name file question-name tests [full-path #f] [test-location 'tree])
+  (->* (path-string? (or/c #f path-string?) string? (listof path-string?))
+       (boolean? (or/c path-string? 'tree 'flat 'current-directory))
        (values boolean? hash?))
   (when (or (and (not full-path) (not (is-project? name)))
             (and full-path (not (directory-exists? name))))
@@ -445,9 +339,11 @@
                         (current-continuation-marks))))
 
   (define project-base (if full-path name (build-project-path name)))
+  (define project-base-str (path->string (path->complete-path project-base)))
   (define project-common (if full-path
     (build-path project-base (read-config 'common-subdirectory))
     (check-and-build-path project-base (read-config 'common-subdirectory))))
+  (define project-question (build-path project-base question-name))
 
   (define project-common-list
     (if (directory-exists? project-common)
@@ -469,41 +365,21 @@
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
     (split-path (check-and-build-path project-base file)))
-  ;; Question directory name (NOTE: may be empty path if file lives in the base directory of the project).
-  (define question-dir-name
-    (let
-      ([simple-file (simplify-path file #f)])
-      (match-define-values (possible-question _ _) (split-path simple-file))
-      (cond
-        [(path? possible-question) possible-question]
-        [else (build-path ".")])))
   ;; Check if we're running a file in common folder
-  (define running-common-file? (and (directory-exists? project-common) (equal? (path->string question-dir-name) "common/")))
-  (when (and running-common-file? (not question-name))
-    (error "No question name given when running a common file."))
+  (define running-common-file?
+    (let ([dlst (explode-path file)])
+      (string=? "common" (path->string (first dlst)))))
 
   (define (compile-c-files)
-    ;; Get the .c and .o files needed to compile file
-    (define-values (c-files o-files)
-      (get-co-files/rec (list (build-path base exe)) '() base
-                        (if running-common-file? (build-path project-base question-name) project-common)
-                        0))
-
-    (logf 'debug ".c files are ~s." c-files)
-    (logf 'debug ".o files are ~s." o-files)
-
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place
-        `(,@(read-config 'compiler-flags)
-          ,@(if (directory-exists? project-common) `("-I" ,(some-system-path->string project-common)) '())
-          ,@(if (and running-common-file? (directory-exists? (build-path project-base question-name)))
-                `("-I" ,(some-system-path->string (build-path project-base question-name))) '()))
-          '("-lm")
-           (remove-duplicates (cons (build-path base exe) c-files))
-           o-files))
-    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-~a-binary" name (file-name-from-path file) (gensym))))
+      (seashell-compile-files/place (read-config 'compiler-flags)
+                                    '("-lm")
+                                    `(,project-question
+                                      ,@(if (directory-exists? project-common) (list project-common) empty))
+                                    (check-and-build-path project-base file)))
+    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
                            #:exists 'replace
@@ -547,11 +423,11 @@
                                   (build-path temp-dir question-name))]
           [else
            ;; Copy the files over from the question
-           (merge-directory/files base (build-path temp-dir question-dir-name))
+           (merge-directory/files base (build-path temp-dir question-name))
            ;; Copy all files in the common folder to the question folder
            (when (directory-exists? project-common)
-             (merge-directory/files project-common (build-path temp-dir question-dir-name)))])
-    (values (build-path temp-dir) (build-path temp-dir question-dir-name)))
+             (merge-directory/files project-common (build-path temp-dir question-name)))])
+    (values (build-path temp-dir) (build-path temp-dir question-name)))
 
   (define-values (racket-temp-dir
                   racket-target-dir)
@@ -566,7 +442,7 @@
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base lang #f real-test-location))
+      (define pid (run-program target base project-base-str lang #f real-test-location))
       (thread
         (lambda ()
           (sync (program-wait-evt pid))
@@ -575,9 +451,10 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
+      (eprintf "about to test\n")
       (define pids (map
                      (lambda (test)
-                       (run-program target base lang test real-test-location))
+                       (run-program target base project-base-str lang test real-test-location))
                      tests))
       (thread
         (lambda ()
@@ -608,7 +485,7 @@
   (if (string=? file-to-run "")
     (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
                         (current-continuation-marks)))
-    (compile-and-run-project name file-to-run tests #f (build-path question (read-config 'tests-subdirectory)) question)))
+    (compile-and-run-project name file-to-run question tests #f (build-path question (read-config 'tests-subdirectory)))))
 
 
 ;; (export-project name) -> bytes?
@@ -671,11 +548,15 @@
           (define common-dir
             (build-path project-dir (read-config 'common-subdirectory)))
           (parameterize ([current-directory tmpdir])
-            (define (copy-from! base)
+            (define (copy-from! base include-hidden [dest #f])
               (fold-files
                 (lambda (path type _)
+                  (define file (last (explode-path path)))
                   (cond
                     [(equal? path base) (values #t #t)]
+                    ;; do not submit hidden files to Marmoset
+                    [(and (not include-hidden) (string-prefix? (path->string file) "."))
+                      (values #t #t)]
                     [else
                       (match
                         type
@@ -685,15 +566,18 @@
                          (values #t #t)]
                         ['file
                          (copy-file path
-                                    (find-relative-path base path))
+                                    (if dest (build-path dest file)
+                                             (find-relative-path base path)))
                          (values #t #t)]
                         [_ (values #t #t)])]))
                 #t
                 base))
             
-            (copy-from! question-dir)
+            (copy-from! question-dir #f)
             (when (directory-exists? common-dir)
-              (copy-directory/files common-dir (check-and-build-path tmpdir "common")))
+              (define compath (check-and-build-path tmpdir "common"))
+              (make-directory compath)
+              (copy-from! common-dir #f compath))
             (with-output-to-file
               tmpzip
               (lambda () (zip->output (pathlist-closure (directory-list))))
@@ -728,65 +612,35 @@
       (delete-directory/files tmpzip #:must-exist? #f)
       (delete-directory/files tmpdir #:must-exist? #f))))
 
-;; (get-most-recently-used project directory)
+;; (get-most-recently-used project question)
 ;; Reads the most recently used information for the specified project/question.
 ;;
 ;; Arguments:
 ;;  project - the project to look in
-;;  directory - the directory to check the information in, #f if at root.
+;;  question - the directory to check the information in, #f if at root.
 ;; Returns:
 ;;  Either the most recently used information, or #f if not set yet.
-(define/contract (get-most-recently-used project directory)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) jsexpr?)
-  (define recent (build-path (read-config 'seashell) "recent.txt"))
-  (define directory-path (if (not directory)
-                             (build-project-path project)
-                             (check-and-build-path (build-project-path project) directory)))
-  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-  (cond
-   [(not (file-exists? recent)) #f]
-   [(not (directory-exists? directory-path)) #f]
-   [else
-     (let/ec escape
-       (match-define `(,predicate ,data) (hash-ref (with-input-from-file recent read)
-                                                   directory-hash
-                                                   (lambda () (escape #f))))
-       (match predicate
-         [`("dexists" ,name)
-           (if (directory-exists? (check-and-build-path (build-project-path project) name)) data #f)]
-         [`("fexists" ,name)
-           (if (file-exists? (check-and-build-path (build-project-path project) name)) data #f)]))]))
+(define/contract (get-most-recently-used project question)
+  (-> (and/c project-name? is-project?) (or/c #f path-string?) (or/c #f string?))
+  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
+  (define file (read-project-settings/key project key))
+  (define path (if file (check-and-build-path (build-project-path project) file) #f))
+  (if (and file (or (and question (file-exists? path))
+                    (and (not question) (directory-exists? path)))) file #f))
 
-;; (update-recent project directory data)
-;; Updates the most recently used information for the specified directory.
+;; (update-most-recently-used project question file)
+;; Updates the most recently used information for the specified question.
 ;;
 ;; Arguments:
 ;;  project - the project to update.
-;;  directory - the directory to update, or #f if at root.
-;;  predicate - A predicate, either:
-;;            ("dexists" name)
-;;            ("fexists" name)
-;;  data - The data to write.
+;;  question - the directory to update, or #f if at root.
+;;  file - The data to write.
 ;; Returns:
 ;;  Nothing.
-(define/contract (update-most-recently-used project directory predicate data)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) (list/c (or/c "dexists" "fexists") path-string?) jsexpr? void?)
-  (define recent-file (build-path (read-config 'seashell) "recent.txt"))
-  (define recent-hash 
-    (if (file-exists? recent-file) (with-input-from-file recent-file read) `#hash()))
-  (define directory-path (if (not directory)
-                             (build-project-path project)
-                             (check-and-build-path (build-project-path project) directory)))
-  (define directory-hash (some-system-path->string (if (not directory) (check-and-build-path project) (check-and-build-path project directory))))
-  (when (directory-exists? directory-path)
-    (with-output-to-file recent-file 
-                         (lambda ()
-                           (write
-                             (hash-set (if (hash? recent-hash) recent-hash `#hash())
-                                       directory-hash
-                                       (list predicate data))))
-                         #:exists 'truncate))
-  (void))
+(define/contract (update-most-recently-used project question file)
+  (-> (and/c project-name? is-project?) (or/c #f path-string?) path-string? void?)
+  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
+  (write-project-settings/key project key file))
 
 ;; (archive-projects archive-name) moves all existing project files into a
 ;;   directory called archive-name
@@ -807,22 +661,39 @@
   (rename-file-or-directory proj-root dir-path)
   (make-directory proj-root))
 
+;; Lists the questions in a given project
+(define/contract (list-questions project)
+  (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
+  (define start-path (build-project-path project))
+  (filter (lambda (q) (and (directory-exists? q) (not (equal? (build-path start-path "common") q))))
+    (directory-list (build-project-path project))))
 
 ;; (read-project-settings project)
 ;; Reads the project settings from the project root.
-;; If the file does not exist, false is returned
+;;
+;; For now, this fetches all of the most recently used files separately.
+;; As a result of this, most recently used data is stored redundantly
+;; in the project settings file.
+;; TODO: consolidate most recently used purely as a project setting
 ;; 
 ;; Returns:
-;;   settings - the project settings, or false
+;;   settings - the project settings
 (define/contract (read-project-settings project)
-  (-> (and/c project-name? is-project?) (or/c #f hash-eq?))
+  (-> (and/c project-name? is-project?) hash-eq?)
   (define filename (read-config 'project-settings-filename))
   (cond 
     [(file-exists? (build-path (build-project-path project) filename))
-     (with-input-from-file 
-       (build-path (build-project-path project) filename)
-       (lambda () (read)))]
-    [else #f]))
+     (define res (with-input-from-file 
+       (build-path (build-project-path project) filename) read))
+     (if (eof-object? res) (hasheq) res)]
+    [else (hasheq)]))
+
+;; (read-project-settings/key project key)
+;; Retrieves the value of a specific key in the project settings.
+;; Returns false if the key does not exist.
+(define/contract (read-project-settings/key project key)
+  (-> (and/c project-name? is-project?) symbol? (or/c #f string? number?))
+  (hash-ref (read-project-settings project) key #f))
 
 
 ;; (write-project-settings project settings)
@@ -833,10 +704,11 @@
 ;; Returns: nothing
 (define/contract (write-project-settings project settings)
   (-> (and/c project-name? is-project?) hash-eq? void?)
-  (with-output-to-file
-    (build-path (build-project-path project) (read-config 'project-settings-filename))
-    (lambda () (write settings))
-    #:exists 'replace))
+  (call-with-write-lock (thunk
+    (with-output-to-file
+      (build-path (build-project-path project) (read-config 'project-settings-filename))
+      (lambda () (write settings))
+      #:exists 'replace))))
 
 
 ;; (write-project-settings/key project key val)
@@ -844,7 +716,7 @@
 ;; Equivalent to a hash-set.
 ;; Returns: nothing
 (define/contract (write-project-settings/key project key val)
-  (-> (and/c project-name? is-project?) symbol? any/c void?)
+  (-> (and/c project-name? is-project?) symbol? (or/c string? number?) void?)
   (define old-settings (read-project-settings project)) 
   (define new-settings 
     (hash-set (if old-settings old-settings #hasheq())  key val))
@@ -862,12 +734,11 @@
 ;;   A string indicating the file to run
 (define/contract (get-file-to-run project question)
   (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
-  (define settings-hash (read-project-settings project))
+  (define file-to-run
+    (read-project-settings/key project
+              (string->symbol (string-append question "_runner_file"))))
   (cond 
-    [settings-hash
-      (define file-to-run
-        (hash-ref settings-hash 
-                  (string->symbol (string-append question "-runner"))))
+    [file-to-run
       (if (not (file-exists? (build-path (build-project-path project)
                                           file-to-run)))
         (raise (exn:project (format "File ~a does not exist." file-to-run)
@@ -897,7 +768,7 @@
     (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
                         (current-continuation-marks)))
     (write-project-settings/key project
-                                (string->symbol (string-append question "-runner"))
+                                (string->symbol (string-append question "_runner_file"))
                                 (path->string (build-path (if (string=? folder (read-config 'common-subdirectory))
                                                               (read-config 'common-subdirectory)
                                                               question)

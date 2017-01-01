@@ -39,11 +39,11 @@ angular.module('frontend-app')
         self.file = openFile;
         self.console = Console;
         self.settings = settings;
-        /*self.undoHistory = undoHistory;*/
 
         // Instance fields.
         self.scrollInfo = scrollInfo;
         self.isBinaryFile = false;
+        self.unavailable = false;
         self.ready = false;
         self.ext = self.file.split(".")[1];
         self.runnerFile = false; // true if a runner file is present in the project
@@ -56,6 +56,7 @@ angular.module('frontend-app')
         self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
         self.fileReadOnly = false;
+
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
          *  the editor will only be loaded if and only if
@@ -73,15 +74,13 @@ angular.module('frontend-app')
           if (self.editor)
             self.editor.setOption("readOnly", true);
         }, true);
+
         $scope.$on('$destroy', function(){
           var scr = self.editor.getScrollInfo();
           if(undefined===self.scrollInfo[self.folder])
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
-          ws.unregister_callback(cbC_key);
-          ws.unregister_callback(cbF_key);
-          ws.unregister_callback(cbD_key);
         });
         self.editorFocus = false;
         self.contents = "";
@@ -382,6 +381,7 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
+            self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
           if (self.consoleEditor) {
@@ -395,7 +395,7 @@ angular.module('frontend-app')
         self.renameFile = function() {
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
             var path = newName.split("/");
-            $scope.$parent.refresh();
+            $scope.$parent.editView.refresh();
             $state.go("edit-project.editor.file", {
               question:(path[0]=="common"?self.question:path[0]),
               part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
@@ -408,7 +408,12 @@ angular.module('frontend-app')
             .then(function() {
               self.project.deleteFile(self.question, self.folder, self.file)
                 .then(function() {
-                  $scope.$parent.refresh();
+                  $scope.$parent.editView.refresh();
+                  $state.go("edit-project.editor");
+                  self.refreshRunner();
+                }).catch(function (res) {
+                  errors.report(res, "An error occurred when deleting '"+self.file+"'.");
+                  $scope.$parent.editView.refresh();
                   $state.go("edit-project.editor");
                   self.refreshRunner();
                 });
@@ -451,16 +456,18 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
+            self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
             self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
                 self.console.setRunning(self.project, [res.pid], false);
                 handleCompileErr(res.messages, true);
-                self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }
@@ -473,15 +480,25 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
+            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
             self.project.run(self.question, true)
               .then(function(res) {
-                self.console.setRunning(self.project, res.pids, true);
-                handleCompileErr(res.messages, true);
-                self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+                if(!res.pids) {
+                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
+                }
+                else {
+                  $q.all(res.pids)
+                    .then(function(pids) {
+                      self.console.setRunning(self.project, pids, true);
+                      handleCompileErr(res.messages, true);
+                    });
+                }
               })
               .catch(function(res) {
                 if(res.status === "compile-failed") {
                   handleCompileErr(res.messages);
+                } else if(typeof res == "string") {
+                  self.console.write(res);
                 } else {
                   errors.report(res, "An error occurred when running the project.");
                 }
@@ -493,7 +510,9 @@ angular.module('frontend-app')
 
         self.killProgram = function() {
           if(!self.console.PIDs) {
-            return $q.when();
+            var def = $q.defer();
+            def.resolve();
+            return def.promise;
           }
           var p = $q.all(_.map(self.console.PIDs, function(id) {
             return self.project.kill(id);
@@ -566,16 +585,24 @@ angular.module('frontend-app')
         };
 
         // Initialization code goes here.
-        var key = settings.addWatcher(function () {self.refreshSettings();}, true);
-
+        var settings_key = settings.addWatcher(function () {self.refreshSettings();}, true);
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
             self.undoHistory = self.editor.getHistory();
             self.project.saveFile(self.question, self.folder, self.file, self.contents, JSON.stringify(self.undoHistory));
           }
-          settings.removeWatcher(key);
+          settings.removeWatcher(settings_key);
+          ws.unregister_callback(connected_key);
         });
+        /** Callback key when connected.
+         *  NOTE: This is slightly sketchy -- however, as
+         *  the editor will only be loaded if and only if
+         *  the socket exists in the first place, this is
+         *  fine for now. */
+        var connected_key = ws.register_callback('connected', function () {
+          //if (self.editor)
+          //  self.editor.setOption("readOnly", self.editorReadOnly);
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
             self.contents = conts.data;
@@ -586,18 +613,29 @@ angular.module('frontend-app')
                 self.fileReadOnly = true;
             }
             self.ready = true;
-            if (conts.data.length === 0) self.loaded = true;
-            self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
-            self.editor.clearHistory();
-            if (conts.history.slice(1).length > 1) {
-              self.undoHistory = JSON.parse(conts.history);
-              self.editor.setHistory(self.undoHistory);
+            if (typeof conts.data === "string") {
+              if (conts.data.length === 0) self.loaded = true;
+              self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
+              self.editor.clearHistory();
+              if (conts.history.slice(1).length > 1) {
+                self.undoHistory = JSON.parse(conts.history);
+                self.editor.setHistory(self.undoHistory);
+              } else {
+                console.log("warning: could not read history");
+              }
             } else {
-              console.log("warning: could not read history");
+              self.unavailable = true;
+            }
+            // .ll files store LLVM bytecode, make these appear as binary files to the user
+            var splitfile = self.file.split(".");
+            if(splitfile[splitfile.length-1] == "ll") {
+              self.isBinaryFile = true;
+              self.contents = null;
             }
             self.refreshSettings();
           }).catch(function (error) {
-            if (error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
+            if (typeof error === "string" &&
+                error.indexOf("bytes->string/utf-8: string is not a well-formed UTF-8 encoding") != -1) {
               self.isBinaryFile = true;
               self.refreshSettings();
             }
@@ -606,23 +644,17 @@ angular.module('frontend-app')
               $state.go('edit-project.editor');
             }
           });
-
-        // true iff the given file has the given extension
-        function has_ext(ext, fname){
-          return fname.split(".").pop() === ext;
-        }
-
-        self.refreshRunner = function () {
-          self.project.getFileToRun(self.question)
-             .then(function (result) {
-                 self.runnerFile = (result !== "");
-                 if(self.folder === "question") {
-                     self.isFileToRun = (result === (self.question + '/' + self.file));
-                 } else {
-                     self.isFileToRun = (result === (self.folder + '/' + self.file));
-                 }
-             });
-        };
-        self.refreshRunner();
-
+          self.refreshRunner = function () {
+            self.project.getFileToRun(self.question)
+               .then(function (result) {
+                   self.runnerFile = (result !== "");
+                   if(self.folder === "question") {
+                       self.isFileToRun = (result === (self.question + '/' + self.file));
+                   } else {
+                       self.isFileToRun = (result === (self.folder + '/' + self.file));
+                   }
+               });
+          };
+          self.refreshRunner();
+        }, true);
       }]);
