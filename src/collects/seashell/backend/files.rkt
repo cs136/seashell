@@ -53,6 +53,17 @@
 (struct exn:project:file exn:project ())
 (struct exn:project:file:checksum exn:project:file ())
 
+(define/contract (call-with-file-lock/delete-lock-file filename kind tnk failure-thunk)
+  (-> path-string? (or/c 'shared 'exclusive) (-> any) (-> any) any)
+  (call-with-file-lock/timeout
+    filename kind
+    (thunk (dynamic-wind
+      (thunk (void))
+      tnk
+      (thunk (with-handlers ([exn:fail:filesystem? void])
+        (delete-file (make-lock-file-name filename))))))
+    failure-thunk))
+
 ;; (new-file project file) -> void?
 ;; Creates a new file inside a project.
 ;;
@@ -135,7 +146,7 @@
            (raise (exn:project:file
                     (format "File does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
                     (current-continuation-marks)))))]
-      (call-with-file-lock/timeout file-to-write 'exclusive
+      (call-with-file-lock/delete-lock-file file-to-write 'exclusive
                                    (lambda ()
                                      (when tag
                                        (define expected-tag (call-with-input-file file-to-write md5))
@@ -206,7 +217,7 @@
        string?)
   (define file-to-write (check-and-build-path (build-project-path project) file))
   (call-with-write-lock (thunk
-    (call-with-file-lock/timeout file-to-write 'exclusive
+    (call-with-file-lock/delete-lock-file file-to-write 'exclusive
                                  (lambda ()
                                    (when tag
                                      (define expected-tag (call-with-input-file file-to-write md5))

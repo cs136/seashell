@@ -219,7 +219,7 @@
      (define compiler (seashell_compiler_make))
      (seashell_compiler_clear_source_dirs compiler)
      (seashell_compiler_clear_compile_flags compiler)
-     (seashell_compiler_set_main_file compiler (some-system-path->string source))
+     (seashell_compiler_add_file compiler (some-system-path->string source))
 
      ;; Run the compiler
      (define compiler-res (seashell_compiler_run compiler #t))
