@@ -7,3 +7,4 @@ _build/
 _install/
 install.log
 build.log
+build_tools/cmake
