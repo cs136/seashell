@@ -35,4 +35,4 @@ before_install:
 script:
   - ./build_tools/cmake -s "../cmake/bin/cmake" -i "$HOME/install" -a "-Wno-dev -DCMAKE_C_FLAGS='-Qunused-arguments -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics' -DPROCESSOR_COUNT=1 -DTRAVIS_BUILD=1" -l ""
   - ./build_tools/install -a "-j2" -l "" -t "true"
-  - ../src/tests/frontend-tests/node_modules/karma/bin/karma start ../src/tests/frontend-tests/seashell.conf.js
+  - ./src/tests/frontend-tests/node_modules/karma/bin/karma start ./src/tests/frontend-tests/seashell.conf.js
