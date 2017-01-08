@@ -5,12 +5,14 @@ BUILD_PATH="$PROJECT_ROOT/_build"
 BUILD_ARGS=""
 INSTALL_PATH="$PROJECT_ROOT/_install"
 LOG_PATH="$PROJECT_ROOT/build.log"
-while getopts b:i:a:l opts; do
+SCRIPT_PATH="cmake"
+while getopts s:b:i:a:l opts; do
 	case ${opts} in
 		b) BUILD_PATH=${OPTARG} ;;
 		i) INSTALL_PATH=${OPTARG} ;;
 		a) BUILD_ARGS=${OPTARG} ;;
-		l) LOG_PATH=${OPTARG} ;;	
+		l) LOG_PATH=${OPTARG} ;;
+		s) SCRIPT_PATH=${OPTARG} ;;	
 	esac
 done
 if [ -d "$BUILD_PATH" ]; then rm -r "$BUILD_PATH"; fi
@@ -19,8 +21,8 @@ mkdir "$BUILD_PATH"
 echo "Cmaking Seashell to \`$BUILD_PATH\`...logging to \`$LOG_PATH\`"
 
 if [ -z "$LOG_PATH" ]; then
-	cd "$BUILD_PATH" && eval cmake "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS 
+	cd "$BUILD_PATH" && eval $SCRIPT_PATH "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS 
 else
-	cd "$BUILD_PATH" && eval cmake "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS > $LOG_PATH 2>&1
+	cd "$BUILD_PATH" && eval $SCRIPT_PATH "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS > $LOG_PATH 2>&1
 fi
 
