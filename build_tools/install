@@ -1,0 +1,46 @@
+#!/bin/bash -e
+SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
+PROJECT_ROOT="$SCRIPT_PATH/../"
+BUILD_PATH="$PROJECT_ROOT/_build"
+MAKE_ARGS=""
+LOG_PATH="$PROJECT_ROOT/install.log"
+TEST="false"
+while getopts b:i:a:l:t opts; do
+	case ${opts} in
+		b) BUILD_PATH=${OPTARG} ;;
+		i) INSTALL_PATH=${OPTARG} ;;
+		a) MAKE_ARGS=${OPTARG} ;;
+		l) LOG_PATH=${OPTARG} ;;
+		t) TEST=${OPTARG} ;;
+	esac
+done
+
+INSTALL_PATH=$(sed -ne "s/SET(CPACK_INSTALL_PREFIX \"\(.*\)\")/\1/p" "$BUILD_PATH/CPackConfig.cmake")
+
+if [ -d "$INSTALL_PATH" ]; then rm -r "$INSTALL_PATH"; fi
+mkdir "$INSTALL_PATH"
+[ -e "$LOG_PATH" ] && rm "$LOG_PATH"
+echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`"
+
+if [ -z "$LOG_PATH" ]; then
+	cd "$BUILD_PATH" && make $MAKE_ARGS 
+	if ["$TEST" == "true"]; then 
+		CTEST_OUTPUT_ON_FAILURE=true make test
+	fi
+	cd "$BUILD_PATH" && make install $MAKE_ARGS
+else 
+	cd "$BUILD_PATH" && make $MAKE_ARGS > $LOG_PATH 2>&1 
+	if ["$TEST" == "true"]; then 
+		CTEST_OUTPUT_ON_FAILURE=true make test
+	fi
+	cd "$BUILD_PATH" && make install $MAKE_ARGS > $LOG_PATH 2>&1 
+fi
+
+echo "Setting Symlinks"
+ln -s "$INSTALL_PATH/cgi-bin" "$INSTALL_PATH/share/frontend/cgi-bin"
+
+echo "Updating login2.cgi with correct path"
+rm "$INSTALL_PATH/cgi-bin/login2.cgi" 
+printf "#!/bin/bash\nexec \"$INSTALL_PATH/bin/seashell-main\" \"-l\"" > "$INSTALL_PATH/cgi-bin/login2.cgi"
+chmod +x "$INSTALL_PATH/cgi-bin/login2.cgi"
+

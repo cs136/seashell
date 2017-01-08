@@ -1,0 +1,26 @@
+#!/bin/bash -e
+SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
+PROJECT_ROOT="$SCRIPT_PATH/../"
+BUILD_PATH="$PROJECT_ROOT/_build"
+BUILD_ARGS=""
+INSTALL_PATH="$PROJECT_ROOT/_install"
+LOG_PATH="$PROJECT_ROOT/build.log"
+while getopts b:a:l:i opts; do
+	case ${opts} in
+		b) BUILD_PATH=${OPTARG} ;;
+		i) INSTALL_PATH=${OPTARG} ;;
+		a) BUILD_ARGS=${OPTARG} ;;
+		l) LOG_PATH=${OPTARG} ;;	
+	esac
+done
+if [ -d "$BUILD_PATH" ]; then rm -r "$BUILD_PATH"; fi
+mkdir "$BUILD_PATH"
+[ -e "$LOG_PATH" ] && rm "$LOG_PATH"
+echo "Cmaking Seashell to \`$BUILD_PATH\`...logging to \`$LOG_PATH\`"
+
+if [ -z "$LOG_PATH" ]; then
+	cd "$BUILD_PATH" && cmake "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS 
+else
+	cd "$BUILD_PATH" && cmake "$PROJECT_ROOT" -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX="$INSTALL_PATH" $BUILD_ARGS > $LOG_PATH 2>&1
+fi
+
