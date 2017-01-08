@@ -22,17 +22,17 @@ mkdir "$INSTALL_PATH"
 echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`"
 
 if [ -z "$LOG_PATH" ]; then
-	cd "$BUILD_PATH" && make $MAKE_ARGS 
+	cd "$BUILD_PATH" && eval make $MAKE_ARGS 
 	if ["$TEST" == "true"]; then 
 		CTEST_OUTPUT_ON_FAILURE=true make test
 	fi
-	cd "$BUILD_PATH" && make install $MAKE_ARGS
+	cd "$BUILD_PATH" && eval make install $MAKE_ARGS
 else 
-	cd "$BUILD_PATH" && make $MAKE_ARGS > $LOG_PATH 2>&1 
+	cd "$BUILD_PATH" && eval make $MAKE_ARGS > $LOG_PATH 2>&1 
 	if ["$TEST" == "true"]; then 
 		CTEST_OUTPUT_ON_FAILURE=true make test
 	fi
-	cd "$BUILD_PATH" && make install $MAKE_ARGS > $LOG_PATH 2>&1 
+	cd "$BUILD_PATH" && eval make install $MAKE_ARGS > $LOG_PATH 2>&1 
 fi
 
 echo "Setting Symlinks"
