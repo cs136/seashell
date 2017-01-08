@@ -5,7 +5,7 @@ BUILD_PATH="$PROJECT_ROOT/_build"
 BUILD_ARGS=""
 INSTALL_PATH="$PROJECT_ROOT/_install"
 LOG_PATH="$PROJECT_ROOT/build.log"
-while getopts b:a:l:i opts; do
+while getopts b:i:a:l opts; do
 	case ${opts} in
 		b) BUILD_PATH=${OPTARG} ;;
 		i) INSTALL_PATH=${OPTARG} ;;

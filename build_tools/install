@@ -5,10 +5,9 @@ BUILD_PATH="$PROJECT_ROOT/_build"
 MAKE_ARGS=""
 LOG_PATH="$PROJECT_ROOT/install.log"
 TEST="false"
-while getopts b:i:a:l:t opts; do
+while getopts b:a:l:t opts; do
 	case ${opts} in
 		b) BUILD_PATH=${OPTARG} ;;
-		i) INSTALL_PATH=${OPTARG} ;;
 		a) MAKE_ARGS=${OPTARG} ;;
 		l) LOG_PATH=${OPTARG} ;;
 		t) TEST=${OPTARG} ;;
