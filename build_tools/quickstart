@@ -1,0 +1,13 @@
+#!/bin/bash -e
+CMAKE_ARGS=""
+INSTALL_ARGS=""
+SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
+while getopts c:i opts; do
+	case ${opts} in
+		c) CMAKE_ARGS=${OPTARG} ;;
+		i) INSTALL_ARGS=${OPTARG} ;;
+	esac
+done
+eval "$SCRIPT_PATH/submodules"
+eval "$SCRIPT_PATH/cmake" $CMAKE_ARGS
+eval "$SCRIPT_PATH/install" $INSTALL_ARGS
