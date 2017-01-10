@@ -233,8 +233,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         return function () {
           if (!self.isOffline()) {
             return $q.when(self._socket[name].apply(self._socket, arguments))
-              .then(function() {
-                return self.syncAll();
+              .then(function(result) {
+                return self.syncAll()
+                  .then(function() {
+                    return result;
+                  });
               });
           } else {
             return self._rejectOffline(name);
