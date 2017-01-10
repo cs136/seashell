@@ -1,6 +1,7 @@
 #lang racket
 
 (require seashell/seashell-config
+         seashell/backend/project
          rackunit)
 
 (define seashell-cli-exe (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli"))
@@ -19,6 +20,19 @@
                (seashell-cli "marmtest" "-t" (number->string timeout) "." "main.c" "main" "out" "err")
                (seashell-cli "marmtest" "." "main.c" "main" "out" "err")))
     (thunk (map delete-file '("main.c" "main.in" "main.expect")))))
+
+(define/contract (cli-object code [name "object"])
+  (->* (string?) (string?) integer?)
+  (define src (string-append name ".c"))
+  (dynamic-wind
+    (thunk
+      (with-output-to-file src
+        (thunk (display code))))
+    (thunk
+      (seashell-cli "object" src))
+    (thunk
+      (delete-file src))))
+
 
 (define/provide-test-suite seashell-cli-suite
   #:before (thunk (make-directory (build-path (read-config 'seashell) "cli-files"))
@@ -59,4 +73,20 @@
       (check-equal?
         (cli-marmtest "int main(){while(1){}}" "" "" 1)
         50))
+
+    (test-case "Generate a .ll file and run a project with it"
+      (new-project "beep")
+      (define q1-path (build-path (build-project-path "beep") "q1"))
+      (make-directory q1-path)
+      (check-equal?
+        (cli-object "int magic() { return 42; }\n" (path->string (build-path q1-path "magic")))
+        0)
+      (with-output-to-file (build-path q1-path "magic.h")
+        (thunk (display "int magic();\n")))
+      (with-output-to-file (build-path q1-path "main.c")
+        (thunk (display "#include <stdio.h>\n#include \"magic.h\"\nint main() { printf(\"%d\\n\", magic()); }\n")))
+      (define-values (suc res)
+        (compile-and-run-project "beep" "q1/main.c" "q1" '()))
+      (check-true suc)
+      (delete-project "beep"))
   ))
