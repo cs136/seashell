@@ -27,16 +27,6 @@ Module._RT_stdout_write = function(str) {
 };
 
 Module._RT_stderr_write = function(str) {
-  // If running file, add stderr contents to stdout.
-  // This isn't ideal, but it prevents us from having to
-  // figure out how stderr and stdout contents interleave,
-  // and when running a file, you can't tell the difference
-  // between stdout and stderr anyways.
-  /*if(testcase_data === null) {
-    stdout += str;
-  } else {
-    stderr += str;
-  }*/
   stderr += str;
 };
 
@@ -59,8 +49,10 @@ function runObj(obj) {
   var running = true;
   
   self.onmessage = function(obj) {
-    if(typeof obj.data === "string")
+    if(typeof obj.data === "string") {
       Module._RT_stdin_buffer += obj.data;
+      stdout += obj.data;
+    }
     else
       Module._RT_stdin_buffer = null;
     if(!running)
