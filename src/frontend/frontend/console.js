@@ -28,8 +28,6 @@ angular.module('frontend-app')
     self.running = false;
     self.inst = null;
     self.errors = [];
-    // Buffers
-    self._contents = "";
     // Terminal object (if it exists)
     self.terminal = null;
     var ind = "";
@@ -100,17 +98,16 @@ angular.module('frontend-app')
         to_print.push(key2.replace(/_/g, " ") + ': ' + err.misc[key2]);
       }
       for (var j = 0; j < to_print.length; j++){
-        self._write(to_print[j] + '\r\n');
+        self.write(to_print[j] + '\r\n');
       }
-      self.flush();
     }
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
-        self._write(io.message);
+        self.write(io.message);
       }
       else if(io.type == "stderr") {
-        self._write(io.message);
+        self.write(io.message);
       }
       else if (io.type == "done") {
         if (io.asan) {
@@ -125,7 +122,6 @@ angular.module('frontend-app')
         self.PIDs = null;
         self.running = false;
       }
-      self.flush();
     });
 
     function printExpectedFromDiff(res) {
@@ -204,7 +200,6 @@ angular.module('frontend-app')
         self.write('----------------------------------\r\n');
         self.write(sprintf("Test \"%s\" was killed.\r\n", res.test_name));
       }
-      self.flush();
     });
 
     self.setRunning = function(project, PIDs, testing) {
@@ -219,18 +214,7 @@ angular.module('frontend-app')
       if (self.terminal)
         self.terminal.clear();
     };
-    self._write = function(msg) {
-      self._contents += msg;
-    };
     self.write = function(msg) {
-      self.flush();
-      self._write(msg);
-      self.flush();
-    };
-    self.flush = function () {
-      if (self.terminal) {
-        self.terminal.write(self._contents);
-        self._contents = "";
-      }
+      self.terminal.write(msg);
     };
   }]);
