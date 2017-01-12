@@ -52,10 +52,13 @@ angular.module('frontend-app')
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
-        self.consoleEditor = null;
-        self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
         self.fileReadOnly = false;
+
+        // Create a xterm.js instance
+        self.terminal = new Terminal();
+        self.terminal.open(document.getElementById('#console-tty'));
+        self.terminal.fit();
 
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -113,40 +116,26 @@ angular.module('frontend-app')
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
           var min_height = 500, margin_bottom = 30;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
-          var console_elem = $window.document.querySelector("#console > .CodeMirror");
+          var console_elem = $window.document.querySelector("#console-tty");
           // Run only when DOM is ready.
           if (editor_elem && console_elem) {
             var target_height = Math.max($window.innerHeight - editor_elem.getBoundingClientRect().top - margin_bottom, min_height);
             var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
-            var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
             if (editor_elem)
               editor_elem.style.height = sprintf("%fpx",
                 (narrow ? target_height * 0.7 : target_height) - file_control_height);
             if (console_elem)
               console_elem.style.height = sprintf("%fpx",
-                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
+                (narrow ? (target_height * 0.3 - file_control_height) : target_height));
             if(self.editor)
               self.editor.refresh();
-            if(self.consoleEditor)
-              self.consoleEditor.refresh();
-            // Force the font size at any rate (and font name)
-            _.each($window.document.querySelectorAll('.CodeMirror'),
-                function (elem) {
-                  elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
-                  elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
-                });
+            // Fit the xterm.js.
+            if(self.terminal)
+              self.terminal.fit();
           }
         }
         $scope.$on('window-resized', onResize);
         // Scope helper function follow.
-        self.consoleLoad = function(console_cm) {
-          self.consoleEditor = console_cm;
-          self.consoleEditor.on("change", function() {
-            var scr = self.consoleEditor.getScrollInfo();
-            self.consoleEditor.scrollTo(scr.left, scr.height);
-          });
-          $timeout(onResize, 0);
-        };
         self.editorLoad = function(editor) {
           self.editor = editor;
           if (self.ext === "c" || self.ext === "h") {
@@ -304,14 +293,6 @@ angular.module('frontend-app')
               },
             }
           };
-          self.consoleOptions = {
-            scrollbarStyle: "overlay",
-            lineWrapping: true,
-            readOnly: true,
-            mode: "text/plain",
-            theme: theme,
-            onLoad: self.consoleLoad
-          };
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
@@ -383,12 +364,6 @@ angular.module('frontend-app')
             }
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
-          }
-          if (self.consoleEditor) {
-            for (var cKey in self.consoleOptions) {
-              self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
-            }
-            self.consoleEditor.refresh();
           }
           onResize();
         };
