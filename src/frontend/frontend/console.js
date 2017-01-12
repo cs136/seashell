@@ -29,8 +29,7 @@ angular.module('frontend-app')
     self.inst = null;
     self.errors = [];
     // Buffers
-    self.stdout = "";
-    self.stderr = "";
+    self._contents = "";
     // Terminal object (if it exists)
     self.terminal = null;
     var ind = "";
@@ -108,32 +107,12 @@ angular.module('frontend-app')
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
-        ind = io.message.indexOf("\r\n");
-        if (ind > -1) {
-          spl = io.message.split("\r\n");
-          self._write(self.stdout);
-          while (spl.length>1) { self._write(spl.shift() + "\r\n"); }
-          self.stdout = spl[0];
-        }
-        else {
-          self.stdout += io.message;
-        }
+        self._write(io.message);
       }
       else if(io.type == "stderr") {
-        ind = io.message.indexOf("\r\n");
-        if (ind > -1) {
-          spl = io.message.split("\r\n");
-          self._write(self.stderr);
-          while(spl.length>1) { self._write(spl.shift() + "\r\n"); }
-          self.stderr = spl[0];
-        } else {
-          self.stderr += io.message;
-        }
+        self._write(io.message);
       }
       else if (io.type == "done") {
-        self._write(self.stdout);
-        self._write(self.stderr);
-        self.stdout = self.stderr = "";
         if (io.asan) {
           // Print parsed ASAN output
           print_asan_error(JSON.parse(io.asan));
@@ -146,11 +125,7 @@ angular.module('frontend-app')
         self.PIDs = null;
         self.running = false;
       }
-      self.contents = self._contents;
-      // Set up an output buffering timeout to prevent output from sitting
-      // in the buffer while the program waits for input/hangs
-      $timeout.cancel(self.flushTimeout);
-      self.flushTimeout = $timeout(self.flush, 100);
+      self.flush();
     });
 
     function printExpectedFromDiff(res) {
@@ -241,7 +216,6 @@ angular.module('frontend-app')
     };
     self.clear = function() {
       self._contents = "";
-      self.stdin = self.stdout = "";
       if (self.terminal)
         self.terminal.clear();
     };
@@ -255,8 +229,8 @@ angular.module('frontend-app')
     };
     self.flush = function () {
       if (self.terminal) {
-        self.terminal.write(self._contents + self.stdout + self.stderr);
-        self._contents = self.stdout = self.stderr = "";
+        self.terminal.write(self._contents);
+        self._contents = "";
       }
     };
   }]);
