@@ -27,12 +27,12 @@ angular.module('frontend-app')
     // running is true iff we are running with "run", allows input
     self.running = false;
     self.inst = null;
-    self.contents = "";
     self.errors = [];
     // Buffers
     self.stdout = "";
     self.stderr = "";
-    self._contents = "";
+    // Terminal object (if it exists)
+    self.terminal = null;
     var ind = "";
     var spl ="";
     var return_codes = {
@@ -240,8 +240,10 @@ angular.module('frontend-app')
       });
     };
     self.clear = function() {
-      self.contents = self._contents = "";
+      self._contents = "";
       self.stdin = self.stdout = "";
+      if (self.terminal)
+        self.terminal.clear();
     };
     self._write = function(msg) {
       self._contents += msg;
@@ -252,10 +254,9 @@ angular.module('frontend-app')
       self.flush();
     };
     self.flush = function () {
-      self.contents = self._contents + self.stdout + self.stderr;
-    };
-    self.flushForInput = function () {
-      self._contents += self.stdout + self.stderr;
-      self.stdout = self.stderr = "";
+      if (self.terminal) {
+        self.terminal.write(self._contents + self.stdout + self.stderr);
+        self._contents = self.stdout = self.stderr = "";
+      }
     };
   }]);

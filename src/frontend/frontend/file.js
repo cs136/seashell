@@ -58,6 +58,7 @@ angular.module('frontend-app')
 
         self.ttyLoad = function(term) {
           self.terminal = term;
+          self.console.terminal = term;
         };
 
 
@@ -85,6 +86,7 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
+          self.console.terminal = null;
         });
         self.editorFocus = false;
         self.contents = "";
