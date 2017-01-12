@@ -59,6 +59,11 @@ angular.module('frontend-app')
         self.ttyLoad = function(term) {
           self.terminal = term;
           self.console.terminal = term;
+          term.on('data', function (data) {
+            if (self.console.running) {
+              self.project.sendInput(self.console.PIDs[0], data);
+            }
+          });
         };
 
 
@@ -510,40 +515,8 @@ angular.module('frontend-app')
           });
         };
 
-        self.userInput = "";
-        self.sendInput = function($event) {
-          if($event.keyCode == 13) {
-            if(self.console.running) {
-              self.project.sendInput(self.console.PIDs[0], self.userInput + "\r\n");
-              self.console.flushForInput();
-              // self.console.write(self.userInput + "\r\n"); -- not needed for a TTY
-              self.userInput = "";
-            }
-          }
-        };
-
         self.clearConsole = function () {
           self.console.clear();
-        };
-
-        self.sendEOF = function() {
-          if(self.console.running) {
-            var d;
-            if(self.userInput) {
-              d = self.project.sendInput(self.console.PIDs[0], self.userInput);
-            }
-            else {
-              d = $q.defer();
-              d.resolve();
-              d = d.promise;
-            }
-            d.then(function() {
-              self.userInput = "";
-              self.project.sendEOF(self.console.PIDs[0]).then(function () {
-                self.console.running = false;
-              });
-            });
-          }
         };
 
         self.setFileToRun = function() {
