@@ -95,7 +95,9 @@ function SeashellWebsocket(uri, key, failure, closes) {
         // error message otherwise. 
         var request = self.requests[response.id];
 
-        if (request.type != 'ping') {
+        // Do not log I/O responses
+        if (request.type != 'ping' && request.type != 'programInput' &&
+            (response.id !== -3 || (response.result.type !== "stdout" && response.result.type !== "stderr"))) {
           console.log("Received response to message with id: "+response.id+".");
           console.log(request);
           console.log(response);
