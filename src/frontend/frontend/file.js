@@ -54,11 +54,12 @@ angular.module('frontend-app')
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.editorReadOnly = true; // We start out read only until contents are loaded.
         self.fileReadOnly = false;
+        self.terminal = null;
 
-        // Create a xterm.js instance
-        self.terminal = new Terminal();
-        self.terminal.open(document.getElementById('#console-tty'));
-        self.terminal.fit();
+        self.ttyLoad = function(term) {
+          self.terminal = term;
+        };
+
 
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
