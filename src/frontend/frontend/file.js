@@ -401,9 +401,9 @@ angular.module('frontend-app')
         function handleCompileErr(msgs, warn_only) {
           if(msgs.length === 0) return;
           else if(!warn_only)
-            self.console.write("Compilation failed with errors:\n");
+            self.console.write("Compilation failed with errors:\r\n");
           else
-            self.console.write("Compilation generated warnings:\n");
+            self.console.write("Compilation generated warnings:\r\n");
           self.console.errors = msgs;
           if(self.ext=="h"||self.ext=="c") {
             self.editor.setOption("lint", false);
@@ -421,12 +421,12 @@ angular.module('frontend-app')
                                          /relocation \d+ has invalid symbol index \d+$/.test(res[4]));
 
             if(!main_undefined_spam) {
-              self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+              self.console.write(sprintf("%s:%d:%d: %s\r\n", res[1], res[2], res[3], res[4]));
             }
 
             if(!warn_only && res[4].endsWith("undefined reference to `main'")) {
                 main_undefined = true;
-                self.console.write("Cannot find the 'main' function.\n");
+                self.console.write("Cannot find the 'main' function.\r\n");
             }
           });
         }
@@ -434,7 +434,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
+            self.console.write("Running '"+self.project.name+"/"+self.question+"':\r\n");
             self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
@@ -458,11 +458,11 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\r\n");
             self.project.run(self.question, true)
               .then(function(res) {
                 if(!res.pids) {
-                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
+                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\r\n");
                 }
                 else {
                   $q.all(res.pids)
@@ -514,9 +514,9 @@ angular.module('frontend-app')
         self.sendInput = function($event) {
           if($event.keyCode == 13) {
             if(self.console.running) {
-              self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
+              self.project.sendInput(self.console.PIDs[0], self.userInput + "\r\n");
               self.console.flushForInput();
-              // self.console.write(self.userInput + "\n"); -- not needed for a TTY
+              // self.console.write(self.userInput + "\r\n"); -- not needed for a TTY
               self.userInput = "";
             }
           }

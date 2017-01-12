@@ -101,18 +101,18 @@ angular.module('frontend-app')
         to_print.push(key2.replace(/_/g, " ") + ': ' + err.misc[key2]);
       }
       for (var j = 0; j < to_print.length; j++){
-        self._write(to_print[j] + '\n');
+        self._write(to_print[j] + '\r\n');
       }
       self.flush();
     }
 
     socket.register_callback("io", function(io) {
       if(io.type == "stdout") {
-        ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\r\n");
         if (ind > -1) {
-          spl = io.message.split("\n");
+          spl = io.message.split("\r\n");
           self._write(self.stdout);
-          while (spl.length>1) { self._write(spl.shift() + "\n"); }
+          while (spl.length>1) { self._write(spl.shift() + "\r\n"); }
           self.stdout = spl[0];
         }
         else {
@@ -120,11 +120,11 @@ angular.module('frontend-app')
         }
       }
       else if(io.type == "stderr") {
-        ind = io.message.indexOf("\n");
+        ind = io.message.indexOf("\r\n");
         if (ind > -1) {
-          spl = io.message.split("\n");
+          spl = io.message.split("\r\n");
           self._write(self.stderr);
-          while(spl.length>1) { self._write(spl.shift() + "\n"); }
+          while(spl.length>1) { self._write(spl.shift() + "\r\n"); }
           self.stderr = spl[0];
         } else {
           self.stderr += io.message;
@@ -142,7 +142,7 @@ angular.module('frontend-app')
         if(io.status !== 0 && return_codes[io.status]) {
           self.write(sprintf(" (%s)", return_codes[io.status]));
         }
-        self.write(".\n");
+        self.write(".\r\n");
         self.PIDs = null;
         self.running = false;
       }
@@ -161,10 +161,10 @@ angular.module('frontend-app')
       // The array contains n lines of text from the lines that differ, n >= 1
       var output = "";
       _.each(res.diff, function(block) {
-        if (_.isString(block)) output += "\n" + block;
+        if (_.isString(block)) output += "\r\n" + block;
         else if (block[0] === false) {
           _.each(block.slice(1), function(line) {
-            output += "\n" + line;
+            output += "\r\n" + line;
           });
         }
       });
@@ -182,52 +182,52 @@ angular.module('frontend-app')
       var parsedASAN = res.asan_output ? JSON.parse(res.asan_output) : false;
 
       if(res.result==="passed") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" passed.\r\n", res.test_name));
       }
       else if(res.result==="failed") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" failed.\n", res.test_name));
-        self.write('Produced output (stdout):\n');
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" failed.\r\n", res.test_name));
+        self.write('Produced output (stdout):\r\n');
         self.write(res.stdout);
-        self.write('---\n');
-        self.write('Expected output (stdout):\n');
+        self.write('---\r\n');
+        self.write('Expected output (stdout):\r\n');
         printExpectedFromDiff(res);
-        self.write('---\n');
-        self.write('Produced errors (stderr):\n');
+        self.write('---\r\n');
+        self.write('Produced errors (stderr):\r\n');
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
-            self.write("AddressSanitizer Output:\n");
+            self.write("AddressSanitizer Output:\r\n");
             print_asan_error(parsedASAN);
         }
       } else if(res.result==="error") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
-        self.write('Produced output (stderr):\n');
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\r\n", res.test_name, res.exit_code));
+        self.write('Produced output (stderr):\r\n');
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
-            self.write("AddressSanitizer Output:\n");
+            self.write("AddressSanitizer Output:\r\n");
             print_asan_error(parsedASAN);
         }
       } else if(res.result==="no-expect") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" produced output (stdout):\n", res.test_name));
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" produced output (stdout):\r\n", res.test_name));
         self.write(res.stdout);
-        self.write('Produced output (stderr):\n');
+        self.write('Produced output (stderr):\r\n');
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
-            self.write("AddressSanitizer Output:\n");
+            self.write("AddressSanitizer Output:\r\n");
             print_asan_error(parsedASAN);
         }
       } else if(res.result==="timeout") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" timed out.\n", res.test_name));
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" timed out.\r\n", res.test_name));
       }
       else if(res.result==="killed") {
-        self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" was killed.\n", res.test_name));
+        self.write('----------------------------------\r\n');
+        self.write(sprintf("Test \"%s\" was killed.\r\n", res.test_name));
       }
       self.flush();
     });
