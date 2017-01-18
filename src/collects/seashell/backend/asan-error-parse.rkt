@@ -284,6 +284,7 @@
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-use-after-free"  "heap-use-after-free")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-use-after-return"  "stack-use-after-return")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-use-after-scope"  "stack-use-after-scope")
+        (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: FPE on unknown address"  "floating-point-exception")
         (match-type #px"^=+\\d+=+ERROR: LeakSanitizer: detected memory leaks" "memory-leak")
         segfault-parser
         memory-leak-parser
