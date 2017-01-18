@@ -24,10 +24,10 @@ var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket', 'CopyFileModal',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
           settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory,
-          ws) {
+          ws, copyModal) {
         var self = this;
         // Scope variable declarations follow.
 
@@ -402,7 +402,16 @@ angular.module('frontend-app')
               file:escape(path.length>2?path[2]:path[1])});
           });
         };
-
+		self.copyFile = function() {
+          copyModal(self.project, self.question, self.folder, self.file, function(newName) {
+            var path = newName.split("/");
+            $scope.$parent.editView.refresh();
+            $state.go("edit-project.editor.file", {
+              question:(path[0]=="common"?self.question:path[0]),
+              part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
+              file:escape(path.length>2?path[2]:path[1])});
+          });
+        };
         self.deleteFile = function() {
           confirmModal("Delete File", "Are you sure you want to delete '"+self.file+"'?")
             .then(function() {

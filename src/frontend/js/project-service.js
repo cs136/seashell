@@ -445,7 +445,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var file = new SeashellFile(self, path, false, contents);
           return self.root._placeInTree(file, false, false, contents, encoding, normalize);
         };
-
+		SeashellProject.prototype.copyFile = function(question, folder, name, newName) {
+			var self = this;
+			var contents=self.openFile(question, folder, name);
+			var path = self._getPath(question, folder, name);
+            var target = newName;
+			if (self.root.find(path)) {
+            return contents.then(function(mycontents) {
+              return self.root.find(path).rename(target).then(function(){
+			    return self.createFile(folder, question, name, mycontents.data, "raw", true);});
+            });
+            } else {
+              return $q.reject("No file found!");
+            }
+		};
 
         SeashellProject.prototype.createQuestion = function(question) {
           var self = this;
