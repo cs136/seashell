@@ -402,7 +402,7 @@ angular.module('frontend-app')
               file:escape(path.length>2?path[2]:path[1])});
           });
         };
-		self.copyFile = function() {
+	self.copyFile = function() {
           copyModal(self.project, self.question, self.folder, self.file, function(newName) {
             var path = newName.split("/");
             $scope.$parent.editView.refresh();
