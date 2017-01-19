@@ -155,6 +155,32 @@ angular.module('frontend-app')
           });
       };
   }])
+  .factory('CopyFileModal', ['$modal', 'error-service',
+    function($modal, errors) {
+      return function(project, question, folder, file, notify) {
+        notify = notify || function() {};
+        return $modal.open({
+          templateUrl: "frontend/templates/copy-file-template.html",
+          controller: ["$scope", "$state", "error-service",
+            function($scope, $state, errors) {
+              $scope.copy_name = (folder=='common' ? "" : question + "/") +
+                (folder=='question' ? "" : folder + "/") + file;
+              $scope.copyFile = function() {
+                project.copyFile(question, folder, file, $scope.copy_name)
+                  .then(function() {
+                    $scope.$close();
+                    notify($scope.copy_name);
+                  })
+                  .catch(function(err) {
+                    $scope.$dismiss();
+                    errors.report(err, "An error occurred while copying the file.");
+                  });
+              };
+            }]
+          });
+      };
+  }])
+	
   // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
