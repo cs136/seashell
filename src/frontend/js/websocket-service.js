@@ -402,7 +402,27 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
 
       self.programInput = function(pid, contents) {
         if (typeof pid === "object") {
-          pid.programInput(contents);
+          /** rudimentary line editor functionality that sort-of emulates a TTY */
+          if (!pid.linebuffer) {
+            pid.linebuffer = "";
+          }
+          for (var i = 0; i < contents.length; i++) {
+            if (contents[i] === "\x7f") {
+              if (pid.linebuffer.length > 0) {
+                pid.linebuffer = pid.linebuffer.slice(0,-1);
+                self.io_cb(null, {type: "stdout", message: "\b \b"});
+              }
+            } else if (contents[i] === "\r") {
+              pid.programInput(pid.linebuffer + "\n");
+              self.io_cb(null, {type: "stdout", message: "\r\n"});
+              pid.linebuffer = "";
+            } else if (contents[i] === "\x04") {
+              pid.sendEOF(); // TODO: actually handle Ctrl-D behaviour properly (send whatever's in the linebuffer).
+            } else {
+              pid.linebuffer += contents[i];
+              self.io_cb(null, {type: "stdout", message: contents[i]});
+            }
+          }
           return $q.when();
         } else {
           return self._socket.programInput(pid, contents);
