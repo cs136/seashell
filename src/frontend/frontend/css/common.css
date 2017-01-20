@@ -154,27 +154,6 @@ body {
   text-decoration: none;
 }
 
-#console-input {
-  clear: both;
-  border: 1px solid;
-}
-#console-input input, #console-input input:focus {
-  font-family: Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Courier New', monospace;
-  line-height: 1em;
-  padding-left: 0.4em;
-  outline: none;
-  -webkit-box-shadow: none !important;
-  -moz-box-shadow: none !important;
-  box-shadow: none !important;
-  border: none;
-}
-#console-input .input-group-addon {
-  background-color: white;
-  padding-right: 0;
-  padding-left: 5px;
-  border: none;
-  border-radius: 0px;
-}
 /** Callouts. */
 
 /* Base styles (regardless of theme) */
@@ -347,24 +326,6 @@ div.tooltip .tooltip-inner {
   border-top: none;
 }
 
-#console > .CodeMirror {
-  height: 299px;
-  border: 1px solid;
-  border-top: none;
-  border-bottom: none;
-  clear: both;
-}
-
-#console > .CodeMirror .CodeMirror-lines {
-  padding-bottom: 0;
-  padding-top: 0;
-}
-
-#console > .CodeMirror .CodeMirror-lines pre {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  padding-left: 20px;
-}
 
 #question-controls {
   float:right;
@@ -381,8 +342,6 @@ div.tooltip .tooltip-inner {
     border: 1px solid;
     border-left: none;
   }
-  #console:not(.console-narrow) .CodeMirror { border-left: none; }
-  #console:not(.console-narrow) #console-input { border-left: none }
   #console.console-narrow { width: 100%; }
   #editor.console-narrow { width: 100%; }
 }

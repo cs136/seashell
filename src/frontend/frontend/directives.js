@@ -55,6 +55,19 @@ angular.module('frontend-app')
       });
     };
   }])
+  .directive('tty', ['$timeout', function($timeout) {
+    return {
+      link: function (scope, element, attrs) {
+        var onLoad = scope.$eval(attrs.ttyLoad);
+        var terminal = new Terminal();
+        terminal.open(element[0]);
+        terminal.fit();
+        if (onLoad) {
+          onLoad(terminal);
+        }
+      }
+    };
+  }])
   .directive('focusMe', function ($timeout, $parse) {
     return {
       link: function (scope, element, attrs) {

@@ -55,6 +55,8 @@ angular.module('seashell-compiler', [])
       self.run = function (object, io_cb) {
         var runner = new Worker('js/offline-run.min.js');
         runner.onmessage = function (result) {
+          if (result.data.message)
+            result.data.message = result.data.message.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
           io_cb(null, result.data);
         };
         return $q.when({

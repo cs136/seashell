@@ -101,26 +101,7 @@
                       class="btn btn-link console-control">resize</button>
             </div>
           </div>
-          <textarea ui-codemirror ui-codemirror-opts="editFileView.consoleOptions"
-            ng-model="editFileView.console.contents" style="margin-top:3px;border-top:1px solid #ddd;"></textarea>
-          <div id="console-input">
-            <div class="input-group"
-                 style="width: 100%">
-              <div class="input-group-addon" style="font-size: 10px">
-                <span class="glyphicon glyphicon-chevron-right"></span>
-              </div>
-              <input ng-model="editFileView.userInput" ng-keypress="editFileView.sendInput($event)"
-                type="text" class="form-control" id="input-line" ng-disabled="!editFileView.console.running"
-                ng-trim="false" focus-on="program-running" placeholder="Type here and press <Enter>">
-              <div class="console-controls"
-                   style="position: absolute; top: 5px; right: 0"
-                   tooltip-placement="left"
-                   tooltip="Control+D">
-                <button id="send-eof" ng-click="editFileView.sendEOF()" ng-disabled="!editFileView.console.running"
-                        class="btn btn-link console-control">eof</button>
-              </div>
-            </div>
-          </div>
+          <div id="console-tty" tty tty-load="editFileView.ttyLoad" style="float:left;width:100%;position:relative;background-color:#000;"></div>
       </div><!-- end main panel tabs -->
     </div>
   </div>

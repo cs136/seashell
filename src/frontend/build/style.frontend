@@ -42,5 +42,8 @@
 # Hotkeys
 frontend/css/lib/hotkeys.min.css
 
+# Other
+js/lib/xterm.css
+
 # Local CSS files
 frontend/css/common.css

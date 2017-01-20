@@ -52,10 +52,20 @@ angular.module('frontend-app')
         self.timeout = null;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
-        self.consoleEditor = null;
-        self.consoleOptions = {};
         self.editorReadOnly = true; // We start out read only until contents are loaded.
         self.fileReadOnly = false;
+        self.terminal = null;
+
+        self.ttyLoad = function(term) {
+          self.terminal = term;
+          self.console.terminal = term;
+          term.on('data', function (data) {
+            if (self.console.running) {
+              self.project.sendInput(self.console.PIDs[0], data);
+            }
+          });
+        };
+
 
         /** Callback key when connected.
          *  NOTE: This is slightly sketchy -- however, as
@@ -81,6 +91,7 @@ angular.module('frontend-app')
             self.scrollInfo[self.folder] = {};
           self.scrollInfo[self.folder][self.file] =
             {top:scr.top, left:scr.left, line:self.line, col:self.col};
+          self.console.terminal = null;
         });
         self.editorFocus = false;
         self.contents = "";
@@ -113,40 +124,26 @@ angular.module('frontend-app')
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
           var min_height = 500, margin_bottom = 30;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
-          var console_elem = $window.document.querySelector("#console > .CodeMirror");
+          var console_elem = $window.document.querySelector("#console-tty");
           // Run only when DOM is ready.
           if (editor_elem && console_elem) {
             var target_height = Math.max($window.innerHeight - editor_elem.getBoundingClientRect().top - margin_bottom, min_height);
             var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
-            var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
             if (editor_elem)
               editor_elem.style.height = sprintf("%fpx",
                 (narrow ? target_height * 0.7 : target_height) - file_control_height);
             if (console_elem)
               console_elem.style.height = sprintf("%fpx",
-                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
+                (narrow ? (target_height * 0.3 - file_control_height) : target_height));
             if(self.editor)
               self.editor.refresh();
-            if(self.consoleEditor)
-              self.consoleEditor.refresh();
-            // Force the font size at any rate (and font name)
-            _.each($window.document.querySelectorAll('.CodeMirror'),
-                function (elem) {
-                  elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
-                  elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
-                });
+            // Fit the xterm.js.
+            if(self.terminal)
+              self.terminal.fit();
           }
         }
         $scope.$on('window-resized', onResize);
         // Scope helper function follow.
-        self.consoleLoad = function(console_cm) {
-          self.consoleEditor = console_cm;
-          self.consoleEditor.on("change", function() {
-            var scr = self.consoleEditor.getScrollInfo();
-            self.consoleEditor.scrollTo(scr.left, scr.height);
-          });
-          $timeout(onResize, 0);
-        };
         self.editorLoad = function(editor) {
           self.editor = editor;
           if (self.ext === "c" || self.ext === "h") {
@@ -304,14 +301,6 @@ angular.module('frontend-app')
               },
             }
           };
-          self.consoleOptions = {
-            scrollbarStyle: "overlay",
-            lineWrapping: true,
-            readOnly: true,
-            mode: "text/plain",
-            theme: theme,
-            onLoad: self.consoleLoad
-          };
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
@@ -384,12 +373,6 @@ angular.module('frontend-app')
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
-          if (self.consoleEditor) {
-            for (var cKey in self.consoleOptions) {
-              self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
-            }
-            self.consoleEditor.refresh();
-          }
           onResize();
         };
         self.renameFile = function() {
@@ -432,9 +415,9 @@ angular.module('frontend-app')
         function handleCompileErr(msgs, warn_only) {
           if(msgs.length === 0) return;
           else if(!warn_only)
-            self.console.write("Compilation failed with errors:\n");
+            self.console.write("Compilation failed with errors:\r\n");
           else
-            self.console.write("Compilation generated warnings:\n");
+            self.console.write("Compilation generated warnings:\r\n");
           self.console.errors = msgs;
           if(self.ext=="h"||self.ext=="c") {
             self.editor.setOption("lint", false);
@@ -452,12 +435,12 @@ angular.module('frontend-app')
                                          /relocation \d+ has invalid symbol index \d+$/.test(res[4]));
 
             if(!main_undefined_spam) {
-              self.console.write(sprintf("%s:%d:%d: %s\n", res[1], res[2], res[3], res[4]));
+              self.console.write(sprintf("%s:%d:%d: %s\r\n", res[1], res[2], res[3], res[4]));
             }
 
             if(!warn_only && res[4].endsWith("undefined reference to `main'")) {
                 main_undefined = true;
-                self.console.write("Cannot find the 'main' function.\n");
+                self.console.write("Cannot find the 'main' function.\r\n");
             }
           });
         }
@@ -465,7 +448,7 @@ angular.module('frontend-app')
         self.runFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.console.write("Running '"+self.project.name+"/"+self.question+"':\n");
+            self.console.write("Running '"+self.project.name+"/"+self.question+"':\r\n");
             self.project.run(self.question, false)
               .then(function(res) {
                 $scope.$broadcast('program-running');
@@ -489,11 +472,11 @@ angular.module('frontend-app')
         self.testFile = function() {runWhenSaved(function () {
           self.killProgram().then(function() {
             self.console.clear();
-            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\n");
+            self.console.write("Running tests for '"+self.project.name+"/"+self.question+"':\r\n");
             self.project.run(self.question, true)
               .then(function(res) {
                 if(!res.pids) {
-                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\n");
+                  self.console.write("There are no tests for "+self.project.name+"/"+self.question+".\r\n");
                 }
                 else {
                   $q.all(res.pids)
@@ -541,40 +524,8 @@ angular.module('frontend-app')
           });
         };
 
-        self.userInput = "";
-        self.sendInput = function($event) {
-          if($event.keyCode == 13) {
-            if(self.console.running) {
-              self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
-              self.console.flushForInput();
-              // self.console.write(self.userInput + "\n"); -- not needed for a TTY
-              self.userInput = "";
-            }
-          }
-        };
-
         self.clearConsole = function () {
           self.console.clear();
-        };
-
-        self.sendEOF = function() {
-          if(self.console.running) {
-            var d;
-            if(self.userInput) {
-              d = self.project.sendInput(self.console.PIDs[0], self.userInput);
-            }
-            else {
-              d = $q.defer();
-              d.resolve();
-              d = d.promise;
-            }
-            d.then(function() {
-              self.userInput = "";
-              self.project.sendEOF(self.console.PIDs[0]).then(function () {
-                self.console.running = false;
-              });
-            });
-          }
         };
 
         self.setFileToRun = function() {
