@@ -29,6 +29,9 @@ angular.module('frontend-app')
     self.errors = [];
     self.logs = [];
 
+    // how many entries to keep in self.logs
+    var logSize = 200;
+
     // bug report email format
     self.reportTo = "seashell@cs.uwaterloo.ca";
     self.reportSubject = "seashell@cs.uwaterloo.ca";
@@ -79,13 +82,16 @@ angular.module('frontend-app')
         window.console[fn] = function() {
             defaultFn.apply(window.console, arguments);
             self.logs.push({type: fn, text: prettyLogMsg.apply(this, arguments)});
+            if (self.logs.length > logSize) {
+                self.logs.shift();
+            }
         };
     }
 
     // format a console.log message to human readable string
     // eg. prettyLogMsg(object1, object2, object3, ...);
     function prettyLogMsg() {
-        return Array.from(arguments).map(function(arg) {
+        return Array.prototype.slice.call(arguments).map(function(arg) {
             try {
                 // in case the object is recursive
                 return JSON.stringify(arg);
