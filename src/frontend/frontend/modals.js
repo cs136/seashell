@@ -33,13 +33,13 @@ angular.module('frontend-app')
       }])
   .factory('LoginModal', ['$modal',
       function($modal) {
-        return function() { return $modal.open({
+        return function(reset) { return $modal.open({
           templateUrl: "frontend/templates/login-template.html",
           controller: ['$scope', '$window', '$cookies', 'socket',
             function($scope, $window, $cookies, ws) {
               $scope.username = "";
               $scope.password = "";
-              $scope.reset = false;
+              $scope.reset = reset || false;
               $scope.busy = false;
               $scope.error = false;
 

@@ -22,28 +22,77 @@ angular.module('frontend-app')
   // Error service.
   .service('error-service', ['$rootScope', '$timeout', '$sce',
     function ($rootScope, $timeout, $sce) {
+      
     var self = this;
+
+    // global variables
     self.errors = [];
+    self.logs = [];
 
-    self.types = {
-      "seashell" : "If this error persists, please email <a href='mailto:seashell@cs.uwaterloo.ca'>seashell@cs.uwaterloo.ca</a> the error message, and the following information for debugging purposes:",
-      "marmoset" : "Make sure you can still access Marmoset's web interface, and try again in a few minutes.",
-      "webserver" : "Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes."
-    };
+    // bug report email format
+    self.reportTo = "seashell@cs.uwaterloo.ca";
+    self.reportSubject = "seashell@cs.uwaterloo.ca";
+    self.reportBody = "Tell us what you were doing when this error showed up. \n[paste the log here]";
 
-    self.getMessage = function(type) {
-      return $sce.trustAsHtml(type ? self.types[type] : self.types.seashell);
-    };
+    // override console.log so that it also logs to self.logs
+    logConsoleFn("log");
+    logConsoleFn("warn");
+    logConsoleFn("error");
 
+    // makes the UI display an error message
     self.report = function (error, shorthand, type) {
       if (error) {
-        console.log(error);
+        console.error(error);
         self.errors.push({shorthand: shorthand, error: error, type: type});
         $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
+
+    // close the error message
     self.suppress = function (index) {
       self.errors.splice(index, 1);
       $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
     };
-  }]);
+
+    // returns a pretty string of self.logs
+    self.dumpLogs = function() {
+      return "navigator.appVersion: " + navigator.appVersion + "\n\n" +
+        self.logs.map(function(entry) {
+            var prefix;
+            switch (entry.type) {
+                case "log": prefix   = "  log > "; break;
+                case "warn": prefix  = " warn ! "; break;
+                case "error": prefix = "error * "; break;
+            }
+            return prefix + entry.text;
+        }).join("\n");
+    };
+
+    // display self.dumpLogs() in a new open window
+    self.dumpLogsNewWindow = function() {
+        return window.open().document.write("<pre>"+self.dumpLogs()+"</pre>");
+    };
+
+    // extend default js console.log so that it also logs to self.log
+    function logConsoleFn(fn) {
+        var defaultFn = window.console[fn];
+        window.console[fn] = function() {
+            defaultFn.apply(window.console, arguments);
+            self.logs.push({type: fn, text: prettyLogMsg.apply(this, arguments)});
+        };
+    }
+
+    // format a console.log message to human readable string
+    // eg. prettyLogMsg(object1, object2, object3, ...);
+    function prettyLogMsg() {
+        return Array.from(arguments).map(function(arg) {
+            try {
+                // in case the object is recursive
+                return JSON.stringify(arg);
+            } catch (e) {
+                return JSON.stringify(e);
+            }
+        }).join("\n");
+    }
+
+}]);
