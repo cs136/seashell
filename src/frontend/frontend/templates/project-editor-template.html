@@ -9,15 +9,14 @@
             <span>{{editView.question}}/
           </span>&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="group in editView.question_files">
-                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
-              <a ng-repeat-start="file in group.files"
-                ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
-                class="file-link"
-                ui-sref-active="file-link-active"
-                ng-class="{'current-runner-file': group.isFileToRun}">
-                {{file}}</a><span ng-repeat-end>
-              </span>
+            <span ng-repeat="file in editView.question_files">
+                <span ng-if="(editView.question + '/' + file) == runnerFile" class="glyphicon glyphicon-play-circle runner-icon"></span>
+                <a ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
+                   class="file-link"
+                   ui-sref-active="file-link-active"
+                   ng-class="{'current-runner-file': (editView.question + '/' + file) == runnerFile}">
+                    {{file}}
+                </a>
             </span> 
           </span>
         </div>
@@ -62,15 +61,11 @@
         <div class="col-md-6 col-xs-8" id="common-files">
           <span class="file-text" style="font-style: italic">common/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="group in editView.common_files">
-                <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
-              <a ng-repeat-start="file in group.files" ng-if="$first"
-                 ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
-                 ui-sref-active='file-link-active'
-                 class='file-link'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
-                class='file-link'
-                ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
-                ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
+            <span ng-repeat="file in editView.common_files">
+                <span ng-if="('common/' + file) == runnerFile" class="glyphicon glyphicon-play-circle runner-icon"></span>
+                <a ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
+                   ui-sref-active='file-link-active'
+                   class='file-link'>{{file}}</a>
               </span>
             </span>
           </span>
@@ -80,15 +75,10 @@
         <div class="col-md-6 col-xs-12">
           <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
           <span class="file-text" style="font-size: 14px">
-            <span ng-repeat="group in editView.test_files">
-              <a ng-repeat-start="file in group.files" ng-if="$first"
-                 ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
+            <span ng-repeat="file in editView.test_files">
+              <a ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
                  class='file-link'
-                 ui-sref-active='file-link-active'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
-                   class='file-link'
-                   ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
-                   ui-sref-active='file-link-active'>{{file.split(".").pop()}}</a>
-              </span>
+                 ui-sref-active='file-link-active'>{{file}}</a>
             </span>
           </span>
         </div>
