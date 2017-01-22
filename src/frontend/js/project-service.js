@@ -364,7 +364,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                     self.projectZipURL = sprintf(WL_PROJ_ZIP_URL_TEMPLATE, self.name);
                     self.skelURL = sprintf(WL_PROJ_FILE_LIST_URL_TEMPLATE, self.name);
                   }
-                  self.pullMissingSkelFiles();
+                  // self.pullMissingSkelFiles();
                });
                return self;
             });

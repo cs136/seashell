@@ -778,30 +778,31 @@
 
 
 
-;; copy old-dir to a new-dir, handles parent creation correctly
-;; after copy children of old-dir becomes children of new-dir
+;; copy old dir/file to a new dir/file, handles parent creation correctly
+;; after copy children of old dir becomes children of new dir
 ;; better than racket's file libaray function also gives an option to overwrite existing
-(define/contract (copy-dir* old-dir new-dir overwrite)
+(define/contract (copy* old new overwrite)
   (path-string? path-string? boolean? . -> . void?)
-  (when (equal? old-dir new-dir)
-    (raise-user-error "copy-dir* cannot copy" old-dir "to the same directory" new-dir))
-  (define entries (directory-list old-dir))
-  (define (copy-file old-dir old-file)
-    (define from (build-path old-dir old-file))
-    (define dest (build-path new-dir old-file))
-    ;; overwrite
-    (when (or overwrite (not (or (file-exists? dest) (directory-exists? dest))))
-      (delete-directory/files dest #:must-exist? #f)
-      (make-parent-directory* dest)
-      (copy-directory/files from dest)))
-  (for-each (lambda (e) (copy-file old-dir e)) entries))
+  (when (equal? old new)
+    (raise-user-error "copy* cannot copy" old "to the same location" new))
+  (make-parent-directory* new)
+  (cond [(or (link-exists? old) 
+             (file-exists? old))
+          (when (or overwrite (not (file-exists? new)))
+            (copy-file old new))]
+        [(directory-exists? old) 
+          (for-each 
+            (lambda (item) 
+              (copy* (build-path old item) (build-path new item) overwrite))
+            (directory-list old))]
+        [else (raise-user-error (format "Could not copy ~a" old))]))
 
 
 ;; unzip to a dest-dir with an option to overwrite existing
 (define/contract (unzip* zip-file dest-dir overwrite)
   (path-string? path-string? boolean? . -> . void?)
   (define zip-port (open-input-file zip-file))
-  (call-with-unzip zip-port (lambda (tmp-dir) (copy-dir* tmp-dir dest-dir overwrite))))
+  (call-with-unzip zip-port (lambda (tmp-dir) (copy* tmp-dir dest-dir overwrite))))
 
 
 ;; (fetch-posted-assignment assignment) fetchs assignment files from the course account, 
