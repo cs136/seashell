@@ -213,9 +213,15 @@
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; Location to list of visiable assignments
-      (cons 'posted-assignment-list         "/u2/cs136/public_html/assignment_skeletons/skeletons.json")
+      (cons 'posted-assignments             "/u2/cs136/public_html/assignment_skeletons/skeletons.json")
       ;; Directory to find the assignment zip
-      (cons 'assignment-zip-dir             "/u2/cs136/public_html/assignment_skeletons")
+      (cons 'assignment-zip-directory       "/u2/cs136/public_html/assignment_skeletons")
+      ;; A list of draft assignments
+      (cons 'draft-assignments              "/u2/cs136/public_html/assignment_skeletons/project_whitelist.json")
+      ;; Who can see the draft assignments
+      (cons 'whitelist-users                "/u2/cs136/public_html/assignment_skeletons/user_whitelist.json")
+      ;; For scp download from the course account
+      (cons 'course-ssh                     "cs136@linux.student.cs.uwaterloo.ca")
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
       (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having

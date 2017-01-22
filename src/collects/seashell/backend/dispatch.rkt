@@ -610,10 +610,10 @@
                (result . #t))]
       [(hash-table
         ('id id)
-        ('type "fetchPostedAssignments"))
+        ('type "fetchAssignments"))
         `#hash((id . ,id)
                (success . #t)
-               (result . ,(fetch-posted-assignments)))]
+               (result . ,(fetch-assignments)))]
       ;; Fall through case.
       [_
        `#hash((id . ,(hash-ref message 'id))

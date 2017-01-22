@@ -992,7 +992,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          * Fetches new assignments into self.list()
          */
         self.fetch = function() {
-            return $q.when(ws.fetchPostedAssignments());
+            return $q.when(ws.fetchAssignments());
         };
       /**
        * Deletes a project.
