@@ -364,7 +364,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                     self.projectZipURL = sprintf(WL_PROJ_ZIP_URL_TEMPLATE, self.name);
                     self.skelURL = sprintf(WL_PROJ_FILE_LIST_URL_TEMPLATE, self.name);
                   }
-                  // self.pullMissingSkelFiles();
+
                });
                return self;
             });
@@ -881,28 +881,8 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return self._inSkeleton;
         };
 
-        /* Returns a list of files missing in the local project,
-           by comparing with the server project skeleton.
 
-           This function uses SeashellProject.prototype.listSkelFiles
-           to get a list of files on the server.
-
-           Deferred return type: [String] -- list of missing local files
-        */
-        SeashellProject.prototype.missingSkelFiles = function() {
-          var self = this;
-          return $q.all([self.list(), self.listSkelFiles()]).then(function(results) {
-            var localFileList = results[0];
-            var serverFileList = results[1];
-            return _.filter(serverFileList, function(serverFile) {
-              return ! _.find(localFileList, function(localFile) {return localFile === serverFile;});
-            });
-          });
-        };
-
-        /* Calls SeashellProject.prototype.missingSkelFiles to get a list of
-           missing files, then requests the server to create them, then reads
-           the files from the server.
+        /* Sync all assignment files with the backend
         */
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
@@ -911,7 +891,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           }
           return $q.when(ws.fetchAssignments()).then(function() {self._buildTree();});
         };
-        
+
       return SeashellProject;})();
 
 
