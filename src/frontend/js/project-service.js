@@ -904,14 +904,14 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
            missing files, then requests the server to create them, then reads
            the files from the server.
         */
-          = function() {
+        SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
           if(ws.isOffline()) {
             return $q.when(true);
           }
           return $q.when(ws.fetchAssignments()).then(function() {self._buildTree();});
         };
-        p
+        
       return SeashellProject;})();
 
 
