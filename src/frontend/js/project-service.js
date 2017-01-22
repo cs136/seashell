@@ -942,7 +942,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var listSkelProjects = function() {
         if (! self._listSkelProjects) {
            self._listSkelProjects = $http({url: PROJ_SKEL_URL}).catch(function (reason) {
-              return $q.reject("Could not fetch list of skeletons: " + reason);
+              return $q.reject("Could not fetch list of skeletons: " + JSON.stringify(reason));
            }).then(function(result) {
               return result.data;
            });
@@ -988,62 +988,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       };
       self.projectWhitelist = projectWhitelist;
 
-      /**
-       * Fetches new assignments.
-       *
-       * @returns {Angular.$q -> [projects]/[failed projects]/String} Deferred object
-       *  that will resolve
-       *  to the list of new assignments cloned, or a list of assignments that failed
-       *  to clone, or a error message.
-      */
-      self.fetch = function() {
-         return self.list().then(function (projects) {
-            return $http({url: PROJ_SKEL_URL}).catch(function () {
-               return $q.reject("Could not fetch list of skeletons!");
-            }).then(function (results) {
-               var localProjects = projects.map(function(v, k) {return v[0];}).sort();
-               // expects a list of project (assignment) names : (listof String)
-               var skels = _.map(results.data.sort(),
-                function(skel) {
-                  return [skel, sprintf(PROJ_ZIP_URL_TEMPLATE, skel)];
-                });
-               var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
-               return self.userWhitelist().then(function(usernames) {
-                  if (_.contains(usernames, user)) {
-                     return self.projectWhitelist().then(function(more) {
-                        skels = skels.concat(_.map(more,
-                          function(skel) {
-                            return [skel, sprintf(WL_PROJ_ZIP_URL_TEMPLATE, skel)];
-                          }));
-                     });
-                  }
-               }).finally(function() {
-                  var new_projects = _.filter(skels, function(skel) {
-                    return -1 == localProjects.indexOf(skel[0]);
-                  });
-                  var failed_projects = [];
-                  var start = $q.when();
-                  return _.foldl(new_projects, function(in_continuation, template) {
-                     function clone(failed) {
-                        return $q.when(ws.newProjectFrom(template[0], 
-                           template[1])).then(function () {
-                              if (failed) {
-                                 return $q.reject("Propagating failure...");
-                              }
-                           }).catch(function (info) {
-                             failed_projects.push(template[0]);
-                             return $q.reject("Propagating failure...");
-                           });
-                        }
-                        return in_continuation.then(function () {return clone(false);},
-                                                    function () {return clone(true);});
-                  }, start).then(function() {return new_projects;})
-                           .catch(function() {return $q.reject(failed_projects);});
-               });
-            });
-         });
-      };
-
+        /**
+         * Fetches new assignments into self.list()
+         */
+        self.fetch = function() {
+            return $q.when(ws.fetchPostedAssignments());
+        };
       /**
        * Deletes a project.
        * @param {String} name - Name of project.

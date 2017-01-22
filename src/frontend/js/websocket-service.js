@@ -312,6 +312,7 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.getUploadFileToken = make_offline_disabled('getUploadFileToken');
       self.getExportToken = make_offline_disabled('getExportToken');
       self.marmosetSubmit = make_offline_disabled('marmosetSubmit');
+      self.fetchPostedAssignments = make_offline_disabled('fetchPostedAssignments');
       // These functions do nothing and just resolve in offline mode.
       self.lockProject = make_offline_noop('lockProject');
       self.forceLockProject = make_offline_noop('forceLockProject');

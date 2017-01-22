@@ -47,6 +47,7 @@
          read-project-settings 
          write-project-settings
          write-project-settings/key
+         fetch-posted-assignments
          )
 
 (require seashell/log
@@ -773,3 +774,54 @@
                                                               (read-config 'common-subdirectory)
                                                               question)
                                                           file)))))
+
+
+
+;; copy old-dir to a new-dir, handles parent creation correctly
+;; after copy children of old-dir becomes children of new-dir
+;; better than racket's file libaray function also gives an option to overwrite existing
+(define/contract (copy-dir* old-dir new-dir overwrite)
+  (path-string? path-string? boolean? . -> . void?)
+  (when (equal? old-dir new-dir)
+    (raise-user-error "copy-dir* cannot copy" old-dir "to the same directory" new-dir))
+  (define entries (directory-list old-dir))
+  (define (copy-file old-dir old-file)
+    (define from (build-path old-dir old-file))
+    (define dest (build-path new-dir old-file))
+    ;; overwrite
+    (when (or overwrite (not (or (file-exists? dest) (directory-exists? dest))))
+      (delete-directory/files dest #:must-exist? #f)
+      (make-parent-directory* dest)
+      (copy-directory/files from dest)))
+  (for-each (lambda (e) (copy-file old-dir e)) entries))
+
+
+;; unzip to a dest-dir with an option to overwrite existing
+(define/contract (unzip* zip-file dest-dir overwrite)
+  (path-string? path-string? boolean? . -> . void?)
+  (define zip-port (open-input-file zip-file))
+  (call-with-unzip zip-port (lambda (tmp-dir) (copy-dir* tmp-dir dest-dir overwrite))))
+
+
+;; (fetch-posted-assignment assignment) fetchs assignment files from the course account, 
+;; skipping files if already exist in student linux account
+(define/contract (fetch-posted-assignment name)
+  (path-string? . -> . void?)
+  (define (zip-path name)
+    (format "~a/~a-seashell.zip" (read-config 'assignment-zip-dir) name))
+  (unzip* (zip-path name) ".seashell/projects/" #f))
+  
+
+;; (fetch-posted-assignments) fetchs new assignment projects from the course account, 
+;; and returns a list of new project names just downloaded
+(define/contract (fetch-posted-assignments)
+  (-> list?)
+  (define local-list (map first (list-projects)))
+  (define provided-list (string->jsexpr (file->string (read-config 'posted-assignment-list))))
+  (define missing-list (remove* local-list provided-list))
+  (for-each fetch-posted-assignment provided-list)
+  (list local-list provided-list missing-list))
+
+
+
+

@@ -608,6 +608,12 @@
         `#hash((id . ,id)
                (success . #t)
                (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "fetchPostedAssignments"))
+        `#hash((id . ,id)
+               (success . #t)
+               (result . ,(fetch-posted-assignments)))]
       ;; Fall through case.
       [_
        `#hash((id . ,(hash-ref message 'id))

@@ -243,6 +243,12 @@ SeashellWebsocket.prototype.getProjects = function() {
     type : "getProjects"});
 };
 
+SeashellWebsocket.prototype.fetchPostedAssignments = function() {
+  return this.sendMessage({
+    type : "fetchPostedAssignments"
+  });
+};
+
 SeashellWebsocket.prototype.listProject = function(name) {
   return this.sendMessage({
     type : "listProject",
