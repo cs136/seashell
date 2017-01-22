@@ -834,29 +834,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return $q.when(ws.sendEOF(pid));
         };
 
-        /* Returns a list of file paths in the current project skeleton.
-           This method only send requests to the server once when it's initially called.
-           The server response is remembered for future calls.
-
-           Deferred return type: [String] -- list of file paths, relative to the project directory.
-           eg. ["q1a/file.c", "q1a/tests/a.in","common/text.txt"]
-        */
-        SeashellProject.prototype.listSkelFiles = function() {
-          var self = this;
-          if (! self._listSkelFiles) {
-            self._listSkelFiles = $http({url: self.skelURL, user: USERNAME, whitelist: 'true'}).then(function(result) {
-              return result.data.result.map(function(path) {
-                // remove the project name from the start
-                return path.replace(new RegExp("^"+self.name+"/"), "");
-              }).filter(function(path) {
-                // remove paths with trailing slash (only want files, no directory)
-                return path.length > 0 && path[path.length-1] !== '/';
-              }).sort();
-            }).catch(function(err) { /* if this fails, ignore for now */ });
-          }
-          return self._listSkelFiles;
-        };
-
         /**
          * Checks if the project is listed in the skeleton on the server.
          * This function is memoized.
