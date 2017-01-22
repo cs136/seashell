@@ -841,7 +841,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellProject.prototype.inSkeleton = function() {
           var self = this;
           if (! self._inSkeleton) {
-            self._inSkeleton = $q.all([listSkelProjects(), userWhitelist(), projectWhitelist()])
+            self._inSkeleton = $q.all([listSkelProjects(), projectWhitelist()])
               .then(function(result) {
                 var names = result[0];
                 var users = result[1];
@@ -896,25 +896,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         return self._listSkelProjects;
       };
       
-      /* Returns a list of user names in the whitelist. 
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-         
-         Deffered type: [String]
-      */
-      var userWhitelist = function() {
-         if (! self._userWhitelist) {
-            self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
-               return result.data;
-            }).catch(function(err) {
-               console.warn("Could not access the user whitelist. Assuming it's empty. Received:", err);
-               return [];
-            });
-         }
-         return self._userWhitelist;
-      };
-      self.userWhitelist = userWhitelist;
- 
        /* Returns a list of projects in the whitelist. 
          This method only send requests to the server once when it's initially called.
          The server response is remembered for future calls.
