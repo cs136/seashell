@@ -15,3 +15,5 @@ Major plugins:
 - Blueprint.JS
 - TypeScript 
 - SCSS
+- React-Router
+- Redux-Socket.IO (docs at https://www.npmjs.com/package/redux-socket.io)
