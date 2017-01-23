@@ -310,7 +310,12 @@ angular.module('frontend-app')
             readOnly: true,
             mode: "text/plain",
             theme: theme,
-            onLoad: self.consoleLoad
+            onLoad: self.consoleLoad,
+            extraKeys: {
+              "Ctrl-Enter": function() {
+                self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
+              }
+            },
           };
           var main_hotkeys = [{
             combo: 'ctrl+d',
@@ -630,7 +635,7 @@ angular.module('frontend-app')
                 self.undoHistory = JSON.parse(conts.history);
                 self.editor.setHistory(self.undoHistory);
               } else {
-                console.log("warning: could not read history");
+                console.warn("could not read history");
               }
             } else {
               self.unavailable = true;
