@@ -1,10 +1,17 @@
-Simple progressive web app starter kit
-
-redux-integration on `redux-integraion` branch
+Seashell React Frontend
 
 Command|Description
 --- | ---
-*npm run start*|Start application with hot reloading enabled
+*npm run start*|Start application with a live server
 *npm run build*|Minified build with offline capabilities
-*npm run deploy*|Deploy your site (under build folder) to github page
 
+Resources get built to /dist while the index.html file is built to /index.html.
+
+All source files (including uncompiled index.html) are located in /src.
+
+Major plugins:
+- React
+- Redux (with React Connector)
+- Blueprint.JS
+- TypeScript 
+- SCSS
