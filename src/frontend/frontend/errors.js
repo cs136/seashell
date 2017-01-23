@@ -20,8 +20,8 @@
 
 angular.module('frontend-app')
   // Error service.
-  .service('error-service', ['$rootScope', '$timeout', '$sce',
-    function ($rootScope, $timeout, $sce) {
+  .service('error-service', ['$rootScope', '$timeout', 
+    function ($rootScope, $timeout) {
       
     var self = this;
 
@@ -31,11 +31,6 @@ angular.module('frontend-app')
 
     // how many entries to keep in self.logs
     var logSize = 200;
-
-    // bug report email format
-    self.reportTo = "seashell@cs.uwaterloo.ca";
-    self.reportSubject = "seashell@cs.uwaterloo.ca";
-    self.reportBody = "Tell us what you were doing when this error showed up. \n[paste the log here]";
 
     // override console.log so that it also logs to self.logs
     logConsoleFn("log");
@@ -98,7 +93,14 @@ angular.module('frontend-app')
             } catch (e) {
                 return JSON.stringify(e);
             }
-        }).join("\n");
+        }).join(" ");
     }
+
+    // bug report email format
+    self.reportTo = "seashell@cs.uwaterloo.ca";
+    self.reportSubject = "Seashell issue report";
+    self.reportBody = function() {
+        return encodeURIComponent("[Tell us what you were doing when this error showed up.]\n\n" + self.dumpLogs());
+    };
 
 }]);

@@ -34,9 +34,9 @@
   <alert ng-repeat="error in frontend.errors.errors" ng-cloak
     type="danger" close="frontend.errors.suppress($index)" role="alert">
     <p><b>An error has occurred: </b>{{error.shorthand}}
-    <span ng-show="error.type == 'marmoset'">Make sure you can still access Marmoset's web interface, and try again in a few minutes.</span>
-    <span ng-show="error.type == 'webserver'">Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes.</span>
-    <span ng-show="error.type == 'seashell' || ! error.type">Try refreshing the page or <a href="" ng-click="frontend.login(true)">resetting Seashell</a>. If the error persists, please email <a href="" ng-click="frontend.errors.dumpLogsNewWindow()">this log</a> to <a href='mailto:{{frontend.errors.reportTo}}?subject={{frontend.errors.reportSubject}}&body={{frontend.errors.reportBody}}'>{{frontend.errors.reportTo}}</a> and tell us what you are doing.</span>
+    <span ng-if="error.type == 'marmoset'">Make sure you can still access Marmoset's web interface, and try again in a few minutes.</span>
+    <span ng-if="error.type == 'webserver'">Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes.</span>
+    <span ng-if="error.type == 'seashell' || ! error.type">Try refreshing the page or <a href="" ng-click="frontend.login(true)">resetting Seashell</a>. If the error persists, please email <a href="" ng-click="frontend.errors.dumpLogsNewWindow()">this log</a> to <a href='mailto:{{frontend.errors.reportTo}}?subject={{frontend.errors.reportSubject}}&body={{frontend.errors.reportBody()}}'>{{frontend.errors.reportTo}}</a> and tell us what you are doing.</span>
     </p>
     <pre ng-cloak>
     error:       {{error.error}}
