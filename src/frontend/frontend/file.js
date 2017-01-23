@@ -262,6 +262,20 @@ angular.module('frontend-app')
             self.editor.indentSelection("subtract");
           }
         }
+        function editorFullscreen() {
+          self.editor.focus();
+          self.consoleEditor.setOption('fullScreen', false);
+          self.editor.setOption('fullScreen', true);
+        }
+        function consoleFullscreen() {
+          self.consoleEditor.focus();
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.setOption('fullScreen', true);
+        }
+        function quitFullscreen() {
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.setOption('fullScreen', false);
+        }
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
@@ -281,13 +295,13 @@ angular.module('frontend-app')
             rulers: [80],
             extraKeys: {
               "Ctrl-Space": "autocomplete",
-              "Ctrl-Enter": function() {
+              "Shift-Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Shift-Ctrl-Left": editorFullscreen,
+              "Shift-Ctrl-Right": consoleFullscreen,
               "Ctrl-I": self.indentAll,
-              "Esc": function() {
-                if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
-              },
+              "Esc": quitFullscreen,
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
@@ -296,10 +310,6 @@ angular.module('frontend-app')
               // font size decrease/increase shortcuts
               "Ctrl-,": function() {
                 settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
-                settings.save();
-              },
-              "Ctrl-.": function() {
-                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
                 settings.save();
               },
             }
@@ -312,9 +322,12 @@ angular.module('frontend-app')
             theme: theme,
             onLoad: self.consoleLoad,
             extraKeys: {
-              "Ctrl-Enter": function() {
+              "Shift-Ctrl-Enter": function() {
                 self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
-              }
+              },
+              "Shift-Ctrl-Left": editorFullscreen,
+              "Shift-Ctrl-Right": consoleFullscreen,
+              "Esc": quitFullscreen,
             },
           };
           var main_hotkeys = [{
@@ -635,7 +648,7 @@ angular.module('frontend-app')
                 self.undoHistory = JSON.parse(conts.history);
                 self.editor.setHistory(self.undoHistory);
               } else {
-                console.warn("could not read history");
+                console.warn("Could not read history");
               }
             } else {
               self.unavailable = true;
