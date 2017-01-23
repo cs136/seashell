@@ -312,6 +312,10 @@ angular.module('frontend-app')
                 settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
                 settings.save();
               },
+              "Ctrl-.": function() {
+                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
+                settings.save();
+              },
             }
           };
           self.consoleOptions = {
