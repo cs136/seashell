@@ -33,12 +33,17 @@
   
   <alert ng-repeat="error in frontend.errors.errors" ng-cloak
     type="danger" close="frontend.errors.suppress($index)" role="alert">
-    <b>An error has occurred: </b>{{error.shorthand}} <span ng-bind-html="frontend.errors.getMessage(error.type)"></span>
+    <p><b>An error has occurred: </b>{{error.shorthand}}
+    <span ng-if="error.type == 'marmoset'">Make sure you can still access Marmoset's web interface, and try again in a few minutes.</span>
+    <span ng-if="error.type == 'webserver'">Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes.</span>
+    <span ng-if="error.type == 'seashell' || ! error.type">Try refreshing the page or <a href="" ng-click="frontend.login(true)">resetting Seashell</a>. If the error persists, please email <a href="" ng-click="frontend.errors.dumpLogsNewWindow()">this log</a> to <a href='mailto:{{frontend.errors.reportTo}}?subject={{frontend.errors.reportSubject}}&body={{frontend.errors.reportBody()}}'>{{frontend.errors.reportTo}}</a> and tell us what you are doing.</span>
+    </p>
     <pre ng-cloak>
-version:     @(values SEASHELL_VERSION) (@(values SEASHELL_BRANCH) at @(values SEASHELL_COMMIT))
-api_version: @(values SEASHELL_API_VERSION)
-host:        {{frontend.host}}
-error:       {{error.error}}</pre>
+    error:       {{error.error}}
+    version:     @(values SEASHELL_VERSION) (@(values SEASHELL_BRANCH) at @(values SEASHELL_COMMIT))
+    browser:     {{navigator.appVersion}}
+    api_version: @(values SEASHELL_API_VERSION)
+    host:        {{frontend.host}}</pre>
   </alert>
 
   <div ui-view></div>
