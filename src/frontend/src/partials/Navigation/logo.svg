@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="221" viewBox="0 0 256 221">
+  <metadata><?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c138 79.159824, 2016/09/14-01:09:01        ">
+   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description rdf:about=""/>
+   </rdf:RDF>
+</x:xmpmeta>
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                           
+<?xpacket end="w"?></metadata>
+<defs>
+    <style>
+      .cls-1 {
+        fill: #6a2f08;
+        stroke: #6a2f08;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+        stroke-linejoin: round;
+        stroke-width: 1px;
+        fill-rule: evenodd;
+      }
+
+      .cls-2 {
+        fill: #4d0e60;
+        stroke: #4d0e60;
+      }
+
+      .cls-3 {
+        fill: #e65a49;
+        stroke: #e65a49;
+      }
+
+      .cls-4 {
+        fill: #3f4c6b;
+        stroke: #3f4c6b;
+      }
+
+      .cls-5 {
+        fill: #70c0c4;
+        stroke: #70c0c4;
+      }
+
+      .cls-6 {
+        fill: #288e90;
+        stroke: #288e90;
+      }
+
+      .cls-7 {
+        fill: #d8b52d;
+        stroke: #d8b52d;
+      }
+
+      .cls-8 {
+        fill: #aedeb2;
+        stroke: #aedeb2;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M56.889,0L128,167.329,104.3,221Z"/>
+  <path class="cls-2" d="M150.123,221H104.3L128,167.329Z"/>
+  <path class="cls-3" d="M128,167.329L56.889,0H197.531L128,167.329"/>
+  <path class="cls-4" d="M150.123,221L128,167.329,197.531,0Z"/>
+  <path class="cls-5" d="M197.531,0L256,71.036,150.123,221h0Z"/>
+  <path class="cls-6" d="M150.123,221L256,71.036V143.65Z"/>
+  <path class="cls-7" d="M104.3,221L56.889,0,0,69.457,104.3,221"/>
+  <path class="cls-8" d="M104.3,221L0,69.457V143.65Z"/>
+</svg>
