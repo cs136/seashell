@@ -644,6 +644,22 @@
               (success . #f)
               (result . ,(format "Unknown message: ~s" message)))]))
 
+  ;; (any->short-str obj max-length)
+  ;;
+  ;; Give an object, returns its string representation up to max-length length.
+  ;;
+  ;; Arguments:
+  ;;  obj - Any object. Will be converted to string using (format "~a" obj)
+  ;;  max-length - A limit on how long the returned string will be. If limit
+  ;;               is reached, ellipsis will be appended to indicate this.
+  ;; Returns:
+  ;;  A string representing obj.
+  (define (any->short-str obj max-length)
+    (let ((s (format "~a" obj)))
+      (if (> (string-length s) max-length)
+          (string-append (substring s 0 max-length) "...")
+          s)))
+
   ;; (handle-message message)
   ;;
   ;; Given a message, passes it on to the appropriate function.
@@ -663,6 +679,8 @@
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
       [else
        (define id (hash-ref message 'id))
+       (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
+             id (hash-ref message 'type "unknown") (any->short-str message 100))
        (with-handlers
            ([exn:project?
              (lambda (exn)
@@ -721,6 +739,9 @@
               (define message (bytes->jsexpr data))
               (semaphore-post keepalive-sema)
               (define result (handle-message message))
+              (logf 'info "Responding to msg id=~a. Response: ~a"
+                    (hash-ref result 'id "no_id")
+                    (any->short-str (hash-ref result 'result "no_results") 100))
               (send-message connection result))))))
        (main-loop)]))
 
