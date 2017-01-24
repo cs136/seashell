@@ -96,9 +96,22 @@ function SeashellWebsocket(uri, key, failure, closes) {
         var request = self.requests[response.id];
 
         if (request.type != 'ping') {
-          console.log("Received response to message with id: "+response.id+".");
-          console.log(request);
-          console.log(response);
+
+          var time = new Date();
+          var diff = request.time ? time - request.time : 'NA';
+
+          console.log("Received response to message with id "+response.id+" after "+diff+" ms.");
+
+          var displayRequest = Object.assign({}, request);
+          delete displayRequest.time; // hide from console
+          delete displayRequest.deferred; // hide from console
+          console.log(displayRequest);
+
+          if (! response.success) {
+            console.error(response);
+          } else {
+            console.log(response);
+          }
         }
 
         if (response.success) {
@@ -169,12 +182,25 @@ SeashellWebsocket.prototype._sendMessage = function(message, deferred) {
   var self = this;
   // Reserve a slot for the message.
   var request_id = self.lastRequest++;
+
+  message.time = new Date();
+
   self.requests[request_id] = message;
   message.id = request_id;
   // Stringify, write out as Array of bytes.
   var blob = new Blob([JSON.stringify(message)]);
   // Grab a deferred for the message:
   self.requests[request_id].deferred = deferred || $.Deferred();
+
+  // log to console
+  if (message.type != 'ping') {
+    var displayMsg = Object.assign({}, message);
+    delete displayMsg.deferred; // hide defer field
+    delete displayMsg.time;  // hide time field
+    console.log("Sent request with id "+request_id+".");
+    console.log(displayMsg);
+  }
+  
   try {
     // Send the message:
     self.websocket.send(blob);

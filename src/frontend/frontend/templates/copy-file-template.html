@@ -1,0 +1,19 @@
+<!-- Copy File dialog -->
+      <div class="modal-header">
+        <button type="button" class="close" ng-click="$dismiss()" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="copy-file-label">
+          <span class="glyphicon glyphicon-edit"></span>
+          Copy File</h4>
+      </div>
+      <form name="copyFileForm" novalidate ng-submit="copyFile()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="copy-name">New Name:</label>
+            <input type="text" ng-model="copy_name" name="copy-name" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" ng-click="$dismiss()">Close</button>
+          <input type="submit" value="Copy" class="btn btn-primary" />
+        </div>
+      </form>

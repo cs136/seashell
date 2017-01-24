@@ -33,13 +33,13 @@ angular.module('frontend-app')
       }])
   .factory('LoginModal', ['$modal',
       function($modal) {
-        return function() { return $modal.open({
+        return function(reset) { return $modal.open({
           templateUrl: "frontend/templates/login-template.html",
           controller: ['$scope', '$window', '$cookies', 'socket',
             function($scope, $window, $cookies, ws) {
               $scope.username = "";
               $scope.password = "";
-              $scope.reset = false;
+              $scope.reset = reset || false;
               $scope.busy = false;
               $scope.error = false;
 
@@ -155,6 +155,32 @@ angular.module('frontend-app')
           });
       };
   }])
+  .factory('CopyFileModal', ['$modal', 'error-service',
+    function($modal, errors) {
+      return function(project, question, folder, file, notify) {
+        notify = notify || function() {};
+        return $modal.open({
+          templateUrl: "frontend/templates/copy-file-template.html",
+          controller: ["$scope", "$state", "error-service",
+            function($scope, $state, errors) {
+              $scope.copy_name = (folder=='common' ? "" : question + "/") +
+                (folder=='question' ? "" : folder + "/") + file;
+              $scope.copyFile = function() {
+                project.copyFile(question, folder, file, $scope.copy_name)
+                  .then(function() {
+                    $scope.$close();
+                    notify($scope.copy_name);
+                  })
+                  .catch(function(err) {
+                    $scope.$dismiss();
+                    errors.report(err, "An error occurred while copying the file.");
+                  });
+              };
+            }]
+          });
+      };
+  }])
+	
   // Directive for 
   // New File Modal Service
   .factory('NewFileModal', ['$modal', 'error-service',
