@@ -19,7 +19,8 @@
 
 (require/typed ffi/unsafe/atomic
                [start-atomic (-> Void)]
-               [end-atomic (-> Void)])
+               [end-atomic (-> Void)]
+               [call-as-atomic (All (A) (-> (-> A) A))])
 
 (provide call-with-exclusive-write-lock
          call-with-write-lock)
@@ -34,39 +35,64 @@
 ;; The safe-semaphore is not as general. It enforces that you must wait for a semaphore
 ;; before posting to it. This is to easily allow checking for unbalances caused by dead
 ;; threads. Keep this in mind before using it for something new.
-(struct safe-semaphore ([count : Integer] [threads : (Listof Thread)]) #:mutable)
-(struct safe-lock ([thread : (U Thread False)]) #:mutable)
+(struct wchan ([waiting : (Listof Thread)]) #:mutable)
+(struct safe-semaphore ([count : Integer] [threads : (Listof Thread)] [wc : wchan]) #:mutable)
+(struct safe-lock ([thread : (U Thread False)] [wc : wchan]) #:mutable)
+
+(: make-wchan (-> wchan))
+(define (make-wchan)
+  (wchan '()))
+
+(: wchan-wait (-> wchan Void))
+(define (wchan-wait wc)
+  (define thd (current-thread))
+  ;; we spawn another thread here in order to atomically add to wait list
+  ;;  and suspend the thread.
+  (void (thread (lambda ()
+    (call-as-atomic (lambda ()
+      (set-wchan-waiting! wc (cons thd (wchan-waiting wc)))
+      (thread-suspend thd)))))))
+
+(: wchan-wakeall (-> wchan Void))
+(define (wchan-wakeall wc)
+  (call-as-atomic (lambda ()
+    (map thread-resume (wchan-waiting wc))
+    (set-wchan-waiting! wc '()))))
 
 (: make-safe-semaphore (-> Integer safe-semaphore))
 (define (make-safe-semaphore count)
-  (safe-semaphore count '()))
+  (safe-semaphore count '() (make-wchan)))
 
 (: safe-semaphore-post (-> safe-semaphore Void))
 (define (safe-semaphore-post sem)
-  (start-atomic)
-  (cond
-    [(member (current-thread) (safe-semaphore-threads sem))
-     (set-safe-semaphore-count! sem (+ 1 (safe-semaphore-count sem)))
-     (set-safe-semaphore-threads! sem (remove (current-thread) (safe-semaphore-threads sem)))]
-    [else (end-atomic) (error "Unbalanced safe-semaphore post before wait")])
-  (end-atomic))
+  (call-as-atomic (lambda ()
+    (cond
+      [(member (current-thread) (safe-semaphore-threads sem))
+       (set-safe-semaphore-count! sem (+ 1 (safe-semaphore-count sem)))
+       (set-safe-semaphore-threads! sem (remove (current-thread) (safe-semaphore-threads sem)))
+       (wchan-wakeall (safe-semaphore-wc sem))]
+      [else (error "Unbalanced safe-semaphore post before wait")]))))
 
 (: safe-semaphore-wait (-> safe-semaphore Void))
 (define (safe-semaphore-wait sem)
   (start-atomic)
   (define dead-thds (filter thread-dead? (safe-semaphore-threads sem)))
-  (set-safe-semaphore-count! sem (- (safe-semaphore-count sem) (length dead-thds)))
-  (set-safe-semaphore-threads! sem (remove* dead-thds (safe-semaphore-threads sem)))
+  (when (< 0 (length dead-thds))
+    (set-safe-semaphore-count! sem (+ (safe-semaphore-count sem) (length dead-thds)))
+    (set-safe-semaphore-threads! sem (remove* dead-thds (safe-semaphore-threads sem)))
+    (wchan-wakeall (safe-semaphore-wc sem)))
   (cond
     [(< 0 (safe-semaphore-count sem))
      (set-safe-semaphore-count! sem (- (safe-semaphore-count sem) 1))
      (set-safe-semaphore-threads! sem (cons (current-thread) (safe-semaphore-threads sem)))
      (end-atomic)]
-    [else (end-atomic) (sleep 0) (safe-semaphore-wait sem)]))
+    [else (end-atomic)
+          (wchan-wait (safe-semaphore-wc sem))
+          (safe-semaphore-wait sem)]))
 
 (: make-safe-lock (-> safe-lock))
 (define (make-safe-lock)
-  (safe-lock #f))
+  (safe-lock #f (make-wchan)))
 
 (: safe-lock-acquire (-> safe-lock Void))
 (define (safe-lock-acquire lock)
@@ -78,16 +104,18 @@
          (and thd (thread-dead? thd)))
      (set-safe-lock-thread! lock (current-thread))
      (end-atomic)]
-    [else (end-atomic) (sleep 0) (safe-lock-acquire lock)]))
+    [else (end-atomic)
+          (wchan-wait (safe-lock-wc lock))
+          (safe-lock-acquire lock)]))
 
 (: safe-lock-release (-> safe-lock Void))
 (define (safe-lock-release lock)
-  (start-atomic)
-  (cond
-    [(eq? (current-thread) (safe-lock-thread lock))
-     (set-safe-lock-thread! lock #f)]
-    [else (void)])
-  (end-atomic))
+  (call-as-atomic (lambda ()
+    (cond
+      [(eq? (current-thread) (safe-lock-thread lock))
+       (set-safe-lock-thread! lock #f)
+       (wchan-wakeall (safe-lock-wc lock))]
+      [else (void)]))))
 
 (: has-safe-lock? (-> safe-lock Boolean))
 (define (has-safe-lock? lock)
