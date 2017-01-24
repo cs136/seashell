@@ -48,10 +48,10 @@
   (define thd (current-thread))
   ;; we spawn another thread here in order to atomically add to wait list
   ;;  and suspend the thread.
-  (void (thread (lambda ()
+  (void (sync (thread (lambda ()
     (call-as-atomic (lambda ()
       (set-wchan-waiting! wc (cons thd (wchan-waiting wc)))
-      (thread-suspend thd)))))))
+      (thread-suspend thd))))))))
 
 (: wchan-wakeall (-> wchan Void))
 (define (wchan-wakeall wc)
