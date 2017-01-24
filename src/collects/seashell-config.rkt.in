@@ -139,14 +139,21 @@
       ;; Location of SSH tunnel binary.
       (cons 'tunnel-binary                 (let
                                             ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-tunnel")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/tunnel/seashell-tunnel")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/backend/tunnel/seashell-tunnel")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (let
                                             ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-user-backend")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-user-backend")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/backend/user/seashell-user-backend")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of main binary
+      (cons 'seashell-main                 (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-main")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/collects/seashell-main")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
