@@ -24,10 +24,10 @@ var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket', 'CopyFileModal',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
           settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory,
-          ws) {
+          ws, copyModal) {
         var self = this;
         // Scope variable declarations follow.
 
@@ -111,7 +111,7 @@ angular.module('frontend-app')
         // Resize on window size change
         function onResize() {
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
-          var min_height = 500, margin_bottom = 30;
+          var min_height = 750, margin_bottom = 30;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
           var console_elem = $window.document.querySelector("#console > .CodeMirror");
           // Run only when DOM is ready.
@@ -121,10 +121,10 @@ angular.module('frontend-app')
             var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
             if (editor_elem)
               editor_elem.style.height = sprintf("%fpx",
-                (narrow ? target_height * 0.7 : target_height) - file_control_height);
+                (narrow ? target_height * 0.5 : target_height) - file_control_height);
             if (console_elem)
               console_elem.style.height = sprintf("%fpx",
-                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
+                (narrow ? (target_height * 0.5 - file_control_height) : target_height) - console_input_height);
             if(self.editor)
               self.editor.refresh();
             if(self.consoleEditor)
@@ -262,6 +262,20 @@ angular.module('frontend-app')
             self.editor.indentSelection("subtract");
           }
         }
+        function editorFullscreen() {
+          self.editor.focus();
+          self.consoleEditor.setOption('fullScreen', false);
+          self.editor.setOption('fullScreen', true);
+        }
+        function consoleFullscreen() {
+          self.consoleEditor.focus();
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.setOption('fullScreen', true);
+        }
+        function quitFullscreen() {
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.setOption('fullScreen', false);
+        }
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
@@ -281,13 +295,13 @@ angular.module('frontend-app')
             rulers: [80],
             extraKeys: {
               "Ctrl-Space": "autocomplete",
-              "Ctrl-Enter": function() {
+              "Shift-Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
+              "Shift-Ctrl-Left": editorFullscreen,
+              "Shift-Ctrl-Right": consoleFullscreen,
               "Ctrl-I": self.indentAll,
-              "Esc": function() {
-                if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
-              },
+              "Esc": quitFullscreen,
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
@@ -310,7 +324,15 @@ angular.module('frontend-app')
             readOnly: true,
             mode: "text/plain",
             theme: theme,
-            onLoad: self.consoleLoad
+            onLoad: self.consoleLoad,
+            extraKeys: {
+              "Shift-Ctrl-Enter": function() {
+                self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
+              },
+              "Shift-Ctrl-Left": editorFullscreen,
+              "Shift-Ctrl-Right": consoleFullscreen,
+              "Esc": quitFullscreen,
+            },
           };
           var main_hotkeys = [{
             combo: 'ctrl+d',
@@ -402,7 +424,16 @@ angular.module('frontend-app')
               file:escape(path.length>2?path[2]:path[1])});
           });
         };
-
+	self.copyFile = function() {
+          copyModal(self.project, self.question, self.folder, self.file, function(newName) {
+            var path = newName.split("/");
+            $scope.$parent.editView.refresh();
+            $state.go("edit-project.editor.file", {
+              question:(path[0]=="common"?self.question:path[0]),
+              part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
+              file:escape(path.length>2?path[2]:path[1])});
+          });
+        };
         self.deleteFile = function() {
           confirmModal("Delete File", "Are you sure you want to delete '"+self.file+"'?")
             .then(function() {
@@ -621,7 +652,7 @@ angular.module('frontend-app')
                 self.undoHistory = JSON.parse(conts.history);
                 self.editor.setHistory(self.undoHistory);
               } else {
-                console.log("warning: could not read history");
+                console.warn("Could not read history");
               }
             } else {
               self.unavailable = true;
