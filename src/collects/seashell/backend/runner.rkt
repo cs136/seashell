@@ -170,7 +170,7 @@
     (define output (make-bytes (read-config-integer 'io-buffer-size)))
     (define read (read-bytes-avail!* output in))
     (when (and (number? read) (read . > . 0))
-      (write-bytes output out)
+      (write-bytes output out 0 read)
       (loop))))
 
 
