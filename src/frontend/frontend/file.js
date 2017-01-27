@@ -262,15 +262,15 @@ angular.module('frontend-app')
             self.editor.indentSelection("subtract");
           }
         }
-        function editorFullscreen() {
-          self.editor.focus();
+        function toggleEditorFullscreen() {
           self.consoleEditor.setOption('fullScreen', false);
-          self.editor.setOption('fullScreen', true);
+          self.editor.focus();
+          self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
         }
-        function consoleFullscreen() {
-          self.consoleEditor.focus();
+        function toggleConsoleFullscreen() {
           self.editor.setOption('fullScreen', false);
-          self.consoleEditor.setOption('fullScreen', true);
+          self.consoleEditor.focus();
+          self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
         }
         function quitFullscreen() {
           self.editor.setOption('fullScreen', false);
@@ -295,11 +295,8 @@ angular.module('frontend-app')
             rulers: [80],
             extraKeys: {
               "Ctrl-Space": "autocomplete",
-              "Shift-Ctrl-Enter": function() {
-                self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
-              },
-              "Ctrl-;": editorFullscreen,
-              "Ctrl-'": consoleFullscreen,
+              "Ctrl-;": toggleEditorFullscreen,
+              "Ctrl-'": toggleConsoleFullscreen,
               "Ctrl-I": self.indentAll,
               "Esc": quitFullscreen,
               // capture save shortcuts and ignore in the editor
@@ -326,11 +323,8 @@ angular.module('frontend-app')
             theme: theme,
             onLoad: self.consoleLoad,
             extraKeys: {
-              "Shift-Ctrl-Enter": function() {
-                self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
-              },
-              "Ctrl-;": editorFullscreen,
-              "Ctrl-'": consoleFullscreen,
+              "Ctrl-;": toggleEditorFullscreen,
+              "Ctrl-'": toggleConsoleFullscreen,
               "Esc": quitFullscreen,
             },
           };
