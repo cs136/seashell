@@ -102,10 +102,10 @@ function SeashellWebsocket(uri, key, failure, closes) {
 
           console.log("Received response to message with id "+response.id+" after "+diff+" ms.");
 
-          var displayRequest = Object.assign({}, request);
-          delete displayRequest.time; // hide from console
-          delete displayRequest.deferred; // hide from console
-          console.log(displayRequest);
+          // var displayRequest = Object.assign({}, request);
+          // delete displayRequest.time; // hide from console
+          // delete displayRequest.deferred; // hide from console
+          // console.log(displayRequest);
 
           if (! response.success) {
             console.error(response);
