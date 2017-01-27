@@ -298,8 +298,8 @@ angular.module('frontend-app')
               "Shift-Ctrl-Enter": function() {
                 self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
               },
-              "Shift-Ctrl-;": editorFullscreen,
-              "Shift-Ctrl-'": consoleFullscreen,
+              "Ctrl-;": editorFullscreen,
+              "Ctrl-'": consoleFullscreen,
               "Ctrl-I": self.indentAll,
               "Esc": quitFullscreen,
               // capture save shortcuts and ignore in the editor
@@ -329,8 +329,8 @@ angular.module('frontend-app')
               "Shift-Ctrl-Enter": function() {
                 self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
               },
-              "Shift-Ctrl-;": editorFullscreen,
-              "Shift-Ctrl-'": consoleFullscreen,
+              "Ctrl-;": editorFullscreen,
+              "Ctrl-'": consoleFullscreen,
               "Esc": quitFullscreen,
             },
           };
