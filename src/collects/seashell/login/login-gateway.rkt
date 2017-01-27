@@ -147,7 +147,7 @@
             (when (eof-object? raw-creds)
               (report-error 4 "Could not reset existing Seashell instance."))
             (when raw-creds
-              (define creds (cast (deserialize (read (tunnel-in creds-tun))) (HashTable Symbol Any)))
+              (define creds (cast (deserialize raw-creds) (HashTable Symbol Any)))
               ;; Get the host and PID
               (define creds-host (cast (hash-ref creds 'host) String))
               (define creds-pid (cast (hash-ref creds 'pid) Integer))

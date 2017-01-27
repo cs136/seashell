@@ -262,19 +262,32 @@ angular.module('frontend-app')
             self.editor.indentSelection("subtract");
           }
         }
-        function editorFullscreen() {
+        function toggleEditorFullscreen(evt) {
+          evt.preventDefault();
+          self.consoleEditor.setOption('fullScreen', false);
           self.editor.focus();
-          self.consoleEditor.setOption('fullScreen', false);
-          self.editor.setOption('fullScreen', true);
+          self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
         }
-        function consoleFullscreen() {
+        function toggleConsoleFullscreen(evt) {
+          evt.preventDefault();
+          self.editor.setOption('fullScreen', false);
           self.consoleEditor.focus();
-          self.editor.setOption('fullScreen', false);
-          self.consoleEditor.setOption('fullScreen', true);
+          self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
         }
-        function quitFullscreen() {
+        function quitFullscreen(evt) {
+          evt.preventDefault();
           self.editor.setOption('fullScreen', false);
           self.consoleEditor.setOption('fullScreen', false);
+        }
+        function increaseFontSize(evt) {
+          evt.preventDefault();
+          settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
+          settings.save();
+        }
+        function decreaseFontSize(evt) {
+          evt.preventDefault();
+          settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
+          settings.save();
         }
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
@@ -295,27 +308,12 @@ angular.module('frontend-app')
             rulers: [80],
             extraKeys: {
               "Ctrl-Space": "autocomplete",
-              "Shift-Ctrl-Enter": function() {
-                self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
-              },
-              "Shift-Ctrl-Left": editorFullscreen,
-              "Shift-Ctrl-Right": consoleFullscreen,
               "Ctrl-I": self.indentAll,
-              "Esc": quitFullscreen,
               // capture save shortcuts and ignore in the editor
               "Ctrl-S": function() { },
               "Cmd-S": function() { },
               "Tab": betterTab,
               "Shift-Tab": negTab,
-              // font size decrease/increase shortcuts
-              "Ctrl-,": function() {
-                settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
-                settings.save();
-              },
-              "Ctrl-.": function() {
-                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
-                settings.save();
-              },
             }
           };
           self.consoleOptions = {
@@ -326,12 +324,6 @@ angular.module('frontend-app')
             theme: theme,
             onLoad: self.consoleLoad,
             extraKeys: {
-              "Shift-Ctrl-Enter": function() {
-                self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
-              },
-              "Shift-Ctrl-Left": editorFullscreen,
-              "Shift-Ctrl-Right": consoleFullscreen,
-              "Esc": quitFullscreen,
             },
           };
           var main_hotkeys = [{
@@ -344,12 +336,37 @@ angular.module('frontend-app')
             }
           }, {
             combo: 'ctrl+k',
-            description: "Kills the currently running program.",
+            description: "Kills the currently running program",
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
               self.killProgram();
             }
+          }, {
+            combo: "ctrl+;",
+            description: "Editor fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: toggleEditorFullscreen
+          }, {
+            combo: "ctrl+'",
+            description: "Console fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: toggleConsoleFullscreen
+          }, {
+            combo: 'ctrl+,',
+            description: "Decrease font size",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: decreaseFontSize
+          }, {
+            combo: 'ctrl+.',
+            description: "Increase font size",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: increaseFontSize
+          }, {
+            combo: 'esc',
+            description: "Quit fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: quitFullscreen
           }];
           var vim_disabled_hotkeys = [{
             combo: 'ctrl+r',
