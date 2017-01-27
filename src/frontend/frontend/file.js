@@ -276,6 +276,14 @@ angular.module('frontend-app')
           self.editor.setOption('fullScreen', false);
           self.consoleEditor.setOption('fullScreen', false);
         }
+        function increaseFontSize() {
+          settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
+          settings.save();
+        }
+        function decreaseFontSize() {
+          settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
+          settings.save();
+        }
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
@@ -305,14 +313,8 @@ angular.module('frontend-app')
               "Tab": betterTab,
               "Shift-Tab": negTab,
               // font size decrease/increase shortcuts
-              "Ctrl-,": function() {
-                settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
-                settings.save();
-              },
-              "Ctrl-.": function() {
-                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
-                settings.save();
-              },
+              "Ctrl-,": decreaseFontSize,
+              "Ctrl-.": increaseFontSize
             }
           };
           self.consoleOptions = {
@@ -326,6 +328,8 @@ angular.module('frontend-app')
               "Ctrl-;": toggleEditorFullscreen,
               "Ctrl-'": toggleConsoleFullscreen,
               "Esc": quitFullscreen,
+              "Ctrl-,": decreaseFontSize,
+              "Ctrl-.": increaseFontSize
             },
           };
           var main_hotkeys = [{
