@@ -1,4 +1,5 @@
 declare module 'offline-plugin/runtime';
+declare module 'react-codemirror';
 
 declare var require: {
    <T>(path: string): T;

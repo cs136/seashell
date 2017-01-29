@@ -1,17 +1,42 @@
 import * as React from 'react';
+import {Tabs, TabList, TabPanel, Tab} from '@blueprintjs/core';
 import {map, actionsInterface} from '../actions';
-import Layout from '../Layout';
+import * as CodeMirror from 'react-codemirror'; 
+require('codemirror/mode/clike/clike');
+const styles = require<any>('./Project.scss');
+const layoutStyles = require<any>('../Layout.scss');
 
-export interface AssignmentProps { title: string; routeParams: any; }
-export interface AssignmentState { open?: boolean; title?: string; }
+export interface ProjectProps { title: string; routeParams: any; }
+export interface ProjectState { open?: boolean; title?: string; }
 
-class Assignment extends React.Component<AssignmentProps&actionsInterface, AssignmentState>{
+class Project extends React.Component<ProjectProps&actionsInterface, ProjectState>{
   render(){
-    const assignment = this.props.projectList.projects[Number(this.props.routeParams.id)];
-    return (<div>
-        <h1>{assignment.name}</h1>
+    const codeMirrorOptions = {
+      lineNumbers: true,
+      mode: 'clike'
+    };
+    const projectId = Number(this.props.routeParams.id);
+    const project = this.props.projectList.projects.filter((project)=>(project.id==projectId))[0];
+    return (<div className={layoutStyles.container}>
+        <Tabs initialSelectedTabIndex={1}>
+          <TabList className="pt-large">
+            <Tab isDisabled={true}>{project.name}</Tab>
+            {project.questions.map((question) => (<Tab key={"tab-"+question.id}>{question.name}</Tab>))}
+          </TabList>
+          <TabPanel/>
+          {project.questions.map((question) => (<TabPanel key={"question-"+question.id}>
+            <Tabs>
+              <TabList>
+                {question.files.map((file)=>(<Tab key={"file-tab-"+file.name}>{file.name}</Tab>))}</TabList>
+                {question.files.map((file)=>(<TabPanel key={"file-"+file.name}>
+                  <h3>{file.name}</h3>
+                  <CodeMirror options={codeMirrorOptions} value={file.content}/>
+                </TabPanel>))}
+            </Tabs>
+          </TabPanel>))}
+      </Tabs>
     </div>);
-  }
+  } 
 }
  
-export default map(Assignment);
+export default map(Project);
