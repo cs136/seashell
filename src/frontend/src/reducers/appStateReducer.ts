@@ -6,6 +6,7 @@ export const appStateActions = {
 };
 export default function appStateReducer(state:appStateReducerState = {}, action:appStateReducerAction) {
   switch (action.type) {
+    
     default:
       return state;
   }

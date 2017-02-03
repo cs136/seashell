@@ -9,7 +9,7 @@ const logo = require<any>('./logo.svg');
 const styles = require<any>('./index.scss');
 const layoutStyles = require<any>('../../Layout.scss');
 
- 
+
 export interface NavigationProps { title: string; }
 export interface NavigationState { helpVisible?: boolean; }
 
@@ -17,11 +17,15 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
   constructor(props:NavigationProps){
     super(props);
     this.state={
-      helpVisible: false
+      helpVisible: false,
+      settingsVisible: false,
     };
   }
   toggleHelp(){
     this.setState({helpVisible: !this.state.helpVisible});
+  }
+  toggleSettings(){
+    this.setState({settingsVisible: !this.state.settingsVisible});
   }
   render(){
     return (<div>
@@ -36,13 +40,16 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             <Tooltip content="Settings" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-wrench"></button></Tooltip>
             <Tooltip content="Log Out" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-log-out"></button></Tooltip>
           </div>
-        </div> 
+        </div>
       </nav>
       <Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
         <HelpDialog />
       </Dialog>
+      <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
+        <SettingsDialog />
+      </Dialog>
     </div>);
-  } 
+  }
 }
- 
+
 export default map(Navigation);
