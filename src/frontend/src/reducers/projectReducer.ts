@@ -3,7 +3,7 @@ import {projectRef} from '../types';
 import {questionReducerState} from './questionReducer';
 export interface projectReducerState {[key: string]: any; 
     name?: string;
-    id?: number;
+    id?: string;
     questions: questionReducerState[]
 };
 export interface projectReducerAction {type: string, payload: projectReducerState}

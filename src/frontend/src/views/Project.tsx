@@ -15,16 +15,16 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       lineNumbers: true,
       mode: 'clike'
     };
-    const projectId = Number(this.props.routeParams.id);
+    const projectId = this.props.routeParams.id;
     const project = this.props.projectList.projects.filter((project)=>(project.id==projectId))[0];
     return (<div className={layoutStyles.container}>
         <Tabs initialSelectedTabIndex={1}>
           <TabList className="pt-large">
             <Tab isDisabled={true}>{project.name}</Tab>
-            {project.questions.map((question) => (<Tab key={"tab-"+question.id}>{question.name}</Tab>))}
+            {project.questions.map((question) => (<Tab key={"tab-"+question.name}>{question.name}</Tab>))}
           </TabList>
           <TabPanel/>
-          {project.questions.map((question) => (<TabPanel key={"question-"+question.id}>
+          {project.questions.map((question) => (<TabPanel key={"question-"+question.name}>
             <Tabs>
               <TabList>
                 {question.files.map((file)=>(<Tab key={"file-tab-"+file.name}>{file.name}</Tab>))}</TabList>

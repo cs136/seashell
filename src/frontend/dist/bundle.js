@@ -23297,10 +23297,15 @@
 
 	"use strict";
 	;
-	exports.appStateActions = {};
+	exports.appStateActions = {
+	    ALERT: 'app_state_alert'
+	};
 	function appStateReducer(state, action) {
 	    if (state === void 0) { state = {}; }
 	    switch (action.type) {
+	        case exports.appStateActions.ALERT:
+	            alert(action.payload);
+	            return state;
 	        default:
 	            return state;
 	    }
@@ -23320,7 +23325,7 @@
 	    openFile: 'state_open_file'
 	};
 	function projectListReducer(state, action) {
-	    if (state === void 0) { state = { projects: [{ name: "A1 Racket", id: 1, questions: [{ name: "q1", id: 1, files: [{ name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}" }] }, { name: "q2", id: 2, files: [{ name: "integrity2.txt", content: "Hello World 2" }] }] }, { name: "A2 C Functions", id: 2, questions: [] }] }; }
+	    if (state === void 0) { state = { projects: [{ name: "A1 Racket", id: "A1R", questions: [{ name: "q1", files: [{ name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}" }] }, { name: "q2", files: [{ name: "integrity2.txt", content: "Hello World 2" }] }] }, { name: "A2 C Functions", id: "A2C", questions: [] }] }; }
 	    switch (action.type) {
 	        /*case appStateActions.openProject:
 	          return evolve(state, {project: action.payload.project});
@@ -29014,13 +29019,16 @@
 
 	"use strict";
 	var react_redux_1 = __webpack_require__(179);
+	var appStateReducer_1 = __webpack_require__(211);
 	function returnType(func) {
 	    return null;
 	}
 	var mapStoreToProps = function (state) { return state; };
 	var mapDispatchToProps = function (dispatch) {
 	    return {
-	        dispatch: {}
+	        dispatch: {
+	            alert: function () { return dispatch({ type: appStateReducer_1.appStateActions.ALERT, payload: "Hello World" }); }
+	        }
 	    };
 	};
 	var actionsStoreType = returnType(mapDispatchToProps);
@@ -41357,15 +41365,15 @@
 	            lineNumbers: true,
 	            mode: 'clike'
 	        };
-	        var projectId = Number(this.props.routeParams.id);
+	        var projectId = this.props.routeParams.id;
 	        var project = this.props.projectList.projects.filter(function (project) { return (project.id == projectId); })[0];
 	        return (React.createElement("div", { className: layoutStyles.container },
 	            React.createElement(core_1.Tabs, { initialSelectedTabIndex: 1 },
 	                React.createElement(core_1.TabList, { className: "pt-large" },
 	                    React.createElement(core_1.Tab, { isDisabled: true }, project.name),
-	                    project.questions.map(function (question) { return (React.createElement(core_1.Tab, { key: "tab-" + question.id }, question.name)); })),
+	                    project.questions.map(function (question) { return (React.createElement(core_1.Tab, { key: "tab-" + question.name }, question.name)); })),
 	                React.createElement(core_1.TabPanel, null),
-	                project.questions.map(function (question) { return (React.createElement(core_1.TabPanel, { key: "question-" + question.id },
+	                project.questions.map(function (question) { return (React.createElement(core_1.TabPanel, { key: "question-" + question.name },
 	                    React.createElement(core_1.Tabs, null,
 	                        React.createElement(core_1.TabList, null, question.files.map(function (file) { return (React.createElement(core_1.Tab, { key: "file-tab-" + file.name }, file.name)); })),
 	                        question.files.map(function (file) { return (React.createElement(core_1.TabPanel, { key: "file-" + file.name },
@@ -51857,6 +51865,7 @@
 	                React.createElement("a", { className: "pt-button", role: "button" },
 	                    React.createElement("span", { className: "pt-icon-standard pt-icon-refresh pt-align-left" }),
 	                    "Refresh")),
+	            React.createElement("button", { onClick: this.props.dispatch.alert }, "Test"),
 	            React.createElement("div", { className: styles.mainRow },
 	                React.createElement("div", { className: styles.column },
 	                    React.createElement("h5", null, "Assignments"),
