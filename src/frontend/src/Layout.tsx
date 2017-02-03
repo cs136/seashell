@@ -2,10 +2,11 @@
 import * as React from 'react';
 import Navigation from './partials/Navigation';
 
+require<any>('codemirror/lib/codemirror.css');
 const styles = require<any>('./Layout.scss');
 
 
-require<any>('../node_modules/@blueprintjs/core/dist/blueprint.css');
+require<any>('@blueprintjs/core/dist/blueprint.css');
 
 export interface LayoutProps { title: string; }
 export interface LayoutState { open?: boolean; title?: string; }
