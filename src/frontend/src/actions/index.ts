@@ -1,8 +1,9 @@
 import { connect } from 'react-redux';
 import { ComponentClass } from 'react';
-import { globalState } from './reducers/';
-import {projectRef, fileRef} from './types';
-import {appStateActions} from './reducers/appStateReducer';
+import { globalState } from '../reducers/';
+import {projectRef, fileRef} from '../types';
+import {appStateActions} from '../reducers/appStateReducer';
+import * as settings from './settingsActions';
 
 interface Func<T> {
     ([...args]: any): T;
@@ -15,8 +16,9 @@ function returnType<T>(func: Func<T>) {
 const mapStoreToProps = (state:globalState) => state;
 
 const mapDispatchToProps = (dispatch:Function) => {
-    return {
+    return { 
         dispatch: {
+            settings: settings
         }
     }
 };
