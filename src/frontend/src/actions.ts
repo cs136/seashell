@@ -4,11 +4,11 @@ import { globalState } from './reducers/';
 import {projectRef, fileRef} from './types';
 import {appStateActions} from './reducers/appStateReducer';
 
-interface Func<T> {  
+interface Func<T> {
     ([...args]: any): T;
 }
 
-function returnType<T>(func: Func<T>) {  
+function returnType<T>(func: Func<T>) {
     return null as T;
 }
 
@@ -19,11 +19,11 @@ const mapDispatchToProps = (dispatch:Function) => {
         dispatch: {
         }
     }
-}; 
+};
 
 const actionsStoreType = returnType(mapDispatchToProps);
 export type actionsInterface = typeof actionsStoreType & globalState;
 
 export function map(Component:ComponentClass<any>){
     return connect(mapStoreToProps,mapDispatchToProps)(Component);
-}  
+}

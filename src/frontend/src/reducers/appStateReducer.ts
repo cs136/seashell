@@ -7,9 +7,6 @@ export const appStateActions = {
 };
 export default function appStateReducer(state:appStateReducerState = {}, action:appStateReducerAction) {
   switch (action.type) {
-    case appStateActions.ALERT:
-      alert(action.payload);
-      return state;
     default:
       return state;
   }
