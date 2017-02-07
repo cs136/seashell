@@ -37,8 +37,6 @@
           projects: 'name',
           settings: 'name',
           meta: 'key'
-        }).upgrade(function(ts) {
-          ts.meta.add({key:"init"});
         });
 
         self.has_offline_changes = false;
