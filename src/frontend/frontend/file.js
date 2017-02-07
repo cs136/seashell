@@ -111,7 +111,7 @@ angular.module('frontend-app')
         // Resize on window size change
         function onResize() {
           var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
-          var min_height = 750, margin_bottom = 30;
+          var min_height = 500, margin_bottom = 30;
           var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
           var console_elem = $window.document.querySelector("#console > .CodeMirror");
           // Run only when DOM is ready.
@@ -121,10 +121,10 @@ angular.module('frontend-app')
             var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
             if (editor_elem)
               editor_elem.style.height = sprintf("%fpx",
-                (narrow ? target_height * 0.5 : target_height) - file_control_height);
+                (narrow ? target_height * 0.7 : target_height) - file_control_height);
             if (console_elem)
               console_elem.style.height = sprintf("%fpx",
-                (narrow ? (target_height * 0.5 - file_control_height) : target_height) - console_input_height);
+                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
             if(self.editor)
               self.editor.refresh();
             if(self.consoleEditor)
