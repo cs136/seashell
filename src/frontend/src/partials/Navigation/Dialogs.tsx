@@ -1,14 +1,144 @@
 import * as React from 'react';
 
-import {evolve} from 'ramda';
+import {evolve, merge} from 'ramda';
 
-import {Tag, Classes} from '@blueprintjs/core';
+import * as Blueprint from '@blueprintjs/core';
 import {map, actionsInterface} from '../../actions';
 import {settingsReducerState} from '../../reducers/settingsReducer';
 
+
 export interface DialogProps { }
 export interface DialogState { }
+export interface SettingsDialogProps{closefunc: Function}
 
+export interface SettingsDialogState { font?: string, fontSize?: number, editorMode?: number, tabWidth?: number,  theme?: number, offlineMode?: number}
+
+class FontTextBox extends React.Component<{font: string, changeParentState: Function}, {font: string}>{
+  constructor(props: {font: string, changeParentState: Function}){
+    super(props);
+    this.state={
+      font: this.props.font
+    }
+  }
+  render(){
+    return(
+      <input required type="text" value={this.state.font} onBlur={()=>{
+        if(this.state.font!=""){
+          this.props.changeParentState({font: this.state.font});
+        }
+        else{
+          this.setState({font: this.props.font});
+        }
+      }} onChange={(e=>this.setState({font: e.target.value}))}/>
+    );
+  }
+}
+
+class FontSizeTextBox extends React.Component<{fontSize: number, changeParentState: Function}, {fontSize: string}>{
+  constructor(props: {fontSize: number, changeParentState: Function}){
+    super(props);
+    this.state={
+      fontSize: this.props.fontSize.toString()
+    }
+  }
+  render(){
+    return(
+      <input required type="text" value={this.state.fontSize} onBlur={()=>{
+        if(isNaN(Number(this.state.fontSize))||Number(this.state.fontSize)<=0){
+          this.setState({fontSize: this.props.fontSize.toString()});
+        }
+        else{
+          this.props.changeParentState({fontSize: Number(this.state.fontSize)});
+        }
+      }} onChange={(e=>this.setState({fontSize: e.target.value}))}/>
+    );
+  }
+}
+
+class SettingsDialog extends React.Component<DialogProps&actionsInterface&SettingsDialogProps, DialogState&SettingsDialogState>{
+  constructor(props: DialogProps&actionsInterface&SettingsDialogProps){
+    super(props);
+    this.state = {
+      font: this.props.settings.font,
+      fontSize: this.props.settings.fontSize,
+      editorMode: this.props.settings.editorMode,
+      tabWidth: this.props.settings.tabWidth,
+      theme: this.props.settings.theme,
+      offlineMode: this.props.settings.offlineMode
+    };
+  }
+
+  render(){
+    return (<div className="pt-dialog-body">
+          <h4>Font:</h4>
+          <div className="pt-control-group">
+          <FontTextBox font={this.state.font} changeParentState={(e: SettingsDialogState)=>this.setState.bind(this)(merge(this.state, e))}/>
+          </div>
+                <h4>Font size:</h4>
+                <div className="pt-control-group">
+                <FontSizeTextBox fontSize={this.state.fontSize} changeParentState={(e: SettingsDialogState)=>this.setState.bind(this)(merge(this.state, e))}/>
+              </div>
+
+                <h4>Editor mode:</h4>
+                <div className="pt-control-group">
+                <div className="pt-select" >
+                  <select id="editor_mode" value={String(this.state.editorMode)} onChange={(e)=>this.setState(merge(this.state, {editorMode: Number(e.target.value)}))}>
+                    <option value="0">Standard</option>
+                    <option value="1">Vim</option>
+                    <option value="2">Emacs</option>
+                  </select>
+                </div>
+              </div>
+
+                <h4>Tab Width:</h4>
+                <div className="pt-control-group">
+                <div className="pt-select" >
+                  <select id="tab_width" value={String(this.state.tabWidth)} onChange={(e)=>this.setState(merge(this.state, {tabWidth: Number(e.target.value)}))}>
+                   <option value="1">1</option>
+                   <option value="2">2</option>
+                   <option value="4">4</option>
+                 </select>
+                </div>
+              </div>
+
+                <h4>Theme:</h4>
+                <div className="pt-control-group">
+                <div className="pt-select" >
+                <select id="theme_style" value={String(this.state.theme)} onChange={(e)=>this.setState(merge(this.state, {theme: Number(e.target.value),}))}>
+                  <option value="0">light</option>
+                  <option value="1">dark</option>
+                </select>
+                </div>
+              </div>
+                <h4>Offline Mode:</h4>
+                <div className="pt-control-group">
+                <Blueprint.RadioGroup onChange={()=>{}} selectedValue={String(this.state.offlineMode)}>
+                  <Blueprint.Radio label="Disabled" value="0" onClick={()=>this.setState(merge(this.state, {offlineMode: 0}))}/>
+                  <Blueprint.Radio label="Enabled" value="1" onClick={()=>this.setState(merge(this.state, {offlineMode: 1}))}/>
+                  <Blueprint.Radio label="Forced" value="2" onClick={()=>this.setState(merge(this.state, {offlineMode: 2}))}/>
+                </Blueprint.RadioGroup>
+
+              </div>
+              <div className="pt-button-group">
+                <button type="button" className="pt-button" onClick={()=>{
+                    this.props.closefunc();
+                  }}>Cancel</button>
+                <button type="button" className="pt-button pt-intent-primary" onClick={()=>{
+                    this.props.dispatch.settings.updateSettings({
+                    font: this.state.font,
+                    fontSize: this.state.fontSize, 
+                    editorMode: this.state.editorMode,
+                    tabWidth: this.state.tabWidth,
+                    theme: this.state.theme,
+                    offlineMode: this.state.offlineMode});
+                    this.props.closefunc();
+                  }}>Save
+                  </button>
+              </div>
+              </div>);
+
+  }
+}
 
 
 
@@ -17,7 +147,7 @@ class HelpDialog extends React.Component<DialogProps, DialogState>{
     return (<div className="pt-dialog-body">
         <h4>Getting Started</h4>
         <p>See the <a target="_blank" href="docs/user.html">Seashell User Documentation</a>.
-        The <a href="https://www.youtube.com/channel/UC6SqoYX4CAEZSHGDqImzd2Q">CS136 YouTube channel</a>
+        The <a href="https://www.youtube.com/channel/UC6SqoYX4CAEZSHGDqImzd2Q">CS136 YouTube channel </a>
         has videos explaining the basics of Seashell and common errors you may encounter.</p>
         <h4>Reset Seashell</h4>
         <p>It often helps to reset your Seashell instance if it gets locked
@@ -31,34 +161,34 @@ class HelpDialog extends React.Component<DialogProps, DialogState>{
         <p>These are shortcuts that will work when the editor window is focused.</p>
         <div className="pt-card pt-elevation-2">
           <p>
-            <Tag>Ctrl-f or Cmd-f</Tag> Start new search.
+            <Blueprint.Tag>Ctrl-f or Cmd-f</Blueprint.Tag> Start new search.
           </p>
           <p>
-            <Tag>Ctrl-g or Cmd-g</Tag> Go to next match.
+            <Blueprint.Tag>Ctrl-g or Cmd-g</Blueprint.Tag> Go to next match.
           </p>
           <p>
-            <Tag>Ctrl-G or Cmd-G</Tag> Go to previous match.
+            <Blueprint.Tag>Ctrl-G or Cmd-G</Blueprint.Tag> Go to previous match.
           </p>
           <p>
-            <Tag>Ctrl-z or Cmd-z</Tag> Undo.
+            <Blueprint.Tag>Ctrl-z or Cmd-z</Blueprint.Tag> Undo.
           </p>
           <p>
-            <Tag>Ctrl-y or Cmd-y</Tag> Redo.
+            <Blueprint.Tag>Ctrl-y or Cmd-y</Blueprint.Tag> Redo.
           </p>
           <p>
-            <Tag>Ctrl-i</Tag> Indent all.
+            <Blueprint.Tag>Ctrl-i</Blueprint.Tag> Indent all.
           </p>
           <p>
-            <Tag>Ctrl-Enter</Tag> Fullscreen Editor.
+            <Blueprint.Tag>Ctrl-Enter</Blueprint.Tag> Fullscreen Editor.
           </p>
           <p>
-            <Tag>Ctrl-, and Ctrl-.</Tag> Change font size.
+            <Blueprint.Tag>Ctrl-, and Ctrl-.</Blueprint.Tag> Change font size.
           </p>
           <p>
-            <Tag>Highlight Lines, Tab</Tag> Block Indent.
+            <Blueprint.Tag>Highlight Lines, Tab</Blueprint.Tag> Block Indent.
           </p>
           <p>
-            <Tag>Highlight Line, Shift-Tab</Tag> Block Unindent.
+            <Blueprint.Tag>Highlight Line, Shift-Tab</Blueprint.Tag> Block Unindent.
           </p>
         </div>
         <br/><br/>
@@ -69,4 +199,5 @@ class HelpDialog extends React.Component<DialogProps, DialogState>{
       </div>);
   }
 }
+export default map<SettingsDialogProps>(SettingsDialog);
 export {HelpDialog}
