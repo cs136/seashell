@@ -296,39 +296,8 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               });
             }
             else {
-              if(self.isOffline())
-                return localfiles[name].apply(localfiles, args);
-              else
-                return $q.when(self._socket[name].apply(self._socket, args));
-            }
-            /*if (self.isOffline()) {
-              console.log(sprintf("Invoking %s in offline mode.", name));
               return localfiles[name].apply(localfiles, args);
-            } else {
-              return $q.when(self._socket[name].apply(self._socket, args))
-                .then(function (result) {
-                  if (offlineWriteThrough) {
-                    console.log(sprintf("Invoking %s in write-through mode.", name));
-                    var write_through_args = args
-                      .concat(new Array(online_arity - args.length))
-                      .concat([result]);
-                    return localfiles[name].apply(localfiles, write_through_args)
-                      .then(function() {
-                        return result;
-                      });
-                  } else {
-                    return result;
-                  }
-                })
-                .catch(function (error) {
-                  if (self.isOffline()) {
-                    console.log(sprintf("Invoking %s in offline mode.", name));
-                    return localfiles[name].apply(localfiles, args);
-                  } else {
-                    return $q.reject(error);
-                  }
-                });
-            }*/
+            }
           } else {
             return $q.when(self._socket[name].apply(self._socket, args));
           }
@@ -482,9 +451,6 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
               });
           })
           .then(function (changes) {
-            /*if(self.connected) {
-              self.invoke_cb('connected', self.isOffline() ? self.offline_mode : false);
-            }*/
             self.isSyncing = false;
             // send the changes back in case we need to act on the files that have
             //  changed within the open project
