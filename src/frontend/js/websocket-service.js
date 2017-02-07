@@ -276,28 +276,26 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
             return $q.reject(sprintf("Too many arguments passed to function %s!", name));
           }
 
-          if (self.offlineEnabled()) {
-            if(offlineWriteThrough) {
-              localfiles.isInitialized().then(function(init) {
-                function offlineAction() {
-                  return localfiles[name].apply(localfiles, args)
-                    .then(function(result) {
-                      if(!self.isOffline())
-                        self.syncAll();
-                      return result;
-                    });
-                }
-                if(init || !self.isOffline()) {
-                  return offlineAction();
-                }
-                else {
-                  return self.syncAll().then(offlineAction);
-                }
-              });
-            }
-            else {
-              return localfiles[name].apply(localfiles, args);
-            }
+          if(self.offlineEnabled()) {
+            return localfiles.isInitialized().then(function(init) {
+              function offlineAction() {
+                return localfiles[name].apply(localfiles, args)
+                  .then(function(result) {
+                    if(offlineWriteThrough && !self.isOffline())
+                      self.syncAll();
+                    return result;
+                  });
+              }
+              if(init) {
+                return offlineAction();
+              }
+              else if(!self.isOffline()) {
+                return self.syncAll().then(offlineAction);
+              }
+              else {
+                return $q.reject(sprintf("Cannot call function %s in offline mode before an initial sync.", name));
+              }
+            });
           } else {
             return $q.when(self._socket[name].apply(self._socket, args));
           }
