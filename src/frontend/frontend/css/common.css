@@ -14,6 +14,7 @@
 body {
   position: relative; /* For scrollyspy */
   padding-top: 15px;
+  height: 100vh;
 }
 
 .container-fluid {
@@ -76,7 +77,7 @@ body {
 }
 
 #editor > .CodeMirror {
-  height: 300px;
+  height: calc(100vh - 71px);
   border: 1px solid;
   border-top: none;
 }
@@ -348,7 +349,7 @@ div.tooltip .tooltip-inner {
 }
 
 #console > .CodeMirror {
-  height: 299px;
+  height: calc(100vh - 75px);
   border: 1px solid;
   border-top: none;
   border-bottom: none;
