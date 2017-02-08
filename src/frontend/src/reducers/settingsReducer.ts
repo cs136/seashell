@@ -15,7 +15,8 @@ export const settingsActions = {
 export interface settingsReducerAction {type: string, payload: settingsReducerState};
 
 
-export default function settingsReducer(state:settingsReducerState , action:settingsReducerAction) {
+export default function settingsReducer(state:settingsReducerState = 
+{font: "Consolas", fontSize: 12, editorMode: 0, tabWidth: 1, theme: 0, offlineMode: 0}, action: settingsReducerAction = {type: '', payload: {}}) {
   switch (action.type) {
     case settingsActions.updateSettings:
       return evolve(state, action.payload);

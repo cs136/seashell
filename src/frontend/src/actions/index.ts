@@ -28,6 +28,6 @@ const mapDispatchToProps = (dispatch:Function) => {
 const actionsStoreType = returnType(mapDispatchToProps);
 export type actionsInterface = typeof actionsStoreType & globalState;
 
-export function map(Component:ComponentClass<any>){
-    return connect(mapStoreToProps,mapDispatchToProps)(Component);
+export function map<PropertyType>(Component:ComponentClass<any>){
+    return connect<{},{},PropertyType>(mapStoreToProps,mapDispatchToProps)(Component);
 }

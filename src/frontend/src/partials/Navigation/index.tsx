@@ -3,7 +3,9 @@ import {map, actionsInterface} from '../../actions';
 import {Link} from 'react-router';
 import {Tooltip, Position, Dialog} from '@blueprintjs/core';
 import {HelpDialog} from './Dialogs';
+import SettingsDialog from './Dialogs';
 import * as R from 'ramda';
+
 
 const logo = require<any>('./logo.svg');
 const styles = require<any>('./index.scss');
@@ -11,7 +13,7 @@ const layoutStyles = require<any>('../../Layout.scss');
 
 
 export interface NavigationProps { title: string; }
-export interface NavigationState { helpVisible?: boolean; }
+export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean;}
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState>{
   constructor(props:NavigationProps){
@@ -22,9 +24,11 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
     };
   }
   toggleHelp(){
+    //console.log("help");
     this.setState({helpVisible: !this.state.helpVisible});
   }
   toggleSettings(){
+    //console.log("good");
     this.setState({settingsVisible: !this.state.settingsVisible});
   }
   render(){
@@ -37,7 +41,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
           <div className="pt-navbar-group pt-align-right">
             <Tooltip content="Help" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-help" onClick={this.toggleHelp.bind(this)}></button></Tooltip>
             <Tooltip content="Sync All" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-import"></button></Tooltip>
-            <Tooltip content="Settings" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-wrench"></button></Tooltip>
+            <Tooltip content="Settings" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-wrench" onClick={this.toggleSettings.bind(this)}></button></Tooltip>
             <Tooltip content="Log Out" position={Position.BOTTOM}><button className="pt-button pt-minimal pt-large pt-icon-log-out"></button></Tooltip>
           </div>
         </div>
@@ -46,10 +50,9 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
         <HelpDialog />
       </Dialog>
       <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
-        <SettingsDialog />
+        <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
       </Dialog>
     </div>);
   }
 }
-
 export default map(Navigation);
