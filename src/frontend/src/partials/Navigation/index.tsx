@@ -16,7 +16,7 @@ export interface NavigationProps { title: string; }
 export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean;}
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState>{
-  constructor(props:NavigationProps){
+  constructor(props: NavigationProps&actionsInterface){
     super(props);
     this.state={
       helpVisible: false,
