@@ -23,11 +23,11 @@ class FontTextBox extends React.Component<{font: string, changeParentState: Func
   render(){
     return(
       <input required type="text" value={this.state.font} onBlur={()=>{
-        if(this.state.font!=""){
-          this.props.changeParentState({font: this.state.font});
+        if(this.state.font==""){
+          this.setState({font: this.props.font});
         }
         else{
-          this.setState({font: this.props.font});
+          this.props.changeParentState(this.state.font);
         }
       }} onChange={(e=>this.setState({font: e.target.value}))}/>
     );
@@ -48,7 +48,7 @@ class FontSizeTextBox extends React.Component<{fontSize: number, changeParentSta
           this.setState({fontSize: this.props.fontSize.toString()});
         }
         else{
-          this.props.changeParentState({fontSize: Number(this.state.fontSize)});
+          this.props.changeParentState(Number(this.state.fontSize));
         }
       }} onChange={(e=>this.setState({fontSize: e.target.value}))}/>
     );
@@ -72,11 +72,11 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
     return (<div className="pt-dialog-body">
           <h4>Font:</h4>
           <div className="pt-control-group">
-          <FontTextBox font={this.state.font} changeParentState={(e: SettingsDialogState)=>this.setState.bind(this)(merge(this.state, e))}/>
+          <FontTextBox font={this.state.font} changeParentState={(e: string)=>this.setState.bind(this)(merge(this.state, {font: e}))}/>
           </div>
                 <h4>Font size:</h4>
                 <div className="pt-control-group">
-                <FontSizeTextBox fontSize={this.state.fontSize} changeParentState={(e: SettingsDialogState)=>this.setState.bind(this)(merge(this.state, e))}/>
+                <FontSizeTextBox fontSize={this.state.fontSize} changeParentState={(e: number)=>this.setState.bind(this)(merge(this.state, {fontSize: e}))}/>
               </div>
 
                 <h4>Editor mode:</h4>

@@ -13,7 +13,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   render(){
     const codeMirrorOptions = {
       lineNumbers: true,
-      mode: 'clike'
+      mode: 'clike',
+      tabSize: this.props.settings.tabWidth
+    };
+    const codeMirrorStyle={
+      fontFamily: this.props.settings.font,
+      fontSize: this.props.settings.fontSize.toString()+"px"
     };
     const projectId = this.props.routeParams.id;
     const project = this.props.projectList.projects.filter((project)=>(project.id==projectId))[0];
@@ -30,7 +35,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 {question.files.map((file)=>(<Tab key={"file-tab-"+file.name}>{file.name}</Tab>))}</TabList>
                 {question.files.map((file)=>(<TabPanel key={"file-"+file.name}>
                   <h3>{file.name}</h3>
-                  <CodeMirror options={codeMirrorOptions} value={file.content}/>
+                  <div style={codeMirrorStyle}><CodeMirror options={codeMirrorOptions} value={file.content}/></div>
                 </TabPanel>))}
             </Tabs>
           </TabPanel>))}
