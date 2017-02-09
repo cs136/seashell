@@ -77,17 +77,22 @@ body {
 }
 
 #editor > .CodeMirror {
-  height: 66vh;
+  height: calc(80vh + 4px);
   border: 1px solid;
   border-top: none;
 }
 
 #console > .CodeMirror {
-  height: 66vh;
+  height: 80vh;
   border: 1px solid;
   border-top: none;
   border-bottom: none;
   clear: both;
+}
+
+#editor.console-narrow .CodeMirror, 
+#console.console-narrow .CodeMirror {
+  height: 66vh;
 }
 
 #editor-controls > button {

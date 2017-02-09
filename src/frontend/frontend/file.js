@@ -109,18 +109,8 @@ angular.module('frontend-app')
         self.onResize = function() {
           settings.settings.force_narrow = !(settings.settings.force_narrow);
           settings.save();
-          self.reRenderCM();
         };
 
-        self.reRenderCM = function() {
-          $(".CodeMirror *").css({
-            fontFamily: sprintf("%s, monospace", settings.settings.font),
-            fontSize: sprintf("%dpt", parseInt(settings.settings.font_size))
-          });
-          self.editor.refresh();
-          self.consoleEditor.refresh();
-        };
-        
         // Scope helper function follow.
         self.consoleLoad = function(console_cm) {
           self.consoleEditor = console_cm;
@@ -128,7 +118,6 @@ angular.module('frontend-app')
             var scr = self.consoleEditor.getScrollInfo();
             self.consoleEditor.scrollTo(scr.left, scr.height);
           });
-          // $timeout(self.reRenderCM, 0);
         };
 
         self.editorLoad = function(editor) {
@@ -232,7 +221,6 @@ angular.module('frontend-app')
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
-          // $timeout(self.reRenderCM, 0);
         };
 
         function betterTab(){
@@ -254,7 +242,6 @@ angular.module('frontend-app')
           self.consoleEditor.setOption('fullScreen', false);
           self.editor.focus();
           self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
-          self.reRenderCM();
         }
 
         function toggleConsoleFullscreen(evt) {
@@ -262,32 +249,27 @@ angular.module('frontend-app')
           self.editor.setOption('fullScreen', false);
           self.consoleEditor.focus();
           self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
-          self.reRenderCM();
         }
 
         function quitFullscreen(evt) {
           evt.preventDefault();
           self.editor.setOption('fullScreen', false);
           self.consoleEditor.setOption('fullScreen', false);
-          self.reRenderCM();
         }
 
         function increaseFontSize(evt) {
           evt.preventDefault();
           settings.settings.font_size = Math.min(settings.settings.font_size + 1, 50);
           settings.save();
-          self.reRenderCM();
         }
 
         function decreaseFontSize(evt) {
           evt.preventDefault();
           settings.settings.font_size = Math.max(settings.settings.font_size - 1, 1);
           settings.save();
-          self.reRenderCM();
         }
 
         self.refreshSettings = function () {
-          console.log("refresh editor settings");
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
           self.editorReadOnly = !self.ready || self.isBinaryFile || self.fileReadOnly;
@@ -423,6 +405,10 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
+            $("#editor .CodeMirror *").css({
+              fontFamily: sprintf("%s, monospace", settings.settings.font),
+              fontSize: sprintf("%dpt", parseInt(settings.settings.font_size))
+            });
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
@@ -430,9 +416,12 @@ angular.module('frontend-app')
             for (var cKey in self.consoleOptions) {
               self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
             }
+            $("#console .CodeMirror *").css({
+              fontFamily: sprintf("%s, monospace", settings.settings.font),
+              fontSize: sprintf("%dpt", parseInt(settings.settings.font_size))
+            });
             self.consoleEditor.refresh();
           }
-          // self.reRenderCM();
         };
 
         self.renameFile = function() {
