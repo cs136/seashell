@@ -77,9 +77,17 @@ body {
 }
 
 #editor > .CodeMirror {
-  height: calc(100vh - 71px);
+  height: 66vh;
   border: 1px solid;
   border-top: none;
+}
+
+#console > .CodeMirror {
+  height: 66vh;
+  border: 1px solid;
+  border-top: none;
+  border-bottom: none;
+  clear: both;
 }
 
 #editor-controls > button {
@@ -348,13 +356,6 @@ div.tooltip .tooltip-inner {
   border-top: none;
 }
 
-#console > .CodeMirror {
-  height: calc(100vh - 75px);
-  border: 1px solid;
-  border-top: none;
-  border-bottom: none;
-  clear: both;
-}
 
 #console > .CodeMirror .CodeMirror-lines {
   padding-bottom: 0;
