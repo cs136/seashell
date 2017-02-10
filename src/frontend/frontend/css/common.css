@@ -18,9 +18,28 @@ body {
 }
 
 .container-fluid {
-  padding-left: 5em;
-  padding-right: 5em;
+  padding-left: 30px;
+  padding-right: 30px;
 }
+
+#console-editor-container {
+  padding: 0;
+  margin: 10px 0px 10px 0px;
+}
+
+@media (max-width: 1440px) {
+
+  #console-editor-container {
+    padding: 0;
+    margin: 10px -15px 0 -15px;
+  }
+  .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+}
+
 .row {
   padding: 2px;
 }
