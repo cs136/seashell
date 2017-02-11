@@ -42,14 +42,12 @@ angular.module('frontend-app')
       if (error) {
         console.error(error);
         self.errors.push({shorthand: shorthand, error: error, type: type});
-        $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
       }
     };
 
     // close the error message
     self.suppress = function (index) {
       self.errors.splice(index, 1);
-      $timeout(function() {$rootScope.$broadcast('window-resized');}, 0);
     };
 
     // returns a pretty string of self.logs
