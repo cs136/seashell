@@ -28,6 +28,10 @@ body {
   overflow: hidden;
 }
 
+.CodeMirror-overlayscroll-horizontal {
+  display: none !important;
+}
+
 @media (max-width: 1440px) {
 
   #editor-console-container {

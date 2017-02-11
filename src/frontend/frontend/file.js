@@ -108,7 +108,7 @@ angular.module('frontend-app')
           var containerDOM = $("#editor-console-container");
           var w = containerDOM.width();
           var h = editorDOM.height();
-          var minEditorW = 460;
+          var minEditorW = 470;
           var minConsoleW = 220;
           editorDOM.resizable({
             handles: "e",
@@ -119,6 +119,8 @@ angular.module('frontend-app')
               consoleDOM.css({
                 width: w - ui.size.width
               });
+              self.editor.refresh();
+              self.consoleEditor.refresh();
               event.stopPropagation();
             }
           });
@@ -140,6 +142,8 @@ angular.module('frontend-app')
             consoleDOM.css({
               width: w / 2
             });
+            if (self.editor) {self.editor.refresh();}
+            if (self.consoleEditor) {self.consoleEditor.refresh();}
           }
           resizeToFit();
           window.onresize = resizeToFit;
