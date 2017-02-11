@@ -119,9 +119,15 @@ angular.module('frontend-app')
               consoleDOM.css({
                 width: w - ui.size.width
               });
+              event.stopPropagation();
+            },
+            start: function() {
+              self.editor.getInputField().blur();
+              self.consoleEditor.getInputField().blur();
+            },
+            end: function() {
               self.editor.refresh();
               self.consoleEditor.refresh();
-              event.stopPropagation();
             }
           });
           function resizeToFit() {
@@ -147,7 +153,25 @@ angular.module('frontend-app')
           }
           resizeToFit();
           window.onresize = resizeToFit;
+          if (settings.settings.force_narrow) {
+            disableResizableUI();
+          }
         })();
+
+        function disableResizableUI() {
+          $("#editor").resizable("disable").css({
+            width: '',
+            height: ''
+          });
+          $("#console").css({
+            width: '',
+            height: ''
+          });
+        }
+        
+        function enableResizableUI() {
+          $("#editor").resizable("enable");
+        }
         
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
@@ -155,6 +179,11 @@ angular.module('frontend-app')
 
         self.onResize = function() {
           settings.settings.force_narrow = !(settings.settings.force_narrow);
+          if (settings.settings.force_narrow) {
+            disableResizableUI();
+          } else {
+            enableResizableUI();
+          }
           settings.save();
         };
 
