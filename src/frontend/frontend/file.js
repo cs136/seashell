@@ -166,7 +166,7 @@ angular.module('frontend-app')
         function enableResizableUI() {
           $("#editor").resizable("enable");
         }
-        
+
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
         });

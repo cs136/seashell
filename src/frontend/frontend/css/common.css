@@ -24,8 +24,7 @@ body {
 
 #editor-console-container {
   padding: 0;
-  margin: 15px 0px 10px 0px;
-  overflow: hidden;
+  margin: 10px 0px 10px 0px;
 }
 
 .CodeMirror-overlayscroll-horizontal {
@@ -36,7 +35,7 @@ body {
 
   #editor-console-container {
     padding: 0;
-    margin: 15px -15px 0 -15px;
+    margin: 10px -15px 0 -15px;
   }
   .container-fluid {
     padding-left: 15px;
@@ -90,6 +89,14 @@ body {
 
 .CodeMirror-gutters {
   border: none;
+}
+
+.editor-console {
+  margin-top: 5px;
+  margin-bottom: none;
+}
+
+#editor {
 }
 
 #editor > .CodeMirror {
