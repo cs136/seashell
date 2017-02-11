@@ -119,15 +119,9 @@ angular.module('frontend-app')
               consoleDOM.css({
                 width: w - ui.size.width
               });
-              event.stopPropagation();
-            },
-            start: function() {
-              self.editor.getInputField().blur();
-              self.consoleEditor.getInputField().blur();
-            },
-            end: function() {
               self.editor.refresh();
               self.consoleEditor.refresh();
+              event.stopPropagation();
             }
           });
           function resizeToFit() {
