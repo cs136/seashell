@@ -26,11 +26,9 @@ before_install:
 - tar xf cmake-3.6.2-Linux-x86_64.tar.gz
 - mv cmake-3.6.2-Linux-x86_64 cmake
 script:
-- ./build_tools/cmake -s "../cmake/bin/cmake" -i "$HOME/install" -a "-Wno-dev -DCMAKE_C_FLAGS='-Qunused-arguments
-  -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics'
-  -DPROCESSOR_COUNT=1 -DTRAVIS_BUILD=1" -l ""
-- ./build_tools/install -a "-j2" -l "" -t "true"
-- ./src/tests/frontend-tests/node_modules/karma/bin/karma start ./src/tests/frontend-tests/seashell.conf.js
+  - ./build_tools/cmake -s "../cmake/bin/cmake" -i "$HOME/install" -a "-Wno-dev -DCMAKE_C_FLAGS='-Qunused-arguments -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics' -DPROCESSOR_COUNT=1 -DTRAVIS_BUILD=1" -l ""
+  - ./build_tools/install -a "-j2" -l "" -t "true"
+  #- ./src/tests/frontend-tests/node_modules/karma/bin/karma start ./src/tests/frontend-tests/seashell.conf.js
 notifications:
   slack:
     secure: QTnHM1Cr1DDHY4laUKnpiQzcj3/NZ+qutlpzF6AcXBWhuGoTLLjmqIAPS6RvIpg0vHb2rxCEQ9g117iH5VFPv4FSoE5IfUeDM4CqheBvSmcbw5HmkCEgwaEcDyTd8iA0ChLmNzXsY8YEjQ5bS1xOsjLvKxwHj7Tg69ZWQhdnlDs=
