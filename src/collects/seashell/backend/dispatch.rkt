@@ -110,11 +110,12 @@
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
-           [(list pid test-name "error" exit-code stderr asan-output)
+           [(list pid test-name "error" exit-code stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
                                                                         (exit_code . ,exit-code)
                                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))
+                                                                        (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                                         (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
            [(list pid test-name "no-expect" stdout stderr asan-output)
             (send-message connection `#hash((id . -4) (success . #t)

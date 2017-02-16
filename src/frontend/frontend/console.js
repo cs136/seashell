@@ -203,6 +203,9 @@ angular.module('frontend-app')
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('---\n');
         self.write('Produced output (stderr):\n');
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
