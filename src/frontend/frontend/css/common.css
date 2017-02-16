@@ -294,6 +294,7 @@ div.tooltip .tooltip-inner {
 }
 
 .question-link {
+  margin-left: 1em;
 }
 
 .question-link:hover, .question-link-active:hover {
@@ -321,8 +322,11 @@ div.tooltip .tooltip-inner {
   font-weight: 300;
 }
 
-.questions-row-container {
-  text-align: right;
+#questions-row-container {
+  float: right;
+  font-size: 18px; 
+  margin-top: 5px; 
+  padding: 0;
 }
 
 #project-list table {
