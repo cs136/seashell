@@ -105,8 +105,8 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
                 <div className="pt-control-group">
                 <div className="pt-select" >
                 <select id="theme_style" value={String(this.state.theme)} onChange={(e)=>this.setState(merge(this.state, {theme: Number(e.target.value),}))}>
-                  <option value="0">light</option>
-                  <option value="1">dark</option>
+                  <option value="0">dark</option>
+                  <option value="1">light</option>
                 </select>
                 </div>
               </div>

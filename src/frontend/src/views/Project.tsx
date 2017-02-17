@@ -2,6 +2,7 @@ import * as React from 'react';
 import {Tabs, TabList, TabPanel, Tab} from '@blueprintjs/core';
 import {map, actionsInterface} from '../actions';
 import * as CodeMirror from 'react-codemirror'; 
+import MonacoEditor from 'react-monaco-editor';
 require('codemirror/mode/clike/clike');
 const styles = require<any>('./Project.scss');
 const layoutStyles = require<any>('../Layout.scss');
@@ -9,16 +10,44 @@ const layoutStyles = require<any>('../Layout.scss');
 export interface ProjectProps { title: string; routeParams: any; }
 export interface ProjectState { open?: boolean; title?: string; }
 
+
+
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState>{
+  constructor(props: ProjectProps&actionsInterface){
+    super(props);
+  }
+  editorDidMount(editor: any, monaco: any) {
+    console.log('editorDidMount', editor);
+    editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
+    editor.focus();
+  }
+  onChange(newValue: any, e: any) {
+    console.log('onChange', newValue, e);
+    this.props.dispatch.file.updateFile({content: newValue});
+  }
   render(){
-    const codeMirrorOptions = {
-      lineNumbers: true,
-      mode: 'clike',
-      tabSize: this.props.settings.tabWidth
+    const editorOptions={
+      automaticLayout: false,
+			cursorBlinking: 'phase',
+			cursorStyle: 'line',
+			parameterHints: true,
+			readOnly: false,
+			roundedSelection: true,
+			scrollBeyondLastLine: false,
+			scrollbar: {
+			 vertical: 'visible',
+			},
+			selectOnLineNumbers: true,
+			theme: (this.props.settings.theme) ? 'vs': 'vs-dark',
+      wrappingColumn: 0,
+      fontFamily: this.props.settings.font+", monospace",
+      fontSize: this.props.settings.fontSize
     };
-    const codeMirrorStyle={
-      fontFamily: this.props.settings.font,
-      fontSize: this.props.settings.fontSize.toString()+"px"
+    const loaderOptions = {
+      url: "dist/vs/loader.js",
+      paths: {
+        vs: "dist/vs"
+      }
     };
     const projectId = this.props.routeParams.id;
     const project = this.props.projectList.projects.filter((project)=>(project.id==projectId))[0];
@@ -35,7 +64,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 {question.files.map((file)=>(<Tab key={"file-tab-"+file.name}>{file.name}</Tab>))}</TabList>
                 {question.files.map((file)=>(<TabPanel key={"file-"+file.name}>
                   <h3>{file.name}</h3>
-                  <div style={codeMirrorStyle}><CodeMirror options={codeMirrorOptions} value={file.content}/></div>
+                  <MonacoEditor height="800" width="500" options={editorOptions} value={file.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
+                  requireConfig={loaderOptions}/>
                 </TabPanel>))}
             </Tabs>
           </TabPanel>))}
@@ -44,4 +74,4 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   } 
 }
  
-export default map(Project);
+export default map<ProjectProps>(Project);
