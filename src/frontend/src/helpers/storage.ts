@@ -16,7 +16,7 @@ class StorageDB extends Dexie {
 
   public constructor(location: string) {
     super(location);
-    self.version(1).stores({
+    this.version(1).stores({
       changelog: '++id',
       files: '[project+file], project',
       projects: 'name',
@@ -310,9 +310,11 @@ export class Storage {
             return checksum;
         });
       } else {
-        self.db.changelog.add({file: {project: name, file: file},
-                                      type: "newFile",
-                                      contents: contents});
+        self.db.changelog.add({
+          file: {project: name, file: file},
+          type: "newFile",
+          contents: contents
+        });
         self.db.files.add({project: name, file: file,
                         contents: contents, history: "", checksum: checksum,
                         last_modified: Date.now()});
