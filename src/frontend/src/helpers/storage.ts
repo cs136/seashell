@@ -71,7 +71,7 @@ export class Storage {
     * @param {string} file_history: The history of the file.
     * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
     */
-  writeFile(file: string, contents: string, history: string, checksum: string) {
+  public writeFile(file: string, contents: string, history: string, checksum: string) {
     var self = this;
     var offline_checksum = md5(contents);
     var key = [name, file];
@@ -112,7 +112,7 @@ export class Storage {
     });
   };
 
-  readFile(name: string, file: string) {
+  public readFile(name: string, file: string) {
     var self = this;
     var key = [name, file];
     return self.db.files.get(key).then(function (result) {
@@ -123,7 +123,7 @@ export class Storage {
     });
   };
 
-  deleteFile(name: string, file: string, online: boolean) {
+  public deleteFile(name: string, file: string, online: boolean) {
     var self = this;
     var key = [name, file];
     return self.db.transaction('rw', self.db.changelog, self.db.files, function () {
@@ -145,7 +145,7 @@ export class Storage {
     });
   };
 
-  renameFile(name: string, file: string, new_file, checksum: string) {
+  public renameFile(name: string, file: string, new_file, checksum: string) {
     var self = this;
     var key = [name, file];
     return self.db.transaction('rw', self.db.files, self.db.changelog, function () {
@@ -173,14 +173,14 @@ export class Storage {
     });
   };
 
-  getFileToRun(name: string, question: string) {
+  public getFileToRun(name: string, question: string) {
     var self = this;
     return self.db.projects.get(name).then(function (project) {
       return project.settings[question+"_runner_file"];
     });
   };
 
-  setFileToRun(name: string, question: string, folder: string, file: string) {
+  public setFileToRun(name: string, question: string, folder: string, file: string) {
     var self = this;
     if (folder === "tests") {
       throw sprintf("Storage.setFileToRun: folder cannot be tests/!");
@@ -193,7 +193,7 @@ export class Storage {
     });
   };
 
-  getSettings(get_all: boolean) {
+  public getSettings(get_all: boolean) {
     var self = this;
     return self.db.settings.get("settings").then(function(settings) {
       if (settings && get_all) {
@@ -205,7 +205,7 @@ export class Storage {
     });
   };
 
-  saveSettings(settings: Settings) {
+  public saveSettings(settings: Settings) {
     var self = this;
     return self.db.settings.put({
       name: "settings",
@@ -214,7 +214,7 @@ export class Storage {
     });
   };
 
-  getMostRecentlyUsed(project: string, question: string) {
+  public getMostRecentlyUsed(project: string, question: string) {
     var self = this;
     return self.db.transaction('rw', self.db.projects, function() {
       return self.db.projects.get(project).then(function(current: Project) {
@@ -228,7 +228,7 @@ export class Storage {
     });
   };
 
-  updateMostRecentlyUsed(project: string, question: string, file: string) {
+  public updateMostRecentlyUsed(project: string, question: string, file: string) {
     var self = this;
     return self.db.transaction('rw', self.db.projects, function() {
       self.db.projects.get(project).then(function(current: Project) {
@@ -242,7 +242,7 @@ export class Storage {
     });
   };
 
-  listProject(name: string) {
+  public listProject(name: string) {
     var self = this;
     // this is called when we open a project, so we will update the last modified time here as well
     return self.db.transaction('rw', self.db.projects, self.db.files, function() {
@@ -260,7 +260,7 @@ export class Storage {
     });
   };
 
-  listAllProjectsForSync() {
+  public listAllProjectsForSync() {
     var self = this;
     return self.db.files.toArray(function (files) {
       return files.map(function(file) {
@@ -273,17 +273,17 @@ export class Storage {
     });
   };
 
-  newDirectory(name: string, path: string) {
+  public newDirectory(name: string, path: string) {
     var self = this;
     return new Dexie.Promise(function (resolve, reject) {resolve(true);});
   };
 
-  deleteDirectory(name: string, path: string) {
+  public deleteDirectory(name: string, path: string) {
     var self = this;
     return new Dexie.Promise(function (resolve, reject) {resolve(true);});
   };
 
-  newFile(name: string, file: string, contents: string, encoding: string, normalize: boolean, online_checksum: string) {
+  public newFile(name: string, file: string, contents: string, encoding: string, normalize: boolean, online_checksum: string) {
     var self = this;
     // account for base64 encoding
     var rmatch;
@@ -323,12 +323,12 @@ export class Storage {
     });
   };
 
-  newProject(name: string) {
+  public newProject(name: string) {
     var self = this;
     return self.db.projects.add({name: name, settings: {}, last_modified: Date.now()});
   };
 
-  deleteProject(name: string, online: string) {
+  public deleteProject(name: string, online: string) {
     var self = this;
     return self.db.transaction('rw', self.db.files, self.db.changelog, self.db.projects, function () {
       self.db.files.where('project').equals(name).each(function (file) {
@@ -339,7 +339,7 @@ export class Storage {
   };
 
   // expects a project object in the form described in collects/seashell/backend/offline.rkt
-  updateProject(project: Project) {
+  public updateProject(project: Project) {
     var self = this;
     project.settings = JSON.parse(project.settings);
     return self.db.transaction('rw', self.db.projects, function() {
@@ -347,7 +347,7 @@ export class Storage {
     });
   };
 
-  getProjectsForSync() {
+  public getProjectsForSync() {
     var self = this;
     return self.db.projects.toArray(function(projects) {
       return projects.map(function(project) {
@@ -357,7 +357,7 @@ export class Storage {
     });
   };
 
-  getProjects() {
+  public getProjects() {
     var self = this;
     return self.db.projects.toCollection().toArray(function (projects) {
       return projects.map(function (project) {
@@ -366,7 +366,7 @@ export class Storage {
     });
   };
 
-  applyChanges(changes, newProjects: Project[], deletedProjects: Project[], updatedProjects: Project[], settings: Settings) {
+  public applyChanges(changes, newProjects: Project[], deletedProjects: Project[], updatedProjects: Project[], settings: Settings) {
     var self = this;
     return self.db.transaction('rw', self.db.files, self.db.changelog, self.db.projects, self.db.settings, function() {
       Dexie.currentTransaction.on('abort', function(ev) {
@@ -400,12 +400,12 @@ export class Storage {
     });
   };
 
-  getOfflineChanges() {
+  public getOfflineChanges() {
     var self = this;
     return self.db.changelog.toArray();
   };
 
-  hasOfflineChanges = function() {
+  public hasOfflineChanges = function() {
     var self = this;
     self.db.changelog.count().then(function(c: number) {
         self.has_offline_changes = c > 0;
