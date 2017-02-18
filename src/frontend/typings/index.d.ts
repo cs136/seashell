@@ -1,5 +1,6 @@
 declare module 'offline-plugin/runtime';
 declare module 'react-codemirror';
+declare module 'react-monaco-editor';
 
 declare var require: {
    <T>(path: string): T;

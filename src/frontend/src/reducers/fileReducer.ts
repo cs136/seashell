@@ -5,13 +5,16 @@ export interface fileReducerState {[key: string]: any;
     content?: string;
 };
 export interface fileReducerAction {type: string, payload: fileReducerState}
-export const appStateActions = {
+export const fileActions = {
   changeName: 'file_change_name',
+  changeContent: 'file_change_content'
 };
 export default function fileReducer(state:fileReducerState = {name: "default.c"}, action:fileReducerAction={type:null, payload:{}}) {
   switch (action.type) {
-    case appStateActions.changeName:
-      return evolve(state, {name: action.payload.name});
+    case fileActions.changeContent:
+      return evolve(state, {name: state.name, content: action.payload.content});
+    case fileActions.changeName:
+      return evolve(state, {name: action.payload.name, content: state.content});
     default:
       return state;
   }

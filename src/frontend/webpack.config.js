@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: [
     './src/index.tsx'
@@ -15,6 +16,12 @@ module.exports = {
       template: './src/index.html',
       filename: '../index.html',
     }),
+      new CopyWebpackPlugin([
+      {
+        from: './node_modules/monaco-editor/min/vs',
+        to: 'vs',
+      }
+    ])
   ],
   devtool: "source-map",
   resolve: {
@@ -23,7 +30,8 @@ module.exports = {
   },
   module: {
     preLoaders: [
-      { test: /\.js$/, loader: "source-map-loader" }
+      { test: /\.js$/, loader: "source-map-loader" },
+      { test: /\.tsx?$/, loader: "tslint-loader" }
     ],
     loaders: [
       { test: /\.tsx?$/, loader: "awesome-typescript-loader" },
