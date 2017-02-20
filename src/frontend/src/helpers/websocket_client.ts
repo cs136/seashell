@@ -5,6 +5,7 @@ class Message {
   type: string;
   project?: string;
   question?: string;
+  folder?: string;
   pid?: number;
   file?: string;
   tests?: Array<string>;
@@ -13,9 +14,13 @@ class Message {
   encoding?: string;
   normalize?: boolean;
   template?: string;
-  history?: History | boolean;
+  history?: History | false;
   oldName?: string;
   newName?: string;
+  settings?: Settings;
+  assn?: string;
+  subdir?: string | false;
+  location?: string | false;
   response?: ArrayBuffer[];
   constructor(msg: Message) {
     this.type = msg.type;
@@ -30,6 +35,9 @@ class Message {
 
 // TODO flesh out the History type for file histories
 interface History { }
+
+// TODO flesh out the Settings type
+interface Settings { }
 
 class Request extends Message {
   callback: (success: boolean, result: WebsocketResult)=>void;
@@ -380,18 +388,71 @@ export class SeashellWebsocket {
       newName: newName});
   }
 
-  public async getMostRecentlyUsed(name: string, question: string) {
+  public async getMostRecentlyUsed(name: string, question: string): Promise<WebsocketResult> {
     return await this.sendMessage({
       type: 'getMostRecentlyUsed',
       project: name,
       question: question});
   }
 
-  public async updateMostRecentlyUsed(name: string, question: string, file: string) {
+  public async updateMostRecentlyUsed(name: string, question: string, file: string): Promise<WebsocketResult> {
     return await this.sendMessage({
       type: 'updateMostRecentlyUsed',
       project: name,
       question: question,
       file: file});
+  }
+
+  public async saveSettings(settings: Settings): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'saveSettings',
+      settings: settings});
+  }
+
+  public async getSettings(): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'getSettings'});
+  }
+
+  public async marmosetSubmit(name: string, assn: string, subdir?: string): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'marmosetSubmit',
+      project: name,
+      assn: assn,
+      subdir: subdir ? subdir : false});
+  }
+
+  public async startIO(name: string, pid: number): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'startIO',
+      project: name,
+      pid: pid});
+  }
+
+  public async archiveProjects(): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'archiveProjects',
+      location: false});
+  }
+
+  public async getFileToRun(name: string, question: string): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'getFileToRun',
+      project: name,
+      question: question});
+  }
+
+  public async setFileToRun(name: string, question: string, folder: string, file: string): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'setFileToRun',
+      project: name,
+      question: question,
+      folder: folder,
+      file: file});
+  }
+
+  public async sync(message: Message) {
+    message.type = 'sync';
+    return await this.sendMessage(message);
   }
 }
