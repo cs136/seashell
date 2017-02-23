@@ -273,10 +273,10 @@ angular.module('frontend-app')
                   // Write default contents.
                   if (extension === 'c' || extension === 'h') {
                       result = project.createFile($scope.new_file_folder, question, filename,
-                                        sprintf("/**\n File: %s\nEnter a description for this file.\n*/\n", filename));
+                                        sprintf("/**\n File: %s\n Enter a description for this file.\n*/\n", filename));
                   } else if (extension === 'rkt') {
                       result = project.createFile($scope.new_file_folder, question, filename,
-                                        sprintf("#lang racket\n;; File %s\n;;Enter a description for this file.\n", filename));
+                                        sprintf("#lang racket\n;; File %s\n;; Enter a description for this file.\n", filename));
                   } else {
                       result = project.createFile($scope.new_file_folder, question, filename);
                   }
