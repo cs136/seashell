@@ -1,9 +1,9 @@
 import * as React from 'react';
 import {Tabs, TabList, TabPanel, Tab} from '@blueprintjs/core';
 import {map, actionsInterface} from '../actions';
-import * as CodeMirror from 'react-codemirror'; 
 import MonacoEditor from 'react-monaco-editor';
-require('codemirror/mode/clike/clike');
+import XTerm from 'react-xterm';
+
 const styles = require<any>('./Project.scss');
 const layoutStyles = require<any>('../Layout.scss');
 
@@ -67,6 +67,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                   <MonacoEditor height="800" width="500" options={editorOptions} value={file.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
                   requireConfig={loaderOptions}/>
                 </TabPanel>))}
+                <XTerm/>
             </Tabs>
           </TabPanel>))}
       </Tabs>
