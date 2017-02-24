@@ -24,11 +24,9 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
     };
   }
   toggleHelp(){
-    //console.log("help");
     this.setState({helpVisible: !this.state.helpVisible});
   }
   toggleSettings(){
-    //console.log("good");
     this.setState({settingsVisible: !this.state.settingsVisible});
   }
   render(){
