@@ -1,18 +1,18 @@
-// import React from 'react';
-import * as React from 'react';
-import Navigation from './partials/Navigation';
+// import React from "react";
+import * as React from "react";
+import Navigation from "./partials/Navigation";
 
-require<any>('codemirror/lib/codemirror.css');
-const styles = require<any>('./Layout.scss');
+require<any>("codemirror/lib/codemirror.css");
+const styles = require<any>("./Layout.scss");
 
 
-require<any>('@blueprintjs/core/dist/blueprint.css');
+require<any>("@blueprintjs/core/dist/blueprint.css");
 
 export interface LayoutProps { title: string; }
 export interface LayoutState { open?: boolean; title?: string; }
 
 export default class Layout extends React.Component<LayoutProps, LayoutState> {
-  constructor(props:LayoutProps) {
+  constructor(props: LayoutProps) {
     super(props);
     this.state = {
       open: false,

@@ -1,7 +1,7 @@
 export interface CoderEncrypted {
-  iv: ArrayBuffer,
-  tag: ArrayBuffer,
-  encrypted: ArrayBuffer,
+  iv: ArrayBuffer;
+  tag: ArrayBuffer;
+  encrypted: ArrayBuffer;
 }
 export class Coder {
   key: CryptoKey;
