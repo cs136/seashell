@@ -1,6 +1,6 @@
 {
     "jsRules": {
-        "class-name": true,
+        "class-name": false,
         "comment-format": [
             true,
             "check-space"
@@ -44,7 +44,7 @@
         ]
     },
     "rules": {
-        "class-name": true,
+        "class-name": false,
         "comment-format": [
             true,
             "check-space"
