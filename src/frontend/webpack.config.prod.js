@@ -59,6 +59,7 @@ module.exports = {
   module: {
     preLoaders: [
       { test: /\.js$/, loader: "source-map-loader" },
+      { test: /\.json$/, loader: 'json'},
       { test: /\.tsx?$/, loader: "tslint-loader", tslint: { configFile: "tslint.json" } }
     ],
     loaders: [
