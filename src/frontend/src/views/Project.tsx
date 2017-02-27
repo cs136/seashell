@@ -49,6 +49,14 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         vs: "dist/vs"
       }
     };
+    const xtermOptions={
+      tabstopwidth: this.props.settings.tabWidth,
+      cursorBlink: true,
+    };
+    const termWrapperStyle={
+      width: "50%",
+      height: "50%"
+    };
     const projectId = this.props.routeParams.id;
     const project = this.props.projectList.projects.filter((project)=>(project.id==projectId))[0];
     return (<div className={layoutStyles.container}>
@@ -67,10 +75,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                   <MonacoEditor height="800" width="500" options={editorOptions} value={file.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
                   requireConfig={loaderOptions}/>
                 </TabPanel>))}
-                <XTerm/>
             </Tabs>
           </TabPanel>))}
       </Tabs>
+      <span style={termWrapperStyle}><XTerm options={xtermOptions}/></span>
     </div>);
   } 
 }

@@ -17,6 +17,7 @@
     "@types/react-addons-css-transition-group": "^15.0.0",
     "@types/react-dom": "^0.14.20",
     "@types/xterm": "^2.0.2",
+    "classnames": "^2.2.5",
     "offline-plugin": "^3.4.1",
     "ramda": "^0.23.0",
     "react": "^15.3.2",
