@@ -22,9 +22,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
     editor.focus();
   }
-  onChange(newValue: any, e: any) {
-    console.log("onChange", newValue, e);
-    this.props.dispatch.file.updateFile({content: newValue});
+  onChange(newValue: string, e: any) {
+    this.props.dispatch.file.updateFile(newValue);
   }
   render() {
     const editorOptions = {
@@ -59,24 +58,26 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       height: "50%"
     };
     const projectId = this.props.routeParams.id;
-    const project = this.props.projectList.projects.filter((project) => (project.id === projectId))[0];
+    const project = this.props.appState.currentProject;
     return (<div className={layoutStyles.container}>
         <Tabs initialSelectedTabIndex={1}>
           <TabList className="pt-large">
             <Tab isDisabled={true}>{project.name}</Tab>
-            {project.questions.map((question) => (<Tab key={"tab-" + question.name}>{question.name}</Tab>))}
+            {project.questions.map((question) => (<Tab key={"tab-" + question}>{question}</Tab>))}
           </TabList>
-          <TabPanel/>
-          {project.questions.map((question) => (<TabPanel key={"question-" + question.name}>
-            <Tabs>
+          <TabPanel />
+          {project.questions.map((question) => (
+          <TabPanel key={"question-" + question}>
+            {question==project.currentQuestion.name?(<Tabs>
               <TabList>
-                {question.files.map((file) => (<Tab key={"file-tab-" + file.name}>{file.name}</Tab>))}</TabList>
-                {question.files.map((file) => (<TabPanel key={"file-" + file.name}>
-                  <h3>{file.name}</h3>
-                  <MonacoEditor height="800" width="500" options={editorOptions} value={file.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
-                  requireConfig={loaderOptions}/>
+                {project.currentQuestion.files.map((file) => (<Tab key={"file-tab-" + file}>{file}</Tab>))}</TabList>
+                {project.currentQuestion.files.map((file) => (<TabPanel key={"file-" + file}>
+                {(file===project.currentQuestion.currentFile.name)?(<div>
+                  <h3>{project.currentQuestion.currentFile.name}</h3>
+                  <MonacoEditor height="800" width="500" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
+                  requireConfig={loaderOptions}/></div>):null}
                 </TabPanel>))}
-            </Tabs>
+            </Tabs>):null}
           </TabPanel>))}
       </Tabs>
       <span style={termWrapperStyle}><XTerm options={xtermOptions}/></span>

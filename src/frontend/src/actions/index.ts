@@ -4,7 +4,6 @@ import { globalState } from "../reducers/";
 import {projectRef, fileRef} from "../types";
 import {appStateActions} from "../reducers/appStateReducer";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
-import {fileActions, fileReducerState} from "../reducers/fileReducer";
 
 interface Func<T> {
     ([...args]: any): T;
@@ -23,7 +22,7 @@ const mapDispatchToProps = (dispatch: Function) => {
              updateSettings: (newSettings: settingsReducerState) => dispatch({type: settingsActions.updateSettings, payload: newSettings})
           },
           file: {
-              updateFile: (newFileContent: fileReducerState) => dispatch({type: fileActions.changeContent, payload: newFileContent})
+              updateFile: (newFileContent: string) => dispatch({type: appStateActions.changeFileContent, payload: newFileContent})
           }
         }
     };
