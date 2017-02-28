@@ -1,5 +1,6 @@
 import {Coder} from './crypto';
 import * as sjcl from 'sjcl';
+import {History,Settings,Change} from './types';
 
 class Message {
   type: string;
@@ -22,6 +23,9 @@ class Message {
   subdir?: string | false;
   location?: string | false;
   response?: ArrayBuffer[];
+  projects?: Array<string>;
+  files?: Array<string>;
+  changes?: Array<Change>;
   constructor(msg: Message) {
     this.type = msg.type;
     this.project = msg.project;
@@ -32,12 +36,6 @@ class Message {
     this.response = msg.response;
   }
 }
-
-// TODO flesh out the History type for file histories
-interface History { }
-
-// TODO flesh out the Settings type
-interface Settings { }
 
 class Request extends Message {
   callback: (success: boolean, result: WebsocketResult)=>void;
@@ -50,7 +48,11 @@ class Request extends Message {
   }
 }
 
-export class WebsocketResult extends Message { }
+export class WebsocketResult extends Message {
+  newProjects: Array<string>;
+  deletedProjects: Array<string>;
+  updatedProjects: Array<string>;
+}
 
 class AuthResult extends WebsocketResult implements ArrayBuffer {
   byteLength: number;
@@ -74,6 +76,9 @@ export class SeashellWebsocket {
   private closed: boolean;
   private started: boolean;
   private websocket: WebSocket;
+
+  // this allows WebsocketService to access member functions by string key
+  [key: string]: any;
 
   constructor(private uri: string, private key: Uint8Array, private failure: ()=>void, private closes: ()=>void) {
     this.coder = new Coder(this.key);
@@ -247,6 +252,12 @@ export class SeashellWebsocket {
       project: project,
       question: question,
       tests: test});
+  }
+
+  public async programKill(pid: number): Promise<WebsocketResult> {
+    return await this.sendMessage({
+      type: 'programKill',
+      pid: pid});
   }
 
   public async sendEOF(pid: number): Promise<WebsocketResult> {
