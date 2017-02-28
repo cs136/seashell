@@ -1,37 +1,35 @@
-import * as React from 'react';
-import {map, actionsInterface} from '../../actions';
-import {Link} from 'react-router';
-import {Tooltip, Position, Dialog} from '@blueprintjs/core';
-import {HelpDialog} from './Dialogs';
-import SettingsDialog from './Dialogs';
-import * as R from 'ramda';
+import * as React from "react";
+import {map, actionsInterface} from "../../actions";
+import {Link} from "react-router";
+import {Tooltip, Position, Dialog} from "@blueprintjs/core";
+import {HelpDialog} from "./Dialogs";
+import SettingsDialog from "./Dialogs";
+import * as R from "ramda";
 
 
-const logo = require<any>('./logo.svg');
-const styles = require<any>('./index.scss');
-const layoutStyles = require<any>('../../Layout.scss');
+const logo = require<any>("./logo.svg");
+const styles = require<any>("./index.scss");
+const layoutStyles = require<any>("../../Layout.scss");
 
 
 export interface NavigationProps { title: string; }
-export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean;}
+export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean; }
 
-class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState>{
-  constructor(props: NavigationProps&actionsInterface){
+class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
+  constructor(props: NavigationProps&actionsInterface) {
     super(props);
-    this.state={
+    this.state = {
       helpVisible: false,
       settingsVisible: false,
     };
   }
-  toggleHelp(){
-    //console.log("help");
+  toggleHelp() {
     this.setState({helpVisible: !this.state.helpVisible});
   }
-  toggleSettings(){
-    //console.log("good");
+  toggleSettings() {
     this.setState({settingsVisible: !this.state.settingsVisible});
   }
-  render(){
+  render() {
     return (<div>
       <nav className={"pt-navbar " + styles.navbar}>
         <div className={layoutStyles.container}>

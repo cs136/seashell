@@ -31,7 +31,8 @@ module.exports = {
   module: {
     preLoaders: [
       { test: /\.js$/, loader: "source-map-loader" },
-      { test: /\.tsx?$/, loader: "tslint-loader" }
+      { test: /\.json$/, loader: 'json'},
+      { test: /\.tsx?$/, loader: "tslint-loader", tslint: { configFile: "tslint.json" } }
     ],
     loaders: [
       { test: /\.tsx?$/, loader: "awesome-typescript-loader" },
