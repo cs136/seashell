@@ -1,20 +1,20 @@
 import {mergeBetter} from "../helpers/utils";
 import {projectRef, fileRef} from "../types";
-export interface appStateReducerState {[key: string]: any; 
-  projects: string[],
+export interface appStateReducerState {[key: string]: any;
+  projects: string[];
   currentProject?: {
-    name: string,
-    id: string,
-    questions: string[], 
+    name: string;
+    id: string;
+    questions: string[];
     currentQuestion: {
       name: "q1"
-      files: string[],
+      files: string[];
       currentFile: {
-        name: string,
+        name: string;
         content: string
-      }
-    }
-  }
+      };
+    };
+  };
 };
 export interface appStateReducerAction {type: string; payload: any; };
 export const appStateActions = {
