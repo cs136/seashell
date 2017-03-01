@@ -6,15 +6,7 @@ describe("App States", () => {
 
   it('should update file contents when called', () => {
     const outputString = "Hello World";
-    const expectedData = {
-      currentProject:{
-        currentQuestion:{
-          currentFile: {
-            content: outputString
-          }
-        }
-      }
-    };
+    const expectedData = {currentProject:{currentQuestion:{currentFile: {content: outputString}}}};
     expect(appStateReducer.default({currentProject:{currentQuestion:{currentFile:{content: "fail"}}}}, action(appStateReducer.appStateActions.changeFileContent, outputString))
     ).toEqual(expectedData);
   });
