@@ -2,7 +2,7 @@ import * as React from "react";
 import {Tabs, TabList, TabPanel, Tab} from "@blueprintjs/core";
 import {map, actionsInterface} from "../actions";
 import MonacoEditor from "react-monaco-editor";
-import XTerm from "react-xterm";
+import Xterm from "./Console";
 
 const styles = require<any>("./Project.scss");
 const layoutStyles = require<any>("../Layout.scss");
@@ -80,7 +80,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             </Tabs>):null}
           </TabPanel>))}
       </Tabs>
-      <span style={termWrapperStyle}><XTerm options={xtermOptions}/></span>
+      <Xterm style={termWrapperStyle}/>
     </div>);
   }
 }

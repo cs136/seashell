@@ -1,44 +1,49 @@
 import * as React from 'react';
-import * as Xterm from 'xterm';
+import * as Terminal from 'xterm';
 
-export interface ConsoleProps {};
+export interface ConsoleProps {style: any};
 export interface ConsoleState {};
 
-let term = new Xterm({
-    cursorBlink: true
-});
 
-term.open(document.getElementById("app"));
-
-class Terminal extends React.Component <ConsoleProps, ConsoleState> {
+export default class Xterm extends React.Component <ConsoleProps, ConsoleState> {
+    term: any;
+    constructor(props: ConsoleProps, context: any){
+        super(props, context);
+        this.term = new Terminal({
+            cursorBlink: true
+        });
+        this.term.open(document.getElementById("console"));
+    }
 
     componentDidMount() {
-        const container = document.getElementById("app");
+
 
         //term.setOption('cursorStyle', 'underline');
 
-        term.open(container);
 
-        term.prompt = () => {
-            term.write("\r\n > ");
+        this.term.prompt = () => {
+            this.term.write("\r\n > ");
         };
 
-        term.on('key', (key: Number, evt: any) => {
+        this.term.on('key', (key: Number, evt: any) => {
             let printable = (!evt.altKey && !evt.altGraphKey && !evt.ctrlKey && !evt.metaKey && evt.keyCode != '38' && evt.keyCode != '40' && evt.keyCode != '39' && evt.keyCode != '37');
             if (evt.keyCode == '13') {
-                term.prompt();
+                this.term.prompt();
             } else if (evt.keyCode == '8') {
-                if (term.x > 3)
-                    term.write("\b \b");
+                if (this.term.x > 3)
+                    this.term.write("\b \b");
             }
-            else if (printable) term.write(key);
+            else if (printable) this.term.write(key);
         });
-
-        term.prompt();
-        term.focus();
+        this.term.resize(30, 50);
+        this.term.prompt();
+        this.term.focus();
+    }
+    componentWillUnmount(){
+        this.term.destroy();
     }
 
     render() {
-        return(<div className="console"></div>);
+        return(<div className="console" style={this.props.style}></div>);
     }
 }     
