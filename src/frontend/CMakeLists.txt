@@ -81,7 +81,7 @@ html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
 find_program(JS_LINTER jshint)
 if (JS_LINTER)
   message("JavaScript linter found: ${JS_LINTER}")
-  add_custom_target(_lint ALL COMMAND ${JS_LINTER} --exclude "'js/lib/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  # add_custom_target(_lint ALL COMMAND ${JS_LINTER} --exclude "'(js/lib|dist|node_modules)/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif (JS_LINTER)
 
 # Files to install.

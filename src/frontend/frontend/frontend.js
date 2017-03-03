@@ -170,8 +170,4 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         errors.report(error, 'Could not load settings!');
       });
     });
-    // Set up resize
-    $window.onresize = function () {
-      $rootScope.$broadcast('window-resized');
-    };
   }]);
