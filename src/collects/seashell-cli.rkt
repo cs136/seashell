@@ -79,7 +79,7 @@
         (eprintf "Program passed the test.\n")
         (write-outputs stdout stderr #f)
         (exit 40)]
-       [(list pid _ "error" exit-code stderr asan)
+       [(list pid _ "error" exit-code stderr stdout asan)
         (if (= exit-code 134)
           (eprintf "Program failed an assertion.~n")
           (eprintf "Program crashed at runtime.~n"))

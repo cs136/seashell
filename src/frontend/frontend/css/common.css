@@ -14,12 +14,32 @@
 body {
   position: relative; /* For scrollyspy */
   padding-top: 15px;
+  height: 100vh;
 }
 
 .container-fluid {
-  padding-left: 5em;
-  padding-right: 5em;
+  padding-left: 30px;
+  padding-right: 30px;
 }
+
+#console-editor-container {
+  padding: 0;
+  margin: 10px 0px 10px 0px;
+}
+
+@media (max-width: 1440px) {
+
+  #console-editor-container {
+    padding: 0;
+    margin: 10px -15px 0 -15px;
+  }
+  .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+}
+
 .row {
   padding: 2px;
 }
@@ -76,9 +96,22 @@ body {
 }
 
 #editor > .CodeMirror {
-  height: 300px;
+  height: calc(80vh + 4px);
   border: 1px solid;
   border-top: none;
+}
+
+#console > .CodeMirror {
+  height: 80vh;
+  border: 1px solid;
+  border-top: none;
+  border-bottom: none;
+  clear: both;
+}
+
+#editor.console-narrow .CodeMirror, 
+#console.console-narrow .CodeMirror {
+  height: 66vh;
 }
 
 #editor-controls > button {
@@ -261,6 +294,7 @@ div.tooltip .tooltip-inner {
 }
 
 .question-link {
+  margin-left: 1em;
 }
 
 .question-link:hover, .question-link-active:hover {
@@ -288,8 +322,11 @@ div.tooltip .tooltip-inner {
   font-weight: 300;
 }
 
-.questions-row-container {
-  text-align: right;
+#questions-row-container {
+  float: right;
+  font-size: 18px; 
+  margin-top: 5px; 
+  padding: 0;
 }
 
 #project-list table {
@@ -347,13 +384,6 @@ div.tooltip .tooltip-inner {
   border-top: none;
 }
 
-#console > .CodeMirror {
-  height: 299px;
-  border: 1px solid;
-  border-top: none;
-  border-bottom: none;
-  clear: both;
-}
 
 #console > .CodeMirror .CodeMirror-lines {
   padding-bottom: 0;
