@@ -72,7 +72,7 @@
     "eslint-plugin-jsx-a11y": "^2.2.2",
     "eslint-plugin-react": "^6.3.0",
     "extract-text-webpack-plugin": "^1.0.1",
-    "fake-indexeddb": "^1.0.11",
+    "fake-indexeddb": "git+https://github.com/YLiLarry/fakeIndexedDB.git#3bb9ccc67b2f02bdb2f8d027707903f775b953d0",
     "file-loader": "^0.9.0",
     "html-webpack-plugin": "^2.22.0",
     "image-webpack-loader": "^3.1.0",
