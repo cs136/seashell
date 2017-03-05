@@ -11,3 +11,4 @@ describe("App States", () => {
     ).toEqual(expectedData);
   });
 });
+
