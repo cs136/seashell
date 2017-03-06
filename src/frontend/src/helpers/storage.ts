@@ -1,9 +1,12 @@
 import Dexie from 'dexie';
-import 'js-cookie';
 import md5 = require('md5');
 import {sprintf} from 'sprintf-js';
 import * as R from 'ramda';
-export {Store, File, Project, Settings}
+export {Store, 
+        File, 
+        Project, 
+        Settings, 
+        StorageInterface}
 
 // subject to changes
 interface ChangeLog {
@@ -46,7 +49,27 @@ interface Settings {
 }
 
 
-class Store {
+interface StorageInterface {
+  writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string>;
+  readFile(proj: string, name: string): Promise<File>;
+  writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string>;
+  readFile(proj: string, name: string): Promise<File>;
+  deleteFile(proj: string, name: string, online: boolean): Promise<void>;
+  renameFile(proj: string, name: string, newName: string, checksum: string): Promise<string>;
+  getFileToRun(proj: string, question: string): Promise<string|undefined>;
+  setFileToRun(proj: string, question: string, file: string): Promise<void>;
+  getSettings(): Promise<Settings|undefined>;
+  saveSettings(settings: Settings): Promise<void>;
+  listProject(name: string): Promise<File[]>;
+  newFile(proj: string, file: string, contents: string, encoding: string, normalize: boolean, online_checksum: string): Promise<string>;
+  newProject(name: string): Promise<void>;
+  deleteProject(name: string, online: boolean): Promise<void>;
+  updateProject(proj: Project): Promise<void>;
+  getProjects(): Promise<Project[]>;
+}
+
+
+class Store implements StorageInterface {
 
   private db: StorageDB;
   private has_offline_changes: boolean;
@@ -65,8 +88,8 @@ class Store {
     * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
     */
   public async writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string> {
-    var offline_checksum = md5(contents);
-    var key = [proj, name];
+    const offline_checksum = md5(contents);
+    const key: FileID = [proj, name];
     return this.db.transaction('rw', this.db.files, async () => {
       if (! checksum) {
         let current: File = await this.db.files.get(key);
@@ -96,7 +119,7 @@ class Store {
   }
 
   public async deleteFile(proj: string, name: string, online: boolean): Promise<void> {
-    const key = [proj, name];
+    const key: FileID = [proj, name];
     const tbs = [this.db.files, this.db.projects];
     return this.db.transaction('rw', tbs, async () => {
       if (! online) {
@@ -127,7 +150,7 @@ class Store {
   }
 
   public async renameFile(proj: string, name: string, newName: string, checksum: string): Promise<string> {
-    const key = [proj, name];
+    const key: FileID = [proj, name];
     const tbs = [this.db.files, this.db.projects];
     return this.db.transaction('rw', tbs, async () => {
       let result = await this.db.files.get(key);
@@ -367,8 +390,8 @@ class Store {
 
 class StorageDB extends Dexie {
   public changelog: Dexie.Table<ChangeLog, number>;
-  public files: Dexie.Table<File, string[]>;
-  public projects: Dexie.Table<Project, string>;
+  public files: Dexie.Table<File, FileID>;
+  public projects: Dexie.Table<Project, ProjectID>;
   public settings: Dexie.Table<Settings, number>;
 
   public constructor(dbName: string, options?: DBOptions) {

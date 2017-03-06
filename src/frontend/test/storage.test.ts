@@ -11,7 +11,7 @@ import md5 = require("md5");
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 10*1000;
 
 const testSize = 5;
-const halfTestSize = testSize/2;
+const halfTestSize = Math.floor(testSize/2);
 
 let unique = 0;
 // should return a thunk, see jscheck documentation 
