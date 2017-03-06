@@ -1,8 +1,16 @@
 import * as React from "react";
 import {Tabs, TabList, TabPanel, Tab} from "@blueprintjs/core";
 import {map, actionsInterface} from "../actions";
-import MonacoEditor from "react-monaco-editor";
 import Xterm from "./Console";
+import AceEditor from 'react-ace';
+import * as brace from 'brace';
+import 'brace/mode/c_cpp';
+import 'brace/mode/scheme';
+import 'brace/ext/searchbox';
+import 'brace/theme/terminal';
+import 'brace/theme/eclipse';
+import 'brace/keybinding/vim';
+import 'brace/keybinding/emacs';
 
 const styles = require<any>("./Project.scss");
 const layoutStyles = require<any>("../Layout.scss");
@@ -17,38 +25,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
   }
-  editorDidMount(editor: any, monaco: any) {
-    console.log("editorDidMount", editor);
-    editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
-    editor.focus();
+  onLoad(editor: any, content: string){
+    editor.getSession().setValue(content);
   }
   onChange(newValue: string, e: any) {
     this.props.dispatch.file.updateFile(newValue);
   }
   render() {
-    const editorOptions = {
-      automaticLayout: false,
-      cursorBlinking: "phase",
-      cursorStyle: "line",
-      parameterHints: true,
-      readOnly: false,
-      roundedSelection: true,
-      scrollBeyondLastLine: false,
-      scrollbar: {
-        vertical: "visible",
-      },
-      selectOnLineNumbers: true,
-      theme: (this.props.settings.theme) ? "vs" : "vs-dark",
-      wrappingColumn: 0,
-      fontFamily: this.props.settings.font + ", monospace",
-      fontSize: this.props.settings.fontSize
-    };
-    const loaderOptions = {
-      url: "dist/vs/loader.js",
-      paths: {
-        vs: "dist/vs"
-      }
-    };
     const xtermOptions={
       tabstopwidth: this.props.settings.tabWidth,
       cursorBlink: true,
@@ -74,8 +57,14 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 {project.currentQuestion.files.map((file) => (<TabPanel key={"file-" + file}>
                 {(file===project.currentQuestion.currentFile.name)?(<div>
                   <h3>{project.currentQuestion.currentFile.name}</h3>
-                  <MonacoEditor height="800" width="500" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
-                  requireConfig={loaderOptions}/></div>):null}
+                  <AceEditor height="800" width="500" value={project.currentQuestion.currentFile.content} 
+                  mode={(project.currentQuestion.currentFile.name.split(".").pop()==="c"||project.currentQuestion.currentFile.name.split(".").pop()==="c")? "c_cpp" :
+                      ((project.currentQuestion.currentFile.name.split(".").pop()==="rkt")? "scheme" : "")} 
+                  onChange={this.onChange.bind(this)}
+                  theme={this.props.settings.theme ? "eclipse" : "terminal"}
+                  keyboardHandler={(this.props.settings.editorMode) ? ((this.props.settings.editorMode===2)? "emacs" : "vim") : ""}
+                  tabSize={this.props.settings.tabWidth} fontSize={this.props.settings.fontSize} setOptions={{fontFamily: this.props.settings.font+", monospace"}}
+                  focus={true} wrapEnabled={true} onLoad={(editor: any)=>this.onLoad.bind(this)(editor, project.currentQuestion.currentFile.content)}/></div>):null}
                 </TabPanel>))}
             </Tabs>):null}
           </TabPanel>))}
