@@ -1,6 +1,5 @@
 declare module 'offline-plugin/runtime';
-declare module 'react-monaco-editor';
-declare module 'xterm';
+
 
 declare var require: {
    <T>(path: string): T;

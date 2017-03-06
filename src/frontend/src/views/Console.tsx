@@ -37,7 +37,6 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
         });
         this.term.resize(30, 50);
         this.term.prompt();
-        this.term.focus();
     }
     componentWillUnmount(){
         this.term.destroy();
