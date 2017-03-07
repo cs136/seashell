@@ -7,7 +7,7 @@ export interface appStateReducerState {[key: string]: any;
     id: string;
     questions: string[];
     currentQuestion: {
-      name: "q1"
+      name: string;
       files: string[];
       currentFile: {
         name: string;
