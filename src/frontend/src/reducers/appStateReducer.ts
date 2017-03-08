@@ -25,13 +25,22 @@ export const appStateActions = {
   addQuestion: "question_add",
   removeFile: "file_add",
   removeProject: "project_add",
-  removeQuestion: "question_add"
+  removeQuestion: "question_add",
+  switchFile: "file_switch",
+  switchQuestion: "question_switch",
+  switchProject: "project_switch"
 };
 
 
 
 export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1 Racket", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1 Racket", "A2 C"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.switchFile:
+      return mergeBetter(state, {currentProject: {currentQuestion: {currentFile: action.payload.file}}});
+    case appStateActions.switchQuestion:
+      return mergeBetter(state, {currentProject: {currentQuestion: action.payload.question}});
+    case appStateActions.switchProject:
+      return mergeBetter(state, {currentProject: action.payload.project});
     //we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       return mergeBetter(state, {currentProject: {questions: state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1)}});
