@@ -49,11 +49,11 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         vs: "dist/vs"
       }
     };
-    const xtermOptions={
+    const xtermOptions = {
       tabstopwidth: this.props.settings.tabWidth,
       cursorBlink: true,
     };
-    const termWrapperStyle={
+    const termWrapperStyle = {
       width: "50%",
       height: "50%"
     };
@@ -68,16 +68,16 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           <TabPanel />
           {project.questions.map((question) => (
           <TabPanel key={"question-" + question}>
-            {question==project.currentQuestion.name?(<Tabs>
+            {question === project.currentQuestion.name ? (<Tabs>
               <TabList>
                 {project.currentQuestion.files.map((file) => (<Tab key={"file-tab-" + file}>{file}</Tab>))}</TabList>
                 {project.currentQuestion.files.map((file) => (<TabPanel key={"file-" + file}>
-                {(file===project.currentQuestion.currentFile.name)?(<div>
+                {(file === project.currentQuestion.currentFile.name) ? (<div>
                   <h3>{project.currentQuestion.currentFile.name}</h3>
                   <MonacoEditor height="800" width="500" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
-                  requireConfig={loaderOptions}/></div>):null}
+                  requireConfig={loaderOptions}/></div>) : null}
                 </TabPanel>))}
-            </Tabs>):null}
+            </Tabs>) : null}
           </TabPanel>))}
       </Tabs>
       <Xterm style={termWrapperStyle}/>
