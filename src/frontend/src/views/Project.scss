@@ -1,0 +1,29 @@
+.tabPanel{
+    display:block;
+    margin-top:0;
+}
+.tabList{
+    padding:0 1em;
+}
+.fileTabList{
+    border-top:1px solid #EEE;
+    background:#FAFAFA;
+}
+.fileTabList li{
+    padding:0.3em 0;
+}
+.fullWidth{
+    width:100%;
+}
+.actionbar{
+    display:flex;
+    flex-wrap: wrap;
+    border-style:none;
+    box-shadow:none !important;
+    padding:0.3em;
+    justify-content: space-between;
+    height:auto;
+}
+.actionbar>div{
+    height:auto;
+}

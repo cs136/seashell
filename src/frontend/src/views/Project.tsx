@@ -9,17 +9,26 @@ const layoutStyles = require<any>("../Layout.scss");
 
 
 export interface ProjectProps { title: string; routeParams: any; }
-export interface ProjectState { open?: boolean; title?: string; }
+export interface ProjectState { open?: boolean; title?: string; editor?: any; }
 
 
 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
+    this.onResize = this.onResize.bind(this);
+    this.state = {editor: null};
+  }
+  onResize(){
+    this.state.editor.domElement.style.height = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top) + "px";
+    this.state.editor.layout();
   }
   editorDidMount(editor: any, monaco: any) {
-    console.log("editorDidMount", editor);
     editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
+    window.removeEventListener("resize", this.onResize);
+    window.addEventListener("resize", this.onResize);
+    this.state.editor = editor;
+    this.onResize();
     editor.focus();
   }
   onChange(newValue: string, e: any) {
@@ -27,7 +36,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   }
   render() {
     const editorOptions = {
-      automaticLayout: false,
+      automaticLayout: true,
       cursorBlinking: "phase",
       cursorStyle: "line",
       parameterHints: true,
@@ -59,23 +68,34 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     };
     const projectId = this.props.routeParams.id;
     const project = this.props.appState.currentProject;
-    return (<div className={layoutStyles.container}>
+    return (<div className={styles.fullWidth}>
         <Tabs initialSelectedTabIndex={1}>
-          <TabList className="pt-large">
-            <Tab isDisabled={true}>{project.name}</Tab>
+          <TabList className={styles.tabList + " pt-large"}>
+            <Tab isDisabled={true}><h5>{project.name}</h5></Tab>
             {project.questions.map((question) => (<Tab key={"tab-" + question}>{question}</Tab>))}
           </TabList>
           <TabPanel />
           {project.questions.map((question) => (
-          <TabPanel key={"question-" + question}>
+          <TabPanel className={styles.tabPanel} key={"question-" + question}>
             {question === project.currentQuestion.name ? (<Tabs>
-              <TabList>
-                {project.currentQuestion.files.map((file) => (<Tab key={"file-tab-" + file}>{file}</Tab>))}</TabList>
-                {project.currentQuestion.files.map((file) => (<TabPanel key={"file-" + file}>
-                {(file === project.currentQuestion.currentFile.name) ? (<div>
-                  <h3>{project.currentQuestion.currentFile.name}</h3>
-                  <MonacoEditor height="800" width="500" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
-                  requireConfig={loaderOptions}/></div>) : null}
+              <TabList className={styles.tabList + " " + styles.fileTabList}>
+                {project.currentQuestion.files.map((file) => (<Tab key={"file-tab-" + file}>{file}</Tab>))}
+              </TabList>
+              {project.currentQuestion.files.map((file) => (<TabPanel key={"file-" + file} className={styles.tabPanel}>
+                <nav className={styles.actionbar + " pt-navbar pt-dark"}>
+                  <div className="pt-navbar-group pt-align-left">
+                    <button className="pt-button pt-minimal">Move/Rename</button>
+                    <button className="pt-button pt-minimal">Copy</button>
+                    <button className="pt-button pt-minimal">Delete</button>
+                    <button className="pt-button pt-minimal">Set as <span className="pt-icon-standard pt-icon-play" />File</button>
+                  </div>
+                  <div className="pt-navbar-group pt-align-right">
+                    <button className="pt-button pt-minimal">Test</button>
+                    <button className="pt-button pt-minimal"><span className="pt-icon-standard pt-icon-play" />Run</button>
+                  </div>
+                </nav>
+                {(file === project.currentQuestion.currentFile.name) ? (<MonacoEditor ref="editor" width="50%" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
+                  requireConfig={loaderOptions}/>) : null}
                 </TabPanel>))}
             </Tabs>) : null}
           </TabPanel>))}

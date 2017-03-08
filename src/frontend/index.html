@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html style="height:100%;margin:0;">
+<html style="height:100%;margin:0;padding:0;">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -10,8 +10,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="PWA">
+  <style type="text/css">
+    /* -- Global Style Overrides -- */
+    .pt-overlay .pt-dialog{
+      margin-top:2em;
+    }
+    .pt-tabs{
+      width:100%;
+    }
+    .react-monaco-editor-container{
+        display:flex;
+        border-right:1px solid #EEE;
+    }
+  </style>
 </head>
-<body style="margin:0;">
-  <div id="root"></div>
+<body style="margin:0;height:100%;padding:0;">
+  <div id="root" style="height:100%;"></div>
 <script type="text/javascript" src="/dist/bundle.js"></script></body> 
 </html>

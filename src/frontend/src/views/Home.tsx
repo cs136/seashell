@@ -10,7 +10,7 @@ export interface HomeState { open?: boolean; title?: string; }
 class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
   render() {
     const projects = this.props.appState.projects;
-    return (<div className={layoutStyles.container}>
+    return (<div>
       <div className="pt-button-group">
         <a className="pt-button" role="button"><span className="pt-icon-standard pt-icon-plus pt-align-left"></span>New Project</a>
         <a className="pt-button" role="button"><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</a>

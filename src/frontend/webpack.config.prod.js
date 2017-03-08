@@ -16,10 +16,6 @@ module.exports = {
   },
   plugins: [
     new CleanWebpackPlugin(['dist'], { verbose: false }),
-    new HtmlWebpackPlugin({
-      template: './src/index.html',
-      filename: '../index.html'
-    }),
     new CopyWebpackPlugin([
       { from: 'images/', to: 'images/' },
       { from: 'manifest.json' }]),
