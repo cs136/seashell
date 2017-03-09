@@ -1,8 +1,8 @@
 import * as React from 'react';
 import * as Terminal from 'xterm';
 
-export interface ConsoleProps {style: any};
-export interface ConsoleState {};
+export interface ConsoleProps {style: any, width: number, height: number};
+export interface ConsoleState {input: boolean, line: number, currString: string};
 
 
 export default class Xterm extends React.Component <ConsoleProps, ConsoleState> {
@@ -15,27 +15,56 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
         this.term.open(document.getElementById("console"));
     }
 
+    dataReceived(payload: string) {
+        this.term.eraseLine(this.term.y);
+        this.term.x = 0;
+        this.term.y = this.state.line;
+        this.term.write(" " + payload);
+        this.term.prompt();
+        this.term.refresh(this.state.line, this.state.line+1, false);
+        this.term.write(this.state.currString);
+        this.setState({line: this.term.y+1});
+    }
+
     componentDidMount() {
 
-
+        this.setState({input: true, line: 1, currString: ""});
         //term.setOption('cursorStyle', 'underline');
-
 
         this.term.prompt = () => {
             this.term.write("\r\n > ");
         };
 
-        this.term.on('key', (key: Number, evt: any) => {
-            let printable = (!evt.altKey && !evt.altGraphKey && !evt.ctrlKey && !evt.metaKey && evt.keyCode != '38' && evt.keyCode != '40' && evt.keyCode != '39' && evt.keyCode != '37');
-            if (evt.keyCode == '13') {
-                this.term.prompt();
-            } else if (evt.keyCode == '8') {
-                if (this.term.x > 3)
-                    this.term.write("\b \b");
+        this.term.on('key', (key: string, evt: any) => {
+            if (evt.which === 47) {
+                this.dataReceived("Data Received");
+                return;
             }
-            else if (printable) this.term.write(key);
+            if (! this.state.input){
+                this.term.cursorBlink = false;
+                return;
+            } 
+            let printable = (!evt.altKey && !evt.altGraphKey && !evt.ctrlKey && !evt.metaKey);
+            if (evt.which === 13) {
+                this.setState({line: this.term.y+1, currString: ""});
+                this.term.prompt();
+            } else if (evt.which === 8) {
+                if (this.term.x > 3 || this.term.y > this.state.line) {
+                    if (this.term.x === 0) {
+                        this.term.x = this.props.width;
+                        this.term.y -= 1;
+                        this.term.refresh(this.term.y, this.term.y+1, false);
+                    }
+                    this.term.write("\b \b");
+                    this.setState({currString: this.state.currString.slice(0, -1)});
+                }
+            }
+            else if (printable) {
+                this.term.write(key);
+                this.setState({currString: this.state.currString+key});
+            }
         });
-        this.term.resize(30, 50);
+        this.term.resize(this.props.width, this.props.height);
         this.term.prompt();
         this.term.focus();
     }
