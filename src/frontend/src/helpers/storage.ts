@@ -11,7 +11,8 @@ export {Store,
 // Will be replaced by Dexie.Syncable.ISyncProtocol
 interface ChangeLog {
   id?: number;
-  [index:string]: any
+  type: string;
+  [index:string]: any;
 }
 
 interface DBOptions {
@@ -122,11 +123,11 @@ class Store implements StorageInterface {
       });
       changes.forEach(function (change) {
         if (change.type === "deleteFile") {
-          this.deleteFile(change.file.project, change.file.file, true);
+          this.deleteFile(change["file"].project, change["file"].file, true);
         } else if (change.type === "editFile") {
-          this.writeFile(change.file.project, change.file.file, change.contents, change.history, change.file.checksum);
+          this.writeFile(change["file"].project, change["file"].file, change["contents"], change["history"], change["file"].checksum);
         } else if (change.type === "newFile") {
-          this.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, change.file.checksum);
+          this.newFile(change["file"].project, change["file"].file, change["contents"], undefined, undefined, change["file"].checksum);
         } else {
           throw sprintf("applyChanges: unknown change %s!", change);
         }
