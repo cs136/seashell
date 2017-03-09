@@ -80,7 +80,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             </Tabs>) : null}
           </TabPanel>))}
       </Tabs>
-      <Xterm style={termWrapperStyle}/>
+      <Xterm style={termWrapperStyle} height={50} width={80} />
     </div>);
   }
 }
