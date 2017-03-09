@@ -4,6 +4,7 @@ import * as Terminal from 'xterm';
 export interface ConsoleProps {style: any, width: number, height: number};
 export interface ConsoleState {input: boolean, line: number, currString: string};
 
+const styles = require<any>("./xterm.css");
 
 export default class Xterm extends React.Component <ConsoleProps, ConsoleState> {
     term: any;
