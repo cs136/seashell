@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import {evolve, merge} from "ramda";
+import {merge} from "ramda";
 
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
