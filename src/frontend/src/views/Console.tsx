@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as Terminal from 'xterm';
+import {merge} from "ramda";
 
 export interface ConsoleProps {style: any, width: number, height: number};
 export interface ConsoleState {input: boolean, line: number, currString: string};
@@ -24,7 +25,7 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
         this.term.prompt();
         this.term.refresh(this.state.line, this.state.line+1, false);
         this.term.write(this.state.currString);
-        this.setState({line: this.term.y+1});
+        this.setState(merge(this.state, {line: this.term.y+1}));
     }
 
     componentDidMount() {
@@ -47,7 +48,7 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
             } 
             let printable = (!evt.altKey && !evt.altGraphKey && !evt.ctrlKey && !evt.metaKey);
             if (evt.which === 13) {
-                this.setState({line: this.term.y+1, currString: ""});
+                this.setState(merge(this.state, {line: this.term.y+1, currString: ""}));
                 this.term.prompt();
             } else if (evt.which === 8) {
                 if (this.term.x > 3 || this.term.y > this.state.line) {
@@ -57,12 +58,12 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
                         this.term.refresh(this.term.y, this.term.y+1, false);
                     }
                     this.term.write("\b \b");
-                    this.setState({currString: this.state.currString.slice(0, -1)});
+                    this.setState(merge(this.state, {currString: this.state.currString.slice(0, -1)}));
                 }
             }
             else if (printable) {
                 this.term.write(key);
-                this.setState({currString: this.state.currString+key});
+                this.setState(merge(this.state, {currString: this.state.currString+key}));
             }
         });
         this.term.resize(this.props.width, this.props.height);
