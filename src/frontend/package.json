@@ -4,7 +4,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node_modules/.bin/jest",
-    "build": "webpack --config webpack.config.prod.js"
+    "build": "webpack --config webpack.config.prod.js",
+    "reinstall": "rm -rf node_modules && npm install && npm run build"
   },
   "repository": {
     "type": "git",
@@ -25,10 +26,10 @@
     "md5": "2.2.1",
     "offline-plugin": "3.4.1",
     "ramda": "0.23.0",
-    "react": "15.3.2",
+    "react": "15.4.2",
     "react-addons-css-transition-group": "15.4.2",
     "react-codemirror": "0.3.0",
-    "react-dom": "15.3.2",
+    "react-dom": "15.4.2",
     "react-monaco-editor": "0.7.3",
     "react-redux": "4.4.6",
     "react-router": "2.8.1",
