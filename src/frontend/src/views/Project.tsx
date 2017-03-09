@@ -20,7 +20,9 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     this.state = {editor: null};
   }
   onResize(){
-    this.state.editor.domElement.style.height = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top) + "px";
+    const newHeight = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top);
+    this.state.editor.domElement.style.height = newHeight + "px";
+    (this.refs.terminal as Xterm).setHeight(newHeight);
     this.state.editor.layout();
   }
   editorDidMount(editor: any, monaco: any) {
@@ -62,10 +64,6 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       tabstopwidth: this.props.settings.tabWidth,
       cursorBlink: true,
     };
-    const termWrapperStyle = {
-      width: "50%",
-      height: "50%"
-    };
     const projectId = this.props.routeParams.id;
     const project = this.props.appState.currentProject;
     return (<div className={styles.fullWidth}>
@@ -94,13 +92,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                     <button className="pt-button pt-minimal"><span className="pt-icon-standard pt-icon-play" />Run</button>
                   </div>
                 </nav>
-                {(file === project.currentQuestion.currentFile.name) ? (<MonacoEditor ref="editor" width="50%" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
-                  requireConfig={loaderOptions}/>) : null}
+                {(file === project.currentQuestion.currentFile.name) ? (<div className={styles.editorContainer}><MonacoEditor ref="editor" options={editorOptions} value={project.currentQuestion.currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)}
+                  requireConfig={loaderOptions}/><Xterm ref="terminal" /></div>) : null}
                 </TabPanel>))}
             </Tabs>) : null}
           </TabPanel>))}
       </Tabs>
-      <Xterm style={termWrapperStyle} height={50} width={80} />
     </div>);
   }
 }

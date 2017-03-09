@@ -27,3 +27,10 @@
 .actionbar>div{
     height:auto;
 }
+.editorContainer{
+    display:flex;
+}
+.editorContainer>div{
+    overflow:hidden;
+    flex:1;
+}
