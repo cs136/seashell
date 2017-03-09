@@ -28,13 +28,16 @@ export const appStateActions = {
   removeQuestion: "question_add",
   switchFile: "file_switch",
   switchQuestion: "question_switch",
-  switchProject: "project_switch"
+  switchProject: "project_switch",
+  renameFile: "file_rename"
 };
 
 
 
 export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1 Racket", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1 Racket", "A2 C"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.renameFile:
+      return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.switchFile:
       return mergeBetter(state, {currentProject: {currentQuestion: {currentFile: action.payload.file}}});
     case appStateActions.switchQuestion:
