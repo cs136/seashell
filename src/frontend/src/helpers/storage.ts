@@ -8,10 +8,10 @@ export {Store,
         Settings, 
         StorageInterface}
 
-// subject to changes
+// Will be replaced by Dexie.Syncable.ISyncProtocol
 interface ChangeLog {
-  type: string,  
-  file: string
+  id?: number;
+  [index:string]: any
 }
 
 interface DBOptions {
@@ -50,6 +50,13 @@ interface Settings {
 
 
 interface StorageInterface {
+
+  // Will be replaced by Dexie.Syncable.ISyncProtocol
+  getProjectsForSync(): Promise<Project[]>;
+  applyChanges(changes: ChangeLog[], newProjects: Project[], deletedProjects: Project[], updatedProjects: Project[], settings: Settings): Promise<void>;
+  getOfflineChanges(): Promise<ChangeLog[]>;
+  hasOfflineChanges(): Promise<boolean>;
+
   writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string>;
   readFile(proj: string, name: string): Promise<File>;
   writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string>;
@@ -79,6 +86,64 @@ class Store implements StorageInterface {
     this.has_offline_changes = false;
   }
 
+
+  // Will be replaced by Dexie.Syncable.ISyncProtocol
+  public async getProjectsForSync(): Promise<Project[]> {
+    return this.db.projects.toArray();
+    // return this.db.projects.toArray(function(projects) {
+    //   return projects.map(function(proj) {
+    //     proj.settings = JSON.stringify(project.settings);
+    //     return project;
+    //   });
+    // });
+  }
+
+  // Will be replaced by Dexie.Syncable.ISyncProtocol
+  public async getOfflineChanges(): Promise<ChangeLog[]> {
+    return this.db.changelog.toArray();
+  }
+
+  // Will be replaced by Dexie.Syncable.ISyncProtocol
+  public async hasOfflineChanges(): Promise<boolean> {
+    return this.db.changelog.count().then(function(c: number) {
+      return c > 0;
+    });
+  }
+
+  // Will be replaced by Dexie.Syncable.ISyncProtocol
+  public async applyChanges(changes: ChangeLog[], newProjects: Project[], deletedProjects: Project[], updatedProjects: Project[], settings: Settings): Promise<void> {
+    const tbs = [this.db.files, this.db.changelog, this.db.projects, this.db.settings];
+    return this.db.transaction('rw', tbs, function() {
+      Dexie.currentTransaction.on('abort', function() {
+        console.log("applyChanges transaction aborted");
+      });
+      newProjects.forEach(function (project) {
+        this.newProject(project);
+      });
+      changes.forEach(function (change) {
+        if (change.type === "deleteFile") {
+          this.deleteFile(change.file.project, change.file.file, true);
+        } else if (change.type === "editFile") {
+          this.writeFile(change.file.project, change.file.file, change.contents, change.history, change.file.checksum);
+        } else if (change.type === "newFile") {
+          this.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, change.file.checksum);
+        } else {
+          throw sprintf("applyChanges: unknown change %s!", change);
+        }
+      });
+      deletedProjects.forEach(function (project) {
+        this.deleteProject(project, true);
+      });
+      updatedProjects.forEach(function(project) {
+        this.updateProject(project);
+      });
+      if (settings) {
+        this.saveSettings(settings);
+      }
+      this.db.changelog.clear();
+    });
+  }
+
   /*
     * Save a file to local storage.
     * @param {string} name: project name.
@@ -90,19 +155,20 @@ class Store implements StorageInterface {
   public async writeFile(proj: string, name: string, contents: string, history: string, checksum: string): Promise<string> {
     const offline_checksum = md5(contents);
     const key: FileID = [proj, name];
-    return this.db.transaction('rw', this.db.files, async () => {
+    const tbs = [this.db.files, this.db.changelog];
+    return this.db.transaction('rw', tbs, async () => {
       if (! checksum) {
         let current: File = await this.db.files.get(key);
-          // this.db.changelog.add({
-          //   file: {
-          //     project: proj, 
-          //     name: name, 
-          //     checksum: current.checksum
-          //   },
-          //   type: "editFile",
-          //   history: history,
-          //   contents: contents
-          // });
+          await this.db.changelog.add({
+            file: {
+              project: proj, 
+              name: name, 
+              checksum: current.checksum
+            },
+            type: "editFile",
+            history: history,
+            contents: contents
+          });
       }
       await this.db.files.update(key, {
         contents: contents,
@@ -120,22 +186,18 @@ class Store implements StorageInterface {
 
   public async deleteFile(proj: string, name: string, online: boolean): Promise<void> {
     const key: FileID = [proj, name];
-    const tbs = [this.db.files, this.db.projects];
+    const tbs = [this.db.files, this.db.projects, this.db.changelog];
     return this.db.transaction('rw', tbs, async () => {
       if (! online) {
         let current = await this.db.files.get(key);
-          // this.db.changelog.add({
-          //   file: {
-          //     project: proj, 
-          //     file: file, 
-          //     checksum: current.checksum
-          //   },
-          //   type: "deleteFile"
-          // });
-        // await this.db.files.update(key, {
-        //   contents: "test"
-        // });
-        // console.warn(key);
+        await this.db.changelog.add({
+          file: {
+            project: proj, 
+            file: name, 
+            checksum: current.checksum
+          },
+          type: "deleteFile"
+        });
       }
       await this.db.files.delete(key);
       // also remove from run files
@@ -151,7 +213,7 @@ class Store implements StorageInterface {
 
   public async renameFile(proj: string, name: string, newName: string, checksum: string): Promise<string> {
     const key: FileID = [proj, name];
-    const tbs = [this.db.files, this.db.projects];
+    const tbs = [this.db.files, this.db.projects, this.db.changelog];
     return this.db.transaction('rw', tbs, async () => {
       let result = await this.db.files.get(key);
       result.name = newName;
@@ -165,16 +227,16 @@ class Store implements StorageInterface {
       }
       await this.db.projects.update(proj, dbProj)
       if (! checksum) {
-            // var change = {
-            //   file:{
-            //     project: proj, 
-            //     name: newName
-            //   },
-            //   type: "newFile",
-            //   contents: result.contents,
-            //   history: result.history
-            // }
-            // // this.db.changelog.add(change);
+        var change = {
+          file:{
+            project: proj, 
+            name: newName
+          },
+          type: "newFile",
+          contents: result.contents,
+          history: result.history
+        }
+        await this.db.changelog.add(change);
       }
       await this.deleteFile(proj, name, !!checksum);
       return result.checksum;
@@ -267,18 +329,19 @@ class Store implements StorageInterface {
                        normalize: boolean, 
                        online_checksum: string): Promise<string> {
     // account for base64 encoding
-    var rmatch;
+    let rmatch: RegExpMatchArray;
     if (encoding == "url" &&
         (rmatch = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/))) {
-      var mime = rmatch[1];
-      var b64 = rmatch[3];
+      const mime = rmatch[1];
+      const b64 = rmatch[3];
       if(b64 || mime=="base64") {
         contents = window.atob(rmatch[4]);
       }
     }
-    var checksum = (typeof contents === "string" && md5(contents)) || online_checksum || "";
-    var key = [proj, file];
-    return this.db.transaction('rw', this.db.files, async () => {
+    const checksum = (typeof contents === "string" && md5(contents)) || online_checksum || "";
+    const key = [proj, file];
+    const tbs = [this.db.files, this.db.changelog];
+    return this.db.transaction('rw', tbs, async () => {
       let f: File = {
         project: proj, 
         name: file,
@@ -290,14 +353,14 @@ class Store implements StorageInterface {
       if (online_checksum) {
         // TODO: Set history when syncing.
       }
-      // this.db.changelog.add({
-      //   file: {
-      //     project: proj, 
-      //     file: file
-      //   },
-      //   type: "newFile",
-      //   contents: contents
-      // });
+      await this.db.changelog.add({
+        file: {
+          project: proj, 
+          file: file
+        },
+        type: "newFile",
+        contents: contents
+      });
       await this.db.files.add(f);
       return checksum;
     });
@@ -312,11 +375,12 @@ class Store implements StorageInterface {
   }
 
   public async deleteProject(name: string, online: boolean): Promise<void> {
-    const tbs = [this.db.files, this.db.projects];
+    const tbs = [this.db.files, this.db.projects, this.db.changelog];
     return this.db.transaction('rw', tbs, async () => {
-      await this.db.files.where('project').equals(name).each((file: File) => {
-        this.deleteFile(name, file.name, online);
-      });
+      const files = await this.db.files.where('project').equals(name).toArray(); 
+      for (const file of files) {
+        await this.deleteFile(name, file.name, online);
+      };
       await this.db.projects.delete(name);
     });
   }
@@ -329,62 +393,10 @@ class Store implements StorageInterface {
     });
   }
 
-  // public getProjectsForSync() {
-  //   return this.db.projects.toArray(function(projects) {
-  //     return projects.map(function(project) {
-  //       project.settings = JSON.stringify(project.settings);
-  //       return project;
-  //     });
-  //   });
-  // }
-
   public async getProjects(): Promise<Project[]> {
-    return this.db.projects.toCollection().toArray(R.identity);
+    return this.db.projects.toCollection().toArray();
   }
 
-  // public applyChanges(changes, newProjects: Project[], deletedProjects: Project[], updatedProjects: Project[], settings: Settings) {
-  //   return this.db.transaction('rw', this.db.files, this.db.changelog, this.db.projects, this.db.settings, function() {
-  //     Dexie.currentTransaction.on('abort', function(ev) {
-  //       console.log("applyChanges transaction aborted", ev);
-  //       throw ev.target.error;
-  //     });
-  //     newProjects.forEach(function (project) {
-  //       this.newProject(project);
-  //     });
-  //     changes.forEach(function (change) {
-  //       if (change.type === "deleteFile") {
-  //         this.deleteFile(change.file.project, change.file.file, true);
-  //       } else if (change.type === "editFile") {
-  //         this.writeFile(change.file.project, change.file.file, change.contents, change.history, change.file.checksum);
-  //       } else if (change.type === "newFile") {
-  //         this.newFile(change.file.project, change.file.file, change.contents, undefined, undefined, change.file.checksum);
-  //       } else {
-  //         throw sprintf("applyChanges: unknown change %s!", change);
-  //       }
-  //     });
-  //     deletedProjects.forEach(function (project) {
-  //       this.deleteProject(project, true);
-  //     });
-  //     updatedProjects.forEach(function(project) {
-  //       this.updateProject(project);
-  //     });
-  //     if (settings) {
-  //       this.saveSettings(JSON.parse(settings));
-  //     }
-  //     this.db.changelog.clear();
-  //   });
-  // }
-
-  // public getOfflineChanges() {
-  //   return this.db.changelog.toArray();
-  // }
-
-  // public hasOfflineChanges = function() {
-  //   this.db.changelog.count().then(function(c: number) {
-  //     this.has_offline_changes = c > 0;
-  //   });
-  //   return this.has_offline_changes;
-  // }
 }
 
 
