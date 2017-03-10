@@ -29,7 +29,7 @@ class FontTextBox extends React.Component<{font: string, changeParentState: Func
         else {
           this.props.changeParentState(this.state.font);
         }
-      }} onChange={(e => this.setState({font: e.target.value}))}/>
+      }} onChange={(e => this.setState({font: e.currentTarget.value}))}/>
     );
   }
 }
@@ -49,7 +49,7 @@ class FontSizeTextBox extends React.Component<{fontSize: number, changeParentSta
         } else {
           this.props.changeParentState(Number(this.state.fontSize));
         }
-      }} onChange={(e => this.setState({fontSize: e.target.value}))}/>
+      }} onChange={(e => this.setState({fontSize: e.currentTarget.value}))}/>
     );
   }
 }
@@ -83,7 +83,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
             Editor mode:
               <div className="pt-control-group">
               <div className="pt-select pt-fill">
-                <select id="editor_mode" value={String(this.state.editorMode)} onChange={(e) => this.setState(merge(this.state, {editorMode: Number(e.target.value)}))}>
+                <select id="editor_mode" value={String(this.state.editorMode)} onChange={(e) => this.setState(merge(this.state, {editorMode: Number(e.currentTarget.value)}))}>
                   <option value="0">Standard</option>
                   <option value="1">Vim</option>
                   <option value="2">Emacs</option>
@@ -95,7 +95,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
             Tab Width
               <div className="pt-control-group">
               <div className="pt-select pt-fill">
-                <select id="tab_width" value={String(this.state.tabWidth)} onChange={(e) => this.setState(merge(this.state, {tabWidth: Number(e.target.value)}))}>
+                <select id="tab_width" value={String(this.state.tabWidth)} onChange={(e) => this.setState(merge(this.state, {tabWidth: Number(e.currentTarget.value)}))}>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="4">4</option>
@@ -107,7 +107,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
             Theme:
               <div className="pt-control-group">
               <div className="pt-select pt-fill">
-              <select id="theme_style" value={String(this.state.theme)} onChange={(e) => this.setState(merge(this.state, {theme: Number(e.target.value)}))}>
+              <select id="theme_style" value={String(this.state.theme)} onChange={(e) => this.setState(merge(this.state, {theme: Number(e.currentTarget.value)}))}>
                 <option value="0">dark</option>
                 <option value="1">light</option>
               </select>
