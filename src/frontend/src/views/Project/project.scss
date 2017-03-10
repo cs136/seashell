@@ -1,0 +1,55 @@
+.tabPanel{
+    display:block;
+    margin-top:0;
+}
+.fileTabList>div[role="tablist"]{
+    border-top:1px solid #EEE;
+    background:#FAFAFA;
+    padding:0 1em;
+}
+.fileTabList>div[role="tablist"]>div{
+    padding:0.25em 0.7em;
+    margin-right:0;
+}
+.questionTabList>div[role="tablist"]{
+    padding:0 1em;
+}
+.questionTabList>div[role="tablist"]>div{
+    padding:0.5em 1em;
+    margin-right:0;
+}
+.fullWidth{
+    width:100%;
+}
+.actionbar{
+    display:flex;
+    flex-wrap: wrap;
+    border-style:none;
+    box-shadow:none !important;
+    padding:0.3em;
+    justify-content: space-between;
+    height:auto;
+}
+.actionbar>div{
+    height:auto;
+}
+.editorContainer{
+    display:flex;
+}
+.editorContainer>div{
+    overflow:hidden;
+    flex:1;
+}
+.questionName{
+    margin-bottom:0.75em;
+}
+.loading{
+    width:100%;
+}
+.loading>div{
+    width:auto;
+    border-radius:0;
+}
+.loading>div>div{
+    border-radius:0 !important;
+}

@@ -1,17 +1,21 @@
 .logo{
     height:1em;
-    margin-right:0.5em;
     display:inline-block;
-    vertical-align:top;
-    top:0.6em;
+    top:0.15em;
     position:relative;
 }
 .navbar{
+    border-right:1px solid #EEE;
     box-shadow:none !important;
-    margin:0.5em 0 1em 0;
+    margin:0;
+    padding:1em;
+    height:100%;
+    position:relative;
+    float:left;
 }
-.home{
-    font-weight:700;
+.home{ 
+    padding:0 !important;
+    text-align:center;
 }   
 .dialogStyle{
     max-width:500px !important;
@@ -19,4 +23,12 @@
     margin:4em 0zem !important;
     background:#FFF !important;
     top:0 !important;
+}
+.navbarBottom{
+    position:absolute;
+    bottom:1em;
+    left:1em;
+}
+.navbarBottom>span{
+    display:block;
 }

@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@blueprintjs/core": "1.6.0",
+    "@blueprintjs/core": "1.11.1",
     "@types/pure-render-decorator": "0.2.27",
     "@types/react": "15.0.0",
     "@types/react-addons-css-transition-group": "15.0.0",

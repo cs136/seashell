@@ -12,10 +12,6 @@ module.exports = {
     publicPath: '/dist/',
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: './src/index.html',
-      filename: '../index.html',
-    }),
       new CopyWebpackPlugin([
       {
         from: './node_modules/monaco-editor/min/vs',
