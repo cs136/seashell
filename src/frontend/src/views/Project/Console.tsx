@@ -7,7 +7,7 @@ Terminal.loadAddon("fit");
 export interface ConsoleProps {};
 export interface ConsoleState {input: boolean; line: number; currString: string; };
 
-const styles = require<any>("./xterm.css");
+const styles = require<any>("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component <ConsoleProps, ConsoleState> {
     term: any;
