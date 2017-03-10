@@ -1,7 +1,28 @@
+/// Mixin printing a linear-gradient
+/// as well as a plain color fallback
+/// and the `-webkit-` prefixed declaration
+/// @access public
+/// @param {Keyword | Angle} $direction - Linear gradient direction
+/// @param {Arglist} $color-stops - List of color-stops composing the gradient
+//from https://www.sitepoint.com/building-linear-gradient-mixin-sass/
+@mixin linear-gradient($direction, $color-stops...) {
+  background: nth(nth($color-stops, 1), 1);
+  background: -webkit-linear-gradient(legacy-direction($direction), $color-stops);
+  background: linear-gradient($direction, $color-stops);
+}
 
+$theme: #149BE3;
 
 .app{
     font-family:Overpass, sans-serif;
+}
+.gradientBar{
+    @include linear-gradient(90deg, $theme, #14E3C7);
+    height:2px;
+}
+
+.flexContainer{
+    display:flex;
 }
 
 .container{
@@ -9,4 +30,8 @@
     box-sizing:border-box;
     padding:0 1.5em;
     margin:0 auto;
+}
+
+.mainContent{
+  flex: 1;
 }

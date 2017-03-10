@@ -28,8 +28,11 @@ export default class Layout extends React.Component<LayoutProps, LayoutState> {
   render() {
     return (
       <div className={styles.app}>
-        <Navigation />
-        <div className={styles.mainContent}>{this.props.children}</div>
+        <div className={styles.gradientBar} />
+        <div className={styles.flexContainer}>
+          <Navigation />
+          <div className={styles.mainContent}>{this.props.children}</div>
+        </div>
       </div>
     );
   }

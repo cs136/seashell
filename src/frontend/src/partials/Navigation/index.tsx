@@ -29,15 +29,26 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
   toggleSettings() {
     this.setState({settingsVisible: !this.state.settingsVisible});
   }
+  onResize() {
+    (this.refs.navbar as HTMLElement).style.height = (window.innerHeight - 2) + "px";
+  }
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.onResize);
+  }
+  componentDidMount() {
+    this.onResize = this.onResize.bind(this);
+    window.addEventListener("resize", this.onResize);
+    this.onResize();
+  }
   render() {
     return (<div>
-      <nav className={styles.navbar} style={{height: window.innerHeight}}>
-        <Link to="/" className={"pt-button pt-large pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
+      <nav className={styles.navbar} ref="navbar">
+        <Link to="/" className={"pt-button pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
         <div className={styles.navbarBottom}>
-          <Tooltip content="Help" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-help" onClick={this.toggleHelp.bind(this)}></button></Tooltip>
-          <Tooltip content="Sync All" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-import"></button></Tooltip>
-          <Tooltip content="Settings" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-wrench" onClick={this.toggleSettings.bind(this)}></button></Tooltip>
-          <Tooltip content="Log Out" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-log-out"></button></Tooltip>
+          <Tooltip content="Help" position={Position.RIGHT}><button className="pt-button pt-minimal pt-icon-help" onClick={this.toggleHelp.bind(this)}></button></Tooltip>
+          <Tooltip content="Sync All" position={Position.RIGHT}><button className="pt-button pt-minimal pt-icon-import"></button></Tooltip>
+          <Tooltip content="Settings" position={Position.RIGHT}><button className="pt-button pt-minimal pt-icon-wrench" onClick={this.toggleSettings.bind(this)}></button></Tooltip>
+          <Tooltip content="Log Out" position={Position.RIGHT}><button className="pt-button pt-minimal pt-icon-log-out"></button></Tooltip>
         </div>
       </nav>
       <Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
