@@ -5,13 +5,13 @@ import {merge} from "ramda";
 Terminal.loadAddon("fit");
 
 export interface ConsoleProps {};
-export interface ConsoleState {input: boolean, line: number, currString: string};
+export interface ConsoleState {input: boolean; line: number; currString: string; };
 
 const styles = require<any>("./xterm.css");
 
 export default class Xterm extends React.Component <ConsoleProps, ConsoleState> {
     term: any;
-    constructor(props: ConsoleProps, context: any){
+    constructor(props: ConsoleProps, context: any) {
         super(props, context);
         this.term = new Terminal({
             cursorBlink: true
@@ -34,10 +34,14 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
         this.term.fit();
     }
 
-    componentDidMount() {
+    updateLayout() {
         this.term.open(this.refs.console);
-        this.setState({input: true, line: 1, currString: ""});
+        this.term.reset();
+    }
 
+    componentDidMount() {
+        this.updateLayout();
+        this.setState({input: true, line: 1, currString: ""});
         this.term.prompt = () => {
             this.term.write("\r\n > ");
         };
@@ -47,7 +51,7 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
                 this.dataReceived("Data Received");
                 return;
             }
-            if (! this.state.input){
+            if (! this.state.input) {
                 this.term.cursorBlink = false;
                 return;
             }
@@ -74,11 +78,12 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
         this.term.prompt();
         this.term.focus();
     }
+
     componentWillUnmount() {
         this.term.destroy();
     }
 
     render() {
-        return(<div style={{background:"#000"}} ref="console"></div>);
+        return(<div style={{background: "#000"}} ref="console"></div>);
     }
 }
