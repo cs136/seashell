@@ -204,13 +204,27 @@
       };
 
       self.listAllProjectsForSync = function () {
+        /*
         return self.database.files.toArray(
         function (files) {
           return files.map(
             function (file) {
               return {project: file.project, file:file.file, checksum: file.checksum};
             });
-        });
+        });*/
+        function dbMap (coll, fn) {
+          var result = [];
+          return coll.each(function (row) {
+            result.push(fn(row));
+          }).then(function () {
+            return result;
+          });
+        }
+        return dbMap(self.database.files,
+          function (file) {
+            return {project: file.project, file:file.file, checksum: file.checksum};
+          }
+        );
       };
 
       self.newDirectory = function (name, path) {
@@ -328,7 +342,16 @@
       };
 
       self.getOfflineChanges = function () {
-        return self.database.changelog.toArray();
+        // return self.database.changelog.toArray();
+        function dbToArray (coll) {
+          var result = [];
+          return coll.each(function (row) {
+            result.push(row);
+          }).then(function () {
+            return result;
+          });
+        }
+        return dbToArray(self.database.changelog);
       };
 
       self.hasOfflineChanges = function() {
