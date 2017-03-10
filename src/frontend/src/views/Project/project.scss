@@ -1,15 +1,7 @@
+@import '../../Layout';
 .tabPanel{
     display:block;
     margin-top:0;
-}
-.fileTabList>div[role="tablist"]{
-    border-top:1px solid #EEE;
-    background:#FAFAFA;
-    padding:0 1em;
-}
-.fileTabList>div[role="tablist"]>div{
-    padding:0.25em 0.7em;
-    margin-right:0;
 }
 .questionTabList>div[role="tablist"]{
     padding:0 1em;
@@ -23,12 +15,18 @@
 }
 .actionbar{
     display:flex;
+    background:#FAFAFA;
+    border-top:1px solid #EEE !important;
+    border-bottom:1px solid #EEE !important;
     flex-wrap: wrap;
     border-style:none;
     box-shadow:none !important;
-    padding:0.3em;
+    padding:0.4em 0.7em;
     justify-content: space-between;
     height:auto;
+}
+.actionbar>div button{
+    margin:0 0.2em !important;
 }
 .actionbar>div{
     height:auto;
@@ -52,4 +50,7 @@
 }
 .loading>div>div{
     border-radius:0 !important;
+}
+.tree{
+    min-width:200px;
 }

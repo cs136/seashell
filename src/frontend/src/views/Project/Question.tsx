@@ -1,8 +1,6 @@
 import * as React from "react";
-import {Tab2, Tabs2} from "@blueprintjs/core";
+import {Position, Popover, Button} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
-import MonacoEditor from "react-monaco-editor";
-import Xterm from "./Console";
 import File from "./File";
 import Loading from "./Loading";
 
@@ -16,10 +14,23 @@ class Question extends React.Component<QuestionProps & actionsInterface, Questio
         super(props);
     }
     render() {
-        const project = this.props.appState.currentProject;
-        return (this.props.question === project.currentQuestion.name ? (<Tabs2 className={styles.fileTabList} id={"question-" + project}>
-            {project.currentQuestion.files.map((file) => (<Tab2 id={"file-tab-" + file} className={styles.tabPanel} key={"file-tab-" + file} title={file} panel={<File file={file} />}/>))}
-        </Tabs2>) : <Loading />);
+        const question = this.props.appState.currentProject.currentQuestion;
+
+        return (this.props.question === question.name ? (<div>
+            <nav className={styles.actionbar + " pt-navbar"}>
+                <div className="pt-navbar-group pt-align-left">
+                    <button className="pt-button pt-minimal">Move/Rename</button>
+                    <button className="pt-button pt-minimal">Copy</button>
+                    <button className="pt-button pt-minimal">Delete</button>
+                    <button className="pt-button pt-minimal">Set as <span className="pt-icon-standard pt-icon-play" />File</button>
+                </div>
+                <div className="pt-navbar-group pt-align-right">
+                    <button className="pt-button pt-minimal">Test</button>
+                    <button className="pt-button pt-minimal"><span className="pt-icon-standard pt-icon-play" />Run</button>
+                </div>
+            </nav>
+            <File file={question.currentFile.name} /></div>
+        ) : <Loading />);
     }
 }
 export default map<QuestionProps>(Question);
