@@ -31,21 +31,19 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
 
     setHeight(height: Number) {
         (this.refs.console as HTMLDivElement).style.height = height + "px";
-        this.term.fit();
     }
 
     updateLayout() {
-        this.term.open(this.refs.console);
-        this.term.reset();
+        this.term.fit();
     }
 
     componentDidMount() {
-        this.updateLayout();
+        this.term.open(this.refs.console);
         this.setState({input: true, line: 1, currString: ""});
         this.term.prompt = () => {
             this.term.write("\r\n > ");
         };
-
+        const consoleElement: HTMLElement = (this.refs.console as HTMLElement);
         this.term.on("key", (key: string, evt: any) => {
             if (evt.which === 47) {
                 this.dataReceived("Data Received");
@@ -62,7 +60,7 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
             } else if (evt.which === 8) {
                 if (this.term.x > 3 || this.term.y > this.state.line) {
                     if (this.term.x === 0) {
-                        this.term.x = (this.refs.console as HTMLElement).getBoundingClientRect().width;
+                        this.term.x = consoleElement.getBoundingClientRect().width;
                         this.term.y -= 1;
                         this.term.refresh(this.term.y, this.term.y + 1, false);
                     }
@@ -76,7 +74,6 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
             }
         });
         this.term.prompt();
-        this.term.focus();
     }
 
     componentWillUnmount() {
