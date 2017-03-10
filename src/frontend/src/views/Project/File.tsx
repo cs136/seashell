@@ -7,31 +7,39 @@ import Loading from "./Loading";
 const styles = require<any>("./project.scss");
 
 export interface FileProps { file: string; };
-export interface FileState {  }
+export interface FileState { editor: any; }
 
 class Question extends React.Component<FileProps & actionsInterface, FileState> {
   constructor(props: FileProps & actionsInterface) {
     super(props);
+    this.state = {
+        editor: null
+    };
   }
   onResize() {
-    const newHeight = (window.innerHeight - (this.refs.editor as any).domElement.getBoundingClientRect().top);
-    (this.refs.editor as any).domElement.style.height = newHeight + "px";
+    if (!("terminal" in this.refs) || this.state.editor == null) return; // ignore if not mounted properly yet
+    const newHeight = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top);
+    this.state.editor.domElement.style.height = newHeight + "px";
     (this.refs.terminal as Xterm).setHeight(newHeight);
-    (this.refs.editor as any).layout();
+    this.state.editor.layout();
+    (this.refs.terminal as Xterm).updateLayout();
   }
   editorDidMount(editor: any, monaco: any) {
     editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
-    window.removeEventListener("resize", this.onResize);
-    window.addEventListener("resize", this.onResize);
-    this.refs.editor = editor;
+    this.state.editor = editor;
     this.onResize();
     editor.focus();
   }
   onChange(newValue: string, e: any) {
     this.props.dispatch.file.updateFile(newValue);
   }
-  componentDidUpdate() {
-    (this.refs.terminal as Xterm).updateLayout();
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.onResize);
+  }
+  componentDidMount() {
+    this.onResize = this.onResize.bind(this);
+    window.addEventListener("resize", this.onResize);
+    this.onResize();
   }
   render() {
     const editorOptions = {

@@ -19,7 +19,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   }
   render() {
     const project = this.props.appState.currentProject;
-    return (<Tabs2 id={"project-" + project} className={styles.questionTabList}>
+    return (<Tabs2 renderActiveTabPanelOnly={true} id={"project-" + project} className={styles.questionTabList}>
         <h5 className={styles.questionName}>{project.name}</h5>
         {project.questions.map((question) => (<Tab2 className={styles.tabPanel} id={"question-tab-" + question} key={"question-tab-" + question} title={question} panel={<Question question={question} />}/>))}
       </Tabs2>);
