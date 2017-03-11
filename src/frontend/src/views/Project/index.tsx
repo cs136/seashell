@@ -1,9 +1,10 @@
 import * as React from "react";
 import {Popover, Position, Tooltip} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
-import Question from "./Question";
+import File from "./File";
 import QuestionList from "./QuestionList";
 import FileList from "./FileList";
+import OpenFiles from "./OpenFiles";
 
 const styles = require<any>("./project.scss");
 const layoutStyles = require<any>("../../Layout.scss");
@@ -31,6 +32,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           <Popover content={<FileList question={question}/>} position={Position.BOTTOM}>
               <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
           </Popover>
+          <OpenFiles />
         </div>
         <div className="pt-navbar-group pt-align-right">
           <Tooltip content="Test" position={Position.BOTTOM_LEFT}><button className="pt-button pt-minimal pt-icon-build"></button></Tooltip>
@@ -38,7 +40,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           <Tooltip content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-send-to"></button></Tooltip>
         </div>
       </nav>
-      <Question question={question.name} />
+      <File file={question.currentFile.name} />
       </div>);
   }
 }

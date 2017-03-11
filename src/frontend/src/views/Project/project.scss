@@ -26,7 +26,7 @@
     height:auto;
 }
 .actionbar>div button{
-    margin:0 0.2em !important;
+    margin:0 0.2em;
 }
 .actionbar>div{
     height:auto;
@@ -53,4 +53,41 @@
 }
 .tree{
     min-width:200px;
+}
+.openFiles{
+    display:inline-block;
+}
+.openFilesTab{
+    float:left;
+    margin:0px 0em -2px 0.45em !important;
+    border-bottom:2px solid transparent;
+    transition: border 250ms;
+}
+.openFilesTabFile{
+    padding-right:0.2em !important;
+}
+.openFilesTabAction{
+    min-width:0 !important;
+    padding-left:0.2em !important;
+}
+.openFilesTab.active{
+    border-bottom:2px solid $theme;
+}
+.openFilesTab.active>.openFilesTabFile{
+    color:$theme !important;
+}
+.openFilesTabFile:hover,.openFilesTabFile:focus{
+    background:transparent !important;
+    outline:none;
+    color:$theme !important;
+}
+.openFilesTabAction:hover,.openFilesTabAction:focus{
+    background:transparent !important;
+    outline:none;
+}
+.openFilesTabAction:hover::before{
+    color:$theme !important;
+}
+.openFilesTab button{
+    margin:0 0 !important;
 }
