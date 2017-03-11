@@ -10,6 +10,7 @@ export interface appStateReducerState {[key: string]: any;
     currentQuestion?: {
       name: string
       files: string[];
+      runFile: string;
       openFiles: string[];
       currentFile?: {
         name: string;
@@ -33,12 +34,13 @@ export const appStateActions = {
   switchProject: "project_switch",
   renameFile: "file_rename",
   openFile: "file_open",
-  closeFile: "file_close"
+  closeFile: "file_close",
+  setRunFile: "file_set_run"
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1 Racket", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1 Racket", "A2 C"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1 Racket", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1 Racket", "A2 C"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.renameFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
@@ -74,6 +76,9 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
       state = clone(state);
       state.currentProject.currentQuestion.openFiles = reject(equals(action.payload), state.currentProject.currentQuestion.openFiles);
       return state;
+    case appStateActions.setRunFile:
+      state = clone(state);
+      return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload}}});
     default:
       return state;
   }

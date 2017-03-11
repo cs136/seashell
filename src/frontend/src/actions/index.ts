@@ -27,11 +27,11 @@ const mapDispatchToProps = (dispatch: Function) => {
               deleteFile: (name: string) => dispatch({type: appStateActions.removeFile, payload: {name: name}}),
               renameFile: (targetName: string) => dispatch({type: appStateActions.renameFile, payload: {question: {name: "question", files: ["file1.txt"]}, newName: targetName.split("/").pop()}}),
               openFile: (name: string) => dispatch({type: appStateActions.openFile, payload: name}),
-              closeFile: (name: string) => {
-              },
+              closeFile: (name: string) => dispatch({type: appStateActions.closeFile, payload: name}),
+              setRunFile: (name: string) => dispatch({type: appStateActions.setRunFile, payload: name}),
               switchFile: (name: string) => {
-                  // TODO interface with backend and get real data
-                  dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: "good"}}});
+                    // TODO interface with backend and get real data
+                    dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: "good"}}});
                 }
           },
           question: {

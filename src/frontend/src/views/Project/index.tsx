@@ -35,8 +35,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           <OpenFiles />
         </div>
         <div className="pt-navbar-group pt-align-right">
-          <Tooltip content="Test" position={Position.BOTTOM_LEFT}><button className="pt-button pt-minimal pt-icon-build"></button></Tooltip>
-          <Tooltip content="Run" position={Position.BOTTOM_LEFT}><button className="pt-button pt-minimal pt-icon-play"></button></Tooltip>
+          <Tooltip content="Test" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-build"></button></Tooltip>
+          {question.runFile === null ? <Tooltip content="Please set a run file" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip> : <Tooltip content="Run" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-play"></button></Tooltip>}
           <Tooltip content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-send-to"></button></Tooltip>
         </div>
       </nav>
