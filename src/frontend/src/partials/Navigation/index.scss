@@ -4,17 +4,10 @@
     top:0.15em;
     position:relative;
 }
-.navbar{
-    border-right:1px solid #EEE;
-    box-shadow:none !important;
-    margin:0;
-    padding:1em;
-    height:100%;
-    position:relative;
-}
 .home{ 
     padding:0 !important;
     text-align:center;
+    margin-right:1em;
 }   
 .dialogStyle{
     max-width:500px !important;
@@ -23,11 +16,21 @@
     background:#FFF !important;
     top:0 !important;
 }
-.navbarBottom{
-    position:absolute;
-    bottom:1em;
-    left:1em;
+
+.navbar{
+    display:flex;
+    background:#FFF;
+    border-bottom:1px solid #EEE !important;
+    flex-wrap: wrap;
+    border-style:none;
+    box-shadow:none !important;
+    padding:0.4em 1em;
+    justify-content: space-between;
+    height:auto;
 }
-.navbarBottom>span{
-    display:block;
+.navbar>div button{
+    margin:0 0.4em;
+}
+.navbar>div{
+    height:auto;
 }

@@ -13,24 +13,6 @@
 .fullWidth{
     width:100%;
 }
-.actionbar{
-    display:flex;
-    background:#FAFAFA;
-    border-top:1px solid #EEE !important;
-    border-bottom:1px solid #EEE !important;
-    flex-wrap: wrap;
-    border-style:none;
-    box-shadow:none !important;
-    padding:0.4em 0.7em;
-    justify-content: space-between;
-    height:auto;
-}
-.actionbar>div button{
-    margin:0 0.2em;
-}
-.actionbar>div{
-    height:auto;
-}
 .editorContainer{
     display:flex;
 }
