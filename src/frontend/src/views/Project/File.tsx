@@ -71,18 +71,6 @@ class Question extends React.Component<FileProps & actionsInterface, FileState> 
     };
     const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
     return (this.props.file === currentFile.name ? (<div className={styles.tabPanel}>
-        <nav className={styles.actionbar + " pt-navbar pt-dark"}>
-            <div className="pt-navbar-group pt-align-left">
-            <button className="pt-button pt-minimal">Move/Rename</button>
-            <button className="pt-button pt-minimal">Copy</button>
-            <button className="pt-button pt-minimal">Delete</button>
-            <button className="pt-button pt-minimal">Set as <span className="pt-icon-standard pt-icon-play" />File</button>
-            </div>
-            <div className="pt-navbar-group pt-align-right">
-            <button className="pt-button pt-minimal">Test</button>
-            <button className="pt-button pt-minimal"><span className="pt-icon-standard pt-icon-play" />Run</button>
-            </div>
-        </nav>
         <div className={styles.editorContainer}><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Xterm ref="terminal" /></div>
     </div>) : <Loading />);
   }

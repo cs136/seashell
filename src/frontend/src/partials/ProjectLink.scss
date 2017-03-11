@@ -1,0 +1,26 @@
+@import '../Layout';
+.container{
+    padding:0;
+    margin:1em 0;
+    display:block;
+    text-decoration:none;
+    color:#222;
+    background:#FFF;
+    transition: all 250ms;
+    border-left:2px solid #CCC;
+}
+.container:hover{
+    text-decoration:none;
+    color:$theme;
+    background:lighten($theme, 48%);
+    border-left-color:$theme;
+}
+.linkContainer{
+    padding:0.8em 1em;
+    transition: transform 250ms;
+    transform:translate3d(0,0,0);
+    display:block;
+}
+.container:hover .linkContainer{
+    transform:translate3d(5px, 0, 0);
+}

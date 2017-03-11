@@ -1,7 +1,7 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
 import {Link} from "react-router";
-import {Tooltip, Position, Dialog} from "@blueprintjs/core";
+import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
@@ -12,7 +12,7 @@ const styles = require<any>("./index.scss");
 const layoutStyles = require<any>("../../Layout.scss");
 
 
-export interface NavigationProps { title: string; }
+export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; }
 export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean; }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
@@ -30,23 +30,32 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
     this.setState({settingsVisible: !this.state.settingsVisible});
   }
   render() {
-    return (<div>
-      <nav className={styles.navbar} style={{height: window.innerHeight}}>
-        <Link to="/" className={"pt-button pt-large pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
-        <div className={styles.navbarBottom}>
-          <Tooltip content="Help" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-help" onClick={this.toggleHelp.bind(this)}></button></Tooltip>
-          <Tooltip content="Sync All" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-import"></button></Tooltip>
-          <Tooltip content="Settings" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-wrench" onClick={this.toggleSettings.bind(this)}></button></Tooltip>
-          <Tooltip content="Log Out" position={Position.RIGHT}><button className="pt-button pt-minimal pt-large pt-icon-log-out"></button></Tooltip>
+    return (
+      <nav className={"pt-navbar " + styles.navbar}>
+        <div className="pt-navbar-group pt-align-left">
+          <Link to="/" className={"pt-button pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
+          {this.props.navLeft}
+        </div>
+        <div className="pt-navbar-group pt-align-right">
+          {this.props.navRight}
+          <div><Popover content={<Menu>
+            <MenuItem iconName="help" text="Help" onClick={this.toggleHelp.bind(this)}/>
+            <MenuItem iconName="refresh" text="Sync All" />
+            <MenuItem iconName="cog" text="Settings" onClick={this.toggleSettings.bind(this)} />
+            <MenuItem iconName="changes" text="Reset Seashell" />
+            <MenuItem iconName="log-out" text="Sign Out" />
+        </Menu>} position={Position.BOTTOM_RIGHT}>
+            <button className="pt-button pt-icon-more pt-minimal"></button>
+        </Popover>
+            <Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
+              <HelpDialog />
+            </Dialog>
+            <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
+              <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
+            </Dialog></div>
         </div>
       </nav>
-      <Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
-        <HelpDialog />
-      </Dialog>
-      <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
-        <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
-      </Dialog>
-    </div>);
+    );
   }
 }
-export default map(Navigation);
+export default map<NavigationProps>(Navigation);

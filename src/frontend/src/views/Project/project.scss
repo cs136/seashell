@@ -1,15 +1,7 @@
+@import '../../Layout';
 .tabPanel{
     display:block;
     margin-top:0;
-}
-.fileTabList>div[role="tablist"]{
-    border-top:1px solid #EEE;
-    background:#FAFAFA;
-    padding:0 1em;
-}
-.fileTabList>div[role="tablist"]>div{
-    padding:0.25em 0.7em;
-    margin-right:0;
 }
 .questionTabList>div[role="tablist"]{
     padding:0 1em;
@@ -20,18 +12,6 @@
 }
 .fullWidth{
     width:100%;
-}
-.actionbar{
-    display:flex;
-    flex-wrap: wrap;
-    border-style:none;
-    box-shadow:none !important;
-    padding:0.3em;
-    justify-content: space-between;
-    height:auto;
-}
-.actionbar>div{
-    height:auto;
 }
 .editorContainer{
     display:flex;
@@ -52,4 +32,44 @@
 }
 .loading>div>div{
     border-radius:0 !important;
+}
+.tree{
+    min-width:200px;
+}
+.openFiles{
+    display:inline-block;
+}
+.openFilesTab{
+    float:left;
+    margin:0px 0em -2px 0.45em !important;
+    border-bottom:2px solid transparent;
+    transition: border 250ms;
+}
+.openFilesTabFile{
+    padding-right:0.2em !important;
+}
+.openFilesTabAction{
+    min-width:0 !important;
+    padding-left:0.2em !important;
+}
+.openFilesTab.active{
+    border-bottom:2px solid $theme;
+}
+.openFilesTab.active>.openFilesTabFile{
+    color:$theme !important;
+}
+.openFilesTabFile:hover,.openFilesTabFile:focus{
+    background:transparent !important;
+    outline:none;
+    color:$theme !important;
+}
+.openFilesTabAction:hover,.openFilesTabAction:focus{
+    background:transparent !important;
+    outline:none;
+}
+.openFilesTabAction:hover::before{
+    color:$theme !important;
+}
+.openFilesTab button{
+    margin:0 0 !important;
 }

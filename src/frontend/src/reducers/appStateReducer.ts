@@ -1,4 +1,5 @@
 import {mergeBetter} from "../helpers/utils";
+import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
   projects: string[];
@@ -9,6 +10,8 @@ export interface appStateReducerState {[key: string]: any;
     currentQuestion?: {
       name: string
       files: string[];
+      runFile: string;
+      openFiles: string[];
       currentFile?: {
         name: string;
         content: string
@@ -29,12 +32,15 @@ export const appStateActions = {
   switchFile: "file_switch",
   switchQuestion: "question_switch",
   switchProject: "project_switch",
-  renameFile: "file_rename"
+  renameFile: "file_rename",
+  openFile: "file_open",
+  closeFile: "file_close",
+  setRunFile: "file_set_run"
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1 Racket", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1 Racket", "A2 C"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.renameFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
@@ -44,7 +50,7 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
       return mergeBetter(state, {currentProject: {currentQuestion: action.payload.question}});
     case appStateActions.switchProject:
       return mergeBetter(state, {currentProject: action.payload.project});
-    //we will leave switching to a new project/question/file on deletion if necessary to the UI
+    // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       return mergeBetter(state, {currentProject: {questions: state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1)}});
     case appStateActions.removeProject:
@@ -62,6 +68,17 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.changeFileName:
       return mergeBetter(state, {name: action.payload});
+    case appStateActions.openFile:
+      state = clone(state);
+      state.currentProject.currentQuestion.openFiles.push(action.payload);
+      return state;
+    case appStateActions.closeFile:
+      state = clone(state);
+      state.currentProject.currentQuestion.openFiles = reject(equals(action.payload), state.currentProject.currentQuestion.openFiles);
+      return state;
+    case appStateActions.setRunFile:
+      state = clone(state);
+      return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload}}});
     default:
       return state;
   }
