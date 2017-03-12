@@ -4,7 +4,7 @@ import {merge} from "ramda";
 
 Terminal.loadAddon("fit");
 
-export interface ConsoleProps {};
+export interface ConsoleProps { style?: any; };
 export interface ConsoleState {input: boolean; line: number; currString: string; };
 
 const styles = require<any>("xterm/lib/xterm.css");
@@ -31,6 +31,10 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
 
     setHeight(height: Number) {
         (this.refs.console as HTMLDivElement).style.height = height + "px";
+    }
+
+    setFlex(flex: any) {
+        (this.refs.console as HTMLDivElement).style.flex = flex;
     }
 
     updateLayout() {
@@ -81,6 +85,7 @@ export default class Xterm extends React.Component <ConsoleProps, ConsoleState> 
     }
 
     render() {
-        return(<div style={{background: "#000"}} ref="console"></div>);
+        let style = {...this.props.style};
+        return(<div style={this.props.style} ref="console"></div>);
     }
 }

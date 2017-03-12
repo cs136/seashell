@@ -1,75 +1,147 @@
 @import '../../Layout';
-.tabPanel{
-    display:block;
-    margin-top:0;
+.filePanel {
+    display: block;
+    margin-top: 0;
+    background: #000;
 }
-.questionTabList>div[role="tablist"]{
-    padding:0 1em;
+
+.questionTabList>div[role="tablist"] {
+    padding: 0 1em;
 }
-.questionTabList>div[role="tablist"]>div{
-    padding:0.5em 1em;
-    margin-right:0;
+
+.questionTabList>div[role="tablist"]>div {
+    padding: 0.5em 1em;
+    margin-right: 0;
 }
-.fullWidth{
-    width:100%;
+
+.fullWidth {
+    width: 100%;
 }
-.editorContainer{
-    display:flex;
+
+.editorContainer {
+    display: flex;
 }
-.editorContainer>div{
-    overflow:hidden;
-    flex:1;
+
+.editorContainer>div {
+    overflow: hidden;
+    flex: 1;
 }
-.questionName{
-    margin-bottom:0.75em;
+
+.questionName {
+    margin-bottom: 0.75em;
 }
-.loading{
-    width:100%;
+
+.loading {
+    width: 100%;
 }
-.loading>div{
-    width:auto;
-    border-radius:0;
+
+.loading>div {
+    width: auto;
+    border-radius: 0;
 }
-.loading>div>div{
-    border-radius:0 !important;
+
+.loading>div>div {
+    border-radius: 0 !important;
 }
-.tree{
-    min-width:200px;
+
+.tree {
+    min-width: 200px;
 }
-.openFiles{
-    display:inline-block;
+
+.openFiles {
+    display: inline-block;
 }
-.openFilesTab{
-    float:left;
-    margin:0px 0em -2px 0.45em !important;
-    border-bottom:2px solid transparent;
+
+.openFilesTab {
+    float: left;
+    margin: 0px 0em -2px 0.45em !important;
+    border-bottom: 2px solid transparent;
     transition: border 250ms;
 }
-.openFilesTabFile{
-    padding-right:0.2em !important;
+
+.openFilesTabFile {
+    padding-right: 0.2em !important;
 }
-.openFilesTabAction{
-    min-width:0 !important;
-    padding-left:0.2em !important;
+
+.openFilesTabAction {
+    min-width: 0 !important;
+    padding-left: 0.2em !important;
 }
-.openFilesTab.active{
-    border-bottom:2px solid $theme;
+
+.openFilesTab.active {
+    border-bottom: 2px solid $theme;
 }
-.openFilesTab.active>.openFilesTabFile{
-    color:$theme !important;
+
+.openFilesTab.active>.openFilesTabFile {
+    color: $theme !important;
 }
-.openFilesTabFile:hover,.openFilesTabFile:focus{
-    background:transparent !important;
-    outline:none;
-    color:$theme !important;
+
+.openFilesTabFile:hover,
+.openFilesTabFile:focus {
+    background: transparent !important;
+    outline: none;
+    color: $theme !important;
 }
-.openFilesTabAction:hover,.openFilesTabAction:focus{
-    background:transparent !important;
-    outline:none;
+
+.openFilesTabAction:hover,
+.openFilesTabAction:focus {
+    background: transparent !important;
+    outline: none;
 }
-.openFilesTabAction:hover::before{
-    color:$theme !important;
+
+.openFilesTabAction:hover::before {
+    color: $theme !important;
 }
-.openFilesTab button{
-    margin:0 0 !important;
+
+.openFilesTab button {
+    margin: 0 0 !important;
+}
+
+.resizeHandle {
+    z-index: 10;
+    width: 3px;
+    border-top-style: none;
+    border-bottom-style: none;
+    box-sizing: content-box;
+    cursor: ew-resize;
+    background: #333;
+    flex: none !important;
+    transform: none !important;
+    position: relative;
+    overflow: visible !important;
+}
+
+.resizeHandle:hover {
+    background: #666;
+}
+
+.resizeHandle:focus,
+.resizeHandle:active {
+    background: $theme;
+    &:before,
+    &:after {
+        opacity: 1;
+    }
+}
+
+.resizeHandle:before,
+.resizeHandle:after {
+    position: absolute;
+    background: transparentize($theme, 0.5);
+    border-top-style: none;
+    border-bottom-style: none;
+    top: 0px;
+    opacity: 0;
+    transition: opacity 250ms;
+    content: '';
+    width: 3px;
+    height: 100%;
+}
+
+.resizeHandle:after {
+    left: 3px;
+}
+
+.resizeHandle:before {
+    right: 3px;
 }
