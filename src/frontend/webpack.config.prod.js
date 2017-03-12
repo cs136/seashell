@@ -5,13 +5,13 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const SWPrecacheWebpackPlugin = require('sw-precache-webpack-plugin');
 const OfflinePlugin = require('offline-plugin');
-
+const ArchivePlugin = require('webpack-archive-plugin');
 
 module.exports = {
   entry: './src/index.tsx',
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.[chunkhash].js',
+    filename: 'bundle.js',
     publicPath: '/dist/'
   },
   plugins: [
@@ -46,7 +46,8 @@ module.exports = {
       ServiceWorker:{
         navigateFallbackURL: '/'
       }
-    })
+    }),
+    new ArchivePlugin()
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.
