@@ -70,7 +70,7 @@ class Question extends React.Component<FileProps & actionsInterface, FileState> 
     };
     const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
     return (this.props.file === currentFile.name ? (<div className={styles.tabPanel}>
-        <div className={styles.editorContainer}><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Xterm ref="terminal" /></div>
+        <div className={styles.editorContainer}><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Xterm ref="terminal" readOnly={false}/></div>
     </div>) : <Loading />);
   }
 }
