@@ -3,7 +3,6 @@ import {map, actionsInterface} from "../../actions";
 import MonacoEditor from "react-monaco-editor";
 import Xterm from "./Console";
 import Loading from "./Loading";
-
 const styles = require<any>("./project.scss");
 
 export interface FileProps { file: string; };

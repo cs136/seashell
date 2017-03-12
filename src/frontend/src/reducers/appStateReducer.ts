@@ -10,7 +10,7 @@ export interface appStateReducerState {[key: string]: any;
     currentQuestion?: {
       name: string
       files: string[];
-      runFile: string;
+      runFile?: string;
       openFiles: string[];
       currentFile?: {
         name: string;
@@ -21,7 +21,6 @@ export interface appStateReducerState {[key: string]: any;
 };
 export interface appStateReducerAction {type: string; payload: any; };
 export const appStateActions = {
-  changeFileName: "file_change_name",
   changeFileContent: "file_change_content",
   addFile: "file_add",
   addProject: "project_add",
@@ -35,13 +34,16 @@ export const appStateActions = {
   renameFile: "file_rename",
   openFile: "file_open",
   closeFile: "file_close",
-  setRunFile: "file_set_run"
+  setRunFile: "file_set_run",
+  copyFile: "file_copy"
 };
 
 
 
 export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.copyFile:
+      return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.renameFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.switchFile:
@@ -66,8 +68,6 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
                                                                     currentFile: {name: action.payload.name, content: action.payload.content}}}});
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
-    case appStateActions.changeFileName:
-      return mergeBetter(state, {name: action.payload});
     case appStateActions.openFile:
       state = clone(state);
       state.currentProject.currentQuestion.openFiles.push(action.payload);

@@ -4,7 +4,7 @@ import {map, actionsInterface} from "../../actions";
 
 const styles = require<any>("./project.scss");
 
-export interface FileActionsProps { file: string; };
+export interface FileActionsProps { file: string; setTargetFile: Function; toggleDelete: Function; toggleCopy: Function; toggleRename: Function};
 export interface FileActionsState {  }
 
 class FileActions extends React.Component<FileActionsProps & actionsInterface, FileActionsState> {
@@ -14,9 +14,18 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
     render() {
         const file = this.props.file;
         return (<Menu>
-            <MenuItem text="Move/Rename" />
-            <MenuItem text="Copy" />
-            <MenuItem text="Delete" />
+            <MenuItem text="Move/Rename" onClick={()=>{
+                this.props.setTargetFile(this.props.file);
+                this.props.toggleRename();
+            }}/>
+            <MenuItem text="Copy" onClick={()=>{
+                this.props.setTargetFile(this.props.file);
+                this.props.toggleCopy();
+            }}/>
+            <MenuItem text="Delete" onClick={()=>{
+                this.props.setTargetFile(this.props.file);
+                this.props.toggleDelete();
+            }}/>
             <MenuDivider />
             <MenuItem text="Set as Run File" onClick={this.props.dispatch.file.setRunFile.bind(null, file)}/>
             <MenuDivider />

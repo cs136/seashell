@@ -22,6 +22,7 @@ const mapDispatchToProps = (dispatch: Function) => {
              updateSettings: (newSettings: settingsReducerState) => dispatch({type: settingsActions.updateSettings, payload: newSettings})
           },
           file: {
+              copyFile: (targetName: string) => dispatch({type: appStateActions.copyFile, payload: {question: {name: "question", files: ["file1.txt"]}, newName: targetName.split("/").pop()}}),
               updateFile: (newFileContent: string) => {dispatch({type: appStateActions.changeFileContent, payload: newFileContent}); },
               addFile: (newFileName: string, newFileContent: string) => dispatch({type: appStateActions.addFile, payload: {name: newFileName, content: newFileContent}}),
               deleteFile: (name: string) => dispatch({type: appStateActions.removeFile, payload: {name: name}}),
