@@ -14,7 +14,7 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
     render() {
         const file = this.props.file;
         return (<Menu>
-            <MenuItem text="Move/Rename" onClick={()=>{
+            <MenuItem text="Rename/Move" onClick={()=>{
                 this.props.setTargetFile(this.props.file);
                 this.props.toggleRename();
             }}/>

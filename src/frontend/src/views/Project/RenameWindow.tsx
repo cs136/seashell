@@ -17,7 +17,7 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
     }
   }
   render(){
-    return(<div>
+    return(<div className="pt-dialog-body">
       <p>Where would you like to rename/move this file?</p>
       <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
         {this.props.questions.map((question: string)=>(<option value={question}>{question}</option>))}
