@@ -19,16 +19,22 @@ const mapDispatchToProps = (dispatch: Function) => {
     return {
         dispatch: {
           settings: {
-             updateSettings: (newSettings: settingsReducerState) => dispatch({type: settingsActions.updateSettings, payload: newSettings})
+             updateSettings: (newSettings: settingsReducerState) => dispatch({type: settingsActions.updateSettings, payload: newSettings}),
+             updateEditorRatio: (ratio: number) => dispatch({type: settingsActions.updateEditorRatio, payload: ratio})
           },
           file: {
-              updateFile: (newFileContent: string) => {dispatch({type: appStateActions.changeFileContent, payload: newFileContent});},
+              copyFile: (targetName: string) => dispatch({type: appStateActions.copyFile, payload: {question: {name: "question", files: ["file1.txt"]}, newName: targetName.split("/").pop()}}),
+              updateFile: (newFileContent: string) => {dispatch({type: appStateActions.changeFileContent, payload: newFileContent}); },
               addFile: (newFileName: string, newFileContent: string) => dispatch({type: appStateActions.addFile, payload: {name: newFileName, content: newFileContent}}),
               deleteFile: (name: string) => dispatch({type: appStateActions.removeFile, payload: {name: name}}),
               renameFile: (targetName: string) => dispatch({type: appStateActions.renameFile, payload: {question: {name: "question", files: ["file1.txt"]}, newName: targetName.split("/").pop()}}),
+              openFile: (name: string) => dispatch({type: appStateActions.openFile, payload: name}),
+              closeFile: (name: string) => dispatch({type: appStateActions.closeFile, payload: name}),
+              setRunFile: (name: string) => dispatch({type: appStateActions.setRunFile, payload: name}),
               switchFile: (name: string) => {
-                  // TODO interface with backend and get real data
-                  dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: "good"}}});}
+                    // TODO interface with backend and get real data
+                    dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: "good"}}});
+                }
           },
           question: {
               addQuestion: (newQuestionName: string) => dispatch({type: appStateActions.addQuestion, payload: {name: newQuestionName}}),

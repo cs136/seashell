@@ -10,7 +10,6 @@ import {settingsReducerState} from "../../reducers/settingsReducer";
 export interface DialogProps { }
 export interface DialogState { }
 export interface SettingsDialogProps {closefunc: Function; }
-
 export interface SettingsDialogState { font?: string; fontSize?: number; editorMode?: number; tabWidth?: number;  theme?: number; offlineMode?: number; }
 
 class FontTextBox extends React.Component<{font: string, changeParentState: Function}, {font: string}> {
@@ -206,4 +205,5 @@ class HelpDialog extends React.Component<DialogProps, DialogState> {
   }
 }
 export default map<SettingsDialogProps>(SettingsDialog);
+
 export {HelpDialog}
