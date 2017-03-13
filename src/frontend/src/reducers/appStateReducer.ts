@@ -1,8 +1,10 @@
 import {mergeBetter} from "../helpers/utils";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
+export interface error {title: string, body: string};
 export interface appStateReducerState {[key: string]: any;
   projects: string[];
+  errors: error[];
   currentProject?: {
     name: string;
     id: string;
@@ -35,13 +37,18 @@ export const appStateActions = {
   openFile: "file_open",
   closeFile: "file_close",
   setRunFile: "file_set_run",
-  copyFile: "file_copy"
+  copyFile: "file_copy",
+  removeError: "error_remove"
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {errors: [{title: "Error title", body: "Error body"}, {title: "error title 2", body: "error body 2"}], currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.removeError:
+      state=clone(state);
+      state.errors.splice(action.payload.errorIDX);
+      return state
     case appStateActions.copyFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.renameFile:
@@ -58,7 +65,9 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
     case appStateActions.removeProject:
       return mergeBetter(state, {projects: state.projects.splice(state.projects.indexOf(action.payload.name), 1)});
     case appStateActions.removeFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: {files: state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1)}}});
+      state=clone(state);
+      state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
+      return state;
     case appStateActions.addQuestion:
       return mergeBetter(state, {currentProject: {questions: state.currentProject.questions.push(action.payload.name), currentQuestion: {files: []}}});
     case appStateActions.addProject:

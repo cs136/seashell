@@ -23,7 +23,7 @@ export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
-    this.state={
+    this.state = {
         deleteVisible: false,
         renameVisible: false,
         copyVisible: false,
@@ -33,13 +33,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   changeTargetFile(file: string){
       this.setState(merge(this.state, {fileOpTarget: file}));
   }
-  toggleDelete(){
+  toggleDelete() {
       this.setState(merge(this.state, {deleteVisible: !this.state.deleteVisible}));
   }
-  toggleRename(){
+  toggleRename() {
       this.setState(merge(this.state, {renameVisible: !this.state.renameVisible}));
   }
-  toggleCopy(){
+  toggleCopy() {
       this.setState(merge(this.state, {copyVisible: !this.state.copyVisible}));
   }
   render() {
