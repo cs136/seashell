@@ -222,10 +222,10 @@ class SeashellWebsocket {
     console.warn(`Answer with int[${response[0].length}], int[${response[1].length}], int[${response[2].length}], int[${response[3].length}]`);
     try {
       const result = await this.requests[-2].received;
-      console.log("Authenticated success");
+      console.log("Authentication success");
       this.authenticated = true;
     } catch (err) {
-      throw new WebsocketError(`Authenticated failure: ${err.msg}`);
+      throw new WebsocketError(`Authentication failure: ${err.msg}`);
     }
   }
 
