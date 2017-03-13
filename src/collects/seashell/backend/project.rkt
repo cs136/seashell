@@ -629,7 +629,7 @@
   (close-input-port err)
 
   (if (not (zero? exit-status))
-      "{\"error\":true\"result\":[]}"
+      (jsexpr->string (hash 'error true 'result empty))
       stdout-output))
 
 ;; (get-most-recently-used project question)
