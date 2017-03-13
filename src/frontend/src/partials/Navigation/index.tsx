@@ -12,7 +12,7 @@ const styles = require<any>("./index.scss");
 const layoutStyles = require<any>("../../Layout.scss");
 
 
-export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; }
+export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; }
 export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean; }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
@@ -31,7 +31,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
   }
   render() {
     return (
-      <nav className={"pt-navbar " + styles.navbar}>
+      <nav className={"pt-navbar " + styles.navbar + " " + this.props.className}>
         <div className="pt-navbar-group pt-align-left">
           <Link to="/" className={"pt-button pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
           {this.props.navLeft}

@@ -7,7 +7,7 @@ import * as Draggable from "react-draggable"; // Both at the same time
 
 const styles = require<any>("./project.scss");
 
-export interface FileProps { file: string; };
+export interface FileProps { file: string; className?: string; };
 export interface FileState { editor: any; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
@@ -23,8 +23,10 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   onResize() {
     if (!("terminal" in this.refs) || this.state.editor == null) return; // ignore if not mounted properly yet
     const newHeight = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top);
-    this.state.editor.domElement.style.height = newHeight + "px";
-    (this.refs.resizeHandle as HTMLElement).style.height = newHeight + "px";
+    const newHeightPx = newHeight + "px";
+    this.state.editor.domElement.style.height = newHeightPx;
+    (this.refs.resizeHandle as HTMLElement).style.height = newHeightPx;
+    (this.refs.editorContainer as HTMLElement).style.height = newHeightPx;
     this.state.editor.domElement.style.flex = this.props.settings.editorRatio;
     (this.refs.terminal as Xterm).setFlex(1 - this.props.settings.editorRatio);
     (this.refs.terminal as Xterm).setHeight(newHeight);
@@ -87,7 +89,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     };
     const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
     return (this.props.file === currentFile.name ? (<div className={styles.filePanel}>
-        <div className={styles.editorContainer}><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
+        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer"><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
           <div ref="resizeHandle" className={styles.resizeHandle} />
       </Draggable><Xterm ref="terminal" readOnly={false}/></div>
     </div>) : <Loading />);

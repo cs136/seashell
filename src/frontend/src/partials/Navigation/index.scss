@@ -1,3 +1,4 @@
+@import "../../Layout";
 .logo{
     height:1em;
     display:inline-block;
@@ -18,19 +19,36 @@
 }
 
 .navbar{
-    display:flex;
     background:#FFF;
     border-bottom:1px solid #EEE !important;
-    flex-wrap: wrap;
     border-style:none;
     box-shadow:none !important;
     padding:0.4em 1em;
     justify-content: space-between;
     height:auto;
+    :global{
+        .pt-align-right{
+            display:flex;
+            float:none !important;
+        }
+    }
 }
 .navbar>div button{
     margin:0 0.4em;
 }
 .navbar>div{
     height:auto;
+}
+
+@media(max-width: $mobile-break){
+    .navbar{
+        flex-wrap: wrap;
+        line-height:50px;
+        :global{
+            .pt-align-right{
+                width:100%;
+                flex-wrap: wrap;
+            }
+        }
+    }
 }
