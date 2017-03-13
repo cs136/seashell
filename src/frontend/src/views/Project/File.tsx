@@ -48,12 +48,12 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     window.addEventListener("resize", this.onResize);
     this.onResize();
   }
-  stopDrag(e: any){
-    const percent = e.x / window.innerWidth;
+  stopDrag(e: any) {
+    const percent = e.clientX / window.innerWidth;
     this.props.dispatch.settings.updateEditorRatio(percent);
   }
   handleDrag(e: any) {
-    const percent = e.x / window.innerWidth;
+    const percent = e.clientX / window.innerWidth;
     this.state.editor.domElement.style.flex = percent;
     (this.refs.terminal as Xterm).setFlex(1 - percent);
   }
