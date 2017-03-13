@@ -1,5 +1,5 @@
 import "jest";
-import {Store, File, Project, Settings} from "../src/helpers/storage";
+import {Storage, File, Project, Settings} from "../src/helpers/storage";
 import J = require("jscheck");
 import FakeIndexedDB = require("fake-indexeddb");
 import FDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
@@ -27,7 +27,7 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 describe("Testing storage.js", () => {
 
-  const store: Store = new Store("y667li", {
+  const store: Storage = new Storage("y667li", {
     IDBKeyRange: FDBKeyRange,
     indexedDB: FakeIndexedDB
   });

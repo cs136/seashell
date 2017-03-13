@@ -2,7 +2,7 @@ import Dexie from 'dexie';
 import md5 = require('md5');
 import {sprintf} from 'sprintf-js';
 import * as R from 'ramda';
-export {Store, 
+export {Storage, 
         File, 
         Project, 
         Settings, 
@@ -65,7 +65,7 @@ interface StorageInterface {
   deleteFile(proj: string, name: string, online: boolean): Promise<void>;
   renameFile(proj: string, name: string, newName: string, checksum: string): Promise<string>;
   getFileToRun(proj: string, question: string): Promise<string|undefined>;
-  setFileToRun(proj: string, question: string, file: string): Promise<void>;
+  setFileToRun(proj: string, question: string, directory: string, file: string): Promise<void>;
   getSettings(): Promise<Settings|undefined>;
   saveSettings(settings: Settings): Promise<void>;
   listProject(name: string): Promise<File[]>;
@@ -77,7 +77,8 @@ interface StorageInterface {
 }
 
 
-class Store implements StorageInterface {
+class Storage implements StorageInterface {
+  [index: string]: any; // supress type errors
 
   private db: StorageDB;
   private has_offline_changes: boolean;
@@ -250,7 +251,7 @@ class Store implements StorageInterface {
   }
 
   // a file name is (test|q*|common)/name
-  public async setFileToRun(proj: string, question: string, file: string): Promise<void> {
+  public async setFileToRun(proj: string, question: string, directory: string, file: string): Promise<void> {
     return this.db.transaction('rw', this.db.projects, async () => {
       let current = await this.db.projects.get(proj);
       current.runs[question] = file;
