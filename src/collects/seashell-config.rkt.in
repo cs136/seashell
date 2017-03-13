@@ -217,6 +217,8 @@
       (cons 'common-subdirectory            "common")
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
+      ;; Location of the Marmoset test results script
+      (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive

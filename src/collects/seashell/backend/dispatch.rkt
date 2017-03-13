@@ -603,6 +603,16 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "marmosetTestResults")
+        ('project project)
+        ('testtype testtype))
+       (define testtype-as-symbol (if (string? testtype) (string->symbol testtype) testtype))
+       (define test-results (marmoset-test-results "CS136" project testtype-as-symbol))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,test-results))]
+      [(hash-table
+        ('id id)
         ('type "archiveProjects")
         ('location location))
         (archive-projects location)
