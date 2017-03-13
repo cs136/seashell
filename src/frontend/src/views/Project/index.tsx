@@ -46,18 +46,18 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     const project = this.props.appState.currentProject;
     const question = project.currentQuestion;
     return (<div><Navigation navLeft={[
-          <div className="pt-navbar-heading">{project.name}</div>,
-          <Popover content={<QuestionList project={project} />} position={Position.BOTTOM}>
+          <div className="pt-navbar-heading" key="project-name">{project.name}</div>,
+          <Popover content={<QuestionList project={project} />} key="project-question" position={Position.BOTTOM}>
               <button className="pt-button pt-intent-primary"><span className="pt-icon-standard pt-icon-caret-down" />{project.currentQuestion.name}</button>
           </Popover>,
-          <span className="pt-navbar-divider"></span>,
-          <Popover content={<FileList question={question}/>} position={Position.BOTTOM}>
+          <span className="pt-navbar-divider" key="project-divider"></span>,
+          <Popover content={<FileList question={question}/>} position={Position.BOTTOM} key="project-open-file">
               <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
           </Popover>,
-          <OpenFiles setTargetFile={this.changeTargetFile.bind(this)} toggleDelete={this.toggleDelete.bind(this)} toggleCopy={this.toggleCopy.bind(this)} toggleRename={this.toggleRename.bind(this)}/>]} navRight={[
-          <Tooltip content="Test" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-build"></button></Tooltip>,
-          question.runFile === null ? <Tooltip content="Please set a run file" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip> : <Tooltip content="Run" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-play"></button></Tooltip>,
-          <Tooltip content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-send-to"></button></Tooltip>]} />
+          <OpenFiles key="project-open-files" setTargetFile={this.changeTargetFile.bind(this)} toggleDelete={this.toggleDelete.bind(this)} toggleCopy={this.toggleCopy.bind(this)} toggleRename={this.toggleRename.bind(this)}/>]} navRight={[
+          <Tooltip key="project-build-file" content="Test" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-build"></button></Tooltip>,
+          question.runFile === null ? <Tooltip key="project-run-file-set" content="Please set a run file" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip> : <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-play"></button></Tooltip>,
+          <Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-send-to"></button></Tooltip>]} />
       <File file={question.currentFile.name} />
       <Dialog className={styles.dialogStyle} title="Delete File" isOpen={this.state.deleteVisible} onClose={this.toggleDelete.bind(this)}><DeleteWindow file={this.state.fileOpTarget} closefunc={this.toggleDelete.bind(this)}/></Dialog>
       <Dialog className={styles.dialogStyle} title="Rename/Move File" isOpen={this.state.renameVisible} onClose={this.toggleRename.bind(this)}><RenameWindow questions={this.props.appState.currentProject.questions} file={this.state.fileOpTarget} closefunc={this.toggleRename.bind(this)}/></Dialog>
