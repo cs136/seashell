@@ -5,6 +5,7 @@ import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
+import ErrorList from "./Errors";
 
 
 const logo = require<any>("./logo.svg");
@@ -31,6 +32,8 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
   }
   render() {
     return (
+      <div>
+      <ErrorList />
       <nav className={"pt-navbar " + styles.navbar}>
         <div className="pt-navbar-group pt-align-left">
           <Link to="/" className={"pt-button pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
@@ -54,7 +57,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
             </Dialog></div>
         </div>
-      </nav>
+      </nav></div>
     );
   }
 }

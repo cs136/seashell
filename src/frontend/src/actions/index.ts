@@ -53,6 +53,10 @@ const mapDispatchToProps = (dispatch: Function) => {
                   // we will leave switching question and file to the UI
                   dispatch({type: appStateActions.switchProject, payload: {project: {name: name, questions: ["q1"]}}});
               }
+          },
+          app: {
+              removeError: (errorIDX: Number) => dispatch({type: appStateActions.removeError, payload: {errorIDX: errorIDX}})
+
           }
         }
     };
