@@ -1,9 +1,9 @@
-import * as sjcl from 'sjcl';
 import {History,Settings,Change} from './types';
 import WebSocket = require("ws");
-import {Coder} from './crypto';
+import {Coder, AuthKey} from './crypto';
+import WebCrypto = require("node-webcrypto-ossl");
 
-export {WebsocketResult, SeashellWebsocket, WebsocketError, AuthKey};
+export {WebsocketResult, SeashellWebsocket, WebsocketError};
 
 class WebsocketError extends Error {
   data: Object;
@@ -74,7 +74,6 @@ class Response {
   result: WebsocketResult;
 }
 
-type AuthKey = Uint32Array;
 
 class SeashellWebsocket {
   private coder: Coder;
@@ -82,7 +81,7 @@ class SeashellWebsocket {
   public requests: {[index:number]: Request<any>};
   // public ready: Promise<boolean>;
   private authenticated: boolean;
-  private server_nonce: Uint8Array;
+  private server_nonce: AuthKey;
   private failed: boolean;
   private closed: boolean;
   private started: boolean;
@@ -176,19 +175,16 @@ class SeashellWebsocket {
     this.websocket.close();
   }
 
-  public async authenticate(): Promise<void> {
-    const server_challenge = await this.requests[-1].received;
-    console.warn(`Server challenge: ${server_challenge}`);
-    /** Generate a nonce. */
-    var client_nonce = sjcl.random.randomWords(32);
-    for (var i = 0; i < client_nonce.length; i++) {
-      client_nonce[i] = client_nonce[i] & 0xFF;
-    }
+  // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
 
-    /** OK, now we proceed to authenticate. */
-    var raw_response = [].concat(client_nonce, server_challenge);
-    var iv_coded_tag = this.coder.encrypt(raw_response, []);
-    var response = [iv_coded_tag[0], iv_coded_tag[1], iv_coded_tag[2], client_nonce]; 
+  public async authenticate(): Promise<void> {
+    const server_challenge = new Uint8Array(await this.requests[-1].received);
+
+    const result = await this.coder.answer(server_challenge);
+    const response = [Array.from(result.iv), 
+                      Array.from(result.encrypted), 
+                      Array.from(result.authTag), 
+                      Array.from(result.nonce)];
 
 /*
     // // Generate a nonce

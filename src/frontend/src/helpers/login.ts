@@ -1,5 +1,5 @@
 import * as $ from "jquery";
-import {AuthKey} from "./websocket_client";
+import {AuthKey} from "./crypto";
 export {Login, AuthKey, LoginError, WSConnection}
 
 class LoginError extends Error {
@@ -31,7 +31,7 @@ class Login {
         dataType: "json"
       });
       console.warn("Login info:", response);
-      return new WSConnection(new Int32Array(response.key), 
+      return new WSConnection(response.key,
                               response.host, 
                               response.port, 
                               response.pingPort);
@@ -49,7 +49,7 @@ class Login {
 class WSConnection {
   public wsURI: string;
 
-  constructor(public publicKey: Int32Array, 
+  constructor(public publicKey: number[], 
               public host: string, 
               public port: number,
               public pingPort: number) {
