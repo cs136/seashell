@@ -56,12 +56,78 @@ class Coder {
     };
   }
 
-  public async answer(server_challenge: number[]) : Promise<{
+  public async shittyEncrypt(rawKey: number[], server_challenge: number[], client_nonce: number[], iv: number[]): Promise<{
+      iv: number[],
+      encrypted: number[],
+      authTag: number[],
+    }> {
+    var plain = [];
+    var cipher = new sjcl.cipher.aes(rawKey);
+    /** OK, now we proceed to authenticate. */
+    var raw_response = [].concat(client_nonce, server_challenge);
+
+    // console.warn("server_challenge",server_challenge);
+    // console.warn("client_nonce",client_nonce);
+    // console.warn("raw_response",raw_response);
+
+    var ivArr = this.toBits(iv);
+
+    // console.warn("iv", iv);
+    // console.warn("ivArr", ivArr);
+    // console.warn("this.fromBits(ivArr)", this.fromBits(ivArr));
+
+    var frameArr = this.toBits(raw_response);
+    var plainArr = this.toBits(plain);
+    var authArr = sjcl.bitArray.concat(ivArr, plainArr);
+    var out = sjcl.mode.gcm.encrypt(cipher,
+        frameArr,
+        ivArr,
+        authArr,
+        128);
+    var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
+    var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
+
+    // console.warn("out", out);
+    // console.warn("this.fromBits(ivArr)", this.fromBits(ivArr));
+    // console.warn("this.fromBits(codedArr)", this.fromBits(codedArr));
+    // console.warn("this.fromBits(tagArr)", this.fromBits(tagArr));
+
+    return {
+      iv: this.fromBits(ivArr),
+      encrypted: this.fromBits(codedArr),
+      authTag: this.fromBits(tagArr),
+    };
+  }
+
+  public async shittyAnswer(server_challenge: number[]): Promise<{
       iv: number[],
       encrypted: number[],
       authTag: number[],
       nonce: number[]
-  }> {
+    }> {
+
+    var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
+    var client_nonce = sjcl.random.randomWords(32);
+    for (var i = 0; i < client_nonce.length; i++) {
+      client_nonce[i] = client_nonce[i] & 0xFF;
+    }
+
+    /** OK, now we proceed to authenticate. */
+    const result = await this.shittyEncrypt(this.rawKey, server_challenge, client_nonce, iv); 
+    return {
+      iv: result.iv,
+      encrypted: result.encrypted,
+      authTag: result.authTag,
+      nonce: client_nonce
+    }
+  }
+
+  public async answer(server_challenge: number[]): Promise<{
+      iv: number[],
+      encrypted: number[],
+      authTag: number[],
+      nonce: number[]
+    }> {
     const iv = new Int32Array(32);
     webcrypto.getRandomValues(iv);    
     /** Generate a nonce. */
@@ -70,9 +136,9 @@ class Coder {
 
     const arr_iv = Array.from(iv);
     const arr_client_nonce = Array.from(client_nonce);
-    // for (var i = 0; i < client_nonce.length; i++) {
-    //   client_nonce[i] = client_nonce[i] & 0xFF;
-    // }
+    for (var i = 0; i < client_nonce.length; i++) {
+      client_nonce[i] = client_nonce[i] & 0xFF;
+    }
     /** OK, now we proceed to authenticate. */
     const result = await this.encrypt(this.rawKey, server_challenge, arr_client_nonce, arr_iv); 
     return {
@@ -83,7 +149,7 @@ class Coder {
     }
   }
 
-  public async decrypt(encryptionResult: CoderEncrypted) : Promise<ArrayBuffer> {
+  public async decrypt(encryptionResult: CoderEncrypted): Promise<ArrayBuffer> {
     let iv = encryptionResult.iv;
     let encrypted = encryptionResult.encrypted;
     let tag = encryptionResult.tag;

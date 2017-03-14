@@ -178,13 +178,13 @@ class SeashellWebsocket {
   // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
 
   public async authenticate(): Promise<void> {
-    const server_challenge = new Uint8Array(await this.requests[-1].received);
+    const server_challenge = await this.requests[-1].received;
 
-    const result = await this.coder.answer(server_challenge);
-    const response = [Array.from(result.iv), 
-                      Array.from(result.encrypted), 
-                      Array.from(result.authTag), 
-                      Array.from(result.nonce)];
+    const result = await this.coder.shittyAnswer(server_challenge);
+    const response = [result.iv, 
+                      result.encrypted, 
+                      result.authTag, 
+                      result.nonce];
 
 /*
     // // Generate a nonce
