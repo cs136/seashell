@@ -4,7 +4,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node_modules/.bin/jest",
-    "build": "webpack --config webpack.config.prod.js",
+    "build": "webpack --config webpack.config.js",
     "reinstall": "rm -rf node_modules && npm install && npm run build"
   },
   "repository": {
@@ -43,7 +43,6 @@
     "xterm": "2.3.2"
   },
   "devDependencies": {
-    "@types/core-js": "0.9.35",
     "@types/history": "2.0.44",
     "@types/jest": "18.1.1",
     "@types/ramda": "0.0.2",
@@ -51,7 +50,7 @@
     "@types/react-dom": "0.14.20",
     "@types/react-redux": "4.4.35",
     "@types/react-router": "2.0.45",
-    "awesome-typescript-loader": "3.0.0-beta.18",
+    "awesome-typescript-loader": "3.1.2",
     "babel-core": "6.14.0",
     "babel-eslint": "6.1.2",
     "babel-loader": "6.2.5",
@@ -69,7 +68,7 @@
     "eslint-plugin-import": "1.16.0",
     "eslint-plugin-jsx-a11y": "2.2.2",
     "eslint-plugin-react": "6.3.0",
-    "extract-text-webpack-plugin": "1.0.1",
+    "extract-text-webpack-plugin": "2.1.0",
     "fake-indexeddb": "git+https://github.com/YLiLarry/fakeIndexedDB.git#3bb9ccc67b2f02bdb2f8d027707903f775b953d0",
     "file-loader": "0.9.0",
     "html-webpack-plugin": "2.22.0",
@@ -90,8 +89,8 @@
     "tslint-loader": "3.4.2",
     "typescript": "2.2.1",
     "url-loader": "0.5.7",
-    "webpack": "1.14.0",
-    "webpack-dev-server": "1.16.1"
+    "webpack": "2.2.1",
+    "webpack-dev-server": "2.4.1"
   },
   "jest": {
     "transform": {

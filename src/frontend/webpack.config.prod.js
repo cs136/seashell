@@ -23,7 +23,8 @@ module.exports = {
       compress: {
         warnings: false,
       },
-      sourceMap: false,
+      sourceMap: true,
+      minimize: true
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production'),
@@ -50,36 +51,36 @@ module.exports = {
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.
-      extensions: ["", ".webpack.js", ".web.js", ".ts", ".tsx", ".js", ".scss"]
+      extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js", ".scss"]
   },
   module: {
-    preLoaders: [
-      { test: /\.js$/, loader: "source-map-loader" },
-      { test: /\.json$/, loader: 'json'},
-      { test: /\.tsx?$/, loader: "tslint-loader", tslint: { configFile: "tslint.json" } }
-    ],
-    loaders: [
+    rules: [
+      { enforce: 'pre', test: /\.js$/, loader: "source-map-loader" },
+      { enforce: 'pre', test: /\.tsx?$/, loader: "tslint-loader" },
       { test: /\.tsx?$/, loader: "awesome-typescript-loader" },
       {
         test: /\.scss$/,
-        loaders: [
-            'style?sourceMap',
-            'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
-            'sass?sourceMap'
+        use: [
+          'style-loader?sourceMap',
+          'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
+          'sass-loader?sourceMap'
+          // { loader: "style-loader", query: { sourceMap: true }},
+          // { loader: "css-loader", query: {modules: true, importLoaders: 1, localIdentName: "[path]___[name]__[local]___[hash:base64:5]" }},
+          // { loader: "sass-loader", query: { sourceMap: true }}
         ]
-      },{
-      test: /\.css$/,
-      loader: "style-loader!css-loader"
+      }, {
+        test: /\.css$/,
+        use: ["style-loader", "css-loader"]
       }, {
         test: /\.(woff|woff2|ttf|eot)$/,
-        loader: 'file-loader'
+        use: ['file-loader']
       },
       {
-          test: /\.(jpe?g|png|gif|svg)$/i,
-          loaders: [
-              'file?hash=sha512&digest=hex&name=[hash].[ext]',
-              'image-webpack?bypassOnDebug&optimizationLevel=7&interlaced=false'
-          ]
+        test: /\.(jpe?g|png|gif|svg)$/i,
+        use: [
+          'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
+          'image-webpack-loader?bypassOnDebug&optimizationLevel=7&interlaced=false'
+        ]
       }
     ],
   },
