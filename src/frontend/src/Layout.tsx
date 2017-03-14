@@ -2,10 +2,10 @@
 import * as React from "react";
 import Navigation from "./partials/Navigation";
 
-const styles = require<any>("./Layout.scss");
+const styles = require("./Layout.scss");
 
 
-require<any>("@blueprintjs/core/dist/blueprint.css");
+require("@blueprintjs/core/dist/blueprint.css");
 
 export interface LayoutProps { title: string; }
 export interface LayoutState { open?: boolean; title?: string; }
