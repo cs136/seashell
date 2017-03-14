@@ -1,7 +1,7 @@
 import {SeashellWebsocket, WebsocketResult, WebsocketError} from "./websocket_client";
 import {WSConnection} from "./login";
-import {Storage} from "./storage";
-import {History,Settings,Test,SeashellFile,SeashellCompiler,SeashellRunner,SeashellTester,SeashellPID,Change} from "./types";
+import {Storage, Project, File, Settings} from "./storage";
+import {History,Test,SeashellFile,SeashellCompiler,SeashellRunner,SeashellTester,SeashellPID,Change} from "./types";
 export {WSConnection, WebsocketError, WebsocketService, SeashellWebsocket}
 export * from "./storage";
 
@@ -405,7 +405,7 @@ class WebsocketService {
     throw new WebsocketError(name + " is not available in offline mode.");
   }
 
-  public hasOfflineChanges(): boolean {
+  public hasOfflineChanges(): Promise<boolean> {
     return this.storage.hasOfflineChanges();
   }
 }

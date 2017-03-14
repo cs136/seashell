@@ -110,7 +110,6 @@ class ShittyCoder extends AbstractCoder {
                        server_challenge: number[], 
                        client_nonce: number[], 
                        iv: number[]): Promise<CoderEncrypted> {
-    var plain = [];
     var cipher = new sjcl.cipher.aes(rawKey);
     /** OK, now we proceed to authenticate. */
     var raw_response = [].concat(client_nonce, server_challenge);
@@ -118,8 +117,7 @@ class ShittyCoder extends AbstractCoder {
     var ivArr = this.toBits(iv);
 
     var frameArr = this.toBits(raw_response);
-    var plainArr = this.toBits(plain);
-    var authArr = sjcl.bitArray.concat(ivArr, plainArr);
+    var authArr = ivArr;
     var out = sjcl.mode.gcm.encrypt(cipher,
         frameArr,
         ivArr,

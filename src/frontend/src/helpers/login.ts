@@ -1,6 +1,5 @@
 import * as $ from "jquery";
-import {AuthKey} from "./crypto";
-export {Login, AuthKey, LoginError, WSConnection}
+export {Login, LoginError, WSConnection}
 
 class LoginError extends Error {
   constructor(msg: string,

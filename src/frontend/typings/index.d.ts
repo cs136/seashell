@@ -3,7 +3,6 @@ declare module 'react-monaco-editor';
 declare module 'react-draggable';
 declare module 'xterm';
 declare module "md5";
-declare module "node-aes-gcm";
 
 declare var require: {
    <T>(path: string): T;
