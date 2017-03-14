@@ -56,7 +56,7 @@ class Coder {
     };
   }
 
-  public async answer(server_challenge: Uint8Array) : Promise<{
+  public async answer(server_challenge: number[]) : Promise<{
       iv: number[],
       encrypted: number[],
       authTag: number[],
@@ -65,18 +65,21 @@ class Coder {
     const iv = new Int32Array(32);
     webcrypto.getRandomValues(iv);    
     /** Generate a nonce. */
-    var client_nonce = new Uint8Array(32);
+    const client_nonce = new Uint8Array(32);
     new WebCrypto().getRandomValues(client_nonce);
+
+    const arr_iv = Array.from(iv);
+    const arr_client_nonce = Array.from(client_nonce);
     // for (var i = 0; i < client_nonce.length; i++) {
     //   client_nonce[i] = client_nonce[i] & 0xFF;
     // }
     /** OK, now we proceed to authenticate. */
-    const result = await this.encrypt(this.rawKey, server_challenge, client_nonce, iv); 
+    const result = await this.encrypt(this.rawKey, server_challenge, arr_client_nonce, arr_iv); 
     return {
       iv: result.iv,
       encrypted: result.encrypted,
       authTag: result.authTag,
-      nonce: client_nonce
+      nonce: arr_client_nonce
     }
   }
 
