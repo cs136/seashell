@@ -1,6 +1,6 @@
 import {History,Settings,Change} from './types';
 import WebSocket = require("ws");
-import {Coder, AuthKey} from './crypto';
+import {Coder, ShittyCoder} from './crypto';
 import WebCrypto = require("node-webcrypto-ossl");
 
 export {WebsocketResult, SeashellWebsocket, WebsocketError};
@@ -76,12 +76,11 @@ class Response {
 
 
 class SeashellWebsocket {
-  private coder: Coder;
+  private coder: ShittyCoder;
   private lastRequest: number;
   public requests: {[index:number]: Request<any>};
   // public ready: Promise<boolean>;
   private authenticated: boolean;
-  private server_nonce: AuthKey;
   private failed: boolean;
   private closed: boolean;
   private started: boolean;
@@ -93,8 +92,8 @@ class SeashellWebsocket {
   [key: string]: any;
 
   constructor(private uri: string, 
-              private key: AuthKey) {
-    this.coder = new Coder(key);
+              private key: number[]) {
+    this.coder = new ShittyCoder(key);
     console.warn(`Using key ${key} to create Coder.`);
     this.websocket = new WebSocket(this.uri);
     this.lastMsgID = 0;
@@ -180,35 +179,12 @@ class SeashellWebsocket {
   public async authenticate(): Promise<void> {
     const server_challenge = await this.requests[-1].received;
 
-    const result = await this.coder.shittyAnswer(server_challenge);
+    const result = await this.coder.answer(server_challenge);
     const response = [result.iv, 
                       result.encrypted, 
                       result.authTag, 
                       result.nonce];
 
-/*
-    // // Generate a nonce
-    server_challenge = new Uint32Array(server_challenge);
-    let client_nonce = new Uint32Array(crypto.randomBytes(128));
-    // for (let i = 0; i < client_nonce.length; i++) {
-    //   client_nonce[i] = client_nonce[i] & 0xFF;
-    // }
-    // // OK, now we proceed to authenticate.
-    let raw_response = new Uint32Array(Array.from(client_nonce).concat(Array.from(server_challenge)));
-    // raw_response.set(client_nonce, 0);
-    // raw_response.set(server_challenge, client_nonce.byteLength);
-    const iv  = new Uint8Array(crypto.randomBytes(48).buffer);
-    const key = new Uint32Array(this.key);
-    const authdata = iv;
-    // console.warn(this.key, key.byteLength, iv.byteLength, raw_response.byteLength);
-    let encrypted = aesgcm.encrypt(Buffer.from(key.buffer), 
-                                    Buffer.from(iv.buffer), 
-                                    Buffer.from(raw_response.buffer), 
-                                    Buffer.from(authdata.buffer));
-    const ciphertext = new Uint8Array(encrypted.ciphertext);
-    const auth_tag   = new Uint8Array(encrypted.auth_tag);
-    let response = [Array.from(iv), Array.from(ciphertext), Array.from(auth_tag), Array.from(client_nonce)];
-//*/
     this.requests[-2].message = {
       id: -2,
       type: 'clientAuth', 

@@ -30,7 +30,6 @@ class Login {
         },
         dataType: "json"
       });
-      console.warn("Login info:", response);
       return new WSConnection(response.key,
                               response.host, 
                               response.port, 

@@ -1,37 +1,61 @@
 import WebCrypto = require("node-webcrypto-ossl");
 import CryptoKey = require("node-webcrypto-ossl");
 import sjcl = require("sjcl");
-export {Coder, CoderEncrypted, AuthKey}
+export {Coder, CoderEncrypted, ShittyCoder}
 
 const webcrypto = new WebCrypto();
-type AuthKey = Uint8Array;
 
 interface CoderEncrypted {
-  iv: Uint8Array;
-  tag: Uint8Array;
-  encrypted: Uint8Array;
+  iv: number[];
+  authTag: number[];
+  encrypted: number[];
+  nonce: number[]
 }
 
-class Coder {
+// factored some code out in the abstract class
+// so that you can migrate away from the shitty sjcl later if every possible
+abstract class AbstractCoder {
+  constructor(public rawKey?: number[]) {};
+  public abstract async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted>;
+  public abstract async genRandom(): Promise<{iv: number[], nonce: number[]}>;
+
+  public async answer(challenge: number[]): Promise<CoderEncrypted> {
+      const rand = await this.genRandom();
+      const result = await this.encrypt(this.rawKey, challenge, rand.nonce, rand.iv); 
+    return {
+      iv: result.iv,
+      encrypted: result.encrypted,
+      authTag: result.authTag,
+      nonce: result.nonce
+    }
+  }
+}
+
+// new but doesn't work
+class Coder extends AbstractCoder {
+
   key: NodeWebcryptoOpenSSL.CryptoKey;
 
-  constructor(public rawKey?: number[]) {};
+  constructor(public rawKey?: number[]) {
+    super();
+  };
+  
+  public async genRandom(): Promise<{ iv: number[], nonce: number[]} > {
+    const iv = new Int32Array(32);
+    webcrypto.getRandomValues(iv);    
+    const client_nonce = new Uint8Array(32);
+    new WebCrypto().getRandomValues(client_nonce);
+    return {
+      iv: Array.from(iv),
+      nonce: Array.from(client_nonce)
+    }
+  };
 
-  public async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<{
-      iv: number[],
-      encrypted: number[],
-      authTag: number[],
-    }> {
-    console.log(`rawKey[${rawKey.length}]: ${rawKey}`);
-    console.log(`Server challenge[${challenge.length}]: ${challenge}`);
-    console.log(`client_nonce[${nonce.length}] ${nonce}`);
-    console.log(`iv[${iv.length}] ${iv}`);
-    // let iv = new Uint8Array(48);
+  public async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted> {
 
     const raw_response = new Uint8Array(nonce.length + challenge.length);
     raw_response.set(nonce, 0);
     raw_response.set(challenge, nonce.length);
-    console.log(`raw_response[${raw_response.length}] ${raw_response}`);
 
     const key8 = new Int8Array(Int32Array.from(rawKey).buffer);
     const key = await webcrypto.subtle.importKey("raw", key8, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
@@ -43,38 +67,55 @@ class Coder {
       tagLength: 128
     }, key, raw_response);
 
-    console.warn(`result[${result.byteLength}] ${new Uint8Array(result)}`);
     let encrypted = result.slice(0, result.byteLength - 16);
-    console.warn(`encrypted[${encrypted.byteLength}] ${new Uint8Array(encrypted)}`);
     let authTag = result.slice(result.byteLength - 16);
-    console.warn(`authTag[${authTag.byteLength}] ${new Uint8Array(authTag)}`);
 
     return {
       iv: iv,
       encrypted: Array.from(new Uint8Array(encrypted)),
       authTag: Array.from(new Uint8Array(authTag)),
+      nonce: nonce
     };
   }
 
-  public async shittyEncrypt(rawKey: number[], server_challenge: number[], client_nonce: number[], iv: number[]): Promise<{
-      iv: number[],
-      encrypted: number[],
-      authTag: number[],
-    }> {
+
+  public async decrypt(encryptionResult: CoderEncrypted): Promise<ArrayBuffer> {
+    let iv = encryptionResult.iv;
+    let encrypted = encryptionResult.encrypted;
+    let tag = encryptionResult.authTag;
+    let data = new Uint8Array(encrypted.length + tag.length);
+    data.set(new Uint8Array(encrypted), 0);
+    data.set(new Uint8Array(tag), encrypted.length);
+    let result = await webcrypto.subtle.decrypt({
+      name: "AES-GCM",
+      iv: iv,
+      additionalData: iv,
+      tagLength: 128,
+    }, this.key, data);
+    return result;
+  }
+
+}
+
+// shitty but works
+class ShittyCoder extends AbstractCoder {
+
+  key: NodeWebcryptoOpenSSL.CryptoKey;
+
+  constructor(public rawKey?: number[]) {
+    super(rawKey);
+  };
+
+  public async encrypt(rawKey: number[], 
+                       server_challenge: number[], 
+                       client_nonce: number[], 
+                       iv: number[]): Promise<CoderEncrypted> {
     var plain = [];
     var cipher = new sjcl.cipher.aes(rawKey);
     /** OK, now we proceed to authenticate. */
     var raw_response = [].concat(client_nonce, server_challenge);
 
-    // console.warn("server_challenge",server_challenge);
-    // console.warn("client_nonce",client_nonce);
-    // console.warn("raw_response",raw_response);
-
     var ivArr = this.toBits(iv);
-
-    // console.warn("iv", iv);
-    // console.warn("ivArr", ivArr);
-    // console.warn("this.fromBits(ivArr)", this.fromBits(ivArr));
 
     var frameArr = this.toBits(raw_response);
     var plainArr = this.toBits(plain);
@@ -87,82 +128,24 @@ class Coder {
     var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128);
     var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
-    // console.warn("out", out);
-    // console.warn("this.fromBits(ivArr)", this.fromBits(ivArr));
-    // console.warn("this.fromBits(codedArr)", this.fromBits(codedArr));
-    // console.warn("this.fromBits(tagArr)", this.fromBits(tagArr));
-
     return {
       iv: this.fromBits(ivArr),
       encrypted: this.fromBits(codedArr),
       authTag: this.fromBits(tagArr),
+      nonce: client_nonce
     };
   }
 
-  public async shittyAnswer(server_challenge: number[]): Promise<{
-      iv: number[],
-      encrypted: number[],
-      authTag: number[],
-      nonce: number[]
-    }> {
-
+  public async genRandom(): Promise<{iv: number[], nonce: number[]}> {
     var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
     var client_nonce = sjcl.random.randomWords(32);
     for (var i = 0; i < client_nonce.length; i++) {
       client_nonce[i] = client_nonce[i] & 0xFF;
     }
-
-    /** OK, now we proceed to authenticate. */
-    const result = await this.shittyEncrypt(this.rawKey, server_challenge, client_nonce, iv); 
     return {
-      iv: result.iv,
-      encrypted: result.encrypted,
-      authTag: result.authTag,
+      iv: iv,
       nonce: client_nonce
     }
-  }
-
-  public async answer(server_challenge: number[]): Promise<{
-      iv: number[],
-      encrypted: number[],
-      authTag: number[],
-      nonce: number[]
-    }> {
-    const iv = new Int32Array(32);
-    webcrypto.getRandomValues(iv);    
-    /** Generate a nonce. */
-    const client_nonce = new Uint8Array(32);
-    new WebCrypto().getRandomValues(client_nonce);
-
-    const arr_iv = Array.from(iv);
-    const arr_client_nonce = Array.from(client_nonce);
-    for (var i = 0; i < client_nonce.length; i++) {
-      client_nonce[i] = client_nonce[i] & 0xFF;
-    }
-    /** OK, now we proceed to authenticate. */
-    const result = await this.encrypt(this.rawKey, server_challenge, arr_client_nonce, arr_iv); 
-    return {
-      iv: result.iv,
-      encrypted: result.encrypted,
-      authTag: result.authTag,
-      nonce: arr_client_nonce
-    }
-  }
-
-  public async decrypt(encryptionResult: CoderEncrypted): Promise<ArrayBuffer> {
-    let iv = encryptionResult.iv;
-    let encrypted = encryptionResult.encrypted;
-    let tag = encryptionResult.tag;
-    let data = new Uint8Array(encrypted.byteLength + tag.byteLength);
-    data.set(new Uint8Array(encrypted), 0);
-    data.set(new Uint8Array(tag), encrypted.byteLength);
-    let result = await webcrypto.subtle.decrypt({
-      name: "AES-GCM",
-      iv: iv,
-      additionalData: iv,
-      tagLength: 128,
-    }, this.key, data);
-    return result;
   }
 
   /** Convert from a bitArray to an array of bytes. */
@@ -192,5 +175,5 @@ class Coder {
     }
     return out;
   }
+
 }
-//*/
