@@ -43,12 +43,12 @@ export const appStateActions = {
 
 
 
-export default function appStateReducer(state: appStateReducerState = {errors: [{title: "Error title", body: "Error body"}, {title: "error title 2", body: "error body 2"}], currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {errors: [], currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.removeError:
       state=clone(state);
-      state.errors.splice(action.payload.errorIDX);
-      return state
+      state.errors.splice(action.payload.errorIDX, 1);
+      return state;
     case appStateActions.copyFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.renameFile:
