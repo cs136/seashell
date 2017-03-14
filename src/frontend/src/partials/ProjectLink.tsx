@@ -1,8 +1,8 @@
 import * as React from "react";
 import {Link} from "react-router";
 
-const layoutStyles = require<any>("../Layout.scss");
-const styles = require<any>("./ProjectLink.scss");
+const layoutStyles = require("../Layout.scss");
+const styles = require("./ProjectLink.scss");
 
 export interface ProjectLinkProps { project: string; }
 export interface ProjectLinkState { }

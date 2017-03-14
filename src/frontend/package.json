@@ -1,6 +1,9 @@
 {
   "name": "seashell",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=6.10 <7"
+  },
   "scripts": {
     "start": "node server.js",
     "test": "node_modules/.bin/jest",
@@ -36,6 +39,7 @@
     "@blueprintjs/core": "1.11.1",
     "@types/history": "2.0.44",
     "@types/jest": "18.1.1",
+    "@types/node": "7.0.8",
     "@types/pure-render-decorator": "0.2.27",
     "@types/ramda": "0.0.2",
     "@types/react": "15.0.0",

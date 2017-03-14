@@ -3,7 +3,7 @@ import {Menu, MenuItem, Popover, Position} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 import FileActions from "./FileActions";
 
-const styles = require<any>("./project.scss");
+const styles = require("./project.scss");
 
 export interface OpenFilesProps {setTargetFile: Function; toggleDelete: Function; toggleCopy: Function; toggleRename: Function };
 export interface OpenFilesState { };

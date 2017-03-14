@@ -8,7 +8,7 @@ export interface ConsoleProps { readOnly: boolean; style?: any; };
 export interface ConsoleState { input: boolean; line: number; currString: string; };
 
 
-const styles = require<any>("xterm/lib/xterm.css");
+const styles = require("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     term: any;
