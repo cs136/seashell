@@ -3,8 +3,8 @@ import {map, actionsInterface} from "../actions";
 import {Link} from "react-router";
 import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
-const layoutStyles = require<any>("../Layout.scss");
-const styles = require<any>("./Home.scss");
+const layoutStyles = require("../Layout.scss");
+const styles = require("./Home.scss");
 
 export interface HomeProps { title: string; }
 export interface HomeState { open?: boolean; title?: string; }

@@ -3,7 +3,7 @@ import {Menu, MenuItem} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 import File from "./File";
 
-const styles = require<any>("./project.scss");
+const styles = require("./project.scss");
 
 export interface QuestionListProps { project: any; };
 export interface QuestionListState {  }

@@ -8,9 +8,9 @@ import * as R from "ramda";
 import ErrorList from "./Errors";
 
 
-const logo = require<any>("./logo.svg");
-const styles = require<any>("./index.scss");
-const layoutStyles = require<any>("../../Layout.scss");
+const logo = require("./logo.svg");
+const styles = require("./index.scss");
+const layoutStyles = require("../../Layout.scss");
 
 
 export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; }
