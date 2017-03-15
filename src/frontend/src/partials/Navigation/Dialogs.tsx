@@ -162,8 +162,8 @@ class HelpDialog extends React.Component<DialogProps, DialogState> {
         <p>If you have used Seashell in a previous term and want to clear all of
         your old projects, you can <a href="">archive all
         projects</a>.</p>
-        <h4>Default Editor Shortcuts</h4>
-        <p>These are shortcuts that will work when the editor window is focused.</p>
+        <h4>Seashell Shortcuts</h4>
+        <p>These are shortcuts that will work anywhere on the page.</p>
         <div className="pt-card pt-elevation-2">
           <p>
             <Blueprint.Tag>Ctrl-f or Cmd-f</Blueprint.Tag> Start new search.
@@ -195,11 +195,13 @@ class HelpDialog extends React.Component<DialogProps, DialogState> {
           <p>
             <Blueprint.Tag>Highlight Line, Shift-Tab</Blueprint.Tag> Block Unindent.
           </p>
-        </div>
+        </div> 
         <br/><br/>
+        <h4>Editor Shortcuts</h4>
+        <p>We use the Monaco editor (found in <a href="http://code.visualstudio.com" target="_blank">Visual Studio Code</a>) which implements many of the shortcuts you are accustomed to in a modern editor. For a full list of available commands, hit <Blueprint.Tag>F1</Blueprint.Tag> while focused on the editor.</p>
         <h4>Giving Feedback</h4>
         <p>Any feedback you may have on Seashell, especially bugs you have encountered, can be reported
-        using <a href="https://gitreports.com/issue/cs136/seashell">Seashell"s Git Reports page</a>.
+        using <a href="https://gitreports.com/issue/cs136/seashell">Seashells Git Reports page</a>.
         Please include your UW userid and full name.</p>
       </div>);
   }

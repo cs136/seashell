@@ -35,7 +35,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     getLines(): number {
-        return document.getElementsByClassName('xterm-rows')[0].childElementCount;
+        return document.getElementsByClassName("xterm-rows")[0].childElementCount;
     }
 
     setHeight(height: Number) {

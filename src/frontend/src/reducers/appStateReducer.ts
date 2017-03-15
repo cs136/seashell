@@ -65,7 +65,7 @@ export default function appStateReducer(state: appStateReducerState = {errors: [
     case appStateActions.removeProject:
       return mergeBetter(state, {projects: state.projects.splice(state.projects.indexOf(action.payload.name), 1)});
     case appStateActions.removeFile:
-      state=clone(state);
+      state = clone(state);
       state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
       return state;
     case appStateActions.addQuestion:
@@ -78,6 +78,7 @@ export default function appStateReducer(state: appStateReducerState = {errors: [
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.openFile:
+      if(state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1) return state; // don't duplicate files
       state = clone(state);
       state.currentProject.currentQuestion.openFiles.push(action.payload);
       return state;

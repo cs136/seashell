@@ -63,6 +63,12 @@ const mapDispatchToProps = (dispatch: Function) => {
 };
 
 const actionsStoreType = returnType(mapDispatchToProps);
+
+
+export function getDispatch<actionsStoreType>(dispatch: Function){
+    return mapDispatchToProps(dispatch);
+}
+
 export type actionsInterface = typeof actionsStoreType & globalState;
 
 export function map<PropertyType>(Component: ComponentClass<any>) {

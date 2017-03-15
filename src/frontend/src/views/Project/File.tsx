@@ -8,13 +8,14 @@ import * as Draggable from "react-draggable"; // Both at the same time
 const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
-export interface FileState { editor: any; }
+export interface FileState { editor: any; dirty: boolean; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
   constructor(props: FileProps & actionsInterface) {
     super(props);
     this.state = {
-        editor: null
+        editor: null,
+        dirty: true
     };
     this.handleDrag = this.handleDrag.bind(this);
     this.stopDrag = this.stopDrag.bind(this);
@@ -36,19 +37,27 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   editorDidMount(editor: any, monaco: any) {
     editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
     this.state.editor = editor;
+    this.state.dirty = true;
     this.onResize();
     editor.focus();
   }
   onChange(newValue: string, e: any) {
     this.props.dispatch.file.updateFile(newValue);
   }
+  componentDidUpdate() {
+    if (this.state.dirty === true) {
+      this.state.dirty = false;
+      window.removeEventListener("resize", this.onResize);
+      this.onResize = this.onResize.bind(this);
+      window.addEventListener("resize", this.onResize);
+      this.onResize();
+    }
+  }
   componentWillUnmount() {
     window.removeEventListener("resize", this.onResize);
   }
   componentDidMount() {
-    this.onResize = this.onResize.bind(this);
-    window.addEventListener("resize", this.onResize);
-    this.onResize();
+    this.componentDidUpdate();
   }
   stopDrag(e: any) {
     const percent = e.clientX / window.innerWidth;

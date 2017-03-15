@@ -3,6 +3,8 @@ import { render } from "react-dom";
 import { Provider } from "react-redux";
 import { createStore, applyMiddleware } from "redux";
 import { install } from "offline-plugin/runtime";
+import {actionsInterface} from "./actions";
+import HotKeys from "./HotKeys";
 import reducers from "./reducers";
 import App from "./App";
 
@@ -17,5 +19,7 @@ const store = createStoreWithMiddleware(reducers);
 
 const rootEl = document.getElementById("root");
 render(<Provider store={store}><App /></Provider>, rootEl);
+
+HotKeys(store);
 
 install();
