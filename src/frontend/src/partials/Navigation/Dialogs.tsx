@@ -78,7 +78,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
               <FontSizeTextBox fontSize={this.state.fontSize} changeParentState={(e: number) => this.setState.bind(this)(merge(this.state, {fontSize: e}))}/>
             </div>
           </label>
-          <label className="pt-label">
+          {/*<label className="pt-label">
             Editor mode:
               <div className="pt-control-group">
               <div className="pt-select pt-fill">
@@ -89,7 +89,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
                 </select>
               </div>
             </div>
-          </label>
+          </label>*/}
           <label className="pt-label">
             Tab Width
               <div className="pt-control-group">
