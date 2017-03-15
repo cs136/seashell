@@ -60,7 +60,6 @@
 .openFilesTab {
     display:inline-block;
     margin: 0px 0.25em 0 0em!important;
-    background:#FFF;
     border-radius:3px;
     border:1px solid transparent;
     transition: border 250ms;
@@ -123,7 +122,7 @@
     border-bottom-style: none;
     box-sizing: content-box;
     cursor: ew-resize;
-    background: #333;
+    background: #DDD;
     flex: none !important;
     transform: none !important;
     position: relative;
@@ -131,7 +130,23 @@
 }
 
 .resizeHandle:hover {
-    background: #666;
+    background: #BCBCBC;
+}
+
+:global{
+    .pt-dark{
+        :local{
+            .resizeHandle{
+                background:#333;
+            }
+            .resizeHandle:hover{
+                background:#666;
+            }
+            .resizeHandle:focus, .resizeHandle:active{
+                background:$theme;
+            }
+        }
+    }
 }
 
 .resizeHandle:focus,

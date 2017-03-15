@@ -1,6 +1,7 @@
 // import React from "react";
 import * as React from "react";
 import Navigation from "./partials/Navigation";
+import {map, actionsInterface} from "./actions";
 
 const styles = require("./Layout.scss");
 
@@ -10,8 +11,8 @@ require("@blueprintjs/core/dist/blueprint.css");
 export interface LayoutProps { title: string; }
 export interface LayoutState { open?: boolean; title?: string; }
 
-export default class Layout extends React.Component<LayoutProps, LayoutState> {
-  constructor(props: LayoutProps) {
+class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState> {
+  constructor(props: LayoutProps & actionsInterface) {
     super(props);
     this.state = {
       open: false,
@@ -26,7 +27,7 @@ export default class Layout extends React.Component<LayoutProps, LayoutState> {
 
   render() {
     return (
-      <div className={styles.app}>
+      <div className={styles.app + " " + (this.props.settings.theme === 0 ? "pt-dark" : "")}>
         <div className={styles.gradientBar} />
         <div className={styles.mainContent}>{this.props.children}</div>
       </div>
@@ -34,3 +35,4 @@ export default class Layout extends React.Component<LayoutProps, LayoutState> {
   }
 }
 
+export default map<LayoutProps>(Layout);

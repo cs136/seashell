@@ -5,14 +5,22 @@
     display:block;
     text-decoration:none;
     color:#222;
-    background:#FFF;
     transition: all 250ms;
     border-left:2px solid #CCC;
+}
+:global{
+    .pt-dark{
+        :local{
+            .container{
+                border-left-color:#555;
+            }
+        }
+    }
 }
 .container:hover{
     text-decoration:none;
     color:$theme;
-    background:lighten($theme, 48%);
+    background:rgba($theme, 0.15);
     border-left-color:$theme;
 }
 .linkContainer{

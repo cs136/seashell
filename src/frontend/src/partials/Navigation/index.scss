@@ -40,6 +40,20 @@
     height:auto;
 }
 
+.options{
+    margin-left:auto;
+}
+
+:global{
+    .pt-dark{
+        :local{
+            .navbar{
+                border-bottom-color: $darkBorder !important;
+            }
+        }
+    }
+}
+
 @media(max-width: $mobile-break){
     .navbar{
         flex-wrap: wrap;
