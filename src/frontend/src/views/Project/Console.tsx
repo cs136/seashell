@@ -8,7 +8,7 @@ export interface ConsoleProps { readOnly: boolean; style?: any; };
 export interface ConsoleState { input: boolean; line: number; currString: string; };
 
 
-const styles = require<any>("xterm/lib/xterm.css");
+const styles = require("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     term: any;
@@ -20,14 +20,22 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     dataReceived(payload: string) {
-        this.term.eraseLine(this.term.y);
+        this.term.eraseRight(0, this.term.y);
         this.term.x = 0;
-        this.term.y = this.state.line;
-        this.term.write(" " + payload);
-        this.term.prompt();
-        this.term.refresh(this.state.line, this.state.line + 1, false);
+        this.term.write(" " + payload + "\r\n");
+        if (this.state.line === this.getLines()) {
+            this.term.scroll();
+            this.term.refresh(this.term.y, this.term.y, false);
+        } else {
+            this.term.refresh(this.state.line, this.state.line+1, false);
+        }
+        this.term.write(" > ");
         this.term.write(this.state.currString);
         this.setState(merge(this.state, { line: this.term.y + 1 }));
+    }
+
+    getLines(): number {
+        return document.getElementsByClassName('xterm-rows')[0].childElementCount;
     }
 
     setHeight(height: Number) {
@@ -63,7 +71,14 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
                 let printable = (!evt.altKey && !evt.altGraphKey && !evt.ctrlKey && !evt.metaKey);
                 if (evt.which === 13) {
                     this.setState(merge(this.state, { line: this.term.y + 1, currString: "" }));
-                    this.term.prompt();
+                    if (this.state.line === this.getLines()) {
+                        this.term.scroll();
+                        this.term.x = 0;
+                        this.term.refresh(this.term.y, this.term.y, false);
+                        this.term.write(" > ");
+                    } else {
+                        this.term.prompt();
+                    }
                 } else if (evt.which === 8) {
                     if (this.term.x > 3 || this.term.y > this.state.line) {
                         if (this.term.x === 0) {

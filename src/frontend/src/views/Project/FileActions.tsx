@@ -2,7 +2,7 @@ import * as React from "react";
 import {Menu, MenuItem, MenuDivider} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 
-const styles = require<any>("./project.scss");
+const styles = require("./project.scss");
 
 export interface FileActionsProps { file: string; setTargetFile: Function; toggleDelete: Function; toggleCopy: Function; toggleRename: Function};
 export interface FileActionsState {  }

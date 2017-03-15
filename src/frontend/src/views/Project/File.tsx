@@ -5,7 +5,7 @@ import Xterm from "./Console";
 import Loading from "./Loading";
 import * as Draggable from "react-draggable"; // Both at the same time
 
-const styles = require<any>("./project.scss");
+const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
 export interface FileState { editor: any; }
