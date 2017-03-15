@@ -8,16 +8,20 @@ module.exports = {
   ],
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.js', 
-    publicPath: '/dist/',
+    filename: 'bundle.[chunkhash].js', 
+    publicPath: '/',
   },
   plugins: [
-      new CopyWebpackPlugin([
+    new CopyWebpackPlugin([
       {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
       }
-    ])
+    ]),
+    new HtmlWebpackPlugin ({
+      inject: true,
+      template: './src/index.html'
+    })
   ],
   devtool: "source-map",
   resolve: {

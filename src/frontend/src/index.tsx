@@ -7,7 +7,9 @@ import reducers from "./reducers";
 import App from "./App";
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./uwseashell-service-worker.js");
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("sw.js");
+  });
 }
 
 const createStoreWithMiddleware = applyMiddleware()(createStore);

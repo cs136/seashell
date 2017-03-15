@@ -78,9 +78,9 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         fontSize: this.props.settings.fontSize
     };
     const loaderOptions = {
-        url: "dist/vs/loader.js",
+        url: "vs/loader.js",
         paths: {
-            vs: "dist/vs"
+            vs: "vs"
         }
     };
     const xtermOptions = {
