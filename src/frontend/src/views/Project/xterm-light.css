@@ -1,0 +1,35 @@
+.xterm-theme-light {
+    background-color: #fff !important;
+    color: #666 !important;
+
+}
+
+.xterm-theme-light:not(.focus) .terminal-cursor {
+    outline: 1px solid #666 !important;
+    background-color: #666 !important;
+}
+
+.xterm-theme-light.focus .terminal-cursor {
+    background-color: #666 !important;
+    color: #fff !important;
+}
+
+.xterm-theme-light.terminal:not(.xterm-cursor-style-underline):not(.xterm-cursor-style-bar).focus.xterm-cursor-blink .terminal-cursor {
+    animation: xterm-cursor-blink-light 1.2s linear infinite !important;
+}
+
+@keyframes xterm-cursor-blink-light {
+    0% {
+        background-color: #666 !important;
+        color: #000 !important;
+    }
+    50% {
+        background-color: #fff !important;
+        color: #666 !important;
+    }
+}
+
+.xterm-theme-light *:not(.terminal-cursor) {
+    background-color: #fff !important;
+    color: #666 !important;
+}
