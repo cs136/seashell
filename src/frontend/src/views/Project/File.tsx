@@ -8,13 +8,15 @@ import * as Draggable from "react-draggable"; // Both at the same time
 const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
-export interface FileState { editor: any; }
+export interface FileState { editor: any; dirty: boolean; editorLastUpdated: number; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
   constructor(props: FileProps & actionsInterface) {
     super(props);
     this.state = {
-        editor: null
+        editor: null,
+        dirty: true,
+        editorLastUpdated: -1
     };
     this.handleDrag = this.handleDrag.bind(this);
     this.stopDrag = this.stopDrag.bind(this);
@@ -33,33 +35,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     this.state.editor.layout();
     (this.refs.terminal as Xterm).updateLayout();
   }
-  editorDidMount(editor: any, monaco: any) {
-    editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
-    this.state.editor = editor;
-    this.onResize();
-    editor.focus();
-  }
-  onChange(newValue: string, e: any) {
-    this.props.dispatch.file.updateFile(newValue);
-  }
-  componentWillUnmount() {
-    window.removeEventListener("resize", this.onResize);
-  }
-  componentDidMount() {
-    this.onResize = this.onResize.bind(this);
-    window.addEventListener("resize", this.onResize);
-    this.onResize();
-  }
-  stopDrag(e: any) {
-    const percent = e.clientX / window.innerWidth;
-    this.props.dispatch.settings.updateEditorRatio(percent);
-  }
-  handleDrag(e: any) {
-    const percent = e.clientX / window.innerWidth;
-    this.state.editor.domElement.style.flex = percent;
-    (this.refs.terminal as Xterm).setFlex(1 - percent);
-  }
-  render() {
+  updateEditorOptions() {
     const editorOptions = {
         automaticLayout: true,
         cursorBlinking: "phase",
@@ -77,10 +53,47 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         fontFamily: this.props.settings.font + ", monospace",
         fontSize: this.props.settings.fontSize
     };
+    this.state.editorLastUpdated = this.props.settings.updated;
+    this.state.editor.updateOptions(editorOptions);
+    this.state.editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
+  }
+  editorDidMount(editor: any, monaco: any) {
+    this.state.editor = editor;
+    this.onResize();
+    editor.focus();
+    this.updateEditorOptions();
+  }
+  onChange(newValue: string, e: any) {
+    this.props.dispatch.file.updateFile(newValue);
+  }
+  componentDidUpdate() {
+    if (this.state.editorLastUpdated !== this.props.settings.updated) {
+      this.updateEditorOptions();
+    }
+  }
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.onResize);
+  }
+  componentDidMount() {
+      window.removeEventListener("resize", this.onResize);
+      this.onResize = this.onResize.bind(this);
+      window.addEventListener("resize", this.onResize);
+      this.onResize();
+  }
+  stopDrag(e: any) {
+    const percent = e.clientX / window.innerWidth;
+    this.props.dispatch.settings.updateEditorRatio(percent);
+  }
+  handleDrag(e: any) {
+    const percent = e.clientX / window.innerWidth;
+    this.state.editor.domElement.style.flex = percent;
+    (this.refs.terminal as Xterm).setFlex(1 - percent);
+  }
+  render() {
     const loaderOptions = {
-        url: "dist/vs/loader.js",
+        url: "vs/loader.js",
         paths: {
-            vs: "dist/vs"
+            vs: "vs"
         }
     };
     const xtermOptions = {
@@ -89,7 +102,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     };
     const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
     return (this.props.file === currentFile.name ? (<div className={styles.filePanel}>
-        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer"><MonacoEditor ref="editor" options={editorOptions} value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
+        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer"><MonacoEditor ref="editor" value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
           <div ref="resizeHandle" className={styles.resizeHandle} />
       </Draggable><Xterm ref="terminal" readOnly={false}/></div>
     </div>) : <Loading />);

@@ -12,13 +12,16 @@ module.exports = {
   output: {
     path: path.join(__dirname, 'dist'),
     filename: 'bundle.[chunkhash].js',
-    publicPath: '/dist/'
+    publicPath: '/'
   },
   plugins: [
     new CleanWebpackPlugin(['dist'], { verbose: false }),
     new CopyWebpackPlugin([
       { from: 'images/', to: 'images/' },
-      { from: 'manifest.json' }]),
+      { from: 'manifest.json' },{
+        from: './node_modules/monaco-editor/min/vs',
+        to: 'vs',
+    }]),
     new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: false,
@@ -29,10 +32,18 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
+    new HtmlWebpackPlugin ({
+      inject: true,
+      template: './src/index.html'
+    }),
     new SWPrecacheWebpackPlugin(
       {
         cacheId: 'uwseashell-pwa',
         filename: 'uwseashell-service-worker.js',
+        stripPrefix: './dist',
+        staticFileGlobs: [
+          './dist/vs/**.*'
+        ],
         runtimeCaching: [{
           handler: 'cacheFirst',
           urlPattern: /cardstack_search$/,

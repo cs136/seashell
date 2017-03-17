@@ -1,10 +1,9 @@
 import {mergeBetter} from "../helpers/utils";
 import {clone, reject, equals} from "ramda";
+import Error from "../partials/Errors";
 import {projectRef, fileRef} from "../types";
-export interface error {title: string, body: string};
 export interface appStateReducerState {[key: string]: any;
   projects: string[];
-  errors: error[];
   currentProject?: {
     name: string;
     id: string;
@@ -37,18 +36,13 @@ export const appStateActions = {
   openFile: "file_open",
   closeFile: "file_close",
   setRunFile: "file_set_run",
-  copyFile: "file_copy",
-  removeError: "error_remove"
+  copyFile: "file_copy"
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {errors: [], currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
   switch (action.type) {
-    case appStateActions.removeError:
-      state=clone(state);
-      state.errors.splice(action.payload.errorIDX, 1);
-      return state;
     case appStateActions.copyFile:
       return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
     case appStateActions.renameFile:
@@ -65,7 +59,7 @@ export default function appStateReducer(state: appStateReducerState = {errors: [
     case appStateActions.removeProject:
       return mergeBetter(state, {projects: state.projects.splice(state.projects.indexOf(action.payload.name), 1)});
     case appStateActions.removeFile:
-      state=clone(state);
+      state = clone(state);
       state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
       return state;
     case appStateActions.addQuestion:
@@ -78,6 +72,8 @@ export default function appStateReducer(state: appStateReducerState = {errors: [
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.openFile:
+      Error("You opened a file");
+      if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1) return state; // don't duplicate files
       state = clone(state);
       state.currentProject.currentQuestion.openFiles.push(action.payload);
       return state;
