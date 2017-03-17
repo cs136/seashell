@@ -57,6 +57,15 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     this.state.editor.updateOptions(editorOptions);
     this.state.editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
   }
+  updateConsoleOptions() {
+    if (this.props.settings.theme) {
+      (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-light");
+      (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-default");
+    } else {
+      (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-light");
+      (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-default");
+    }
+  }
   editorDidMount(editor: any, monaco: any) {
     this.state.editor = editor;
     this.onResize();
@@ -69,6 +78,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   componentDidUpdate() {
     if (this.state.editorLastUpdated !== this.props.settings.updated) {
       this.updateEditorOptions();
+      this.updateConsoleOptions();
     }
   }
   componentWillUnmount() {
@@ -79,6 +89,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       this.onResize = this.onResize.bind(this);
       window.addEventListener("resize", this.onResize);
       this.onResize();
+      this.updateConsoleOptions();
   }
   stopDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
