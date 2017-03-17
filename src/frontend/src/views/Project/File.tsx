@@ -94,6 +94,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   stopDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.props.dispatch.settings.updateEditorRatio(percent);
+    this.onResize();
   }
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
@@ -115,7 +116,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     return (this.props.file === currentFile.name ? (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer"><MonacoEditor ref="editor" value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
           <div ref="resizeHandle" className={styles.resizeHandle} />
-      </Draggable><Xterm ref="terminal" readOnly={false}/></div>
+      </Draggable><Xterm ref="terminal" className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" } readOnly={false}/></div>
     </div>) : <Loading />);
   }
 }

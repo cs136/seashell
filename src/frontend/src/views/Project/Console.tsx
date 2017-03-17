@@ -4,10 +4,10 @@ import { merge } from "ramda";
 
 Terminal.loadAddon("fit");
 
-export interface ConsoleProps { readOnly: boolean; style?: any; };
+export interface ConsoleProps { readOnly: boolean; style?: any; className?: string; };
 export interface ConsoleState { input: boolean; line: number; currString: string; };
 
-const lightStyles = require("./xterm-light.css");
+const lightStyles = require("./xterm.scss");
 const styles = require("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
@@ -105,6 +105,6 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
 
     render() {
         let style = {...this.props.style};
-        return(<div style={this.props.style} ref="console"></div>);
+        return(<div style={this.props.style} className={this.props.className} ref="console"></div>);
     }
 }
