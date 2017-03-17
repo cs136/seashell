@@ -22,7 +22,7 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
         </div>
         <div className={styles.mainRow}>
           <div className={styles.column}>
-            <h5>AssignmentsTest</h5>
+            <h5>Assignments</h5>
             {projects.map((project) => (<ProjectLink key={project} project={project} />))}
           </div>
           <div className={styles.column}>
