@@ -55,7 +55,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               }
           },
           app: {
-              removeError: (errorIDX: Number) => dispatch({type: appStateActions.removeError, payload: {errorIDX: errorIDX}})
+              // removeError: (errorIDX: Number) => dispatch({type: appStateActions.removeError, payload: {errorIDX: errorIDX}})
 
           }
         }
