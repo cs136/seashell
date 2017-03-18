@@ -73,8 +73,25 @@ class Response {
   result: WebsocketResult;
 }
 
-
 class SeashellWebsocket {
+  private static instance: SeashellWebsocket = null;
+
+  public static getInstance(): SeashellWebsocket {
+    if(SeashellWebsocket.instance) {
+      return SeashellWebsocket.instance;
+    }
+    else {
+      throw new WebsocketError("Call to SeashellWebsocket.getInstance() before websocket initialization.");
+    }
+  }
+
+  public static initialize(uri: string, key: number[]) {
+    if(SeashellWebsocket.instance) {
+      throw new WebsocketError("SeashellWebsocket initialized twice.");
+    }
+    SeashellWebsocket.instance = new SeashellWebsocket(uri, key);
+  }
+
   private coder: ShittyCoder;
   private lastRequest: number;
   public requests: {[index:number]: Request<any>};
@@ -91,7 +108,7 @@ class SeashellWebsocket {
   // this allows WebsocketService to access member functions by string key
   [key: string]: any;
 
-  constructor(private uri: string,
+  private constructor(private uri: string,
               private key: number[]) {
     this.coder = new ShittyCoder(key);
     this.websocket = new WebSocket(this.uri);

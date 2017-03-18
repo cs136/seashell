@@ -27,11 +27,19 @@ class Login {
         },
         dataType: "json"
       });
-      return new Connection(user,
-                            response.key,
-                            response.host,
-                            response.port,
-                            response.pingPort);
+      try {
+        return Connection.getInstance();
+      } catch(ex) {
+        if(ex instanceof LoginError) {
+          return Connection.initialize(user,
+                                       response.key,
+                                       response.host,
+                                       response.port,
+                                       response.pingPort);
+        }
+        else throw ex;
+      }
+
     } catch (ajax) {
       const code       = ajax.responseJSON.error.code;
       const msg        = ajax.responseJSON.error.message;
@@ -46,12 +54,31 @@ class Login {
 class Connection {
   public wsURI: string;
 
-  constructor(public username: string,
+  private constructor(public username: string,
               public key: number[],
               public host: string,
               public port: number,
               public pingPort: number) {
     this.wsURI = `wss://${this.host}:${this.port}`;
   };
+
+  public static instance: Connection = null;
+
+  public static getInstance(): Connection {
+    if(Connection.instance !== null) {
+      return Connection.instance;
+    }
+    else {
+      throw new LoginError("Called Connection.getInstance() before logging in.");
+    }
+  }
+
+  public static initialize(username: string, key: number[], host: string, port: number, pingPort: number): Connection {
+    if(Connection.instance !== null) {
+      throw new LoginError("Connection initialized twice.");
+    }
+    Connection.instance = new Connection(username, key, host, port, pingPort);
+    return Connection.instance;
+  }
 }
 
