@@ -14,6 +14,6 @@ class Storage extends WebStorage implements AbstractStorage {
   constructor(cnn: Connection) {
     const name = `seashell-${cnn.username}`;
     const store = new LocalStorage(name);
-    super(cnn, store);
+    super(store);
   }
 }

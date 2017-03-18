@@ -1,11 +1,12 @@
-import {SeashellWebsocket, WebsocketResult, WebsocketError} from "./WebsocketClient";
+import {SeashellWebsocket, WebsocketResult, WebsocketError} from "../WebsocketClient";
 import {Connection} from "../Login";
 import {LocalStorage} from "./LocalStorage";
 import {AbstractStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
         Settings, defaultSettings} from "./Interface";
-import {History,Test,SeashellFile,SeashellCompiler,SeashellRunner,SeashellTester,SeashellPID,Change} from "../types";
+import {History,Change} from "../types";
+import {Test} from "../Compiler";
 export {Connection, WebsocketError, WebStorage, SeashellWebsocket}
 import * as R from "ramda";
 
@@ -16,7 +17,6 @@ class Callback {
 }
 
 class WebStorage extends AbstractStorage {
-  private connection: Connection;
   // private synced: boolean;
   private connected: boolean;
   private failed: boolean;
@@ -29,10 +29,6 @@ class WebStorage extends AbstractStorage {
   private callbacks: Callback[];
   private socket: SeashellWebsocket;
   private storage: LocalStorage;
-
-  private compiler: SeashellCompiler;
-  private runner: SeashellRunner;
-  private tester: SeashellTester;
 
   public ping: () => Promise<WebsocketResult>;
   public newProjectFrom: (name: string, src_url: string) => Promise<WebsocketResult>;
@@ -58,9 +54,8 @@ class WebStorage extends AbstractStorage {
 
   public debug: boolean; // toggle this.debug && console.log
 
-  constructor(connection: Connection, storage: LocalStorage, debug?: boolean) {
+  constructor(storage: LocalStorage, debug?: boolean) {
     super();
-    this.connection = connection;
     // this.synced = false;
     this.connected = false;
     this.failed = false;
@@ -70,7 +65,7 @@ class WebStorage extends AbstractStorage {
     this.timeoutInterval = null;
     this.key = 0;
     this.storage = storage;
-    this.socket = new SeashellWebsocket(this.connection.wsURI, this.connection.key);
+    this.socket = SeashellWebsocket.getInstance();
     this.callbacks = [];
     this.debug = debug;
     this.socket.debug = debug;
@@ -496,7 +491,7 @@ class WebStorage extends AbstractStorage {
     }
   }
 
-  public async compileAndRunProject(project: string, question: string, file: SeashellFile, tests: Array<Test>) {
+  /*public async compileAndRunProject(project: string, question: string, file: SeashellFile, tests: Array<Test>) {
     if (!this.isOffline()) {
       var test_names = tests.map((test: Test) => {
         return test.test_name;
@@ -524,31 +519,31 @@ class WebStorage extends AbstractStorage {
       }
       return result;
     }
-  }
+  }*/
 
-  public async programKill(pid: SeashellPID) {
+  /*public async programKill(pid: SeashellPID) {
     if (typeof pid === 'object') {
       pid.kill();
     } else {
       return this.socket.programKill(pid);
     }
-  }
+  }*/
 
-  public async sendEOF(pid: number|SeashellPID) {
+  /*public async sendEOF(pid: number|SeashellPID) {
     if (typeof pid === 'object') {
       pid.sendEOF();
     } else {
       return this.socket.sendEOF(pid);
     }
-  }
+  }*/
 
-  public async startIO(project: string, pid: number|SeashellPID) {
+  /*public async startIO(project: string, pid: number|SeashellPID) {
     if (typeof pid === 'object') {
       pid.startIO();
     } else {
       return this.socket.startIO(project, pid);
     }
-  }
+  }*/
 
   /**
    * Sync everything, to be called when we first connect to the websocket.
