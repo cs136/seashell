@@ -5,7 +5,6 @@ import {map, actionsInterface} from "./actions";
 
 const styles = require("./Layout.scss");
 
-
 require("@blueprintjs/core/dist/blueprint.css");
 
 export interface LayoutProps { title: string; }
