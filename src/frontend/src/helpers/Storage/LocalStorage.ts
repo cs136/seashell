@@ -43,11 +43,13 @@ class LocalStorage implements LocalStorageInterface, AbstractStorage {
   private db: StorageDB;
   private has_offline_changes: boolean;
 
-  public constructor(dbName: string, options?: DBOptions) {
-    this.db = new StorageDB(dbName, options);
+  public constructor(private options?: DBOptions) {
     this.has_offline_changes = false;
   }
 
+  public async connect(dbName: string): Promise<void> {
+    this.db = new StorageDB(dbName, this.options);
+  }
 
   // Will be replaced by Dexie.Syncable.ISyncProtocol
   public async getProjectsForSync(): Promise<Project[]> {
@@ -346,7 +348,6 @@ class LocalStorage implements LocalStorageInterface, AbstractStorage {
     return this.db.projects.toCollection().toArray();
   }
 
-  public async connect(): Promise<void> {}
 }
 
 

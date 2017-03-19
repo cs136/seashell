@@ -4,9 +4,8 @@ import {WebStorage,
         SeashellWebsocket} from "../../src/helpers/Storage/WebStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "../../src/helpers/Storage";
+        Settings, defaultSettings, Services} from "../../src/helpers/Services";
 import {LocalStorage} from "../../src/helpers/Storage/LocalStorage";
-import {Login} from "../../src/helpers/login";
 import * as R from "ramda";
 import FakeIndexedDB = require("fake-indexeddb");
 import FDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
@@ -37,15 +36,10 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 describe("testing websocket.ts", () => {
 
-  let socket: WebStorage;
+  let socket = Services.storage();
 
   beforeAll(() => {
-    const store = new LocalStorage(TestAccount.user, { IDBKeyRange: FDBKeyRange, indexedDB: FakeIndexedDB });
-    return Login.login(TestAccount.user, TestAccount.password).then((cnn) => {
-      socket = new WebStorage(cnn, store, false);
-    }).then(() => {
-      return socket.connect();
-    }).catch((err) => {
+    return Services.login(TestAccount.user, TestAccount.password).catch((err) => {
       console.error(err);
     });
   });

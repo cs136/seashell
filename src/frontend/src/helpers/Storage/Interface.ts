@@ -4,8 +4,6 @@ export {AbstractStorage,
         Settings, defaultSettings}
 
 abstract class AbstractStorage {
-  // connect to the database
-  public abstract async connect(): Promise<void>;
   // projects
   public abstract async newProject(name: string): Promise<void>;
   public abstract async getProject(proj: ProjectID): Promise<Project>;
