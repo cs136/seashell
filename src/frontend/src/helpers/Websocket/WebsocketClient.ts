@@ -1,5 +1,6 @@
 import WebSocket = require("ws");
 import {Coder, ShittyCoder} from './Crypto';
+import {Connection} from '../Services';
 import WebCrypto = require("node-webcrypto-ossl");
 
 export {WebsocketResult, SeashellWebsocket, WebsocketError};
@@ -75,15 +76,16 @@ class Response {
 
 
 class SeashellWebsocket {
-  private coder: ShittyCoder;
+  private static cnn: Connection;
+  private static coder: ShittyCoder;
+  private static websocket: WebSocket;
   private lastRequest: number;
   public requests: {[index:number]: Request<any>};
   // public ready: Promise<boolean>;
-  private authenticated: boolean;
+  public authenticated: boolean;
   private failed: boolean;
   private closed: boolean;
   private started: boolean;
-  private websocket: WebSocket;
   private closes: () => void;
   private falures: () => void;
   public debug: boolean; // toggle console.log for tests
@@ -91,10 +93,7 @@ class SeashellWebsocket {
   // this allows WebsocketService to access member functions by string key
   [key: string]: any;
 
-  constructor(private uri: string,
-              private key: number[]) {
-    this.coder = new ShittyCoder(key);
-    this.websocket = new WebSocket(this.uri);
+  constructor() {
     this.lastMsgID = 0;
     this.authenticated = false;
     this.failed = false;
@@ -108,6 +107,28 @@ class SeashellWebsocket {
     this.requests[-4] = new Request({id: -4});
     // this.ready = new Promise((resolve, reject)=>{
     this.started = true;
+  }
+
+  public onFailure(callbacks: () => void) {
+    this.failures = callbacks;
+  }
+
+  public onClose(callbacks: () => void) {
+    this.closes = callbacks;
+  }
+
+  public close(): void {
+    this.websocket.close();
+  }
+
+  // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
+
+  public async authenticate(cnn: Connection): Promise<void> {
+
+    this.cnn = cnn;
+    this.coder = new ShittyCoder(this.cnn.key);
+    this.websocket = new WebSocket(this.cnn.wsURI);
+
     this.websocket.onerror = () => {
       this.failed = true;
       if (! this.authenticated) {
@@ -124,7 +145,7 @@ class SeashellWebsocket {
       return this.closes && this.closes();
     };
 
-    this.websocket.onmessage = (message) => {
+    this.websocket.onmessage = (message: any) => {
       try {
         const response_string = String.fromCharCode.apply(null, new Uint32Array(message.data));
         var response = <Response>(JSON.parse(response_string));
@@ -160,23 +181,7 @@ class SeashellWebsocket {
         console.error("websocket.onmessage received:", response);
       }
     }
-  }
 
-  public onFailure(callbacks: () => void) {
-    this.failures = callbacks;
-  }
-
-  public onClose(callbacks: () => void) {
-    this.closes = callbacks;
-  }
-
-  public close(): void {
-    this.websocket.close();
-  }
-
-  // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
-
-  public async authenticate(): Promise<void> {
     const server_challenge = await this.requests[-1].received;
 
     const result = await this.coder.answer(server_challenge);

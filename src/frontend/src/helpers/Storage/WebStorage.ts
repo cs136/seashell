@@ -1,12 +1,11 @@
-import {SeashellWebsocket, WebsocketResult, WebsocketError} from "./WebsocketClient";
-import {Connection} from "../Login";
+import {SeashellWebsocket, WebsocketResult, WebsocketError} from "../Websocket/WebsocketClient";
 import {LocalStorage} from "./LocalStorage";
 import {AbstractStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
         Settings, defaultSettings} from "./Interface";
 import {History,Test,SeashellFile,SeashellCompiler,SeashellRunner,SeashellTester,SeashellPID,Change} from "../types";
-export {Connection, WebsocketError, WebStorage, SeashellWebsocket}
+export {WebsocketError, WebStorage, SeashellWebsocket}
 import * as R from "ramda";
 
 enum OfflineMode {Off, On, Forced}
@@ -16,7 +15,6 @@ class Callback {
 }
 
 class WebStorage extends AbstractStorage {
-  private connection: Connection;
   // private synced: boolean;
   private connected: boolean;
   private failed: boolean;
@@ -58,9 +56,8 @@ class WebStorage extends AbstractStorage {
 
   public debug: boolean; // toggle this.debug && console.log
 
-  constructor(connection: Connection, storage: LocalStorage, debug?: boolean) {
+  constructor(wbclient: SeashellWebsocket, store: LocalStorage, debug?: boolean) {
     super();
-    this.connection = connection;
     // this.synced = false;
     this.connected = false;
     this.failed = false;
@@ -69,8 +66,8 @@ class WebStorage extends AbstractStorage {
     this.timeoutCount = 0;
     this.timeoutInterval = null;
     this.key = 0;
-    this.storage = storage;
-    this.socket = new SeashellWebsocket(this.connection.wsURI, this.connection.key);
+    this.storage = store;
+    this.socket = wbclient;
     this.callbacks = [];
     this.debug = debug;
     this.socket.debug = debug;
@@ -310,12 +307,10 @@ class WebStorage extends AbstractStorage {
       }
     });
 
-    try {
-      await this.socket.authenticate();
-    } catch (e) {
+    if (! this.socket.authenticated) {
       this.failed = true;
       await this.invoke_cb_failure_om_wrap('failed');
-      throw e;
+      throw new WebsocketError("socket is not authenticated");
     }
 
     this.debug && console.log("Seashell socket set up properly");

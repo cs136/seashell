@@ -2,7 +2,7 @@ import "jest";
 import {LocalStorage} from "../../src/helpers/Storage/LocalStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "../../src/helpers/Storage";
+        Settings, defaultSettings} from "../../src/helpers/Services";
 import J = require("jscheck");
 import FakeIndexedDB = require("fake-indexeddb");
 import FDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
@@ -28,11 +28,12 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 describe("Testing LocalStorage.ts", () => {
 
-  const store = new LocalStorage("seashell", {
+  const store = new LocalStorage({
     IDBKeyRange: FDBKeyRange,
     indexedDB: FakeIndexedDB
   });
 
+  store.connect("test");
 
   let projs: Project[] = R.sortBy(prop("name"), map((s: string) => ({
     id: s,

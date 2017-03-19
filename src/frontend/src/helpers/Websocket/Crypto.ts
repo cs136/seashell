@@ -1,5 +1,4 @@
 import WebCrypto = require("node-webcrypto-ossl");
-import CryptoKey = require("node-webcrypto-ossl");
 import sjcl = require("sjcl");
 export {Coder, CoderEncrypted, ShittyCoder}
 

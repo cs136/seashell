@@ -1,4 +1,4 @@
-import {Coder, ShittyCoder} from "../../src/helpers/Storage/Crypto";
+import {Coder, ShittyCoder} from "../../src/helpers/Websocket/Crypto";
 
 describe("Testing crypto.ts", () => {
 
