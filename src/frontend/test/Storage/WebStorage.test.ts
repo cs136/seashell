@@ -44,7 +44,7 @@ describe("testing websocket.ts", () => {
   });
 
   afterAll(() => {
-    socket.disconnect();
+    Services.logout();
   });
 
   it("setting up tests", () => {

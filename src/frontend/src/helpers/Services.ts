@@ -32,9 +32,9 @@ class Connection {
 
 namespace Services {
   let connection: Connection;
-  const webClient: SeashellWebsocket = new SeashellWebsocket();
+  const socketClient: SeashellWebsocket = new SeashellWebsocket();
   const localStorage: LocalStorage = new LocalStorage();
-  const webStorage: WebStorage = new WebStorage(webClient, localStorage);
+  const webStorage: WebStorage = new WebStorage(socketClient, localStorage);
   // private static compile: Compiler;
 
 
@@ -73,7 +73,11 @@ namespace Services {
 
     // login successful
     await localStorage.connect(`seashell-${connection.username}`);
-    await webClient.authenticate(connection);
+    await socketClient.authenticate(connection);
     await webStorage.connect();
+  }
+
+  export async function logout() {
+    await socketClient.close();
   }
 }
