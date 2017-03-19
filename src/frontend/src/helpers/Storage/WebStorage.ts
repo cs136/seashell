@@ -289,7 +289,7 @@ class WebStorage extends AbstractStorage {
     }
     if (old === 2 && this.offlineMode !== old) {
       // trigger reconnect and sync
-      if (!this.socket.isConnected())
+      if(!this.socket.isConnected())
         this.socket.connect();
       else {
         this.syncAll();

@@ -85,8 +85,7 @@ namespace Services {
 
     // login successful
     await localStorage.connect(`seashell-${connection.username}`);
-    await socketClient.authenticate(connection);
-    await socketClient.connect();
+    await socketClient.connect(connection);
   }
 
   export async function logout() {

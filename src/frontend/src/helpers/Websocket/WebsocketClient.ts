@@ -119,25 +119,23 @@ class SeashellWebsocket {
     this.callbacks = [];
   }
 
-  public onFailure(callbacks: () => void) {
-    this.failures = callbacks;
-  }
-
-  public onClose(callbacks: () => void) {
-    this.closes = callbacks;
-  }
-
   // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
 
-  public async authenticate(cnn: Connection): Promise<void> {
-
-    this.cnn = cnn;
+  // Connects and authenticates the socket, sets up the disconnection monitor
+  // Pass a new Connection object to overwrite the previously held one
+  public async connect(cnn?: Connection): Promise<void> {
+    if(cnn) {
+      this.cnn = cnn;
+    }
+    else if(!this.cnn) {
+      throw new WebsocketError("Trying to connect websocket with no Connection object provided.");
+    }
     this.coder = new ShittyCoder(this.cnn.key);
     this.websocket = new WebSocket(this.cnn.wsURI);
 
     this.websocket.onerror = () => {
       this.failed = true;
-      if (! this.authenticated) {
+      if(!this.authenticated) {
         throw new WebsocketError("Socket closed during authentication!");
       }
       return this.closes && this.closes();
@@ -145,7 +143,7 @@ class SeashellWebsocket {
 
     this.websocket.onclose = () => {
       this.closed = true;
-      if (! this.authenticated) {
+      if(!this.authenticated) {
         throw new WebsocketError("Socket closed during authentication!");
       }
       return this.closes && this.closes();
@@ -157,12 +155,11 @@ class SeashellWebsocket {
         var response = <Response>(JSON.parse(response_string));
         // Assume the response holds the message and response.id holds the
         //  message identifier that corresponds with it
-        //
         // response.result will hold the result if the API call succeeded,
         //  error message otherwise.
         const request = this.requests[response.id];
 
-        if (request.type != 'ping') {
+        if(request.type != 'ping') {
           const time = new Date();
           const diff = request.time ? time.getTime() - request.time : -1;
           if (response.success) {
@@ -173,16 +170,16 @@ class SeashellWebsocket {
 
         }
 
-        if (response.success) {
+        if(response.success) {
           request.resolve(response.result);
-        } else if (! response.success) {
+        } else if(!response.success) {
           request.reject(`Request ${request.message.id} failed with response: ${response.result}`);
         }
 
-        if (response.id >= 0) {
+        if(response.id >= 0) {
           delete this.requests[response.id];
         }
-      } catch (err) {
+      } catch(err) {
         console.error("websocket.onmessage:", err);
         console.error("websocket.onmessage received:", response);
       }
@@ -206,33 +203,30 @@ class SeashellWebsocket {
       const result = await this.requests[-2].received;
       this.debug && console.log("Authentication success");
       this.authenticated = true;
-    } catch (err) {
+    } catch(err) {
       throw new WebsocketError(`Authentication failure: ${err.msg}`);
     }
-  }
 
-  // Connects the socket, sets up the disconnection monitor
-  public async connect(): Promise<void> {
     // Failure - probably want to prompt the user to attempt to reconnect or
     //  log in again
-    this.onFailure(async () => {
+    this.failures = async () => {
       clearInterval(this.timeoutInterval);
       try {
         await this.invoke_cb('failed');
-      } catch (err) {
+      } catch(err) {
         console.error(err);
       }
-    });
+    };
 
     // Socket closed - probably want to prompt the user to reconnect
-    this.onClose(async () => {
+    this.closes = async () => {
       clearInterval(this.timeoutInterval);
       try {
         await this.invoke_cb('disconnected');
       } catch (err) {
         console.error(err);
       }
-    });
+    };
 
     if(!this.authenticated) {
       await this.invoke_cb('failed');
