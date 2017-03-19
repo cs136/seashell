@@ -21,6 +21,7 @@ project(seashell-frontend)
 file(GLOB_RECURSE seashell_frontend_src src/*.*)
 add_custom_target(seashell-frontend-src-copy
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/typings" "${CMAKE_CURRENT_BINARY_DIR}/typings"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tsconfig.json" "${CMAKE_CURRENT_BINARY_DIR}/tsconfig.json"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tslint.json" "${CMAKE_CURRENT_BINARY_DIR}/tslint.json"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/package.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json"

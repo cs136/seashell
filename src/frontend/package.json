@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node_modules/.bin/jest",
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.config.prod.js",
     "reinstall": "rm -rf node_modules && npm install && npm run build"
   },
   "repository": {

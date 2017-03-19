@@ -11,8 +11,8 @@ module.exports = {
   entry: './src/index.tsx',
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.js',
-    publicPath: '/dist/'
+    filename: 'bundle.[chunkhash].js',
+    publicPath: './'
   },
   plugins: [
     new CleanWebpackPlugin(['dist'], { verbose: false }),
