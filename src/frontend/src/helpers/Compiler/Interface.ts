@@ -38,7 +38,7 @@ abstract class AbstractCompiler {
     }), (f: FileBrief)=>{
       return basename(f);
     }).map((t: FileBrief[])=> {
-      var test: TestBrief = {
+      let test: TestBrief = {
         name: basename(t[0]),
         in: null,
         expect: null

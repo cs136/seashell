@@ -44,12 +44,12 @@ interface FileBrief {
 }
 
 export const ext = (f: FileBrief) => {
-  var arr = this.name.split(".");
+  let arr = this.name.split(".");
   return arr.pop();
 };
 
 export const basename = (f: FileBrief) => {
-  var arr = this.name.split(".");
+  let arr = this.name.split(".");
   arr.pop();
   return arr.join(".");
 };

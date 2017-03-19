@@ -1,8 +1,14 @@
-import {SeashellWebsocket, WebsocketResult} from "../Websocket/WebsocketClient";
+import {SeashellWebsocket,
+        WebsocketResult} from "../Websocket/WebsocketClient";
 import {Connection} from "../Services";
-import {AbstractCompiler, Test, PID, CompilerResult} from "./Interface";
+import {AbstractCompiler,
+        TestBrief,
+        PID,
+        CompilerResult} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
-import {AbstractStorage, ProjectID, FileID} from "../Storage/Interface";
+import {AbstractStorage,
+        ProjectID,
+        FileID} from "../Storage/Interface";
 
 export {OnlineCompiler};
 
@@ -26,7 +32,7 @@ class OnlineCompiler extends AbstractCompiler {
       type: 'compileAndRunProject',
       project: proj,
       question: question,
-      tests: tests.map((tst: Test)=>{ return tst.name; })
+      tests: tests.map((tst: TestBrief)=>{ return tst.name; })
     }) as Promise<CompilerResult>;
   }
 
