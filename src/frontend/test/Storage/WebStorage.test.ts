@@ -33,7 +33,7 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
   return J.array(arrLen, uniqStr(strLen));
 }
 
-describe("testing websocket.ts", () => {
+function websocketTest() {
 
   let socket = Services.storage();
 
@@ -244,3 +244,8 @@ describe("testing websocket.ts", () => {
 
 });
 
+if (TestAccount.user) {
+  describe("testing WebSocket.ts", websocketTest);
+} else {
+  describe.skip("testing WebSocket.ts", websocketTest);
+}
