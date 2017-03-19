@@ -16,23 +16,12 @@ class Callback {
 
 class WebStorage extends AbstractStorage {
   // private synced: boolean;
-  private connected: boolean;
-  private failed: boolean;
   // private isSyncing: boolean;
   private offlineMode: number;
-  private timeoutCount: number;
-  private timeoutInterval: any;
-  private key: number;
 
-  private callbacks: Callback[];
   private socket: SeashellWebsocket;
   private storage: LocalStorage;
 
-  private compiler: SeashellCompiler;
-  private runner: SeashellRunner;
-  private tester: SeashellTester;
-
-  public ping: () => Promise<WebsocketResult>;
   public newProjectFrom: (name: string, src_url: string) => Promise<WebsocketResult>;
   // public deleteProject: (name: string) => Promise<WebsocketResult>;
   public restoreFileFrom: (name: string, file: string, contents: string, history: History) => Promise<WebsocketResult>;
@@ -59,16 +48,10 @@ class WebStorage extends AbstractStorage {
   constructor(wbclient: SeashellWebsocket, store: LocalStorage, debug?: boolean) {
     super();
     // this.synced = false;
-    this.connected = false;
-    this.failed = false;
     // this.isSyncing = false;
     this.offlineMode = 0; // TODO change this to look up the cookie
-    this.timeoutCount = 0;
-    this.timeoutInterval = null;
-    this.key = 0;
     this.storage = store;
     this.socket = wbclient;
-    this.callbacks = [];
     this.debug = debug;
     this.socket.debug = debug;
 
