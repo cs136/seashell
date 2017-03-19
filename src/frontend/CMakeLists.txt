@@ -38,4 +38,7 @@ add_custom_command(OUTPUT dist.tar.gz
     COMMAND ${SEASHELL_NPM} run build
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS seashell-frontend-configure)
+# This is _really_ a dummy target (used for incremental builds).
+# During the install step, we copy dist/* -> frontend/*
 add_custom_target(seashell-frontend-binary ALL DEPENDS dist.tar.gz)
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dist/" DESTINATION share/frontend)
