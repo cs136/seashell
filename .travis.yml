@@ -20,7 +20,7 @@ script:
 - ./build_tools/cmake -s "../cmake/bin/cmake" -i "$HOME/install" -a "-Wno-dev -DCMAKE_C_FLAGS='-Qunused-arguments
   -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics'
   -DPROCESSOR_COUNT=1 -DTRAVIS_BUILD=1" -l ""
-- ./build_tools/install -a "-j2" -l "" -t true
+- ./build_tools/install -a "-j2" -l "" -t
 notifications:
   slack:
     secure: QTnHM1Cr1DDHY4laUKnpiQzcj3/NZ+qutlpzF6AcXBWhuGoTLLjmqIAPS6RvIpg0vHb2rxCEQ9g117iH5VFPv4FSoE5IfUeDM4CqheBvSmcbw5HmkCEgwaEcDyTd8iA0ChLmNzXsY8YEjQ5bS1xOsjLvKxwHj7Tg69ZWQhdnlDs=

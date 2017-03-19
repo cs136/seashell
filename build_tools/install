@@ -10,7 +10,7 @@ while getopts b:a:l:t opts; do
 		b) BUILD_PATH=${OPTARG} ;;
 		a) MAKE_ARGS=${OPTARG} ;;
 		l) LOG_PATH=${OPTARG} ;;
-		t) TEST=${OPTARG} ;;
+		t) TEST="true" ;;
 	esac
 done
 
@@ -19,7 +19,7 @@ INSTALL_PATH=$(sed -ne "s/SET(CPACK_INSTALL_PREFIX \"\(.*\)\")/\1/p" "$BUILD_PAT
 if [ -d "$INSTALL_PATH" ]; then rm -r "$INSTALL_PATH"; fi
 mkdir "$INSTALL_PATH"
 [ -e "$LOG_PATH" ] && rm "$LOG_PATH"
-echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`"
+echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`; testing: $TEST"
 
 if [ -z "$LOG_PATH" ]; then
 	cd "$BUILD_PATH" && eval make $MAKE_ARGS
