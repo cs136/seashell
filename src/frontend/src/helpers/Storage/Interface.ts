@@ -36,19 +36,30 @@ interface File extends FileBrief {
   last_modified: number;
 }
 
+interface FileBrief {
+  id: FileID;
+  name: string; // a file name is (test|q*|common)/name
+  last_modified: number;
+  project: ProjectID;
+}
+
+export const ext = (f: FileBrief) => {
+  let arr = this.name.split(".");
+  return arr.pop();
+};
+
+export const basename = (f: FileBrief) => {
+  let arr = this.name.split(".");
+  arr.pop();
+  return arr.join(".");
+};
+
 interface Project extends ProjectBrief {
   id: ProjectID;
   name: string;
   last_modified: number;
   runs: {[index: string]: FileID};
   opened_tabs: {[index: string]: FileID};
-}
-
-interface FileBrief {
-  id: FileID;
-  name: string; // a file name is (test|q*|common)/name
-  last_modified: number;
-  project: ProjectID;
 }
 
 interface ProjectBrief {

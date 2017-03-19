@@ -1,5 +1,4 @@
 import {AbstractCompiler,
-        PID,
         Test,
         CompilerResult} from "./Interface";
 import {AbstractStorage,
@@ -10,11 +9,8 @@ export {OfflineCompiler};
 
 class OfflineCompiler extends AbstractCompiler {
 
-  private storage: AbstractStorage;
-
   constructor(storage: AbstractStorage) {
-    super();
-    this.storage = storage;
+    super(storage);
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
@@ -24,12 +20,10 @@ class OfflineCompiler extends AbstractCompiler {
       status: "failed"
     };
   }
+  
+  public async programKill(): Promise<void> { }
 
-  public async programInput(pid: PID, contents: string): Promise<void> {
+  public async programInput(contents: string): Promise<void> { }
 
-  }
-
-  public async startIO(project: ProjectID, pid: PID): Promise<void> {
-
-  }
+  public async sendEOF(): Promise<void> { }
 }
