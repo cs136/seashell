@@ -1,12 +1,20 @@
 import * as $ from "jquery";
-import {SeashellWebsocket} from "./Websocket/WebSocketClient";
+import {SeashellWebsocket} from "./Websocket/WebsocketClient";
 import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings} from "./Storage/Interface";
+import {OnlineCompiler} from "./Compiler/OnlineCompiler";
+import {OfflineCompiler} from "./Compiler/OfflineCompiler";
+import {AbstractCompiler,
+        Test,
+        CompilerResult,
+        CompilerMessage} from "./Compiler/Interface";
+
 export * from "./Storage/Interface";
+export * from "./Compiler/Interface";
 export {Services, LoginError, Connection};
 
 class LoginError extends Error {
@@ -35,11 +43,15 @@ namespace Services {
   const socketClient: SeashellWebsocket = new SeashellWebsocket();
   const localStorage: LocalStorage = new LocalStorage();
   const webStorage: WebStorage = new WebStorage(socketClient, localStorage);
-  // private static compile: Compiler;
-
+  const offlineCompiler: OfflineCompiler = new OfflineCompiler(localStorage);
+  const onlineCompiler: OnlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler);
 
   export function storage(): WebStorage {
     return webStorage;
+  }
+
+  export function compiler(): AbstractCompiler {
+    return onlineCompiler;
   }
 
   export async function login(user: string,
@@ -73,11 +85,10 @@ namespace Services {
 
     // login successful
     await localStorage.connect(`seashell-${connection.username}`);
-    await socketClient.authenticate(connection);
-    await webStorage.connect();
+    await socketClient.connect(connection);
   }
 
   export async function logout() {
-    await socketClient.close();
+    await socketClient.disconnect();
   }
 }
