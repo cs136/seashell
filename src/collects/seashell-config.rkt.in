@@ -139,14 +139,21 @@
       ;; Location of SSH tunnel binary.
       (cons 'tunnel-binary                 (let
                                             ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-tunnel")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/tunnel/seashell-tunnel")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/backend/tunnel/seashell-tunnel")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
       ;; Location of remote backend
       (cons 'seashell-backend-remote       (let
                                             ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-user-backend")]
-                                             [build-path (build-path SEASHELL_BUILD_PATH "backend/user/seashell-user-backend")])
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/backend/user/seashell-user-backend")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
+      ;; Location of main binary
+      (cons 'seashell-main                 (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-main")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/collects/seashell-main")])
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
@@ -210,6 +217,8 @@
       (cons 'common-subdirectory            "common")
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
+      ;; Location of the Marmoset test results script
+      (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive

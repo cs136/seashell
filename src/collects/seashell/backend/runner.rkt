@@ -138,7 +138,7 @@
                       (define expected-lines (regexp-split #rx"\n" expected))
                       ;; hotfix: diff with empty because it's slow
                       (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
-                   [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,asan-output)) out-stdout)])
+                   [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,stdout ,asan-output)) out-stdout)])
             (logf 'debug "Done sending test results for program PID ~a." pid)
             (close)]
            [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
@@ -170,7 +170,7 @@
     (define output (make-bytes (read-config-integer 'io-buffer-size)))
     (define read (read-bytes-avail!* output in))
     (when (and (number? read) (read . > . 0))
-      (write-bytes output out)
+      (write-bytes output out 0 read)
       (loop))))
 
 

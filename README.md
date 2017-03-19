@@ -1,4 +1,5 @@
-Seashell: An online editor and evaluator for C programs.
+# Seashell
+An online editor and evaluator for C programs.
 
 master: [![Build Status](https://travis-ci.org/cs136/seashell.svg?branch=master)](https://travis-ci.org/cs136/seashell)
 staging: [![Build Status](https://travis-ci.org/cs136/seashell.svg?branch=staging)](https://travis-ci.org/cs136/seashell)

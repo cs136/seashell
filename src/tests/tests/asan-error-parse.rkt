@@ -64,8 +64,7 @@ HERE
 )
       (define json-answer (compile-run-wait student-code))
       (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "my_var")
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "80"))
+      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_my_var_size_in_bytes) "80"))
 
     (test-case "Stack Overflow Test 2"
       (define student-code #<<HERE
@@ -78,8 +77,7 @@ HERE
 )
       (define json-answer (compile-run-wait student-code))
       (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "carr")
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "30"))
+      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_carr_size_in_bytes) "30"))
 
     ;; This next test really should be an underflow, but ASAN for some reason thinks that
     ;; we're overflowing the parameter x (and it doesn't report the variable name).
@@ -96,6 +94,30 @@ HERE
       (define json-answer (compile-run-wait student-code))
       (check-true (has-type-and-stack? json-answer "stack-buffer-underflow")))
 
+    (test-case "Stack Overflow Test 4"
+      (define student-code #<<HERE
+#include <string.h>
+
+struct Employee {
+  char *name;
+  char *initials;
+};
+
+int main() {
+  char name[100], initials[2];
+  struct Employee emp = {name, initials};
+  for (int i = 0; i < 100; ++i) { emp.name[i] = 'X'; }
+  return strlen(emp.name);
+}
+HERE
+)
+      (define json-answer (compile-run-wait student-code))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
+      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'array_emp_size_in_bytes))
+      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'underflow_distance_in_bytes_from_start_of_array_emp))
+      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'array_initials_size_in_bytes))
+      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'underflow_distance_in_bytes_from_start_of_array_initials)))
+
 ;; ---- STACK UNDERFLOW TESTS ---------------------------
     (test-case "Stack Underflow Test 1"
       (define student-code #<<HERE
@@ -107,8 +129,7 @@ HERE
 )
       (define json-answer (compile-run-wait student-code))
       (check-true (has-type-and-stack? json-answer "stack-buffer-underflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_variable_name) "x")
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_size_in_bytes) "80"))
+      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_x_size_in_bytes) "80"))
 
 ;; ---- STACK USE AFTER RETURN TEST ---------------------------
     (test-case "Stack Use After Return"
