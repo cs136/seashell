@@ -10,11 +10,8 @@ export {OfflineCompiler};
 
 class OfflineCompiler extends AbstractCompiler {
 
-  private storage: AbstractStorage;
-
   constructor(storage: AbstractStorage) {
-    super();
-    this.storage = storage;
+    super(storage);
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {

@@ -9,13 +9,11 @@ export {OnlineCompiler};
 class OnlineCompiler extends AbstractCompiler {
 
   private socket: SeashellWebsocket;
-  private storage: AbstractStorage;
   private offlineCompiler: OfflineCompiler;
 
   constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler) {
-    super();
+    super(storage);
     this.socket = socket;
-    this.storage = storage;
     this.offlineCompiler = offComp;
   }
   
@@ -23,11 +21,13 @@ class OnlineCompiler extends AbstractCompiler {
     if(!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
     }
-    return {
-      messages: [],
-      pid: null,
-      status: "failed"
-    };
+    const tests = await this.getTestsForQuestion(proj, question);
+    return this.socket.sendMessage({
+      type: 'compileAndRunProject',
+      project: proj,
+      question: question,
+      tests: tests.map((tst: Test)=>{ return tst.name; })
+    }) as Promise<CompilerResult>;
   }
 
   public async programInput(pid: PID, contents: string): Promise<void> {
