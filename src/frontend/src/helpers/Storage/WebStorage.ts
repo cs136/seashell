@@ -1,4 +1,4 @@
-import {SeashellWebsocket, WebsocketResult, WebsocketError} from "./WebsocketClient";
+import {SeashellWebsocket, WebsocketResult, WebsocketError} from "../Websocket/WebsocketClient";
 import {LocalStorage} from "./LocalStorage";
 import {AbstractStorage,
         Project, ProjectID, ProjectBrief,

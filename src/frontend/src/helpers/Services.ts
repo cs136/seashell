@@ -1,5 +1,5 @@
 import * as $ from "jquery";
-import {SeashellWebsocket} from "./Storage/WebSocketClient";
+import {SeashellWebsocket} from "./Websocket/WebSocketClient";
 import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,

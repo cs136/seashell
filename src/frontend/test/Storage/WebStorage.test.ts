@@ -1,6 +1,5 @@
 import "jest";
 import {WebStorage,
-        Connection,
         SeashellWebsocket} from "../../src/helpers/Storage/WebStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
