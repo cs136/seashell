@@ -19,7 +19,10 @@ class OnlineCompiler extends AbstractCompiler {
     this.offlineCompiler = offComp;
   }
   
-  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, tests: Test[]): Promise<CompilerResult> {
+  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
+    if(!this.socket.isConnected()) {
+      return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
+    }
     return {
       messages: [],
       pid: null,

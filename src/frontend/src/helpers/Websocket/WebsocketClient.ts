@@ -74,32 +74,39 @@ class Response {
   result: WebsocketResult;
 }
 
+class Callback {
+  constructor(public type: string, public cb: (message?: any) => any, public now: boolean) { }
+}
 
 class SeashellWebsocket {
-  private static cnn: Connection;
-  private static coder: ShittyCoder;
-  private static websocket: WebSocket;
-  private lastRequest: number;
+  private cnn: Connection;
+  private coder: ShittyCoder;
+  private websocket: WebSocket;
+  private lastMsgID: number;
   public requests: {[index:number]: Request<any>};
-  // public ready: Promise<boolean>;
-  public authenticated: boolean;
+  private authenticated: boolean;
   private failed: boolean;
   private closed: boolean;
   private started: boolean;
   private closes: () => void;
-  private falures: () => void;
+  private failures: () => void;
   public debug: boolean; // toggle console.log for tests
 
-  // this allows WebsocketService to access member functions by string key
-  [key: string]: any;
+  private timeoutCount: number;
+  private timeoutInterval: any;
+  private key: number;
+  private callbacks: Callback[];
 
-  constructor() {
+  // this allows WebsocketService to access member functions by string key
+  //[key: string]: any;
+
+  constructor(debug?: boolean) {
     this.lastMsgID = 0;
     this.authenticated = false;
     this.failed = false;
     this.closed = false;
     this.started = false;
-    this.debug = true;
+    this.debug = !!debug;
     this.requests = {};
     this.requests[-1] = new Request({id: -1}); // server challenge
     this.requests[-2] = new Request({id: -2}); // reply challenge
@@ -107,6 +114,9 @@ class SeashellWebsocket {
     this.requests[-4] = new Request({id: -4});
     // this.ready = new Promise((resolve, reject)=>{
     this.started = true;
+    this.timeoutCount = 0;
+    this.timeoutInterval = null;
+    this.callbacks = [];
   }
 
   public onFailure(callbacks: () => void) {
@@ -115,10 +125,6 @@ class SeashellWebsocket {
 
   public onClose(callbacks: () => void) {
     this.closes = callbacks;
-  }
-
-  public close(): void {
-    this.websocket.close();
   }
 
   // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
@@ -205,6 +211,92 @@ class SeashellWebsocket {
     }
   }
 
+  // Connects the socket, sets up the disconnection monitor
+  public async connect(): Promise<void> {
+    // Failure - probably want to prompt the user to attempt to reconnect or
+    //  log in again
+    this.onFailure(async () => {
+      clearInterval(this.timeoutInterval);
+      try {
+        await this.invoke_cb('failed');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Socket closed - probably want to prompt the user to reconnect
+    this.onClose(async () => {
+      clearInterval(this.timeoutInterval);
+      try {
+        await this.invoke_cb('disconnected');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    if(!this.authenticated) {
+      await this.invoke_cb('failed');
+      throw new WebsocketError("socket is not authenticated");
+    }
+
+    this.debug && console.log("Seashell socket set up properly");
+    this.timeoutInterval = setInterval(async () => {
+      try {
+        if (this.timeoutCount++ === 3) {
+          this.invoke_cb('timeout');
+        }
+        await this.ping();
+        if (this.timeoutCount >= 3) {
+          this.invoke_cb('timein');
+        }
+        this.timeoutCount = 0;
+      } catch (err) {
+        console.error(err);
+      }
+    }, 4000);
+    this.requests[-3].callback = this.io_cb;
+    this.requests[-4].callback = this.test_cb;
+    this.debug && console.log("Websocket disconnection monitor set up properly.");
+    // Run the callbacks.
+    await this.invoke_cb('connected');
+  }
+
+  public disconnect(): void {
+    this.websocket.close();
+  }
+
+   public register_callback(type: string, cb: (message?: any) => any, now?: boolean) : number {
+    this.callbacks[this.key] = new Callback(type, cb, now);
+
+    if(type === 'disconnected' && !this.isConnected() && now) {
+      cb();
+    } else if(type === 'connected' && this.isConnected() && now) {
+      cb();
+    } else if(type === 'failed' && this.failed && now) {
+      cb();
+    }
+    return this.key++;
+  }
+
+  public unregister_callback(key: number) : void {
+    delete this.callbacks[key];
+  }
+
+  public async invoke_cb(type: string, message?: any): Promise<Array<any>> {
+    return this.callbacks.filter(
+      (x: Callback) => { return x && x.type === type; }).map(
+        async (x: Callback) => { return x.cb(message); });
+  }
+
+  // Helper function to invoke the I/O callback.
+  public io_cb(ignored: any, message: any) {
+    return this.invoke_cb('io', message);
+  }
+
+  public test_cb(ignored: any, message: any) {
+    return this.invoke_cb('test', message);
+  } 
+
   /** Sends a message along the connection. Internal use only.
    *
    * @param {Object} message - JSON message to send (as JavaScript object).
@@ -234,12 +326,16 @@ class SeashellWebsocket {
    *  sends the message after the socket has been properly
    *  authenticated/set up. */
   public sendMessage(message: Message): Promise<any> {
-    if (this.failed || this.closed || ! this.started) {
+    if(!this.isConnected()) {
       throw new WebsocketError("Socket closed or failed");
     }
     var msgID = this.lastMsgID++;
     message.id = msgID;
     return this.sendRequest(new Request(message));
+  }
+
+  public isConnected() {
+    return !(this.failed || this.closed || !this.started);
   }
 
   /** The following functions are wrappers around sendMessage.
@@ -253,7 +349,7 @@ class SeashellWebsocket {
     });
   }
 
-  public async compileAndRunProject(project: string, question: string, test: Array<string>): Promise<WebsocketResult> {
+  /*public async compileAndRunProject(project: string, question: string, test: Array<string>): Promise<WebsocketResult> {
     return await this.sendMessage({
       type: 'compileAndRunProject',
       project: project,
@@ -366,5 +462,5 @@ class SeashellWebsocket {
   public async sync(message: Message) {
     message.type = 'sync';
     return await this.sendMessage(message);
-  }
+  }*/
 }

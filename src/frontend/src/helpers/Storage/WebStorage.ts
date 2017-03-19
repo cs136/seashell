@@ -282,120 +282,8 @@ class WebStorage extends AbstractStorage {
     }
   }
 
-  // Connects the socket, sets up the disconnection monitor
-  public async connect(): Promise<void> {
-    // Failure - probably want to prompt the user to attempt to reconnect or
-    //  log in again
-    this.socket.onFailure(async () => {
-      this.failed = true;
-      clearInterval(this.timeoutInterval);
-      try {
-        await this.invoke_cb_failure_om_wrap('failed');
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    // Socket closed - probably want to prompt the user to reconnect
-    this.socket.onClose(async () => {
-      this.connected = false;
-      clearInterval(this.timeoutInterval);
-      try {
-        await this.invoke_cb_failure_om_wrap('disconnected');
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    if (! this.socket.authenticated) {
-      this.failed = true;
-      await this.invoke_cb_failure_om_wrap('failed');
-      throw new WebsocketError("socket is not authenticated");
-    }
-
-    this.debug && console.log("Seashell socket set up properly");
-    this.timeoutInterval = setInterval(async () => {
-      try {
-        if (this.timeoutCount++ === 3) {
-          this.invoke_cb('timeout');
-        }
-        await this.socket.ping();
-        if (this.timeoutCount >= 3) {
-          this.invoke_cb('timein');
-        }
-        this.timeoutCount = 0;
-      } catch (err) {
-        console.error(err);
-      }
-    }, 4000);
-    this.connected = true;
-    this.failed = false;
-    this.socket.requests[-3].callback = this.io_cb;
-    this.socket.requests[-4].callback = this.test_cb;
-    this.debug && console.log("Websocket disconnection monitor set up properly.");
-    // Run the callbacks.
-    await this.invoke_cb('connected');
-  }
-
-  public disconnect(): void {
-    this.socket.close();
-  }
-
-  public register_callback(type: string, cb: (message?: any) => any, now?: boolean) : number {
-    this.callbacks[this.key] = new Callback(type, cb, now);
-
-    if (type === 'disconnected' && !this.connected && now) {
-      cb();
-    } else if (type === 'connected' && (this.connected || this.isOffline()) && now) {
-      cb();
-    } else if (type === 'failed' && this.failed && now) {
-      cb();
-    }
-    return this.key++;
-  }
-
-  public unregister_callback(key: number) : void {
-    delete this.callbacks[key];
-  }
-
-  public unregister_callbacks(type: string) : void {
-    this.callbacks = this.callbacks.filter(
-      (item: Callback) : boolean => { return item && item.type===type; });
-    this.key = this.callbacks.length;
-  }
-
-  public async invoke_cb(type: string, message?: any): Promise<Array<any>> {
-    return this.callbacks.filter(
-      (x: Callback) => { return x && x.type === type; }).map(
-        async (x: Callback) => { return x.cb(message); });
-  }
-
-  // wrapper function for invoke_cb meant to be used to call
-  //  the websocket failure coniditons 'disconnected' and 'failure'
-  public invoke_cb_failure_om_wrap(type: string, message?: any): PromiseLike<Array<any>> {
-    if (this.offlineEnabled()) {
-      // if offline mode is enabled, we notify the frontend
-      //  and proceed as if we are connected
-      return this.invoke_cb('connected', this.offlineMode);
-    }
-    return this.invoke_cb(type, message);
-  }
-
-  // Helper function to invoke the I/O callback.
-  public io_cb(ignored: any, message: any) {
-    return this.invoke_cb('io', message);
-  }
-
-  public test_cb(ignored: any, message: any) {
-    return this.invoke_cb('test', message);
-  }
-
-  public isConnected(): boolean {
-    return this.connected;
-  }
-
   public isOffline(): boolean {
-    return this.offlineMode === OfflineMode.Forced || (!this.connected && this.offlineMode === OfflineMode.On);
+    return this.offlineMode === OfflineMode.Forced || (!this.socket.isConnected() && this.offlineMode === OfflineMode.On);
   }
 
   public offlineEnabled(): boolean {
@@ -418,18 +306,15 @@ class WebStorage extends AbstractStorage {
     }
     if (old === 2 && this.offlineMode !== old) {
       // trigger reconnect and sync
-      if (!this.connected)
-        this.connect();
+      if (!this.socket.isConnected())
+        this.socket.connect();
       else {
-        this.invoke_cb('connected');
         this.syncAll();
       }
-    } else if (this.offlineMode === 2) {
-      this.invoke_cb('connected', this.offlineMode);
     }
   }
 
-  private make_offline_disabled(name: string) {
+  /*private make_offline_disabled(name: string) {
     return async (...args: any[]) => {
       if (!this.isOffline()) {
         var res = await this.socket[name].apply(this.socket, args);
@@ -479,7 +364,7 @@ class WebStorage extends AbstractStorage {
         return this.socket[name].apply(this.socket, args);
       }
     };
-  }
+  }*/
 
   private async maybeSyncAll(): Promise<void> {
     if (this.offlineEnabled() && ! await this.storage.didInitSync()) {
@@ -491,7 +376,7 @@ class WebStorage extends AbstractStorage {
     }
   }
 
-  public async compileAndRunProject(project: string, question: string, file: SeashellFile, tests: Array<Test>) {
+  /*public async compileAndRunProject(project: string, question: string, file: SeashellFile, tests: Array<Test>) {
     if (!this.isOffline()) {
       var test_names = tests.map((test: Test) => {
         return test.test_name;
@@ -543,7 +428,7 @@ class WebStorage extends AbstractStorage {
     } else {
       return this.socket.startIO(project, pid);
     }
-  }
+  }*/
 
   /**
    * Sync everything, to be called when we first connect to the websocket.
@@ -560,7 +445,7 @@ class WebStorage extends AbstractStorage {
     var files = await this.storage.listAllProjectsForSync();
     var changes = await this.storage.getOfflineChanges();
     var settings = await this.storage.getSettings();
-    var result = await this.socket.sync({
+    var result = await this.socket.sendMessage({
       type: 'sync',
       projects: projects,
       files: files,

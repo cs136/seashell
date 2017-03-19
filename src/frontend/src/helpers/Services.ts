@@ -43,7 +43,7 @@ namespace Services {
   const socketClient: SeashellWebsocket = new SeashellWebsocket();
   const localStorage: LocalStorage = new LocalStorage();
   const webStorage: WebStorage = new WebStorage(socketClient, localStorage);
-  const offlineCompiler: OfflineCompiler = new OfflineCompiler();
+  const offlineCompiler: OfflineCompiler = new OfflineCompiler(localStorage);
   const onlineCompiler: OnlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler);
 
   export function storage(): WebStorage {
@@ -86,10 +86,10 @@ namespace Services {
     // login successful
     await localStorage.connect(`seashell-${connection.username}`);
     await socketClient.authenticate(connection);
-    await webStorage.connect();
+    await socketClient.connect();
   }
 
   export async function logout() {
-    await socketClient.close();
+    await socketClient.disconnect();
   }
 }

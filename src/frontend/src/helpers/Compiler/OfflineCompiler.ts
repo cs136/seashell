@@ -1,11 +1,23 @@
-import {AbstractCompiler, PID, Test, CompilerResult} from "./Interface";
-import {ProjectID, FileID} from "../Storage/Interface";
+import {AbstractCompiler,
+        PID,
+        Test,
+        CompilerResult} from "./Interface";
+import {AbstractStorage,
+        ProjectID,
+        FileID} from "../Storage/Interface";
 
 export {OfflineCompiler};
 
 class OfflineCompiler extends AbstractCompiler {
 
-  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, tests: Test[]): Promise<CompilerResult> {
+  private storage: AbstractStorage;
+
+  constructor(storage: AbstractStorage) {
+    super();
+    this.storage = storage;
+  }
+
+  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return {
       messages: [],
       pid: null,

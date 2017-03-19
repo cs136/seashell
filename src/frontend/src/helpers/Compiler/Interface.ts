@@ -7,7 +7,7 @@ export {AbstractCompiler,
         PID};
 
 abstract class AbstractCompiler {
-  public abstract async compileAndRunProject(proj: ProjectID, question: string, file: FileID, tests: Test[]): Promise<CompilerResult>;
+  public abstract async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult>;
   public async programKill(pid: PID): Promise<void> {
     return pid.kill();
   }
