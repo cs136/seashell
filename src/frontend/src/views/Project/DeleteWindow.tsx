@@ -9,7 +9,7 @@ export interface DeleteWindowProps {file: string; closefunc: Function};
 
 class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {}>{
   render(){
-    return(<div>
+    return(<div className="pt-dialog-body">
       <p>Are you sure you want to delete this file?</p>
       <div className="pt-button-group">
         <button type="button" className="pt-button" onClick={() => {

@@ -7,12 +7,12 @@ import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
 
 
-const logo = require<any>("./logo.svg");
-const styles = require<any>("./index.scss");
-const layoutStyles = require<any>("../../Layout.scss");
+const logo = require("./logo.svg");
+const styles = require("./index.scss");
+const layoutStyles = require("../../Layout.scss");
 
 
-export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; }
+export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; }
 export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean; }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
@@ -38,7 +38,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
         </div>
         <div className="pt-navbar-group pt-align-right">
           {this.props.navRight}
-          <div><Popover content={<Menu>
+          <Popover className={styles.options} content={<Menu>
             <MenuItem iconName="help" text="Help" onClick={this.toggleHelp.bind(this)}/>
             <MenuItem iconName="refresh" text="Sync All" />
             <MenuItem iconName="cog" text="Settings" onClick={this.toggleSettings.bind(this)} />
@@ -47,7 +47,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
         </Menu>} position={Position.BOTTOM_RIGHT}>
             <button className="pt-button pt-icon-more pt-minimal"></button>
         </Popover>
-            <Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
+            <div><Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
               <HelpDialog />
             </Dialog>
             <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>

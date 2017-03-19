@@ -3,8 +3,8 @@ import {map, actionsInterface} from "../actions";
 import {Link} from "react-router";
 import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
-const layoutStyles = require<any>("../Layout.scss");
-const styles = require<any>("./Home.scss");
+const layoutStyles = require("../Layout.scss");
+const styles = require("./Home.scss");
 
 export interface HomeProps { title: string; }
 export interface HomeState { open?: boolean; title?: string; }
@@ -13,13 +13,14 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
   render() {
     const projects = this.props.appState.projects;
     return (<div>
-      <Navigation />
+      <Navigation navLeft={[
+          <div className="pt-navbar-heading" key="project-name">My Projects</div>]}
+          navRight={
+            [<button className="pt-button" role="button" key="home-new-project"><span className="pt-icon-standard pt-icon-plus pt-align-left"></span>New Project</button>,
+            <button className="pt-button" role="button" key="home-refresh"><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</button>]
+          }
+           />
       <div className={styles.container}>
-        <h3 className={styles.title}>My Projects</h3>
-        <div className="pt-button-group">
-          <a className="pt-button" role="button"><span className="pt-icon-standard pt-icon-plus pt-align-left"></span>New Project</a>
-          <a className="pt-button" role="button"><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</a>
-        </div>
         <div className={styles.mainRow}>
           <div className={styles.column}>
             <h5>Assignments</h5>
