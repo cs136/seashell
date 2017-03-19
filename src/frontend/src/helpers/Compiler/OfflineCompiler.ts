@@ -1,5 +1,4 @@
 import {AbstractCompiler,
-        PID,
         Test,
         CompilerResult} from "./Interface";
 import {AbstractStorage,
@@ -21,12 +20,10 @@ class OfflineCompiler extends AbstractCompiler {
       status: "failed"
     };
   }
+  
+  public async programKill(): Promise<void> { }
 
-  public async programInput(pid: PID, contents: string): Promise<void> {
+  public async programInput(contents: string): Promise<void> { }
 
-  }
-
-  public async startIO(project: ProjectID, pid: PID): Promise<void> {
-
-  }
+  public async sendEOF(): Promise<void> { }
 }

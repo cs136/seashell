@@ -3,7 +3,6 @@ import {SeashellWebsocket,
 import {Connection} from "../Services";
 import {AbstractCompiler,
         TestBrief,
-        PID,
         CompilerResult} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
 import {AbstractStorage,
@@ -16,29 +15,41 @@ class OnlineCompiler extends AbstractCompiler {
 
   private socket: SeashellWebsocket;
   private offlineCompiler: OfflineCompiler;
+  private activePIDs: number[];
 
   constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler) {
     super(storage);
     this.socket = socket;
     this.offlineCompiler = offComp;
+    this.activePIDs = [];
   }
   
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     if(!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
     }
-    const tests = await this.getTestsForQuestion(proj, question);
-    return this.socket.sendMessage({
+    let tests: TestBrief[] = [];
+    if(runTests) {
+      tests = await this.getTestsForQuestion(proj, question);
+    }
+    const result = await this.socket.sendMessage({
       type: 'compileAndRunProject',
       project: proj,
       question: question,
       tests: tests.map((tst: TestBrief)=>{ return tst.name; })
-    }) as Promise<CompilerResult>;
+    });
+    if(result.status == "running") {
+      this.activePIDs.push(result.pid);
+    }
+    return {
+      messages: result.messages,
+      status: result.status
+    };
   }
 
-  public async programInput(pid: PID, contents: string): Promise<void> {
-  }
+  public async programKill(): Promise<void> { }
 
-  public async startIO(project: ProjectID, pid: PID): Promise<void> {
-  }
+  public async programInput(contents: string): Promise<void> { }
+
+  public async sendEOF(): Promise<void> { }
 }

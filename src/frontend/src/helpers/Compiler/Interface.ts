@@ -11,22 +11,16 @@ export {AbstractCompiler,
         CompilerResult,
         CompilerMessage,
         TestBrief,
-        Test,
-        PID};
+        Test};
 
 abstract class AbstractCompiler {
   constructor(protected storage: AbstractStorage) { }
 
   // Outward-facing Compiler interface
   public abstract async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult>;
-  public async programKill(pid: PID): Promise<void> {
-    return pid.kill();
-  }
-  public async sendEOF(pid: PID): Promise<void> {
-    return pid.sendEOF();
-  }
-  public abstract async programInput(pid: PID, contents: string): Promise<void>;
-  public abstract async startIO(project: ProjectID, pid: PID): Promise<void>;
+  public abstract async programKill(): Promise<void>;
+  public abstract async sendEOF(): Promise<void>;
+  public abstract async programInput(contents: string): Promise<void>;
   // End public interface
 
   // Function used by both compilers to group the test files appropriately
@@ -68,16 +62,8 @@ interface Test {
   expect: File;
 }
 
-interface PID {
-  source: AbstractCompiler;
-  kill(): Promise<void>;
-  sendEOF(): Promise<void>;
-  startIO(): Promise<void>;
-}
-
 interface CompilerResult {
   messages: CompilerMessage[];
-  pid: PID;
   status: string;
 }
 
