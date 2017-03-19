@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node_modules/.bin/jest",
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.config.prod.js",
     "reinstall": "rm -rf node_modules && npm install && npm run build"
   },
   "repository": {
@@ -84,6 +84,7 @@
     "tslint-loader": "3.4.2",
     "typescript": "2.2.1",
     "url-loader": "0.5.7",
+    "webpack-archive-plugin": "^3.0.0",
     "webpack": "2.2.1",
     "webpack-dev-server": "2.4.1"
   },

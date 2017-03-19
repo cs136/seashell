@@ -1,0 +1,88 @@
+      <div class="modal-header">
+        <button type="button" class="close" ng-click="$close()" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="help-label">Seashell Documentation</h4>
+      </div>
+      <div class="modal-body" id="popup-text">
+        <h4>Getting Started</h4>
+        See the <a target="_blank" href="docs/user.html">Seashell User Documentation</a>.
+        The <a href="https://www.youtube.com/channel/UC6SqoYX4CAEZSHGDqImzd2Q">CS136 YouTube channel</a>
+        has videos explaining the basics of Seashell and common errors you may encounter.
+        <br /><br />
+        <h4>Reset Seashell</h4>
+        It often helps to reset your Seashell instance if it gets locked
+        up in some way. To do this, <a href="" ng-click="login(true)">log in again</a>,
+        and check the box labeled "Check to reset your Seashell instance."
+        <br /><br />
+        <h4>Cluttered old projects?</h4>
+        If you have used Seashell in a previous term and want to clear all of
+        your old projects, you can <a href="" ng-click="archive()">archive all
+        projects</a>.
+        <br /><br />
+        <h4>Default Editor Shortcuts</h4>
+        These are shortcuts that will work when the editor window is focused.
+        <br />
+        <label>
+        <input type="checkbox" class="btn btn-default" ng-model="shortShow" id="EditorShortcut">
+          Show
+          <span class="glyphicon glyphicon-chevron-right" ng-show="!shortShow"></span>
+          <span class="glyphicon glyphicon-chevron-down" ng-show="shortShow"></span> 
+        </label>
+        <ul class="list-group" ng-show="shortShow">
+          <li class="list-group-item">
+          <span class="badge">Ctrl-f or Cmd-f</span>
+          Start new search
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-g or Cmd-g</span>
+          Go to next match
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-G or Cmd-G</span>
+          Go to previous match
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-z or Cmd-z</span>
+          Undo
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-y or Cmd-y</span>
+          Redo
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-i</span>
+          Indent all
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Shift-Ctrl-Enter</span>
+          Editor/console fullscreen depending on focus
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-;</span>
+          Editor fullscreen
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-'</span>
+          Console fullscreen
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Ctrl-, and Ctrl-.</span>
+          Change font size
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Highlight Lines, Tab</span>
+          Block indent
+          </li>
+          <li class="list-group-item">
+          <span class="badge">Highlight Line, Shift-Tab</span>
+          Block unindent
+          </li>
+        </ul>
+        <br /><br />
+        <h4>Giving Feedback</h4>
+        Any feedback you may have on Seashell, especially bugs you have encountered, can be reported
+        using <a href="https://gitreports.com/issue/cs136/seashell">Seashell's Git Reports page</a>.
+        Please include your UW userid and full name.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" ng-click="$close()">Close</button>
+      </div>

@@ -2,7 +2,7 @@
 
 (require typed/json)
 (require/typed racket/string [string-prefix? (String String -> Boolean)])
-(require/typed racket/hash [hash-union (JSHash JSHash -> JSHash)])
+(require/typed racket/hash [hash-union (->* (JSHash JSHash) (#:combine (JSExpr JSExpr -> JSExpr)) JSHash)])
 (require/typed racket/base [regexp-match (PRegexp String -> (U False (Listof (U False String))))]
                [string->number (String -> Real)])
 
@@ -171,15 +171,18 @@
      (define mres (cast match-result (Listof String)))
      (define array-lower-bound (string->number (second mres)))
      (define array-upper-bound (string->number (third mres)))
+     (define array-variable-name (fourth mres))
      (define access-location (string->number (fifth mres)))
-     (define extra-info (jsexpr (cons (if (< access-location array-upper-bound)
-                                          (list 'underflow_distance_in_bytes_from_start_of_array (number->string (- array-lower-bound access-location)))
-                                          (list 'overflow_distance_in_bytes_from_end_of_array (number->string (- access-location array-upper-bound))))
-                                      `((array_size_in_bytes ,(number->string (- array-upper-bound array-lower-bound)))
-                                        (array_variable_name ,(fourth mres))))))
+     (define extra-info (jsexpr (list (if (< access-location array-upper-bound)
+                                          (list (string->symbol (string-append "underflow_distance_in_bytes_from_start_of_array_" array-variable-name))
+                                                (number->string (- array-lower-bound access-location)))
+                                          (list (string->symbol (string-append "overflow_distance_in_bytes_from_end_of_array_" array-variable-name))
+                                                (number->string (- access-location array-upper-bound))))
+                                      (list (string->symbol (format "array_~a_size_in_bytes" array-variable-name))
+                                            (number->string (- array-upper-bound array-lower-bound))))))
      (SectionData #f ; overflow/underflow taken care of as of clang >=3.9
                   #f ; frame list
-                  (if (not (equal? (fourth mres) "")) extra-info #f)
+                  (if (not (equal? array-variable-name "")) extra-info #f)
                   #f)))) ; lines left
 
 ;; For bad heap accesses, ASAN sometimes print info about where the heap access occurred
@@ -284,6 +287,7 @@
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: heap-use-after-free"  "heap-use-after-free")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-use-after-return"  "stack-use-after-return")
         (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: stack-use-after-scope"  "stack-use-after-scope")
+        (match-type #px"^=+\\d+=+ERROR: AddressSanitizer: FPE on unknown address"  "floating-point-exception")
         (match-type #px"^=+\\d+=+ERROR: LeakSanitizer: detected memory leaks" "memory-leak")
         segfault-parser
         memory-leak-parser
@@ -331,7 +335,7 @@
          (asan-parser (if new-lines-left new-lines-left (rest lines))
                       (if new-error-type new-error-type error-type)
                       (if new-call-stack (cons new-call-stack call-stacks) call-stacks)
-                      (if new-extra-info (hash-union new-extra-info extra-info) extra-info)
+                      (if new-extra-info (hash-union new-extra-info extra-info #:combine (lambda ([v1 : JSExpr] [v2 : JSExpr]) v1)) extra-info)
                       source-dir)]))
 
 

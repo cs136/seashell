@@ -645,7 +645,7 @@ public:
     const clang::SourceManager* SM = Info.hasSourceManager() ? &Info.getSourceManager() : nullptr;
     const clang::SourceLocation Loc = Info.getLocation();
     bool error = (Level == clang::DiagnosticsEngine::Error) || (Level == clang::DiagnosticsEngine::Fatal);
-#ifndef _NDEBUG
+#ifndef NDEBUG
     fprintf(stderr, "Got diagnostic %s\n", OutStr.c_str());
 #endif
     if (SM) {
