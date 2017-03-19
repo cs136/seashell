@@ -2,6 +2,7 @@ import {ProjectID, FileID, File} from "../Storage/Interface";
 
 export {AbstractCompiler,
         CompilerResult,
+        CompilerMessage,
         Test,
         PID};
 
