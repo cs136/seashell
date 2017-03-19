@@ -4,7 +4,7 @@ import {AbstractStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
         Settings, defaultSettings} from "./Interface";
-import {History,Test,SeashellFile,SeashellCompiler,SeashellRunner,SeashellTester,SeashellPID,Change} from "../types";
+import {History,Change} from "../types";
 export {WebsocketError, WebStorage, SeashellWebsocket}
 import * as R from "ramda";
 
