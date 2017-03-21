@@ -7,6 +7,7 @@ import {actionsInterface} from "./actions";
 import HotKeys from "./HotKeys";
 import reducers from "./reducers";
 import App from "./App";
+import {Services} from "./helpers/Services";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -20,6 +21,6 @@ const store = createStoreWithMiddleware(reducers);
 const rootEl = document.getElementById("root");
 render(<Provider store={store}><App /></Provider>, rootEl);
 
-HotKeys(store);
+Services.init(store.dispatch);
 
 install();
