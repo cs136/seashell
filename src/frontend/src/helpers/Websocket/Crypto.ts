@@ -1,8 +1,8 @@
-import WebCrypto = require("node-webcrypto-ossl");
 import sjcl = require("sjcl");
 export {Coder, CoderEncrypted, ShittyCoder}
 
-const webcrypto = new WebCrypto();
+const win: any = window as any, webcrypto = (win.crypto || win.msCrypto);
+
 
 interface CoderEncrypted {
   iv: number[];
@@ -43,7 +43,7 @@ class Coder extends AbstractCoder {
     const iv = new Int32Array(32);
     webcrypto.getRandomValues(iv);
     const client_nonce = new Uint8Array(32);
-    new WebCrypto().getRandomValues(client_nonce);
+    new webcrypto.getRandomValues(client_nonce);
     return {
       iv: Array.from(iv),
       nonce: Array.from(client_nonce)
