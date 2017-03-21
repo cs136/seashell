@@ -6,6 +6,7 @@ import {AbstractStorage,
         ext,
         basename} from "../Storage/Interface";
 import {groupBy} from "../utils";
+import {DispatchFunction} from "../Services";
 
 export {AbstractCompiler,
         CompilerResult,
@@ -14,7 +15,7 @@ export {AbstractCompiler,
         Test};
 
 abstract class AbstractCompiler {
-  constructor(protected storage: AbstractStorage) { }
+  constructor(protected storage: AbstractStorage, protected dispatch: DispatchFunction) { }
 
   // Outward-facing Compiler interface
   public abstract async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult>;

@@ -15,7 +15,7 @@ import {AbstractCompiler,
 
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
-export {Services, LoginError, Connection};
+export {Services, LoginError, Connection, DispatchFunction};
 
 class LoginError extends Error {
   constructor(msg: string,
@@ -38,19 +38,37 @@ class Connection {
   };
 }
 
+type DispatchFunction = (act: Object) => Object;
+
 namespace Services {
   let connection: Connection;
-  const socketClient: SeashellWebsocket = new SeashellWebsocket();
-  const localStorage: LocalStorage = new LocalStorage();
-  const webStorage: WebStorage = new WebStorage(socketClient, localStorage);
-  const offlineCompiler: OfflineCompiler = new OfflineCompiler(localStorage);
-  const onlineCompiler: OnlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler);
+  let dispatch: DispatchFunction = null;
+  let socketClient: SeashellWebsocket = null;
+  let localStorage: LocalStorage = null;
+  let webStorage: WebStorage = null;
+  let offlineCompiler: OfflineCompiler = null;
+  let onlineCompiler: OnlineCompiler = null;
+
+  export function init(disp: DispatchFunction) {
+    dispatch = disp;
+    socketClient = new SeashellWebsocket();
+    localStorage = new LocalStorage();
+    webStorage = new WebStorage(socketClient, localStorage);
+    offlineCompiler = new OfflineCompiler(localStorage, dispatch);
+    onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
+  }
 
   export function storage(): WebStorage {
+    if(webStorage === null) {
+      throw new LoginError("Must call Services.init() before Services.storage().");
+    }
     return webStorage;
   }
 
   export function compiler(): AbstractCompiler {
+    if(onlineCompiler === null) {
+      throw new LoginError("Must call Services.init() before Services.compiler().");
+    }
     return onlineCompiler;
   }
 
