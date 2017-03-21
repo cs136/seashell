@@ -86,8 +86,8 @@
             (close-output-port raw-stdin)))
 
   ;; Background read stuff.
-  (define-values (buf-stderr cp-stderr) (make-pipe))
-  (define-values (buf-stdout cp-stdout) (make-pipe))
+  (define-values (buf-stderr cp-stderr) (make-pipe (* (read-config-nonnegative-real 'subprocess-buffer-size) 1000000)))
+  (define-values (buf-stdout cp-stdout) (make-pipe (* (read-config-nonnegative-real 'subprocess-buffer-size) 1000000)))
   (define stderr-thread (thread (lambda ()
                                   (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
                                   (copy-port raw-stderr cp-stderr))))
@@ -102,6 +102,14 @@
     (close-output-port out-stdout)
     (custodian-shutdown-all custodian)
     (void))
+
+  ;; Helper function that truncates bytes. Used when students write a ton of output and we
+  ;; don't want to send all of it to the front-end.
+  (: first-n-bytes (->* (Bytes Nonnegative-Real) (Bytes) Bytes))
+  (define (first-n-bytes my-bytes n [too-long-message #"\n... There is more output, but it's not shown ...\n"])
+    (if (> (bytes-length my-bytes) (exact-floor n))
+        (bytes-append (subbytes my-bytes 0 (exact-floor n)) too-long-message)
+        my-bytes))
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
@@ -148,7 +156,14 @@
             (kill-thread stderr-thread)
             (kill-thread stdout-thread)
             (subprocess-kill handle #t)
-            (write (serialize `(,pid ,test-name "timeout")) out-stdout)
+
+            ;; Read stdout, stderr.
+            (close-output-port cp-stderr)
+            (close-output-port cp-stdout)
+            (define stdout (first-n-bytes (port->bytes buf-stdout) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+            (define stderr (first-n-bytes (port->bytes buf-stderr) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+
+            (write (serialize `(,pid ,test-name "timeout" ,stdout ,stderr)) out-stdout)
             (close)]
            [(? (lambda ([evt : Any]) (eq? receive-evt evt))) ;; Received a signal.
             (match (thread-receive)
@@ -158,7 +173,14 @@
                     (kill-thread stdout-thread)
                     (set-program-exit-status! pgrm 254)
                     (subprocess-kill handle #t)
-                    (write (serialize `(,pid ,test-name "killed")) out-stdout)
+
+                    ;; Read stdout, stderr.
+                    (close-output-port cp-stderr)
+                    (close-output-port cp-stdout)
+                    (define stdout (first-n-bytes (port->bytes buf-stdout) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+                    (define stderr (first-n-bytes (port->bytes buf-stderr) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+
+                    (write (serialize `(,pid ,test-name "killed" ,stdout ,stderr)) out-stdout)
                     (close)])]))
   (void))
 
@@ -465,7 +487,10 @@
 (define (program-kill pid)
   (thread-send (program-wait-evt pid)
                'kill
-               #f)
+               (lambda ()
+                  (define handle (program-handle (hash-ref program-table pid)))
+                  (logf 'error "program-kill thread-send failed. Pid: ~a, exit code: ~a" pid (subprocess-status handle))
+                  #f))
   (void))
 
 ;; (program-wait-evt pid)
