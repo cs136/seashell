@@ -4,6 +4,11 @@
     This page requires JavaScript to operate properly, or at all.
   </noscript>
 
+  <div ng-show="frontend.oldsafari" ng-cloak class="alert alert-danger text-center" role="alert">
+    Safari 9.x and below is not supported.  Please upgrade to Safari 10 or use a modern version
+    of Chrome or Firefox.
+  </div>
+
   <div ng-show="frontend.timeout" ng-cloak
     class="alert alert-danger text-center" role="alert">
     Lost contact with the server (Seashell will keep trying to
@@ -45,6 +50,7 @@
     api_version: @(values SEASHELL_API_VERSION)
     host:        {{frontend.host}}</pre>
   </alert>
+
 
   <div ui-view></div>
 </div>

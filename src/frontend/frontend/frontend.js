@@ -35,6 +35,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.offline_mode = false;
         self.has_offline_changes = false;
         self.errors = errors;
+        self.oldsafari = !bowser.check({safari: '10'}, false, window.navigator.userAgent);
         $scope.navigator = navigator;
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
