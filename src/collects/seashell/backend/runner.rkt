@@ -103,13 +103,16 @@
     (custodian-shutdown-all custodian)
     (void))
 
-  ;; Helper function that truncates bytes. Used when students write a ton of output and we
-  ;; don't want to send all of it to the front-end.
-  (: first-n-bytes (->* (Bytes Nonnegative-Real) (Bytes) Bytes))
-  (define (first-n-bytes my-bytes n [too-long-message #"\n... There is more output, but it's not shown ...\n"])
-    (if (> (bytes-length my-bytes) (exact-floor n))
-        (bytes-append (subbytes my-bytes 0 (exact-floor n)) too-long-message)
-        my-bytes))
+  ;; This helper function reads and returns the first n bytes of an input port.
+  ;; Used when students write a ton of output and we don't want to send all of it to the front-end.
+  (: first-n-bytes (->* (Input-Port Nonnegative-Real) (Bytes) Bytes))
+  (define (first-n-bytes input-port n [too-long-message #"\n... There is more output, but it's not shown ...\n"])
+    (local [(define first-part (read-bytes (exact-floor n) input-port))
+            (define reached-end? (or (not (byte-ready? input-port)) (eof-object? (read-byte input-port))))]
+      (cond [(eof-object? first-part) #""]
+            [reached-end? first-part]
+            [else (bytes-append first-part too-long-message)])))
+
 
   (define receive-evt (thread-receive-evt))
   (let loop ()
@@ -160,8 +163,8 @@
             ;; Read stdout, stderr.
             (close-output-port cp-stderr)
             (close-output-port cp-stdout)
-            (define stdout (first-n-bytes (port->bytes buf-stdout) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
-            (define stderr (first-n-bytes (port->bytes buf-stderr) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+            (define stdout (first-n-bytes buf-stdout (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+            (define stderr (first-n-bytes buf-stderr (read-config-nonnegative-real 'max-output-bytes-to-keep)))
 
             (write (serialize `(,pid ,test-name "timeout" ,stdout ,stderr)) out-stdout)
             (close)]
@@ -177,8 +180,8 @@
                     ;; Read stdout, stderr.
                     (close-output-port cp-stderr)
                     (close-output-port cp-stdout)
-                    (define stdout (first-n-bytes (port->bytes buf-stdout) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
-                    (define stderr (first-n-bytes (port->bytes buf-stderr) (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+                    (define stdout (first-n-bytes buf-stdout (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+                    (define stderr (first-n-bytes buf-stderr (read-config-nonnegative-real 'max-output-bytes-to-keep)))
 
                     (write (serialize `(,pid ,test-name "killed" ,stdout ,stderr)) out-stdout)
                     (close)])]))
