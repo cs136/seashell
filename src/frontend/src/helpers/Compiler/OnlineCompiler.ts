@@ -8,6 +8,7 @@ import {OfflineCompiler} from "./OfflineCompiler";
 import {AbstractStorage,
         ProjectID,
         FileID} from "../Storage/Interface";
+import {DispatchFunction} from "../Services";
 
 export {OnlineCompiler};
 
@@ -17,8 +18,8 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler) {
-    super(storage);
+  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler, dispatch: DispatchFunction) {
+    super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];

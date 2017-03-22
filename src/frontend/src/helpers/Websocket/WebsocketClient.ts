@@ -1,4 +1,4 @@
-import WebSocket = require("ws");
+//import WebSocket = require("ws");
 import {Coder, ShittyCoder} from './Crypto';
 import {Connection} from '../Services';
 import WebCrypto = require("node-webcrypto-ossl");
@@ -132,7 +132,6 @@ class SeashellWebsocket {
     }
     this.coder = new ShittyCoder(this.cnn.key);
     this.websocket = new WebSocket(this.cnn.wsURI);
-
     this.websocket.onerror = () => {
       this.failed = true;
       if(!this.authenticated) {
