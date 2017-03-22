@@ -29,7 +29,7 @@ type ProjectID = string; // alias of name for now
 
 interface File extends FileBrief {
   id: FileID;
-  name: string; // a file name is (test|q*|common)/name
+  name: string; // a file name is (tests|q*|common)/name
   project: ProjectID;
   contents: string;
   checksum: string;
@@ -72,7 +72,7 @@ interface Settings {
   id: 0,
   editor_mode: string,
   font_size: number;
-  font: "Consolas";
+  font: string;
   theme: "light"|"dark";
   space_tab: boolean;
   tab_width: number;

@@ -55,9 +55,13 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
       return mergeBetter(state, {currentProject: action.payload.project});
     // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
-      return mergeBetter(state, {currentProject: {questions: state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1)}});
+      state=clone(state);
+      state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
+      return state;
     case appStateActions.removeProject:
-      return mergeBetter(state, {projects: state.projects.splice(state.projects.indexOf(action.payload.name), 1)});
+      state=clone(state);
+      state.projects.splice(state.projects.indexOf(action.payload.name), 1);
+      return state;
     case appStateActions.removeFile:
       state = clone(state);
       state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
@@ -67,8 +71,8 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
     case appStateActions.addProject:
       return mergeBetter(state, {projects: state.projects.push(action.payload.name), currentProject: {questions: []}});
     case appStateActions.addFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: {files: state.currentProject.currentQuestion.files.push(action.payload.name),
-                                                                    currentFile: {name: action.payload.name, content: action.payload.content}}}});
+      return mergeBetter(state, {currentProject: {currentQuestion: {name: action.payload.name, files: action.payload.files,
+                                                                    currentFile: {name: action.payload.file.name, content: action.payload.file.content}}}});
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.openFile:
