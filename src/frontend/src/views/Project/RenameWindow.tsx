@@ -20,9 +20,9 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
     return(<div className="pt-dialog-body">
       <p>Where would you like to rename/move this file?</p>
       <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
-        {this.props.questions.map((question: string)=>(<option value={question}>{question}</option>))}
+        {this.props.questions.map((question: string) => (<option value={question}>{question}</option>))}
         </select></div>
-        <input className="pt-input pt-fill" required type="text" value={this.state.file} 
+        <input className="pt-input pt-fill" required type="text" value={this.state.file}
         onBlur={()=>{
           if(this.state.file===""||this.state.file.includes("/")){
             this.setState(merge(this.state, {file: this.state.prevFile}));
@@ -37,7 +37,7 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" onClick={()=>{
-          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name+"/"+this.props.appState.currentProject.currentQuestion.currentFile.name, this.state.question+"/"+this.state.file);
+          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.currentFile.name, this.state.question + "/" + this.state.file);
           this.props.closefunc();
           }}>Rename/Move</button>
       </div>
