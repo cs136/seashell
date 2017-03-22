@@ -75,11 +75,11 @@
       (define stdout (program-stdout pid))
       (define run-result (sync/timeout 0 (wrap-evt stdout (compose deserialize read))))
       (match run-result
-       [(and result (list pid _ (and test-res (or "timeout" "killed" "passed")) stdout stderr))
+       [(and result (list pid _ (and test-res (or "killed" "passed")) stdout stderr))
         (eprintf "Program passed the test.\n")
         (write-outputs stdout stderr #f)
         (exit 40)]
-       [(list pid _ "error" exit-code stderr asan)
+       [(list pid _ "error" exit-code stderr stdout asan)
         (if (= exit-code 134)
           (eprintf "Program failed an assertion.~n")
           (eprintf "Program crashed at runtime.~n"))
@@ -93,7 +93,7 @@
         (eprintf "Test failed the test (but did not crash)~n")
         (write-outputs stdout stderr asan)
         (exit 30)]
-       [(list pid _ "timeout")
+       [(or (list pid _ "timeout") (list pid _ "timeout" _ _))
         (eprintf "Test timed out (but did not crash)~n")
         (exit 50)]
        [x

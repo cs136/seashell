@@ -233,8 +233,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
         return function () {
           if (!self.isOffline()) {
             return $q.when(self._socket[name].apply(self._socket, arguments))
-              .then(function() {
-                return self.syncAll();
+              .then(function(result) {
+                return self.syncAll()
+                  .then(function() {
+                    return result;
+                  });
               });
           } else {
             return self._rejectOffline(name);
@@ -308,11 +311,11 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
       self.restoreFileFrom = make_offline_disabled('restoreFileFrom');
       self.getUploadFileToken = make_offline_disabled('getUploadFileToken');
       self.getExportToken = make_offline_disabled('getExportToken');
+      self.marmosetSubmit = make_offline_disabled('marmosetSubmit');
       // These functions do nothing and just resolve in offline mode.
       self.lockProject = make_offline_noop('lockProject');
       self.forceLockProject = make_offline_noop('forceLockProject');
       self.unlockProject = make_offline_noop('unlockProject');
-      self.marmosetSubmit = make_offline_noop('marmosetSubmit');
       self.archiveProjects = make_offline_noop('archiveProjects');
       // These functions either:
       //  - return the online result if online.

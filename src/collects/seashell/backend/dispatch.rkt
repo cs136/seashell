@@ -109,12 +109,15 @@
             (program-destroy-handle pid)]
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
-                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
-           [(list pid test-name "error" exit-code stderr asan-output)
+                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)
+                                                                         (stdout . ,(bytes->string/utf-8 stdout #\?))
+                                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
+           [(list pid test-name "error" exit-code stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
                                                                         (exit_code . ,exit-code)
                                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))
+                                                                        (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                                         (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
            [(list pid test-name "no-expect" stdout stderr asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
@@ -136,7 +139,10 @@
                                                               diff))
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))
-                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))])))))
+                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
+           [unmatched-result
+            (logf 'error "Unmatched test result: ~a" unmatched-result)
+            (send-message connection `#hash((id . -4) (success . #f) (result . "backend error")))])))))
 
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running
@@ -602,6 +608,16 @@
               (result . #t))]
       [(hash-table
         ('id id)
+        ('type "marmosetTestResults")
+        ('project project)
+        ('testtype testtype))
+       (define testtype-as-symbol (if (string? testtype) (string->symbol testtype) testtype))
+       (define test-results (marmoset-test-results "CS136" project testtype-as-symbol))
+       `#hash((id . ,id)
+              (success . #t)
+              (result . ,test-results))]
+      [(hash-table
+        ('id id)
         ('type "archiveProjects")
         ('location location))
         (archive-projects location)
@@ -644,6 +660,22 @@
               (success . #f)
               (result . ,(format "Unknown message: ~s" message)))]))
 
+  ;; (any->short-str obj max-length)
+  ;;
+  ;; Give an object, returns its string representation up to max-length length.
+  ;;
+  ;; Arguments:
+  ;;  obj - Any object. Will be converted to string using (format "~a" obj)
+  ;;  max-length - A limit on how long the returned string will be. If limit
+  ;;               is reached, ellipsis will be appended to indicate this.
+  ;; Returns:
+  ;;  A string representing obj.
+  (define (any->short-str obj max-length)
+    (let ((s (format "~a" obj)))
+      (if (> (string-length s) max-length)
+          (string-append (substring s 0 max-length) "...")
+          s)))
+
   ;; (handle-message message)
   ;;
   ;; Given a message, passes it on to the appropriate function.
@@ -663,6 +695,8 @@
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
       [else
        (define id (hash-ref message 'id))
+       (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
+             id (hash-ref message 'type "unknown") (any->short-str message 100))
        (with-handlers
            ([exn:project?
              (lambda (exn)
@@ -721,6 +755,9 @@
               (define message (bytes->jsexpr data))
               (semaphore-post keepalive-sema)
               (define result (handle-message message))
+              (logf 'info "Responding to msg id=~a. Response: ~a"
+                    (hash-ref result 'id "no_id")
+                    (any->short-str (hash-ref result 'result "no_results") 100))
               (send-message connection result))))))
        (main-loop)]))
 

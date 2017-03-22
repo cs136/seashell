@@ -35,6 +35,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.offline_mode = false;
         self.has_offline_changes = false;
         self.errors = errors;
+        self.oldsafari = !bowser.check({safari: '10'}, false, window.navigator.userAgent);
+        $scope.navigator = navigator;
         var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
         if(cookie) {
           self.host = cookie.host;
@@ -50,8 +52,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             controller: ['$scope', 'ConfirmationMessageModal', '$window',
               '$cookies',
               function ($scope, confirm, $window, $cookies) {
-                $scope.login = function () {
-                  self.login();
+                $scope.login = function (reset) {
+                  self.login(reset);
                   $scope.$dismiss();
                 };
                 $scope.archive = function() {
@@ -121,8 +123,8 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           ws.connect();
         };
         // Open login dialog window after disconnection
-        self.login = function() {
-          new LoginModal().then(function() {
+        self.login = function(reset) {
+          new LoginModal(reset).then(function() {
           });
         };
 
@@ -169,8 +171,4 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         errors.report(error, 'Could not load settings!');
       });
     });
-    // Set up resize
-    $window.onresize = function () {
-      $rootScope.$broadcast('window-resized');
-    };
   }]);

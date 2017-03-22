@@ -142,19 +142,21 @@
         (lambda ()
           ;; Terminate existing Seashell instance
           (when (and (not (empty? (extract-bindings "reset" bdgs))) (equal? "true" (extract-binding/single "reset" bdgs)))
-            (define creds-tun (password:tunnel-launch uname passwd #:args "-d"))
-            (define creds (cast (deserialize (read (tunnel-in creds-tun))) (HashTable Symbol Any)))
-            (when (eof-object? creds)
+            (define creds-tun (password:tunnel-launch uname passwd #:target (read-config-string 'seashell-main) #:args "-d"))
+            (define raw-creds (read (tunnel-in creds-tun)))
+            (when (eof-object? raw-creds)
               (report-error 4 "Could not reset existing Seashell instance."))
-            ;; Get the host and PID
-            (define creds-host (cast (hash-ref creds 'host) String))
-            (define creds-pid (cast (hash-ref creds 'pid) Integer))
-            ;; Kill the process
-            (define kill-tun (password:tunnel-launch uname passwd #:target "kill" #:args (format "~a" creds-pid) #:host creds-host))
-            (subprocess-wait (tunnel-process kill-tun))
-            (when (not (equal? 0 (subprocess-status (tunnel-process kill-tun))))
-              (report-error 4 (format "Could not kill existing Seashell instance (internal error, code=~a)."
-                                      (subprocess-status (tunnel-process kill-tun))))))
+            (when raw-creds
+              (define creds (cast (deserialize raw-creds) (HashTable Symbol Any)))
+              ;; Get the host and PID
+              (define creds-host (cast (hash-ref creds 'host) String))
+              (define creds-pid (cast (hash-ref creds 'pid) Integer))
+              ;; Kill the process
+              (define kill-tun (password:tunnel-launch uname passwd #:target "kill" #:args (format "~a" creds-pid) #:host creds-host))
+              (subprocess-wait (tunnel-process kill-tun))
+              (when (not (equal? 0 (subprocess-status (tunnel-process kill-tun))))
+                (report-error 4 (format "Could not kill existing Seashell instance (internal error, code=~a)."
+                                        (subprocess-status (tunnel-process kill-tun)))))))
 
           ;; Spawn backend process on backend host.
           (define tun (password:tunnel-launch uname passwd))

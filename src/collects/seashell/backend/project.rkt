@@ -38,6 +38,7 @@
          compile-and-run-project
          compile-and-run-project/use-runner
          marmoset-submit
+         marmoset-test-results
          get-most-recently-used
          update-most-recently-used
          export-project
@@ -611,6 +612,25 @@
     (lambda ()
       (delete-directory/files tmpzip #:must-exist? #f)
       (delete-directory/files tmpdir #:must-exist? #f))))
+
+;; (marmoset-test-results project)
+(define/contract (marmoset-test-results course project type)
+  (-> string? string? (or/c 'public 'secret) string?)
+
+  ;; Run the script that gets test results
+  (define-values (proc out in err)
+    (subprocess #f #f #f (read-config 'test-results-tool) (symbol->string type) project))
+  (subprocess-wait proc)
+  (define stderr-output (port->string err))
+  (define stdout-output (port->string out))
+  (define exit-status (subprocess-status proc))
+  (close-output-port in)
+  (close-input-port out)
+  (close-input-port err)
+
+  (if (not (zero? exit-status))
+      (jsexpr->string (hash 'error #t 'result empty))
+      stdout-output))
 
 ;; (get-most-recently-used project question)
 ;; Reads the most recently used information for the specified project/question.

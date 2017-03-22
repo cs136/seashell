@@ -33,6 +33,7 @@ js/lib/ui-codemirror.js
 js/lib/hotkeys.min.js
 js/lib/autofill-event.js
 js/lib/md5.js
+js/lib/bowser.min.js
 
 # Seashell libraries
 js/socket/crypto.js

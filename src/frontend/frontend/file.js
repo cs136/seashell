@@ -24,10 +24,10 @@ var SEASHELL_READONLY_STRING = "SEASHELL_READONLY";
 angular.module('frontend-app')
   .controller('EditFileController', ['$state', '$scope', '$timeout', '$q', 'openProject', 'openQuestion',
       'openFolder', 'openFile', 'error-service', 'settings-service', 'console-service', 'RenameFileModal',
-      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket',
+      'ConfirmationMessageModal', '$window', '$document', 'hotkeys', 'scrollInfo', 'undoHistory', 'socket', 'CopyFileModal',
       function($state, $scope, $timeout, $q, openProject, openQuestion, openFolder, openFile, errors,
           settings, Console, renameModal, confirmModal, $window, $document, hotkeys, scrollInfo, undoHistory,
-          ws) {
+          ws, copyModal) {
         var self = this;
         // Scope variable declarations follow.
 
@@ -101,43 +101,16 @@ angular.module('frontend-app')
             fn();
           }
         }
+        
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
         });
-        self.activateResize = function(){
+
+        self.onResize = function() {
           settings.settings.force_narrow = !(settings.settings.force_narrow);
           settings.save();
         };
-        // Resize on window size change
-        function onResize() {
-          var narrow = (settings.settings.force_narrow || $window.innerWidth < 992);
-          var min_height = 500, margin_bottom = 30;
-          var editor_elem = $window.document.querySelector("#editor > .CodeMirror");
-          var console_elem = $window.document.querySelector("#console > .CodeMirror");
-          // Run only when DOM is ready.
-          if (editor_elem && console_elem) {
-            var target_height = Math.max($window.innerHeight - editor_elem.getBoundingClientRect().top - margin_bottom, min_height);
-            var file_control_height = $window.document.querySelector('#current-file-controls').offsetHeight;
-            var console_input_height = $window.document.querySelector('#console-input').offsetHeight;
-            if (editor_elem)
-              editor_elem.style.height = sprintf("%fpx",
-                (narrow ? target_height * 0.7 : target_height) - file_control_height);
-            if (console_elem)
-              console_elem.style.height = sprintf("%fpx",
-                (narrow ? (target_height * 0.3 - file_control_height) : target_height) - console_input_height);
-            if(self.editor)
-              self.editor.refresh();
-            if(self.consoleEditor)
-              self.consoleEditor.refresh();
-            // Force the font size at any rate (and font name)
-            _.each($window.document.querySelectorAll('.CodeMirror'),
-                function (elem) {
-                  elem.style['font-family'] = sprintf("%s, monospace", settings.settings.font);
-                  elem.style['font-size'] = sprintf("%dpt", parseInt(settings.settings.font_size));
-                });
-          }
-        }
-        $scope.$on('window-resized', onResize);
+
         // Scope helper function follow.
         self.consoleLoad = function(console_cm) {
           self.consoleEditor = console_cm;
@@ -145,8 +118,8 @@ angular.module('frontend-app')
             var scr = self.consoleEditor.getScrollInfo();
             self.consoleEditor.scrollTo(scr.left, scr.height);
           });
-          $timeout(onResize, 0);
         };
+
         self.editorLoad = function(editor) {
           self.editor = editor;
           if (self.ext === "c" || self.ext === "h") {
@@ -248,8 +221,8 @@ angular.module('frontend-app')
           self.editor.on("cursorActivity", updateColNums);
           self.editor.on("focus", updateColNums);
           self.editor.on("blur", updateColNums);
-          $timeout(onResize, 0);
         };
+
         function betterTab(){
           if(self.editor.somethingSelected()){
             self.editor.indentSelection("add");
@@ -257,15 +230,60 @@ angular.module('frontend-app')
             self.editor.replaceSelection(Array(self.editor.getOption("indentUnit") + 1).join(" "), "end", "+input");
           }
         }
+
         function negTab(){
           if(self.editor.somethingSelected()){
             self.editor.indentSelection("subtract");
           }
         }
+
+        function toggleEditorFullscreen(evt) {
+          evt.preventDefault();
+          self.consoleEditor.setOption('fullScreen', false);
+          self.editor.focus();
+          self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
+        }
+
+        function toggleConsoleFullscreen(evt) {
+          evt.preventDefault();
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.focus();
+          self.consoleEditor.setOption('fullScreen', !self.consoleEditor.getOption('fullScreen'));
+        }
+
+        function quitFullscreen(evt) {
+          evt.preventDefault();
+          self.editor.setOption('fullScreen', false);
+          self.consoleEditor.setOption('fullScreen', false);
+        }
+
+        function increaseFontSize(evt) {
+          evt.preventDefault();
+          settings.settings.font_size = Math.min(settings.settings.font_size + 1, 50);
+          settings.save();
+        }
+
+        function decreaseFontSize(evt) {
+          evt.preventDefault();
+          settings.settings.font_size = Math.max(settings.settings.font_size - 1, 1);
+          settings.save();
+        }
+
         self.refreshSettings = function () {
           // var theme = settings.settings.theme_style === "light" ? "3024-day" : "3024-night";
           var theme = settings.settings.theme_style === "light" ? "default" : "3024-night";
           self.editorReadOnly = !self.ready || self.isBinaryFile || self.fileReadOnly;
+
+          var extraKeys = {
+            "Ctrl-Space": "autocomplete",
+            "Ctrl-I": self.indentAll,
+            // capture save shortcuts and ignore in the editor
+            "Ctrl-S": function() { },
+            "Cmd-S": function() { },
+            "Tab": betterTab,
+            "Shift-Tab": negTab,
+          };
+
           self.editorOptions = {
             scrollbarStyle: "overlay",
             autofocus: true,
@@ -279,39 +297,19 @@ angular.module('frontend-app')
             onLoad: self.editorLoad,
             matchBrackets: true,
             rulers: [80],
-            extraKeys: {
-              "Ctrl-Space": "autocomplete",
-              "Ctrl-Enter": function() {
-                self.editor.setOption('fullScreen', !self.editor.getOption('fullScreen'));
-              },
-              "Ctrl-I": self.indentAll,
-              "Esc": function() {
-                if(self.editor.getOption('fullScreen')) self.editor.setOption('fullScreen', false);
-              },
-              // capture save shortcuts and ignore in the editor
-              "Ctrl-S": function() { },
-              "Cmd-S": function() { },
-              "Tab": betterTab,
-              "Shift-Tab": negTab,
-              // font size decrease/increase shortcuts
-              "Ctrl-,": function() {
-                settings.settings.font_size = Math.max(settings.settings.font_size - 2, 2);
-                settings.save();
-              },
-              "Ctrl-.": function() {
-                settings.settings.font_size = Math.min(settings.settings.font_size + 2, 100);
-                settings.save();
-              },
-            }
+            extraKeys: extraKeys
           };
+
           self.consoleOptions = {
             scrollbarStyle: "overlay",
             lineWrapping: true,
             readOnly: true,
             mode: "text/plain",
             theme: theme,
-            onLoad: self.consoleLoad
+            onLoad: self.consoleLoad,
+            extraKeys: extraKeys
           };
+
           var main_hotkeys = [{
             combo: 'ctrl+d',
             description: 'Sends EOF',
@@ -322,13 +320,39 @@ angular.module('frontend-app')
             }
           }, {
             combo: 'ctrl+k',
-            description: "Kills the currently running program.",
+            description: "Kills the currently running program",
             allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
             callback: function (evt) {
               evt.preventDefault();
               self.killProgram();
             }
+          }, {
+            combo: "ctrl+;",
+            description: "Editor fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: toggleEditorFullscreen
+          }, {
+            combo: "ctrl+'",
+            description: "Console fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: toggleConsoleFullscreen
+          }, {
+            combo: 'ctrl+,',
+            description: "Decrease font size",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: decreaseFontSize
+          }, {
+            combo: 'ctrl+.',
+            description: "Increase font size",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: increaseFontSize
+          }, {
+            combo: 'esc',
+            description: "Quit fullScreen",
+            allowIn: ['INPUT', 'SELECT', 'TEXTAREA'],
+            callback: quitFullscreen
           }];
+
           var vim_disabled_hotkeys = [{
             combo: 'ctrl+r',
             description: "Runs the program",
@@ -381,6 +405,10 @@ angular.module('frontend-app')
             for (var key in self.editorOptions) {
               self.editor.setOption(key, self.editorOptions[key]);
             }
+            $("#editor .CodeMirror *").css({
+              fontFamily: sprintf("%s, monospace", settings.settings.font),
+              fontSize: sprintf("%dpt", parseInt(settings.settings.font_size))
+            });
             self.editor.addKeyMap({'Tab': betterTab});
             self.editor.refresh();
           }
@@ -388,12 +416,27 @@ angular.module('frontend-app')
             for (var cKey in self.consoleOptions) {
               self.consoleEditor.setOption(cKey, self.consoleOptions[cKey]);
             }
+            $("#console .CodeMirror *").css({
+              fontFamily: sprintf("%s, monospace", settings.settings.font),
+              fontSize: sprintf("%dpt", parseInt(settings.settings.font_size))
+            });
             self.consoleEditor.refresh();
           }
-          onResize();
         };
+
         self.renameFile = function() {
           renameModal(self.project, self.question, self.folder, self.file, function(newName) {
+            var path = newName.split("/");
+            $scope.$parent.editView.refresh();
+            $state.go("edit-project.editor.file", {
+              question:(path[0]=="common"?self.question:path[0]),
+              part:(path.length>2?path[1]:(path[0]=="common"?"common":"question")),
+              file:escape(path.length>2?path[2]:path[1])});
+          });
+        };
+
+	      self.copyFile = function() {
+          copyModal(self.project, self.question, self.folder, self.file, function(newName) {
             var path = newName.split("/");
             $scope.$parent.editView.refresh();
             $state.go("edit-project.editor.file", {
@@ -522,6 +565,7 @@ angular.module('frontend-app')
           });
           self.console.running = false;
           self.console.PIDs = null;
+          self.console.stopTestingProgressNote();
           return p;
         };
 
@@ -538,7 +582,7 @@ angular.module('frontend-app')
             if(self.console.running) {
               self.project.sendInput(self.console.PIDs[0], self.userInput + "\n");
               self.console.flushForInput();
-              self.console.write(self.userInput + "\n");
+              // self.console.write(self.userInput + "\n"); -- not needed for a TTY
               self.userInput = "";
             }
           }
@@ -585,7 +629,7 @@ angular.module('frontend-app')
         };
 
         // Initialization code goes here.
-        var settings_key = settings.addWatcher(function () {self.refreshSettings();}, true);
+        var settings_key = settings.addWatcher(self.refreshSettings, true);
         $scope.$on("$destroy", function() {
           if (self.timeout && self.ready) {
             $timeout.cancel(self.timeout);
@@ -621,7 +665,7 @@ angular.module('frontend-app')
                 self.undoHistory = JSON.parse(conts.history);
                 self.editor.setHistory(self.undoHistory);
               } else {
-                console.log("warning: could not read history");
+                console.warn("Could not read history");
               }
             } else {
               self.unavailable = true;

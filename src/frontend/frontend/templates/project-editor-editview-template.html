@@ -1,5 +1,5 @@
   <!-- File Editor Template -->
-  <div class="row">
+  <div id="console-editor-container" class="row">
     <div class="col-md-12 col-xs-12"
          style="padding: 0"
          role="main">
@@ -39,7 +39,11 @@
                     class="btn btn-link">
             rename/move
             </button>
-
+            <button id="toolbar-copy-file" 
+                    ng-click="editFileView.copyFile()"
+                    class="btn btn-link">
+            copy
+            </button>
             <button id="toolbar-delete-file"
                     ng-click="editFileView.deleteFile()"
                     class="btn btn-link">
@@ -93,7 +97,7 @@
               <button id="console-clear-button"
                       ng-click="editFileView.clearConsole()"
                       class="btn btn-link console-control">clear</button>
-              <button id="resize-button" ng-click="editFileView.activateResize()"
+              <button id="resize-button" ng-click="editFileView.onResize()"
                       class="btn btn-link console-control">resize</button>
             </div>
           </div>

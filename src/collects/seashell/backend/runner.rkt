@@ -18,13 +18,12 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
          (submod seashell/seashell-config typed)
-         seashell/diff)
+         seashell/diff
+         seashell/utils/pty)
 (require/typed racket/serialize
                [serialize (-> Any Any)])
 (require/typed racket/base
-               [#:opaque Environment-Variable-Set environment-variables?]
-               [current-environment-variables (Parameterof Environment-Variable-Set)]
-               [environment-variables-copy (-> Environment-Variable-Set Environment-Variable-Set)])
+               [environment-variables-copy (-> Environment-Variables Environment-Variables)])
 (require/typed "asan-error-parse.rkt"
                [asan->json (-> Bytes Path-String Bytes)])
 
@@ -41,7 +40,8 @@
                  [destroyed-semaphore : Semaphore]
                  [_mode : (U 'test 'run)] [custodian : Custodian]
                  [source-dir : Path-String]
-                 [asan : Bytes]) #:transparent #:mutable #:type-name Program)
+                 [asan : Bytes]
+                 [pty : (U False PTY)]) #:transparent #:mutable #:type-name Program)
 (struct exn:program:run exn:fail:user ())
 
 (: program-table (HashTable Integer Program))
@@ -66,8 +66,8 @@
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
                          destroyed-semaphore mode custodian
-                         source-dir asan)
-    pgrm)
+                         source-dir asan pty)
+                pgrm)
   (define pid (subprocess-pid handle))
   ;; Close ports we don't use.
   (close-input-port in-stdin)
@@ -75,27 +75,27 @@
 
   (logf 'debug "Sending ~a bytes to program PID ~a." (bytes-length input) pid)
 
-  ;; Send test input to program and wait. 
+  ;; Send test input to program and wait.
   (thread (lambda ()
-    (with-handlers
-      [(exn:fail?
-        (lambda ([exn : exn])
-          (logf 'info "write-bytes failed to write ~a.in to program stdin: received error: ~a"
-                      test-name (exn-message exn))))]
-      (write-bytes input raw-stdin))
-    (close-output-port raw-stdin)))
+            (with-handlers
+             [(exn:fail?
+               (lambda ([exn : exn])
+                 (logf 'info "write-bytes failed to write ~a.in to program stdin: received error: ~a"
+                       test-name (exn-message exn))))]
+             (write-bytes input raw-stdin))
+            (close-output-port raw-stdin)))
 
   ;; Background read stuff.
-  (define-values (buf-stderr cp-stderr) (make-pipe))
-  (define-values (buf-stdout cp-stdout) (make-pipe))
+  (define-values (buf-stderr cp-stderr) (make-pipe (* (read-config-nonnegative-real 'subprocess-buffer-size) 1000000)))
+  (define-values (buf-stdout cp-stdout) (make-pipe (* (read-config-nonnegative-real 'subprocess-buffer-size) 1000000)))
   (define stderr-thread (thread (lambda ()
-            (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
-            (copy-port raw-stderr cp-stderr))))
+                                  (logf 'debug "Starting copy port for stderr for program PID ~a." pid)
+                                  (copy-port raw-stderr cp-stderr))))
   (define stdout-thread (thread (lambda ()
-            (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
-            (copy-port raw-stdout cp-stdout))))
+                                  (logf 'debug "Starting copy port for stdout for program PID ~a." pid)
+                                  (copy-port raw-stdout cp-stdout))))
 
-  ;; Helper to close ports
+  ;; Helper to close ports (note -- there is no PTY when running a test)
   (define (close)
     (close-input-port raw-stdout)
     (close-input-port raw-stderr)
@@ -103,64 +103,101 @@
     (custodian-shutdown-all custodian)
     (void))
 
+  ;; This helper function reads and returns the first n bytes of an input port.
+  ;; Used when students write a ton of output and we don't want to send all of it to the front-end.
+  (: first-n-bytes (->* (Input-Port Nonnegative-Real) (Bytes) Bytes))
+  (define (first-n-bytes input-port n [too-long-message #"\n... There is more output, but it's not shown ...\n"])
+    (local [(define first-part (read-bytes (exact-floor n) input-port))
+            (define reached-end? (or (not (byte-ready? input-port)) (eof-object? (read-byte input-port))))]
+      (cond [(eof-object? first-part) #""]
+            [reached-end? first-part]
+            [else (bytes-append first-part too-long-message)])))
+
+
   (define receive-evt (thread-receive-evt))
   (let loop ()
     (match (sync/timeout (read-config-nonnegative-real 'program-run-timeout)
                          #{handle :: (Evtof Any)}
                          #{receive-evt :: (Evtof Any)})
-      [(? (lambda ([evt : Any]) (eq? handle evt))) ;; Program quit
-       (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
-       (set-program-exit-status! pgrm (cast (subprocess-status handle) Exact-Nonnegative-Integer))
-       ;; Wait for threads to finish copying
-       (thread-wait stderr-thread)
-       (thread-wait stdout-thread)
-       ;; Read stdout, stderr.
-       (close-output-port cp-stderr)
-       (close-output-port cp-stdout)
-       ;; Read asan error message and convert it to json (stored as Bytes)
-       (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
-       
-       (define stdout (port->bytes buf-stdout))
-       (define stderr (port->bytes buf-stderr))
-       (define asan-output (program-asan pgrm))
+           [(? (lambda ([evt : Any]) (eq? handle evt))) ;; Program quit
+            (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
+            (set-program-exit-status! pgrm (cast (subprocess-status handle) Exact-Nonnegative-Integer))
+            ;; Wait for threads to finish copying
+            (thread-wait stderr-thread)
+            (thread-wait stdout-thread)
+            ;; Read stdout, stderr.
+            (close-output-port cp-stderr)
+            (close-output-port cp-stdout)
+            ;; Read asan error message and convert it to json (stored as Bytes)
+            (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
 
-       (match (subprocess-status handle)
-         [0
-          ;; Three cases:
-          (cond
-            [(not expected)
-             (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr ,asan-output)) out-stdout)]
-            [(equal? stdout expected)
-             (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
-            [else
-              ;; Split expected and output, difference them.
-              (define output-lines (regexp-split #rx"\n" stdout))
-              (define expected-lines (regexp-split #rx"\n" expected))
-              ;; hotfix: diff with empty because it's slow
-              (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
-         [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,asan-output)) out-stdout)])
-       (logf 'debug "Done sending test results for program PID ~a." pid)
-       (close)]
-      [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
-       (logf 'info "Program with PID ~a timed out after ~a seconds." pid (read-config-nonnegative-real 'program-run-timeout))
-       (set-program-exit-status! pgrm 255)
-       ;; Kill copy-threads before killing program
-       (kill-thread stderr-thread)
-       (kill-thread stdout-thread)
-       (subprocess-kill handle #t)
-       (write (serialize `(,pid ,test-name "timeout")) out-stdout)
-       (close)]
-      [(? (lambda ([evt : Any]) (eq? receive-evt evt))) ;; Received a signal.
-       (match (thread-receive)
-         ['kill
-          (logf 'info "Program with PID ~a killed." pid)
-          (kill-thread stderr-thread)
-          (kill-thread stdout-thread)
-          (set-program-exit-status! pgrm 254)
-          (subprocess-kill handle #t)
-          (write (serialize `(,pid ,test-name "killed")) out-stdout)
-          (close)])]))
+            (define stdout (port->bytes buf-stdout))
+            (define stderr (port->bytes buf-stderr))
+            (define asan-output (program-asan pgrm))
+
+            (match (subprocess-status handle)
+                   [0
+                    ;; Three cases:
+                    (cond
+                     [(not expected)
+                      (write (serialize `(,pid ,test-name "no-expect" ,stdout ,stderr ,asan-output)) out-stdout)]
+                     [(equal? stdout expected)
+                      (write (serialize `(,pid ,test-name "passed" ,stdout ,stderr)) out-stdout)]
+                     [else
+                      ;; Split expected and output, difference them.
+                      (define output-lines (regexp-split #rx"\n" stdout))
+                      (define expected-lines (regexp-split #rx"\n" expected))
+                      ;; hotfix: diff with empty because it's slow
+                      (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
+                   [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,stdout ,asan-output)) out-stdout)])
+            (logf 'debug "Done sending test results for program PID ~a." pid)
+            (close)]
+           [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
+            (logf 'info "Program with PID ~a timed out after ~a seconds." pid (read-config-nonnegative-real 'program-run-timeout))
+            (set-program-exit-status! pgrm 255)
+            ;; Kill copy-threads before killing program
+            (kill-thread stderr-thread)
+            (kill-thread stdout-thread)
+            (subprocess-kill handle #t)
+
+            ;; Read stdout, stderr.
+            (close-output-port cp-stderr)
+            (close-output-port cp-stdout)
+            (define stdout (first-n-bytes buf-stdout (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+            (define stderr (first-n-bytes buf-stderr (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+
+            (write (serialize `(,pid ,test-name "timeout" ,stdout ,stderr)) out-stdout)
+            (close)]
+           [(? (lambda ([evt : Any]) (eq? receive-evt evt))) ;; Received a signal.
+            (match (thread-receive)
+                   ['kill
+                    (logf 'info "Program with PID ~a killed." pid)
+                    (kill-thread stderr-thread)
+                    (kill-thread stdout-thread)
+                    (set-program-exit-status! pgrm 254)
+                    (subprocess-kill handle #t)
+
+                    ;; Read stdout, stderr.
+                    (close-output-port cp-stderr)
+                    (close-output-port cp-stdout)
+                    (define stdout (first-n-bytes buf-stdout (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+                    (define stderr (first-n-bytes buf-stderr (read-config-nonnegative-real 'max-output-bytes-to-keep)))
+
+                    (write (serialize `(,pid ,test-name "killed" ,stdout ,stderr)) out-stdout)
+                    (close)])]))
   (void))
+
+;; (drain-port in out)
+;; Drains all available bytes from in to out.
+(: drain-port (-> Input-Port Output-Port Any))
+(define (drain-port in out)
+  (let loop ()
+    (define output (make-bytes (read-config-integer 'io-buffer-size)))
+    (define read (read-bytes-avail!* output in))
+    (when (and (number? read) (read . > . 0))
+      (write-bytes output out 0 read)
+      (loop))))
+
 
 ;; (program-control-thread program)
 ;; Control thread helper for a running program.
@@ -176,8 +213,8 @@
                          raw-stdin raw-stdout raw-stderr
                          handle control exit-status
                          destroyed-semaphore mode custodian
-                         source-dir asan)
-    pgrm)
+                         source-dir asan pty)
+                pgrm)
   (define pid (subprocess-pid handle))
   (define (close)
     (unless (port-closed? raw-stdout)
@@ -194,6 +231,8 @@
       (close-output-port out-stderr))
     (unless (port-closed? out-stdout)
       (close-output-port out-stdout))
+    (assert (PTY? pty))
+    (close-pty pty)
     (custodian-shutdown-all custodian)
     (void))
 
@@ -202,13 +241,13 @@
   (: check-signals (-> (-> Any) Any))
   (define (check-signals tail)
     (if (sync/timeout 0 (thread-receive-evt))
-       (match (thread-receive)
-         ['kill
-          (logf 'info "Program with PID ~a killed." pid)
-          (set-program-exit-status! pgrm 254)
-          (subprocess-kill handle #t)
-          (close)])
-       (tail)))
+        (match (thread-receive)
+               ['kill
+                (logf 'info "Program with PID ~a killed." pid)
+                (set-program-exit-status! pgrm 254)
+                (subprocess-kill handle #t)
+                (close)])
+      (tail)))
 
   (let loop : Any ()
     (define receive-evt (thread-receive-evt))
@@ -216,66 +255,57 @@
                          handle
                          receive-evt
                          (if (port-closed? in-stdin)
-                           never-evt
+                             never-evt
                            in-stdin)
                          (if (port-closed? raw-stderr)
-                           never-evt
+                             never-evt
                            raw-stderr)
                          (if (port-closed? raw-stdout)
-                           never-evt
+                             never-evt
                            raw-stdout))
-      [(? (lambda (evt) (eq? handle evt))) ;; Program quit
-       (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
-       (set-program-exit-status! pgrm (cast (subprocess-status handle) Exact-Nonnegative-Integer))
-       ;; Flush the ports!
-       (define read-stdout
-         (if (port-closed? raw-stdout)
-           eof
-           (port->bytes raw-stdout)))
-       (unless (eof-object? read-stdout)
-         (write-bytes read-stdout out-stdout))
-       (define read-stderr
-         (if (port-closed? raw-stderr)
-           eof
-           (port->bytes raw-stderr)))
-       (unless (eof-object? read-stderr)
-         (write-bytes read-stderr out-stderr))
-       (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
-       (close)]
-      [#f ;; Program timed out (30 seconds pass without any event)
-       (logf 'info "Program with PID ~a timed out." pid)
-       (set-program-exit-status! pgrm 255)
-       (subprocess-kill handle #t)
-       (close)]
-      [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
-       (check-signals loop)]
-      [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
-       (define input (make-bytes (read-config-integer 'io-buffer-size)))
-       (define read (read-bytes-avail! input in-stdin))
-       (when (integer? read)
-         (write-bytes input raw-stdin 0 read))
-       (when (eof-object? read)
-         (close-input-port in-stdin)
-         (close-output-port raw-stdin))
-       (check-signals loop)]
-      [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
-       (define output (make-bytes (read-config-integer 'io-buffer-size)))
-       (define read (read-bytes-avail! output raw-stdout))
-       (when (integer? read)
-         (write-bytes output out-stdout 0 read))
-       (when (eof-object? read)
-         (close-input-port raw-stdout)
-         (close-output-port out-stdout))
-       (check-signals loop)]
-      [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
-       (define output (make-bytes (read-config-integer 'io-buffer-size)))
-       (define read (read-bytes-avail! output raw-stderr))
-       (when (integer? read)
-         (write-bytes output out-stderr 0 read))
-       (when (eof-object? read)
-         (close-input-port raw-stderr)
-         (close-output-port out-stderr))
-       (check-signals loop)]))
+           [(? (lambda (evt) (eq? handle evt))) ;; Program quit
+            (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
+            (set-program-exit-status! pgrm (cast (subprocess-status handle) Exact-Nonnegative-Integer))
+            ;; Flush the ports!
+            (unless (port-closed? raw-stdout) (drain-port raw-stdout out-stdout))
+            (unless (port-closed? raw-stderr) (drain-port raw-stderr out-stderr))
+            (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
+            (close)]
+           [#f ;; Program timed out (30 seconds pass without any event)
+            (logf 'info "Program with PID ~a timed out." pid)
+            (set-program-exit-status! pgrm 255)
+            (subprocess-kill handle #t)
+            (close)]
+           [(? (lambda (evt) (eq? receive-evt evt))) ;; Received a signal.
+            (check-signals loop)]
+           [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
+            (define input (make-bytes (read-config-integer 'io-buffer-size)))
+            (define read (read-bytes-avail! input in-stdin))
+            (when (integer? read)
+              (write-bytes input raw-stdin 0 read))
+            (when (eof-object? read)
+              (close-input-port in-stdin)
+              ;; Send <eof> (#x4) to the PTY, instead of closing the port.
+              (write-byte #x4 raw-stdin))
+            (check-signals loop)]
+           [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
+            (define output (make-bytes (read-config-integer 'io-buffer-size)))
+            (define read (read-bytes-avail! output raw-stdout))
+            (when (integer? read)
+              (write-bytes output out-stdout 0 read))
+            (when (eof-object? read)
+              (close-input-port raw-stdout)
+              (close-output-port out-stdout))
+            (check-signals loop)]
+           [(? (lambda (evt) (eq? raw-stderr evt))) ;; Received standard error from program
+            (define output (make-bytes (read-config-integer 'io-buffer-size)))
+            (define read (read-bytes-avail! output raw-stderr))
+            (when (integer? read)
+              (write-bytes output out-stderr 0 read))
+            (when (eof-object? read)
+              (close-input-port raw-stderr)
+              (close-output-port out-stderr))
+            (check-signals loop)]))
   (void))
 
 ;; (run-program binary directory lang test [test-loc 'tree])
@@ -305,93 +335,104 @@
                     ((U Path-String 'current-directory 'flat 'tree)) Integer))
 (define (run-program binary directory source-dir lang test [test-loc 'tree])
   (define test-path (cond
-                      [(eq? test-loc 'current-directory) (build-path ".")]
-                      [(eq? test-loc 'flat) (build-path directory)]
-                      [(eq? test-loc 'tree) (build-path directory (read-config-string 'tests-subdirectory))]
-                      [(path-string? test-loc) test-loc]
-                      [else (error "...unreachable.")]))
+                     [(eq? test-loc 'current-directory) (build-path ".")]
+                     [(eq? test-loc 'flat) (build-path directory)]
+                     [(eq? test-loc 'tree) (build-path directory (read-config-string 'tests-subdirectory))]
+                     [(path-string? test-loc) test-loc]
+                     [else (error "...unreachable.")]))
   (define run-custodian (make-custodian))
-
   (parameterize ([current-custodian run-custodian]
                  [current-subprocess-custodian-mode 'interrupt])
-    (call-with-semaphore
-      program-new-semaphore
-      (lambda ()
-        (with-handlers
-            [(exn:fail:filesystem?
-              (lambda ([exn : exn])
-                (raise (exn:program:run
-                        (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
-                        (current-continuation-marks)))))]
-          (if test
-            (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
-            (logf 'info "Running file ~a with language ~a" binary lang))
-
-          (define-values (handle raw-stdout raw-stdin raw-stderr)
-            (parameterize
-              ([current-directory directory]
-               [current-environment-variables (environment-variables-copy (current-environment-variables))])
-              (match lang
-                ['C
-                  ;; Behaviour is inconsistent if we just exec directly.
-                  ;; This seems to work.  (why: who knows?)
-                  (putenv "ASAN_OPTIONS"
-                          "allocator_may_return_null=1:
-                           detect_leaks=1:
-                           log_path='/tmp/seashell-asan':
-                           detect_stack_use_after_return=1")
-                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
-                  (subprocess #f #f #f binary)]
-                ['racket (subprocess #f #f #f (read-config-path 'racket-interpreter)
-                                     "-t"
-                                      (some-system-path->string (build-path (read-config-path 'seashell-racket-runtime-library)))
-                                     "-u" binary)])))
-
-              ;; Construct the I/O ports.
-              (define (make-io-pipe)
-                (if test (make-pipe) (make-pipe (read-config-integer 'io-buffer-size))))
-
-              (define-values (in-stdout out-stdout) (make-io-pipe))
-              (define-values (in-stdin out-stdin) (make-io-pipe))
-              (define-values (in-stderr out-stderr) (make-io-pipe))
-              ;; Set buffering modes
-              (file-stream-buffer-mode raw-stdin 'none)
-              ;; Construct the destroyed-semaphore
-              (define destroyed-semaphore (make-semaphore 0))
-              ;; Construct the control structure.
-              (define result (program in-stdin in-stdout in-stderr
-                                      out-stdin out-stdout out-stderr
-                                      raw-stdin raw-stdout raw-stderr
-                                      handle #f #f destroyed-semaphore
-                                      (if test 'test 'run) run-custodian
-                                      source-dir #""))
-              (define control-thread
-                (thread
-                  (lambda ()
-                    (if test
-                      (program-control-test-thread result
-                                                   test
-                                                   (file->bytes (build-path test-path (string-append test ".in")))
-                                                   (with-handlers
-                                                     ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                     (file->bytes (build-path test-path (string-append test ".expect")))))
-                      (program-control-thread result)))))
-              (set-program-control! result control-thread)
-              ;; Install it in the hash-table
-              (define pid (subprocess-pid handle))
-              ;; Block if there's still a PID in there.  This is to prevent
-              ;; nasty race-conditions in which a process which is started
-              ;; has the same PID as a process which is just about to be destroyed.
-              (define block-semaphore
                 (call-with-semaphore
-                  program-destroy-semaphore
-                  (lambda ()
-                    (define handle (hash-ref program-table pid #f))
-                    (if handle (program-destroyed-semaphore handle) #f))))
-              (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
-              (hash-set! program-table pid result)
-              (logf 'info "Binary ~a running as PID ~a." binary pid)
-              pid)))))
+                 program-new-semaphore
+                 (lambda ()
+                   (with-handlers
+                    [(exn:fail:filesystem?
+                      (lambda ([exn : exn])
+                        (raise (exn:program:run
+                                (format "Could not run binary: Received filesystem error: ~a" (exn-message exn))
+                                (current-continuation-marks)))))]
+                    (if test
+                        (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
+                      (logf 'info "Running file ~a with language ~a" binary lang))
+                    (define-values (handle pty raw-stdout raw-stdin raw-stderr)
+                      (parameterize
+                       ([current-directory directory]
+                        [current-environment-variables (environment-variables-copy (current-environment-variables))])
+                       (define-values (pty slave:stdout slave:stdin master:stdout master:stdin)
+                         (if (not test)
+                             (let* ([pty (make-pty)]
+                                    [slave:stdout (PTY-s-out pty)]
+                                    [slave:stdin (PTY-s-in pty)]
+                                    [master:stdout (PTY-m-in pty)]
+                                    [master:stdin (PTY-m-out pty)])
+                               (values pty slave:stdout slave:stdin master:stdout master:stdin))
+                           (values #f #f #f #f #f)))
+                       (define-values (handle r:stdout r:stdin r:stderr)
+                         (match lang
+                                ['C
+                                 ;; Behaviour is inconsistent if we just exec directly.
+                                 ;; This seems to work.  (why: who knows?)
+                                 (putenv "ASAN_OPTIONS"
+                                         "allocator_may_return_null=1:detect_leaks=1:log_path='/tmp/seashell-asan':detect_stack_use_after_return=1")
+                                 (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
+                                 (subprocess slave:stdout slave:stdin #f binary)]
+                                ['racket (subprocess slave:stdout slave:stdin #f
+                                                     (read-config-path 'racket-interpreter)
+                                                     "-t"
+                                                     (some-system-path->string (build-path (read-config-path 'seashell-racket-runtime-library)))
+                                                     "-u" binary)]))
+                       ;; Keep the slave end of the PTY open, so the I/O code doesn't crash on us.
+                       ;; (It's automatically closed when the program terminates)
+                       ;; NOTE: this does not work on FreeBSD -- https://stackoverflow.com/questions/23458160/final-output-on-slave-pty-is-lost-if-it-was-not-closed-in-parent-why
+                       (values handle pty
+                               (assert (or master:stdout r:stdout))
+                               (assert (or master:stdin r:stdin))
+                               (assert r:stderr))))
+                    ;; Construct the I/O ports.
+                    (define (make-io-pipe)
+                      (if test (make-pipe) (make-pipe (read-config-integer 'io-buffer-size))))
+                    (define-values (in-stdout out-stdout) (make-io-pipe))
+                    (define-values (in-stdin out-stdin) (make-io-pipe))
+                    (define-values (in-stderr out-stderr) (make-io-pipe))
+                    ;; Set buffering modes
+                    (file-stream-buffer-mode raw-stdin 'none)
+                    ;; Construct the destroyed-semaphore
+                    (define destroyed-semaphore (make-semaphore 0))
+                    ;; Construct the control structure.
+                    (define result (program in-stdin in-stdout in-stderr
+                                            out-stdin out-stdout out-stderr
+                                            raw-stdin raw-stdout raw-stderr
+                                            handle #f #f destroyed-semaphore
+                                            (if test 'test 'run) run-custodian
+                                            source-dir #"" pty))
+                    (define control-thread
+                      (thread
+                       (lambda ()
+                         (if test
+                             (program-control-test-thread result
+                                                          test
+                                                          (file->bytes (build-path test-path (string-append test ".in")))
+                                                          (with-handlers
+                                                           ([exn:fail:filesystem? (lambda (exn) #f)])
+                                                           (file->bytes (build-path test-path (string-append test ".expect")))))
+                           (program-control-thread result)))))
+                    (set-program-control! result control-thread)
+                    ;; Install it in the hash-table
+                    (define pid (subprocess-pid handle))
+                    ;; Block if there's still a PID in there.  This is to prevent
+                    ;; nasty race-conditions in which a process which is started
+                    ;; has the same PID as a process which is just about to be destroyed.
+                    (define block-semaphore
+                      (call-with-semaphore
+                       program-destroy-semaphore
+                       (lambda ()
+                         (define handle (hash-ref program-table pid #f))
+                         (if handle (program-destroyed-semaphore handle) #f))))
+                    (when block-semaphore (sync (semaphore-peek-evt block-semaphore)))
+                    (hash-set! program-table pid result)
+                    (logf 'info "Binary ~a running as PID ~a." binary pid)
+                    pid)))))
 
 ;; (program-stdin pid)
 ;; Returns the standard input port for a program
@@ -449,7 +490,10 @@
 (define (program-kill pid)
   (thread-send (program-wait-evt pid)
                'kill
-               #f)
+               (lambda ()
+                  (define handle (program-handle (hash-ref program-table pid)))
+                  (logf 'error "program-kill thread-send failed. Pid: ~a, exit code: ~a" pid (subprocess-status handle))
+                  #f))
   (void))
 
 ;; (program-wait-evt pid)
@@ -485,7 +529,7 @@
 ;;  #f if program is not done, exit status otherwise
 (: program-asan-message (-> Integer (U False Bytes)))
 (define (program-asan-message pid)
-  (program-asan (hash-ref program-table pid)))  
+  (program-asan (hash-ref program-table pid)))
 
 ;; (program-destroy-handle pid) -> void?
 ;;
@@ -499,27 +543,27 @@
 (: program-destroy-handle (-> Integer Void))
 (define (program-destroy-handle pid)
   (call-with-semaphore
-    program-destroy-semaphore
-    (lambda ()
-      (define pgrm (hash-ref program-table pid))
-      (match-define (program in-stdin in-stdout in-stderr
-                             out-stdin out-stdout out-stderr
-                             raw-stdin raw-stdout raw-stderr
-                             handle control exit-status
-                             destroyed-semaphore mode custodian
-                             source-dir asan)
-        pgrm)
+   program-destroy-semaphore
+   (lambda ()
+     (define pgrm (hash-ref program-table pid))
+     (match-define (program in-stdin in-stdout in-stderr
+                            out-stdin out-stdout out-stderr
+                            raw-stdin raw-stdout raw-stderr
+                            handle control exit-status
+                            destroyed-semaphore mode custodian
+                            source-dir asan pty)
+                   pgrm)
 
-      ;; Note: ports are Racket pipes and therefore GC'd.
-      ;; We don't need to close them.  (Closing the input port
-      ;; cause a bit of a race condition with the dispatch code.
-      ;; We don't close out-stdout and out-stderr as clients
-      ;; may still be using them.  Note that in-stdout and in-stderr
-      ;; MUST be closed for EOF to be properly sent).
-      (hash-remove! program-table pid)
+     ;; Note: ports are Racket pipes and therefore GC'd.
+     ;; We don't need to close them.  (Closing the input port
+     ;; cause a bit of a race condition with the dispatch code.
+     ;; We don't close out-stdout and out-stderr as clients
+     ;; may still be using them.  Note that in-stdout and in-stderr
+     ;; MUST be closed for EOF to be properly sent).
+     (hash-remove! program-table pid)
 
-      ;; Post the destroyed semaphore
-      (semaphore-post destroyed-semaphore))))
+     ;; Post the destroyed semaphore
+     (semaphore-post destroyed-semaphore))))
 
 ;; Retrieve asan error message at "/tmp/seashell-asan.{pid}"
 ;;  this is set in "run-program"
