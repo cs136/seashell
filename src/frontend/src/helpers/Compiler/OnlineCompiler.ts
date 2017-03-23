@@ -25,24 +25,24 @@ class OnlineCompiler extends AbstractCompiler {
     this.offlineCompiler = offComp;
     this.activePIDs = [];
   }
-  
+
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
-    if(!this.socket.isConnected()) {
+    if (!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
-    } else if(this.activePIDs.length > 0) {
+    } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
     let tests: TestBrief[] = [];
-    if(runTests) {
+    if (runTests) {
       tests = await this.getTestsForQuestion(proj, question);
     }
     const result = await this.socket.sendMessage({
-      type: 'compileAndRunProject',
+      type: "compileAndRunProject",
       project: proj,
       question: question,
-      tests: tests.map((tst: TestBrief)=>{ return tst.name; })
+      tests: tests.map((tst: TestBrief) => { return tst.name; })
     });
-    if(result.status == "running") {
+    if (result.status === "running") {
       this.activePIDs.push(result.pid);
     }
     return {
@@ -52,7 +52,7 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   public async programKill(): Promise<void> {
-    if(this.activePIDs.length > 0 && this.socket.isConnected()) {
+    if (this.activePIDs.length > 0 && this.socket.isConnected()) {
       await this.socket.sendMessage({
         type: "programKill",
         pid: this.activePIDs
@@ -62,7 +62,7 @@ class OnlineCompiler extends AbstractCompiler {
       //  let's kill any programs running offline as well
       try {
         await this.offlineCompiler.programKill();
-      } catch(err) {
+      } catch (err) {
         // Ignore the case where there are no programs running offline.
       }
     } else {
@@ -71,14 +71,14 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   public async programInput(contents: string): Promise<void> {
-    if(this.activePIDs.length === 0 || !this.socket.isConnected()) {
+    if (this.activePIDs.length === 0 || !this.socket.isConnected()) {
       return this.offlineCompiler.programInput(contents);
-    } else if(this.activePIDs.length > 1) {
+    } else if (this.activePIDs.length > 1) {
       throw new CompilerError("Sending input to program when multiple programs are running.");
     }
     try {
       await this.offlineCompiler.programKill();
-    } catch(err) { /* Ignore if there is no program running offline */}
+    } catch (err) { /* Ignore if there is no program running offline */}
     return this.socket.sendMessage({
       type: "programInput",
       pid: this.activePIDs[0],
@@ -87,14 +87,14 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   public async sendEOF(): Promise<void> {
-    if(this.activePIDs.length === 0 || !this.socket.isConnected()) {
+    if (this.activePIDs.length === 0 || !this.socket.isConnected()) {
       return this.offlineCompiler.sendEOF();
-    } else if(this.activePIDs.length > 1) {
+    } else if (this.activePIDs.length > 1) {
       throw new CompilerError("Sending EOF to program when multiple programs are running.");
     }
     try {
       await this.offlineCompiler.programKill();
-    } catch(err) { /* Ignore if there is no program running offline */}
+    } catch (err) { /* Ignore if there is no program running offline */}
     return this.socket.sendMessage({
       type: "sendEOF",
       pid: this.activePIDs[0]

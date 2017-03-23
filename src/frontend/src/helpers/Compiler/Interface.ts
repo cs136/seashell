@@ -29,9 +29,9 @@ abstract class AbstractCompiler {
   //  to send to their respective backends
   protected async getTestsForQuestion(project: ProjectID, question: string): Promise<TestBrief[]> {
     const files = await this.storage.getFiles(project);
-    return groupBy(files.filter((f: FileBrief)=> {
-      return f.name.startsWith(question+"/tests/");
-    }), (f: FileBrief)=>{
+    return groupBy(files.filter((f: FileBrief) => {
+      return f.name.startsWith(question + "/tests/");
+    }), (f: FileBrief) => {
       return basename(f);
     }).map((t: FileBrief[])=> {
       let test: TestBrief = {
@@ -39,13 +39,13 @@ abstract class AbstractCompiler {
         in: null,
         expect: null
        };
-      if(ext(t[0]) == "in")
+      if (ext(t[0]) === "in")
         test.in = t[0];
       else
         test.expect = t[0];
-      if(t[1] && ext(t[1]) == "in")
+      if (t[1] && ext(t[1]) === "in")
         test.in = t[1];
-      else if(t[1])
+      else if (t[1])
         test.expect = t[1];
       return test;
     });
