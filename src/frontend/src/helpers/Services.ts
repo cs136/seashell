@@ -59,14 +59,14 @@ namespace Services {
   }
 
   export function storage(): WebStorage {
-    if(webStorage === null) {
+    if (webStorage === null) {
       throw new LoginError("Must call Services.init() before Services.storage().");
     }
     return webStorage;
   }
 
   export function compiler(): AbstractCompiler {
-    if(onlineCompiler === null) {
+    if (onlineCompiler === null) {
       throw new LoginError("Must call Services.init() before Services.compiler().");
     }
     return onlineCompiler;

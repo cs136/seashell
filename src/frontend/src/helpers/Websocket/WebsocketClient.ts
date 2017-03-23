@@ -1,4 +1,3 @@
-//import WebSocket = require("ws");
 import {Coder, ShittyCoder} from './Crypto';
 import {Connection} from '../Services';
 import WebCrypto = require("node-webcrypto-ossl");
@@ -288,7 +287,7 @@ class SeashellWebsocket {
 
   public test_cb(ignored: any, message: any) {
     return this.invoke_cb('test', message);
-  } 
+  }
 
   /** Sends a message along the connection. Internal use only.
    *
