@@ -12,18 +12,23 @@ import {map, filter, flatten, repeat, head, prop} from "ramda";
 import J = require("jscheck");
 import {TestAccount} from "../account";
 
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 30*1000;
+// polyfills
+import WebSocket = require("ws");
+
+(<any>window).WebSocket = WebSocket;
+
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 30 * 1000;
 
 const testSize = 1;
-const halfTestSize = Math.ceil(testSize/2);
+const halfTestSize = Math.ceil(testSize / 2);
 
 let unique = 0;
 // should return a thunk, see jscheck documentation
 function uniqStr(len: number): () => string {
   return () =>  J.string(J.number(0, len),
-                    J.one_of([J.character('a','z'),
-                              J.character('0','9'),
-                              J.character('A','Z'),
+                    J.one_of([J.character("a", "z"),
+                              J.character("0", "9"),
+                              J.character("A", "Z"),
                               J.character("-"),
                               J.character(" "),
                               J.character("_")]))() + (++unique);
@@ -35,6 +40,7 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 function websocketTest() {
 
+  Services.init();
   let socket = Services.storage();
 
   beforeAll(() => {
@@ -48,7 +54,7 @@ function websocketTest() {
   });
 
   it("setting up tests", () => {
-    expect(socket.isConnected()).toEqual(true);
+    // expect(socket.isConnected()).toEqual(true);
     expect(socket.isOffline()).toEqual(false);
   });
 
@@ -57,16 +63,16 @@ function websocketTest() {
     id: `X${s}`,
     name: `X${s}`,
     // runs: {}
-  }), uniqStrArr(testSize,20)()));
+  }), uniqStrArr(testSize, 20)()));
 
   let files = map((p) => {
-    const name = `default/${uniqStr(20)()}.${J.one_of(["c","h","rkt","txt","test"])()}`;
+    const name = `default/${uniqStr(20)()}.${J.one_of(["c", "h", "rkt", "txt", "test"])()}`;
     return {
       id: [p.id, name],
       project: p.id,
       name: name,
-      contents: uniqStr(5000)()+"\n"
-    }
+      contents: uniqStr(5000)() + "\n"
+    };
   }, flatten(repeat(projs, testSize)));
 
   async function remoteProjs() {
@@ -84,11 +90,11 @@ function websocketTest() {
   }
 
   async function remoteFiles() {
-    let projGps = R.groupBy((x:File) => x.project, files);
+    let projGps = R.groupBy((x: File) => x.project, files);
     for (const p of projs) {
       let remoteFiles: File[] = <File[]> await socket.getFiles(p.id);
       // ignore automatically created file by the backend
-      remoteFiles = remoteFiles.filter((f:File) => f.name != "default/main.c");
+      remoteFiles = remoteFiles.filter((f: File) => f.name !==  "default/main.c");
       for (let x of remoteFiles) {
         const file = await socket.readFile([p.name, x.name]);
         x.contents = file.contents;
@@ -153,9 +159,9 @@ function websocketTest() {
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
   });
 
-  function genRunFiles(p: string) : {[index: string]: FileID} {
-    return R.zipObj(uniqStrArr(testSize,30)(),
-                    J.array(testSize, J.one_of(map((file) => [p, file.name], files)))())
+  function genRunFiles(p: string): {[index: string]: FileID} {
+    return R.zipObj(uniqStrArr(testSize, 30)(),
+                    J.array(testSize, J.one_of(map((file) => [p, file.name], files)))());
   }
 
   it(`setFileToRun: randomly pick a run file per project`, async () => {
@@ -163,7 +169,7 @@ function websocketTest() {
       await socket.setFileToRun(f.project, "default", [f.project, f.name]);
       for (const o of files) {
         const check = await socket.getFileToRun(o.project, "default");
-        if (o.project == f.project) {
+        if (o.project ===  f.project) {
           expect(check).toEqual(f.id);
         } else {
           expect(check).not.toEqual(f.id);
@@ -174,10 +180,10 @@ function websocketTest() {
 
   it(`renameFile: rename ${halfTestSize} file per project, should also rename run files`, async () => {
     // group files by project
-    const projGps = R.groupBy((x:File) => x.project, files);
+    const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj: Project = R.find((x) => x.name == p, projs);
-      for (const i of R.range(0,Math.min(halfTestSize, projGps[p].length))) {
+      const pj: Project = R.find((x) => x.name ===  p, projs);
+      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const old: string  = projGps[p][i].name; // old name
         const name: string = (projGps[p][i].name += "_new_name");
         projGps[p][i].id = [p, projGps[p][i].name];
@@ -185,10 +191,10 @@ function websocketTest() {
         await socket.renameFile([p, old], name);
         /* backend does not support
         // update local varible to reflect the rename
-        // now the question's runner file should be the new name.
+        // now the question"s runner file should be the new name.
         pj.runs["default"] = name;
         for (const d in pj.runs) {
-          if (pj.runs[d] == old) {
+          if (pj.runs[d] ===  old) {
             pj.runs[d] = name;
           }
           const check: FileID = await socket.getFileToRun(p, d);
@@ -210,19 +216,19 @@ function websocketTest() {
   });
 
   it(`deleteFile: delete ${halfTestSize} files per project, should also remove from run files`, async () => {
-    const projGps = R.groupBy((x:File) => x.project, files);
+    const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name == p, projs);
-      for (const i of R.range(0,Math.min(halfTestSize, projGps[p].length))) {
+      const pj = R.find((x) => x.name === p, projs);
+      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const nm = projGps[p][i].name;
         const fid: [string, string] = [p, nm];
         await socket.setFileToRun(pj.name, nm, fid);
         await socket.deleteFile(fid);
         expect(await remoteFiles()).not.toEqual(expect.arrayContaining(files));
         expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
-        files = filter((x) => x.project != p || x.name != nm, files);
+        files = filter((x) => x.project !==  p || x.name !==  nm, files);
         for (const d in pj.runs) {
-          if (pj.runs[d] == fid) {
+          if (pj.runs[d] === fid) {
             delete pj.runs[d];
           }
         }
@@ -231,11 +237,11 @@ function websocketTest() {
   });
 
   it(`deleteProject: delete ${halfTestSize} projects, should also delete children`, async () => {
-    for (const i of R.range(0,halfTestSize)) {
+    for (const i of R.range(0, halfTestSize)) {
       const p = projs[0].name;
       await socket.deleteProject(p);
       projs = R.tail(projs);
-      files = R.filter((f) => f.project != p, files);
+      files = R.filter((f) => f.project !==  p, files);
     }
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
