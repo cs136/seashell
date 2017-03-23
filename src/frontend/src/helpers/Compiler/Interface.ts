@@ -12,7 +12,8 @@ export {AbstractCompiler,
         CompilerResult,
         CompilerMessage,
         TestBrief,
-        Test};
+        Test,
+        CompilerError};
 
 abstract class AbstractCompiler {
   constructor(protected storage: AbstractStorage, protected dispatch: DispatchFunction) { }
@@ -74,4 +75,12 @@ interface CompilerMessage {
   line: number;
   column: number;
   message: string;
+}
+
+class CompilerError extends Error {
+  data: Object;
+  constructor(msg: string, data?: Object) {
+    super(msg);
+    this.data = data;
+  }
 }
