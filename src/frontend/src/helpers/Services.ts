@@ -19,10 +19,8 @@ export {Services, GenericError, LoginError, Connection, DispatchFunction};
 
 class GenericError {
   msg: string;
-  type: any;
-  constructor(msg: string, type: any) {
+  constructor(msg: string) {
     this.msg = msg;
-    this.type = type;
   }
 }
 
@@ -31,7 +29,7 @@ class LoginError extends GenericError {
               public username?: string,
               public status?: number,
               public statusText?: number) {
-    super(msg, LoginError);
+    super(msg);
   }
 }
 

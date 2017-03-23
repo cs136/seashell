@@ -19,14 +19,15 @@ async function asyncAction<T>(pr: Promise<T>) {
     try {
         return await pr;
     }catch (e) {
-        switch (e.type) {
-            case LoginError:
-                showError("You need to sign in to perform this action");
-            default:
-                throw e;
+        if (e instanceof LoginError) {
+            showError(e.msg);
+        } else {
+            throw e;
         }
     }
 }
+
+let result = asyncAction(Services.login("foo", "bar"));
 
 const mapStoreToProps = (state: globalState) => state;
 
