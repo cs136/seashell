@@ -45,7 +45,7 @@
         self.writeFile = function (name, file, contents, history, checksum) {
           var offline_checksum = md5(contents);
           var key = [name, file];
-          history = null; // blank out history, too large (for now)
+          history = false; // blank out history, too large (for now)
           return self.database.transaction('rw', self.database.changelog, self.database.files, function () {
             if (checksum !== undefined) {
               return self.database.files.update(key,
