@@ -15,14 +15,23 @@ import {AbstractCompiler,
 
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
-export {Services, LoginError, Connection, DispatchFunction};
+export {Services, GenericError, LoginError, Connection, DispatchFunction};
 
-class LoginError extends Error {
+class GenericError {
+  msg: string;
+  type: any;
+  constructor(msg: string, type: any) {
+    this.msg = msg;
+    this.type = type;
+  }
+}
+
+class LoginError extends GenericError {
   constructor(msg: string,
               public username?: string,
               public status?: number,
               public statusText?: number) {
-    super(msg);
+    super(msg, LoginError);
   }
 }
 
@@ -59,7 +68,7 @@ namespace Services {
   }
 
   export function storage(): WebStorage {
-    if(webStorage === null) {
+    if (webStorage === null) {
       throw new LoginError("Must call Services.init() before Services.storage().");
     }
     return webStorage;

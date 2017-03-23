@@ -3,6 +3,8 @@ import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import {projectRef, fileRef} from "../types";
 import {appStateActions} from "../reducers/appStateReducer";
+import { Services, GenericError, LoginError } from "../helpers/Services";
+import { showError } from "../partials/Errors";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
 
 interface Func<T> {
@@ -13,9 +15,23 @@ function returnType<T>(func: Func<T>) {
     return null as T;
 }
 
+async function asyncAction<T>(pr: Promise<T>) {
+    try {
+        return await pr;
+    }catch (e) {
+        switch (e.type) {
+            case LoginError:
+                showError("You need to sign in to perform this action");
+            default:
+                throw e;
+        }
+    }
+}
+
 const mapStoreToProps = (state: globalState) => state;
 
 const mapDispatchToProps = (dispatch: Function) => {
+
     return {
         dispatch: {
           settings: {

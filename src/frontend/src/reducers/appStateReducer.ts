@@ -1,6 +1,5 @@
 import {mergeBetter} from "../helpers/utils";
 import {clone, reject, equals} from "ramda";
-import Error from "../partials/Errors";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
   projects: string[];
@@ -72,7 +71,6 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.openFile:
-      Error("You opened a file");
       if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1) return state; // don't duplicate files
       state = clone(state);
       state.currentProject.currentQuestion.openFiles.push(action.payload);
