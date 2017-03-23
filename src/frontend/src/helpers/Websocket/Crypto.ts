@@ -8,7 +8,7 @@ interface CoderEncrypted {
   iv: number[];
   authTag: number[];
   encrypted: number[];
-  nonce: number[]
+  nonce: number[];
 }
 
 // factored some code out in the abstract class
@@ -26,7 +26,7 @@ abstract class AbstractCoder {
       encrypted: result.encrypted,
       authTag: result.authTag,
       nonce: result.nonce
-    }
+    };
   }
 }
 
@@ -47,7 +47,7 @@ class Coder extends AbstractCoder {
     return {
       iv: Array.from(iv),
       nonce: Array.from(client_nonce)
-    }
+    };
   };
 
   public async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted> {
@@ -109,21 +109,21 @@ class ShittyCoder extends AbstractCoder {
                        server_challenge: number[],
                        client_nonce: number[],
                        iv: number[]): Promise<CoderEncrypted> {
-    var cipher = new sjcl.cipher.aes(rawKey);
+    let cipher = new sjcl.cipher.aes(rawKey);
     /** OK, now we proceed to authenticate. */
-    var raw_response = [].concat(client_nonce, server_challenge);
+    let raw_response = [].concat(client_nonce, server_challenge);
 
-    var ivArr = this.toBits(iv);
+    let ivArr = this.toBits(iv);
 
-    var frameArr = this.toBits(raw_response);
-    var authArr = ivArr;
-    var out = sjcl.mode.gcm.encrypt(cipher,
+    let frameArr = this.toBits(raw_response);
+    let authArr = ivArr;
+    let out = sjcl.mode.gcm.encrypt(cipher,
         frameArr,
         ivArr,
         authArr,
         128);
-    var tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128, sjcl.bitArray.bitLength(out));
-    var codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
+    let tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128, sjcl.bitArray.bitLength(out));
+    let codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
 
     return {
       iv: this.fromBits(ivArr),
@@ -134,23 +134,23 @@ class ShittyCoder extends AbstractCoder {
   }
 
   public async genRandom(): Promise<{iv: number[], nonce: number[]}> {
-    var iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
-    var client_nonce = sjcl.random.randomWords(32);
-    for (var i = 0; i < client_nonce.length; i++) {
+    let iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
+    let client_nonce = sjcl.random.randomWords(32);
+    for (let i = 0; i < client_nonce.length; i++) {
       client_nonce[i] = client_nonce[i] & 0xFF;
     }
     return {
       iv: iv,
       nonce: client_nonce
-    }
+    };
   }
 
   /** Convert from a bitArray to an array of bytes. */
   public fromBits(arr: number[]) {
-    var out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
-    for (i=0; i<bl/8; i++) {
-      if ((i&3) === 0) {
-        tmp = arr[i/4];
+    let out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
+    for (i = 0; i < bl / 8; i++) {
+      if ((i & 3) === 0) {
+        tmp = arr[i / 4];
       }
       out.push(tmp >>> 24);
       tmp <<= 8;
@@ -159,16 +159,16 @@ class ShittyCoder extends AbstractCoder {
   }
   /** Convert from an array of bytes to a bitArray. */
   public toBits(bytes: number[]) {
-    var out = [], i, tmp=0;
-    for (i=0; i<bytes.length; i++) {
+    let out = [], i, tmp = 0;
+    for (i = 0; i < bytes.length; i++) {
       tmp = tmp << 8 | bytes[i];
-      if ((i&3) === 3) {
+      if ((i & 3) === 3) {
       out.push(tmp);
       tmp = 0;
       }
     }
-    if (i&3) {
-      out.push(sjcl.bitArray.partial(8*(i&3), tmp));
+    if (i & 3) {
+      out.push(sjcl.bitArray.partial(8 * ( i & 3), tmp));
     }
     return out;
   }
