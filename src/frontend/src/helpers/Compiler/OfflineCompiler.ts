@@ -21,7 +21,7 @@ class OfflineCompiler extends AbstractCompiler {
       status: "failed"
     };
   }
-  
+
   public async programKill(): Promise<void> { }
 
   public async programInput(contents: string): Promise<void> { }
