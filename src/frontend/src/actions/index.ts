@@ -3,8 +3,10 @@ import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import {projectRef, fileRef} from "../types";
 import {appStateActions} from "../reducers/appStateReducer";
+import {userActions} from "../reducers/userReducer";
 import { Services, GenericError, LoginError } from "../helpers/Services";
 import { showError } from "../partials/Errors";
+import { trim } from "ramda";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
 
 interface Func<T> {
@@ -15,23 +17,22 @@ function returnType<T>(func: Func<T>) {
     return null as T;
 }
 
-async function asyncAction<T>(pr: Promise<T>) {
-    try {
-        return await pr;
-    }catch (e) {
-        if (e instanceof LoginError) {
-            showError(e.msg);
-        } else {
-            throw e;
-        }
-    }
-}
-
-let result = asyncAction(Services.login("foo", "bar"));
-
 const mapStoreToProps = (state: globalState) => state;
 
 const mapDispatchToProps = (dispatch: Function) => {
+
+    async function asyncAction<T>(pr: Promise<T>) {
+        try {
+            return await pr;
+        }catch (e) {
+            if (e instanceof LoginError) {
+                showError(e.msg);
+                dispatch({type: userActions.INVALIDATE});
+            } else {
+                throw e;
+            }
+        }
+    }
 
     return {
         dispatch: {
@@ -61,6 +62,16 @@ const mapDispatchToProps = (dispatch: Function) => {
                   // we will leave switching files to the UI
                   dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, files: ["file1.txt"]}}});
               }
+          },
+          user: {
+            signin: (username: string, password: string) => {
+                if (trim(username) === "" || trim(password) === ""){
+                    showError("Please fill in all fields!");
+                } else {
+                    let result = asyncAction(Services.login(username, password));
+                    alert("hi!");
+                }
+            }
           },
           project: {
               addProject: (newProjectName: string) => dispatch({type: appStateActions.addProject, payload: {name: newProjectName}}),
