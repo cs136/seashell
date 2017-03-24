@@ -6,4 +6,5 @@ export const Errors = Toaster.create({
     position: Position.BOTTOM,
 });
 
-export default (message: string) => Errors.show({ message: message, timeout: 0, intent: Intent.DANGER });
+
+export const showError =  (message: string)=>Errors.show({ message: message, timeout: 0, intent: Intent.DANGER });;

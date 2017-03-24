@@ -3,8 +3,11 @@ import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import {projectRef, fileRef} from "../types";
 import {appStateActions} from "../reducers/appStateReducer";
+import {userActions} from "../reducers/userReducer";
+import { Services, GenericError, LoginError } from "../helpers/Services";
+import { showError } from "../partials/Errors";
+import { trim } from "ramda";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
-import {Services} from "../helpers/Services";
 import {File} from "../helpers/Storage/Interface";
 
 
@@ -19,6 +22,20 @@ function returnType<T>(func: Func<T>) {
 const mapStoreToProps = (state: globalState) => state;
 
 const mapDispatchToProps = (dispatch: Function) => {
+
+    async function asyncAction<T>(pr: Promise<T>) {
+        try {
+            return await pr;
+        }catch (e) {
+            if (e instanceof LoginError) {
+                showError(e.message);
+                dispatch({type: userActions.INVALIDATE});
+            } else {
+                throw e;
+            }
+        }
+    }
+
     return {
         dispatch: {
           settings: {
@@ -64,6 +81,16 @@ const mapDispatchToProps = (dispatch: Function) => {
                   // we will leave switching files to the UI
                   Services.storage().getFiles(project).then((files) => dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, files: files.filter((file) => file.name.split("/")[0] === name).map((file) => file.name)}}}));
               }
+          },
+          user: {
+            signin: (username: string, password: string) => {
+                if (trim(username) === "" || trim(password) === ""){
+                    showError("Please fill in all fields!");
+                } else {
+                    let result = asyncAction(Services.login(username, password));
+                    alert("hi!");
+                }
+            }
           },
           project: {
               addProject: (newProjectName: string) => Services.storage().newProject(newProjectName).then(() => dispatch({type: appStateActions.addProject, payload: {name: newProjectName}})),

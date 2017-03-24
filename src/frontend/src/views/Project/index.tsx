@@ -16,7 +16,7 @@ import DeleteWindow from "./DeleteWindow";
 
 
 export interface ProjectProps { title: string; routeParams: any; }
-export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; fileOpTarget: string; toggleView: boolean}
+export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; fileOpTarget: string; toggleView: boolean; }
 
 
 
