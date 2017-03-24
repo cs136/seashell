@@ -43,7 +43,7 @@ class WebStorage extends AbstractStorage {
   // public setSettings: (settings: Settings) => Promise<WebsocketResult>;
   public updateMostRecentlyUsed: (proj: string, question: string, file: string) => Promise<WebsocketResult>;
 
-  private debug: boolean; // toggle this.debug && console.log
+  public debug: boolean; // toggle this.debug && console.log
 
   constructor(wbclient: SeashellWebsocket, store: LocalStorage, debug?: boolean) {
     super();

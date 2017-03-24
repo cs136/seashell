@@ -89,7 +89,7 @@ class SeashellWebsocket {
   private started: boolean;
   private closes: () => void;
   private failures: () => void;
-  private debug: boolean; // toggle console.log for tests
+  public debug: boolean; // toggle console.log for tests
 
   private timeoutCount: number;
   private timeoutInterval: any;
@@ -132,11 +132,11 @@ class SeashellWebsocket {
       switch (this.websocket.readyState) {
         case WSState.CONNECTING:
         case WSState.OPEN:
-          console.log("Socket is already connected. Action ignored.");
+          this.debug && console.log("Socket is already connected. Action ignored.");
           return Promise.resolve();
         case WSState.CLOSING:
         case WSState.CLOSED:
-          console.log(`Closing existing websocket and opening new connection.`);
+          this.debug && console.log(`Closing existing websocket and opening new connection.`);
           const promise = new Promise<void>((accept, reject) => {
             this.websocket.onclose = () => {
               this.connect(cnn).then(accept);
@@ -271,7 +271,7 @@ class SeashellWebsocket {
           this.debug && console.log(`Request ${response.id} succeeded after ${diff} ms`, response);
         }
       } else {
-        console.warn(`Request ${response.id} failed after ${diff} ms`, request.message, response);
+        this.debug && console.warn(`Request ${response.id} failed after ${diff} ms`, request.message, response);
       }
     }
     if (response.success) {
