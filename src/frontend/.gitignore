@@ -3,3 +3,5 @@ node_modules
 dist
 index.html
 account.json
+dist.tar.gz
+dist.zip
