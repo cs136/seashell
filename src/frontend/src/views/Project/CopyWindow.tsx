@@ -10,24 +10,24 @@ export interface CopyWindowProps {questions: string[]; closefunc: Function; file
 class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}>{
   constructor(props: CopyWindowProps&actionsInterface){
     super(props);
-    this.state={
+    this.state = {
       question: this.props.questions[0],
       file: this.props.file,
       prevFile: this.props.file
-    }
+    };
   }
-  render(){
+  render() {
     return(<div className="pt-dialog-body">
       <p>Where would you like to copy this file?</p>
       <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
-        {this.props.questions.map((question: string)=>(<option value={question}>{question}</option>))}
+        {this.props.questions.map((question: string) => (<option value={question}>{question}</option>))}
         </select></div>
-        <input className="pt-input pt-fill" required type="text" value={this.state.file} 
-        onBlur={()=>{
-          if(this.state.file===""||this.state.file.includes("/")){
+        <input className="pt-input pt-fill" required type="text" value={this.state.file}
+        onBlur={() => {
+          if (this.state.file === "" || this.state.file.includes("/")) {
             this.setState(merge(this.state, {file: this.state.prevFile}));
           }
-          else{
+          else {
             this.setState(merge(this.state, {prevFile: this.state.file}));
           }
         }}
@@ -36,8 +36,8 @@ class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {ques
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
                 }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-primary" onClick={()=>{
-          this.props.dispatch.file.copyFile(this.state.question+"/"+this.state.file);
+        <button type="button" className="pt-button pt-intent-primary" onClick={() => {
+          this.props.dispatch.file.copyFile(this.state.question + "/" + this.state.file);
           this.props.closefunc();
           }}>Copy</button>
       </div>

@@ -1,7 +1,18 @@
+const defaultSettings: Settings = {
+  id: 0,
+  editor_mode: "standard",
+  font_size: 12,
+  font: "Consolas",
+  theme: "light",
+  space_tab: true,
+  tab_width: 2
+};
+
 export {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings}
+
 
 abstract class AbstractStorage {
   // projects
@@ -29,7 +40,7 @@ type ProjectID = string; // alias of name for now
 
 interface File extends FileBrief {
   id: FileID;
-  name: string; // a file name is (test|q*|common)/name
+  name: string; // a file name is (tests|q*|common)/name
   project: ProjectID;
   contents: string;
   checksum: string;
@@ -69,21 +80,11 @@ interface ProjectBrief {
 };
 
 interface Settings {
-  id: 0,
-  editor_mode: string,
+  id: 0;
+  editor_mode: string;
   font_size: number;
-  font: "Consolas";
+  font: string;
   theme: "light"|"dark";
   space_tab: boolean;
   tab_width: number;
-}
-
-var defaultSettings: Settings = {
-  id: 0,
-  editor_mode: "standard",
-  font_size: 12,
-  font: "Consolas",
-  theme: "light",
-  space_tab: true,
-  tab_width: 2
 }

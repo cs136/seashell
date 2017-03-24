@@ -15,8 +15,8 @@ class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
                 }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-danger" onClick={()=>{
-          this.props.dispatch.file.deleteFile(this.props.file);
+        <button type="button" className="pt-button pt-intent-danger" onClick={() => {
+          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.file);
           this.props.closefunc();
           }}>Delete</button>
       </div>

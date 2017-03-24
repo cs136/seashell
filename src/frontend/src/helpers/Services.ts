@@ -73,7 +73,7 @@ namespace Services {
   }
 
   export function compiler(): AbstractCompiler {
-    if(onlineCompiler === null) {
+    if (onlineCompiler === null) {
       throw new LoginError("Must call Services.init() before Services.compiler().");
     }
     return onlineCompiler;
