@@ -22,6 +22,7 @@ class GenericError extends Error {
     constructor(message?: string) {
         const trueProto = new.target.prototype;
         super(message);
+        this.__proto__ = new.target.prototype;
     }
 }
 
