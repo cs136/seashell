@@ -17,19 +17,20 @@ export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
 export {Services, GenericError, LoginError, Connection, DispatchFunction};
 
-class GenericError {
-  msg: string;
-  constructor(msg: string) {
-    this.msg = msg;
-  }
+class GenericError extends Error {
+  __proto__: Error;
+    constructor(message?: string) {
+        const trueProto = new.target.prototype;
+        super(message);
+    }
 }
 
 class LoginError extends GenericError {
-  constructor(msg: string,
+  constructor(message: string,
               public username?: string,
               public status?: number,
               public statusText?: number) {
-    super(msg);
+    super(message);
   }
 }
 

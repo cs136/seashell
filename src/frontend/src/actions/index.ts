@@ -8,7 +8,6 @@ import { Services, GenericError, LoginError } from "../helpers/Services";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
-import {Services} from "../helpers/Services";
 import {File} from "../helpers/Storage/Interface";
 
 
@@ -29,7 +28,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             return await pr;
         }catch (e) {
             if (e instanceof LoginError) {
-                showError(e.msg);
+                showError(e.message);
                 dispatch({type: userActions.INVALIDATE});
             } else {
                 throw e;
