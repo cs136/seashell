@@ -60,7 +60,7 @@ namespace Services {
 
   export function init(disp: DispatchFunction) {
     dispatch = disp;
-    socketClient = new SeashellWebsocket();
+    socketClient = new SeashellWebsocket(true);
     localStorage = new LocalStorage();
     webStorage = new WebStorage(socketClient, localStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
@@ -87,6 +87,7 @@ namespace Services {
                               uri?: string): Promise<void> {
     uri = uri || "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
     try {
+      console.log("Logging in...");
       const response = await $.ajax({
         url: uri,
         type: "POST",
@@ -97,6 +98,7 @@ namespace Services {
         },
         dataType: "json"
       });
+      console.log("Login succeeded.");
       connection = new Connection(user,
                                   response.key,
                                   response.host,

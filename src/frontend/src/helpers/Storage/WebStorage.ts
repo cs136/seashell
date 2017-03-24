@@ -43,7 +43,7 @@ class WebStorage extends AbstractStorage {
   // public setSettings: (settings: Settings) => Promise<WebsocketResult>;
   public updateMostRecentlyUsed: (proj: string, question: string, file: string) => Promise<WebsocketResult>;
 
-  public debug: boolean; // toggle this.debug && console.log
+  private debug: boolean; // toggle this.debug && console.log
 
   constructor(wbclient: SeashellWebsocket, store: LocalStorage, debug?: boolean) {
     super();
@@ -53,7 +53,6 @@ class WebStorage extends AbstractStorage {
     this.storage = store;
     this.socket = wbclient;
     this.debug = debug;
-    this.socket.debug = debug;
 
     // These functions are not available in offline mode.
     // this.ping = this.make_offline_disabled("ping");
@@ -289,9 +288,9 @@ class WebStorage extends AbstractStorage {
     }
     if (old === 2 && this.offlineMode !== old) {
       // trigger reconnect and sync
-      if (!this.socket.isConnected())
-        this.socket.connect();
-      else {
+      if (!this.socket.isConnected()) {
+        // this.socket.connect();
+      } else {
         this.syncAll();
       }
     }

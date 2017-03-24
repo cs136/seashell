@@ -53,8 +53,11 @@ function websocketTest() {
     Services.logout();
   });
 
-  it("setting up tests", () => {
+  it("Login multiple times, should not break.", async () => {
     // expect(socket.isConnected()).toEqual(true);
+    for (const i of R.range(0, 5)) {
+      await Services.login(TestAccount.user, TestAccount.password);
+    }
     expect(socket.isOffline()).toEqual(false);
   });
 
