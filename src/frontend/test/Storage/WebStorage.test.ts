@@ -79,7 +79,7 @@ function websocketTest() {
       id: [p.id, name],
       project: p.id,
       name: name,
-      contents: uniqStr(1)() + "\n"
+      contents: uniqStr(5000)() + "\n"
     };
   }, flatten(repeat(projs, testSize)));
 
