@@ -19,7 +19,7 @@ import WebSocket = require("ws");
 
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 30 * 1000;
 
-const testSize = 1;
+const testSize = 3;
 const halfTestSize = Math.ceil(testSize / 2);
 
 let unique = 0;
@@ -40,7 +40,12 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 function websocketTest() {
 
-  Services.init();
+  Services.init({}, {
+    debugWebSocket: false,
+    debugWebStorage: false,
+    debugService: false
+  });
+
   let socket = Services.storage();
 
   beforeAll(() => {
@@ -53,8 +58,11 @@ function websocketTest() {
     Services.logout();
   });
 
-  it("setting up tests", () => {
+  it("Login multiple times. Should not crash.", async () => {
     // expect(socket.isConnected()).toEqual(true);
+    for (const i of R.range(0, 3)) {
+      await Services.login(TestAccount.user, TestAccount.password);
+    }
     expect(socket.isOffline()).toEqual(false);
   });
 
@@ -90,25 +98,21 @@ function websocketTest() {
   }
 
   async function remoteFiles() {
-    let projGps = R.groupBy((x: File) => x.project, files);
+    let remoteFiles = [];
     for (const p of projs) {
-      let remoteFiles: File[] = <File[]> await socket.getFiles(p.id);
+      let files: File[] = <File[]> await socket.getFiles(p.id);
       // ignore automatically created file by the backend
-      remoteFiles = remoteFiles.filter((f: File) => f.name !==  "default/main.c");
-      for (let x of remoteFiles) {
+      for (let x of files) {
         const file = await socket.readFile([p.name, x.name]);
-        x.contents = file.contents;
+        remoteFiles.push(file);
       }
-      let projFiles = projGps[p.name];
-      // remoteFiles   = R.sortBy(prop("name"), remoteFiles);
-      // projFiles = R.sortBy(prop("name"), projGps[p.name]);
-      return map((x) => ({
-        id: x.id,
-        project: x.project,
-        name: x.name,
-        contents: x.contents,
-      }), remoteFiles);
     }
+    return map((x) => ({
+      id: x.id,
+      project: x.project,
+      name: x.name,
+      contents: x.contents,
+    }), remoteFiles);
   }
 
   it(`newProject: create ${testSize} projects`, async () => {
@@ -209,7 +213,7 @@ function websocketTest() {
 
   it("setSettings: set random properties", async () => {
     const s: Settings = defaultSettings;
-    s.fontSize = 100;
+    s.font_size = 100;
     await socket.setSettings(s);
     const r = await socket.getSettings();
     expect(r).toEqual(s);

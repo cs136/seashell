@@ -57,26 +57,32 @@ namespace Services {
   let webStorage: WebStorage = null;
   let offlineCompiler: OfflineCompiler = null;
   let onlineCompiler: OnlineCompiler = null;
+  let debug: boolean;
 
-  export function init(disp: DispatchFunction) {
+  export function init(disp: DispatchFunction,
+                       options?: { debugService?: boolean;
+                                   debugWebSocket?: boolean;
+                                   debugWebStorage?: boolean; }) {
     dispatch = disp;
-    socketClient = new SeashellWebsocket();
+    options = options || {};
+    debug = options.debugService;
+    socketClient = new SeashellWebsocket(options.debugWebSocket);
     localStorage = new LocalStorage();
-    webStorage = new WebStorage(socketClient, localStorage);
+    webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
   }
 
   export function storage(): WebStorage {
     if (webStorage === null) {
-      throw new LoginError("Must call Services.init() before Services.storage().");
+      throw new Error("Must call Services.init() before Services.storage().");
     }
     return webStorage;
   }
 
   export function compiler(): AbstractCompiler {
     if (onlineCompiler === null) {
-      throw new LoginError("Must call Services.init() before Services.compiler().");
+      throw new Error("Must call Services.init() before Services.compiler().");
     }
     return onlineCompiler;
   }
@@ -87,6 +93,7 @@ namespace Services {
                               uri?: string): Promise<void> {
     uri = uri || "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
     try {
+      debug && console.log("Logging in...");
       const response = await $.ajax({
         url: uri,
         type: "POST",
@@ -97,6 +104,7 @@ namespace Services {
         },
         dataType: "json"
       });
+      debug && console.log("Login succeeded.");
       connection = new Connection(user,
                                   response.key,
                                   response.host,
