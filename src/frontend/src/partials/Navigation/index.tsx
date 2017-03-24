@@ -7,7 +7,7 @@ import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
 
 
-const logo = require("./logo.svg");
+const logo = require("../../assets/logo.svg");
 const styles = require("./index.scss");
 const layoutStyles = require("../../Layout.scss");
 
