@@ -1,6 +1,8 @@
 export {LoginError,
         GenericError,
-        SyncError}
+        SyncError,
+        WebsocketError,
+        CompilerError};
 
 class GenericError extends Error {
   __proto__: Error;
@@ -22,6 +24,20 @@ class LoginError extends GenericError {
 
 class SyncError extends GenericError {
   constructor(message: string) {
+    super(message);
+  }
+}
+
+class WebsocketError extends GenericError {
+  constructor(message: string,
+              public data?: Object) {
+    super(message);
+  }
+}
+
+class CompilerError extends GenericError {
+  constructor(message: string,
+              public data?: Object) {
     super(message);
   }
 }

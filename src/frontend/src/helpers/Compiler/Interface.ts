@@ -7,6 +7,7 @@ import {AbstractStorage,
         basename} from "../Storage/Interface";
 import {groupBy} from "../utils";
 import {DispatchFunction} from "../Services";
+import {CompilerError} from "../Errors";
 
 export {AbstractCompiler,
         CompilerResult,
@@ -167,12 +168,4 @@ interface TestMessage {
   test_name: string;
   diff?: DiffLine[];
   asan_output?: string;
-}
-
-class CompilerError extends Error {
-  data: Object;
-  constructor(msg: string, data?: Object) {
-    super(msg);
-    this.data = data;
-  }
 }
