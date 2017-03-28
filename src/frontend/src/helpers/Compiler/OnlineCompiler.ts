@@ -105,10 +105,18 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   protected programDone(pid: number) {
-    if (this.activePIDs.length === 0 || this.activePIDs[0] !== pid) {
+    const ind = this.activePIDs.indexOf(pid);
+    if (ind === -1) {
       throw new CompilerError("Program that was not running has ended.");
     } else {
-      this.activePIDs = [];
+      this.activePIDs = this.activePIDs.splice(ind, 1);
+    }
+    // if everything has finished running, notify frontend
+    if (this.activePIDs.length === 0) {
+      this.dispatch({
+        type: "programDone",
+        payload: null
+      });
     }
   }
 }

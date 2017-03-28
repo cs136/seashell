@@ -86,10 +86,6 @@ abstract class AbstractCompiler {
       this.stderr = "";
       this.output("Program finished with exit code " + result.status + ".\n");
       this.programDone(result.pid);
-      this.dispatch({
-        type: "programDone",
-        payload: null
-      });
     }
   }
 
@@ -122,6 +118,7 @@ abstract class AbstractCompiler {
       output += "Produced errors (stderr):\n";
       output += result.stderr;
     }
+    this.programDone(result.pid);
     this.output(output);
   }
 }
