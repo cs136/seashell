@@ -24,6 +24,9 @@ class OnlineCompiler extends AbstractCompiler {
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
+
+    this.socket.register_callback("io", this.handleIO);
+    this.socket.register_callback("test", this.handleTest);
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
@@ -99,5 +102,13 @@ class OnlineCompiler extends AbstractCompiler {
       type: "sendEOF",
       pid: this.activePIDs[0]
     });
+  }
+
+  protected programDone(pid: number) {
+    if(this.activePIDs.length === 0 || this.activePIDs[0] !== pid) {
+      throw new CompilerError("Program that was not running has ended.");
+    } else {
+      this.activePIDs = [];
+    }
   }
 }

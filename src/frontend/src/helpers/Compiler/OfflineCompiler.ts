@@ -27,4 +27,6 @@ class OfflineCompiler extends AbstractCompiler {
   public async programInput(contents: string): Promise<void> { }
 
   public async sendEOF(): Promise<void> { }
+
+  protected programDone(pid: number): void { }
 }
