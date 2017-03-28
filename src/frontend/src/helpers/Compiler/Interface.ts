@@ -38,7 +38,7 @@ abstract class AbstractCompiler {
       return f.name.startsWith(question + "/tests/");
     }), (f: FileBrief) => {
       return basename(f);
-    }).map((t: FileBrief[])=> {
+    }).map((t: FileBrief[]) => {
       let test: TestBrief = {
         name: basename(t[0]),
         in: null,
@@ -67,14 +67,14 @@ abstract class AbstractCompiler {
     if (result.type === "stdout") {
       this.stdout += result.message;
       const spl = this.stdout.split("\n");
-      for (let i=0; i<spl.length-1; i++) {
+      for (let i = 0; i < spl.length - 1; i++) {
         this.output(spl[i] + "\n");
       }
       this.stdout = spl[spl.length - 1];
     } else if (result.type === "stderr") {
       this.stderr += result.message;
       const spl = this.stderr.split("\n");
-      for (let i=0; i<spl.length-1; i++) {
+      for (let i = 0; i < spl.length - 1; i++) {
         this.output(spl[i] + "\n");
       }
       this.stderr = spl[spl.length - 1];
@@ -105,7 +105,7 @@ abstract class AbstractCompiler {
       output += "---\n";
       output += "Expected output (stdout):\n";
       const diffStr = (ln: DiffLine): string => {
-        if(typeof ln === "string") {
+        if (typeof ln === "string") {
           return ln;
         } else {
           return ln[1];
@@ -114,7 +114,7 @@ abstract class AbstractCompiler {
       if (result.diff.length > 0) {
         output += diffStr(result.diff[0]);
       }
-      for (let i=1; i<result.diff.length; i++) {
+      for (let i = 1; i < result.diff.length; i++) {
         output += "\n" + diffStr(result.diff[i]);
       }
       output += "---\n";
