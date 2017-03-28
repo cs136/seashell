@@ -96,8 +96,20 @@ class OutputBuffer {
       output += "Test \"" + result.test_name + "\" passed.\n";
     } else if (result.result === "failed") {
       output += "Test \"" + result.test_name + "\" failed.\n";
+    } else if (result.result === "error") {
+      output += "Test \"${result.test_name}\" caused an error (with return code ${result.status})!\n";
+    } else if (result.result === "no-expect") {
+      output += "Test \"${result.test_name}\" completed.\n";
+    } else if (result.result === "timeout") {
+      output += "Test \"${result.test_name}\" timed out.\n";
+    } else if (result.result === "killed") {
+      output += "Test \"${result.test_name}\" was killed.\n";
+    };
+    if (result.result !== "passed") {
       output += "Produced output (stdout):\n";
       output += result.stdout;
+    }
+    if (result.result === "failed") {
       output += "Expected output (stdout):\n";
       const diffStr = (ln: DiffLine): string => {
         if (typeof ln === "string") {
@@ -112,18 +124,7 @@ class OutputBuffer {
       for (let i = 1; i < result.diff.length; i++) {
         output += "\n" + diffStr(result.diff[i]);
       }
-    } else if (result.result === "error") {
-      output += "Test \"${result.test_name}\" caused an error (with return code ${result.status})!\n";
-      output += "Produced output (stdout):\n";
-      output += result.stdout;
-    } else if (result.result === "no-expect") {
-      output += "Test \"${result.test_name}\" produced output (stdout):\n";
-      output += result.stdout;
-    } else if (result.result === "timeout") {
-      output += "Test \"${result.test_name}\" timed out.\n";
-    } else if (result.result === "killed") {
-      output += "Test \"${result.test_name}\" was killed.\n";
-    };
+    }
     if (result.stderr !== "") {
       output += "Produced errors (stderr):\n";
       output += result.stderr;
