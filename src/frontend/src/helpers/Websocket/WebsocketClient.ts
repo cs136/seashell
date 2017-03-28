@@ -1,16 +1,11 @@
 import {Coder, ShittyCoder} from "./Crypto";
 import {Connection} from "../Services";
+import {WebsocketError} from "../Errors";
 import WebCrypto = require("node-webcrypto-ossl");
 
-export {WebsocketResult, SeashellWebsocket, WebsocketError};
-
-class WebsocketError extends Error {
-  data: Object;
-  constructor(msg: string, d?: Object) {
-    super(msg);
-    this.data = d;
-  }
-}
+export {WebsocketResult,
+        SeashellWebsocket,
+        WebsocketError};
 
 interface Message {
   [index: string]: any;
