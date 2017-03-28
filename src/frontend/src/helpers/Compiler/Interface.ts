@@ -30,6 +30,7 @@ abstract class AbstractCompiler {
 
   private stdout: string;
   private stderr: string;
+  private timeout: any;
 
   // Function used by both compilers to group the test files appropriately
   //  to send to their respective backends
@@ -62,6 +63,12 @@ abstract class AbstractCompiler {
       type: "output",
       payload: out
     });
+  }
+
+  private flush(): void {
+    this.output(this.stdout + this.stderr);
+    this.stdout = "";
+    this.stderr = "";
   }
 
   private outputASAN(ASAN: ASANOutput): string {
@@ -111,10 +118,7 @@ abstract class AbstractCompiler {
       }
       this.stderr = spl[spl.length - 1];
     } else if (result.type === "done") {
-      output += this.stdout;
-      output += this.stderr;
-      this.stdout = "";
-      this.stderr = "";
+      this.flush();
       const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
       if (ASAN) {
         output += this.outputASAN(ASAN);
@@ -123,20 +127,19 @@ abstract class AbstractCompiler {
       this.programDone(result.pid);
     }
     this.output(output);
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(this.flush, 100);
   }
 
   protected handleTest(result: TestMessage): void {
-    let output = "";
+    let output = "----------------------------------\n";
     const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
     if (result.result === "passed") {
-      output += "-------------------------------\n";
       output += "Test \"" + result.test_name + "\" passed.\n";
     } else if (result.result === "failed") {
-      output += "-------------------------------\n";
       output += "Test \"" + result.test_name + "\" failed.\n";
       output += "Produced output (stdout):\n";
       output += result.stdout;
-      output += "---\n";
       output += "Expected output (stdout):\n";
       const diffStr = (ln: DiffLine): string => {
         if (typeof ln === "string") {
@@ -151,11 +154,23 @@ abstract class AbstractCompiler {
       for (let i = 1; i < result.diff.length; i++) {
         output += "\n" + diffStr(result.diff[i]);
       }
-      output += "---\n";
+    } else if (result.result === "error") {
+      output += "Test \"${result.test_name}\" caused an error (with return code ${result.status})!\n";
+      output += "Produced output (stdout):\n";
+      output += result.stdout;
+    } else if (result.result === "no-expect") {
+      output += "Test \"${result.test_name}\" produced output (stdout):\n";
+      output += result.stdout;
+    } else if (result.result === "timeout") {
+      output += "Test \"${result.test_name}\" timed out.\n";
+    } else if (result.result === "killed") {
+      output += "Test \"${result.test_name}\" was killed.\n";
+    };
+    if (result.stderr !== "") {
       output += "Produced errors (stderr):\n";
       output += result.stderr;
     }
-    if (ASAN) {
+    if (ASAN && ASAN.raw_message !== "") {
       output += "AddressSanitizer Output:\n";
       output += this.outputASAN(ASAN);
     }
