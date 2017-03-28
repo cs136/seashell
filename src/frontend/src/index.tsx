@@ -21,6 +21,10 @@ const store = createStoreWithMiddleware(reducers);
 const rootEl = document.getElementById("root");
 render(<Provider store={store}><App /></Provider>, rootEl);
 
-Services.init(store.dispatch);
+Services.init(store.dispatch, {
+  debugService: true,
+  debugWebSocket: true,
+  debugWebStorage: true
+});
 
 install();

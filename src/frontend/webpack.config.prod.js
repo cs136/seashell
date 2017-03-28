@@ -8,6 +8,7 @@ const OfflinePlugin = require('offline-plugin');
 const ArchivePlugin = require('webpack-archive-plugin');
 
 module.exports = {
+  devtool: 'source-map',
   entry: './src/index.tsx',
   output: {
     path: path.join(__dirname, 'dist'),
