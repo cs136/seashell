@@ -31,6 +31,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 showError(e.message);
                 dispatch({type: userActions.INVALIDATE});
             } else {
+                console.log(typeof e);
                 throw e;
             }
         }
@@ -87,8 +88,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                 if (trim(username) === "" || trim(password) === ""){
                     showError("Please fill in all fields!");
                 } else {
-                    let result = asyncAction(Services.login(username, password));
-                    alert("hi!");
+                    asyncAction(Services.login(username, password)).then(function(response){
+                        console.log(response);
+                    }).catch(console.error);
                 }
             }
           },
