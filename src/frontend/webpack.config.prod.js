@@ -23,6 +23,7 @@ module.exports = {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
     }]),
+/*
     new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: false,
@@ -30,6 +31,7 @@ module.exports = {
       sourceMap: true,
       minimize: true
     }),
+*/
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
