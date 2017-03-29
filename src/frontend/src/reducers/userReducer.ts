@@ -6,7 +6,8 @@ export interface userReducerState {[key: string]: any;
 export interface userReducerAction {type: string; payload: userReducerState; };
 export const userActions = {
   INVALIDATE: "USER_INVALIDATE",
-  SIGNIN: "USER_SIGNIN"
+  SIGNIN: "USER_SIGNIN",
+  SIGNOUT: "USER_SIGNOUT"
 };
 export default function userReducer(state: userReducerState = {questid: null}, action: userReducerAction= {type: null, payload: {}}) {
   switch (action.type) {
@@ -14,6 +15,8 @@ export default function userReducer(state: userReducerState = {questid: null}, a
       return {questid: null};
     case userActions.SIGNIN:
       return {questid: action.payload};
+    case userActions.SIGNOUT:
+      return {questid: null};
     default:
       return state;
   }

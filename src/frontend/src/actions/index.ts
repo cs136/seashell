@@ -26,11 +26,13 @@ const mapDispatchToProps = (dispatch: Function) => {
 
     async function asyncAction<T>(pr: Promise<T>) {
         try {
-            return await pr;
+            const result = await pr;
+            return result;
         }catch (e) {
             if (e instanceof LoginError) {
                 showError(e.message);
                 dispatch({type: userActions.INVALIDATE});
+                throw null;
             } else {
                 throw e;
             }
@@ -85,12 +87,27 @@ const mapDispatchToProps = (dispatch: Function) => {
           },
           user: {
             signin: (username: string, password: string) => {
-                if (trim(username) === "" || trim(password) === ""){
-                    showError("Please fill in all fields!");
-                } else {
-                    let result = asyncAction(Services.login(username, password));
-                    alert("hi!");
-                }
+                return new Promise((resolve, reject) => {
+                    if (trim(username) === "" || trim(password) === "") {
+                        showError("Please fill in all fields!");
+                        resolve();
+                    } else {
+                        asyncAction(Services.login(username, password)).then((response) => {
+                            dispatch({type: userActions.SIGNIN, payload: username});
+                            reject(null);
+                        }).catch((reason) => {
+                            resolve();
+                            if (reason !== null) reject(reason);
+                        });
+                    }
+                });
+            },
+            signout: () => {
+                asyncAction(Services.logout()).then((response) => {
+                    dispatch({type: userActions.SIGNOUT});
+                }).catch((reason) => {
+                    if (reason !== null) throw reason;
+                });
             }
           },
           project: {
