@@ -43,7 +43,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             <MenuItem iconName="refresh" text="Sync All" />
             <MenuItem iconName="cog" text="Settings" onClick={this.toggleSettings.bind(this)} />
             <MenuItem iconName="changes" text="Reset Seashell" />
-            <MenuItem iconName="log-out" text="Sign Out" />
+            <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
         </Menu>} position={Position.BOTTOM_RIGHT}>
             <button className="pt-button pt-icon-more pt-minimal"></button>
         </Popover>
