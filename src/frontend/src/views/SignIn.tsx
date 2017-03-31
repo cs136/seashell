@@ -24,6 +24,7 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
             ctx.props.dispatch.project.getAllProjects();
             ctx.setState({loading: false});
         }).catch((reason) => {
+            ctx.setState({loading: false});
             if (reason !== null) throw reason;
         });
     }
