@@ -4,7 +4,8 @@ import { globalState } from "../reducers/";
 import {projectRef, fileRef} from "../types";
 import {appStateActions} from "../reducers/appStateReducer";
 import {userActions} from "../reducers/userReducer";
-import { Services, GenericError, LoginError } from "../helpers/Services";
+import { Services } from "../helpers/Services";
+import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
 import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
@@ -25,7 +26,8 @@ const mapDispatchToProps = (dispatch: Function) => {
 
     async function asyncAction<T>(pr: Promise<T>) {
         try {
-            return await pr;
+            const result = await pr;
+            return result;
         }catch (e) {
             if (e instanceof LoginError) {
                 showError(e.message);
