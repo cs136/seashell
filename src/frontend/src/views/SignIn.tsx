@@ -21,6 +21,7 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
         this.setState({loading: true});
         const ctx = this;
         this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value, (this.refs.password as HTMLInputElement).value).then(() => {
+            ctx.props.dispatch.project.getAllProjects();
             ctx.setState({loading: false});
         }).catch((reason) => {
             if (reason !== null) throw reason;

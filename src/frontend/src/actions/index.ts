@@ -122,7 +122,10 @@ const mapDispatchToProps = (dispatch: Function) => {
                   function unique(val: any, idx: Number, arr: any){
                     return arr.indexOf(val) === idx;
                   }
-                  return asyncAction(Services.storage().getFiles(name)).then((files) => dispatch({type: appStateActions.switchProject, payload: {project: {name: name, questions: files.map((file) => file.name).filter(unique)}}}));
+                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name).filter(unique)}}})));
+              },
+              getAllProjects: ()=> {
+                  asyncAction(Services.storage().getProjects()).then((projects)=>dispatch({type: appStateActions.getProjects, payload: {projects: projects.map((project)=>project.name)}}));
               }
           },
           app: {

@@ -24,16 +24,19 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
         <div className={styles.mainRow}>
           <div className={styles.column}>
             <h5>Assignments</h5>
-            {projects.map((project) => (<ProjectLink key={project} project={project} />))}
+            {projects.filter((project)=>project.toUpperCase().startsWith("A")).map((project) => <ProjectLink key={project} project={project} />)}
           </div>
           <div className={styles.column}>
             <h5>Tutorials</h5>
+           {projects.filter((project)=>project.toUpperCase().startsWith("TUT")).map((project) => <ProjectLink key={project} project={project} />)}
           </div>
           <div className={styles.column}>
             <h5>Lectures</h5>
+            {projects.filter((project)=>project.toUpperCase().startsWith("LEC")).map((project) => <ProjectLink key={project} project={project} />)}
           </div>
           <div className={styles.column}>
             <h5>Personal</h5>
+            {projects.filter((project)=>!project.toUpperCase().startsWith("A")&&!project.toUpperCase().startsWith("TUT")&&!project.toUpperCase().startsWith("LEC")).map((project) => <ProjectLink key={project} project={project} />)}
           </div>
         </div>
         <div className={styles.clear} />

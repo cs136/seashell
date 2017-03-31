@@ -36,13 +36,16 @@ export const appStateActions = {
   closeFile: "file_close",
   setRunFile: "file_set_run",
   copyFile: "file_copy",
-  clearFiles: "file_clear"
+  clearFiles: "file_clear",
+  getProjects: "projects_get",
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {projects: []}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.getProjects:
+      return mergeBetter(state, {projects: action.payload.projects});
     case appStateActions.clearFiles:
       state=clone(state);
       state.currentProject.currentQuestion.openFiles = [];
