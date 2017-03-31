@@ -42,7 +42,7 @@ export const appStateActions = {
 
 
 
-export default function appStateReducer(state: appStateReducerState = {projects: []}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: [], currentQuestion: {name: "question", files: [], runFile: "file.txt", openFiles: [], currentFile: {name: "file.txt", content: "content"}}}, projects: []}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.getProjects:
       return mergeBetter(state, {projects: action.payload.projects});
