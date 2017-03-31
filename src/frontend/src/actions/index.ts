@@ -92,14 +92,11 @@ const mapDispatchToProps = (dispatch: Function) => {
                 return new Promise((resolve, reject) => {
                     if (trim(username) === "" || trim(password) === "") {
                         showError("Please fill in all fields!");
-                        resolve();
+                        reject(null);
                     } else {
                         asyncAction(Services.login(username, password)).then((response) => {
                             dispatch({type: userActions.SIGNIN, payload: username});
-                            reject(null);
-                        }).catch((reason) => {
                             resolve();
-                            if (reason !== null) reject(reason);
                         });
                     }
                 });

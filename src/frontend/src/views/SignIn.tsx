@@ -23,6 +23,7 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
         this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value, (this.refs.password as HTMLInputElement).value).then(() => {
             ctx.setState({loading: false});
         }).catch((reason) => {
+            ctx.setState({loading: false});
             if (reason !== null) throw reason;
         });
     }
