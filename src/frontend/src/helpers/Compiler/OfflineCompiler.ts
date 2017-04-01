@@ -11,8 +11,8 @@ import {CompilerError} from "../Errors";
 
 export {OfflineCompiler};
 
-const CompilerWorker = require("worker-loader!../../../workers/offline-compile.js");
-const RunnerWorker = require("worker-loader!../../../workers/offline-run.js");
+const CompilerWorker = require("worker-loader!../../workers/offline-compile.js");
+const RunnerWorker = require("worker-loader!../../workers/offline-run.js");
 
 interface PID {
   id: number;
