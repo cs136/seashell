@@ -5,6 +5,8 @@ import {merge} from "ramda";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 
+import {showError} from "../../partials/Errors";
+
 export interface DeleteWindowProps {file: string; closefunc: Function};
 
 class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {}>{
@@ -16,7 +18,17 @@ class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-danger" onClick={() => {
-          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.file);
+          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.file).then(
+            ()=>{
+              if(this.props.appState.currentProject.currentQuestion.files.length>0){
+                this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.files[0]);
+              }
+            }
+          ).catch((error)=>{
+            if(error !== null){
+              showError(error.message);
+            }
+          });
           this.props.closefunc();
           }}>Delete</button>
       </div>

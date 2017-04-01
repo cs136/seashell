@@ -6,16 +6,27 @@ const styles = require("./SignIn.scss");
 const logo = require("../assets/logo.svg");
 
 export interface SignInProps { }
-export interface SignInState { }
+export interface SignInState { loading: boolean; }
 
 class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> {
     constructor(props: SignInProps){
         super(props);
+        this.state = {
+            loading: false
+        };
         this.signin = this.signin.bind(this);
     }
     signin(e: any) {
         e.preventDefault();
-        this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value, (this.refs.password as HTMLInputElement).value);
+        this.setState({loading: true});
+        const ctx = this;
+        this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value, (this.refs.password as HTMLInputElement).value).then(() => {
+            ctx.props.dispatch.project.getAllProjects();
+            ctx.setState({loading: false});
+        }).catch((reason) => {
+            ctx.setState({loading: false});
+            if (reason !== null) throw reason;
+        });
     }
     render() {
         const projects = this.props.appState.projects;
@@ -24,13 +35,13 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
                 <form className="pt-control-group pt-vertical" onSubmit={this.signin}>
                     <div className="pt-input-group pt-large">
                         <span className="pt-icon pt-icon-person"></span>
-                        <input type="text" className="pt-input" ref="username" placeholder="Username" />
+                        <input type="text" className="pt-input" disabled={this.state.loading} ref="username" placeholder="Username" />
                     </div>
                     <div className="pt-input-group pt-large">
                         <span className="pt-icon pt-icon-lock"></span>
-                        <input type="password" className="pt-input" ref="password" placeholder="Password" />
+                        <input type="password" className="pt-input" disabled={this.state.loading} ref="password" placeholder="Password" />
                     </div>
-                    <button className="pt-button pt-large pt-intent-primary">Sign In</button>
+                    <button className="pt-button pt-large pt-intent-primary" disabled={this.state.loading}>Sign In</button>
                 </form>
 
             </div>);

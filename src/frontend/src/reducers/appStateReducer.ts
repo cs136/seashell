@@ -35,23 +35,33 @@ export const appStateActions = {
   openFile: "file_open",
   closeFile: "file_close",
   setRunFile: "file_set_run",
-  copyFile: "file_copy"
+  copyFile: "file_copy",
+  clearFiles: "file_clear",
+  getProjects: "projects_get",
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "A1", id: "A1R", questions: ["q1", "q2"], currentQuestion: {name: "q1", files: ["main.c", "test.txt"], openFiles: [], runFile: null, currentFile: {name: "main.c", content: "#include <stdio.h>\nint main(){\n\tprintf(\"Hello World!\");\n}"}}}, projects: ["A1", "A2"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: [], currentQuestion: {name: "question", files: [], runFile: "file.txt", openFiles: [], currentFile: {name: "file.txt", content: "content"}}}, projects: []}, action: appStateReducerAction) {
   switch (action.type) {
-    case appStateActions.copyFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
-    case appStateActions.renameFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: mergeBetter(action.payload.question, {currentFile: mergeBetter(state.currentProject.currentQuestion.currentFile, {name: action.payload.newName})})}});
+    case appStateActions.getProjects:
+      return mergeBetter(state, {projects: action.payload.projects});
+    case appStateActions.clearFiles:
+      state=clone(state);
+      state.currentProject.currentQuestion.openFiles = [];
+      return state;
     case appStateActions.switchFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: {currentFile: action.payload.file}}});
+      state=clone(state);
+      state.currentProject.currentQuestion.currentFile=action.payload.file;
+      return state;
     case appStateActions.switchQuestion:
-      return mergeBetter(state, {currentProject: {currentQuestion: action.payload.question}});
+      state=clone(state);
+      state.currentProject.currentQuestion=action.payload.question;
+      return state;
     case appStateActions.switchProject:
-      return mergeBetter(state, {currentProject: action.payload.project});
+      state = clone(state);
+      state.currentProject = action.payload.project;
+      return state;
     // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       state=clone(state);
@@ -66,12 +76,18 @@ export default function appStateReducer(state: appStateReducerState = {currentPr
       state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
       return state;
     case appStateActions.addQuestion:
-      return mergeBetter(state, {currentProject: {questions: state.currentProject.questions.push(action.payload.name), currentQuestion: {files: []}}});
+      state=clone(state);
+      state.currentProject.questions.push(action.payload.name);
+      return state;
     case appStateActions.addProject:
-      return mergeBetter(state, {projects: state.projects.push(action.payload.name), currentProject: {questions: []}});
+      state=clone(state);
+      state.projects.push(action.payload.name);
+      return state;
+    // leave switching project/question to the UI
     case appStateActions.addFile:
-      return mergeBetter(state, {currentProject: {currentQuestion: {name: action.payload.name, files: action.payload.files,
-                                                                    currentFile: {name: action.payload.file.name, content: action.payload.file.content}}}});
+      state = clone(state);
+      state.currentProject.currentQuestion.files.push(action.payload.name);
+      return state;
     case appStateActions.changeFileContent:
       return mergeBetter(state, {currentProject: { currentQuestion: {currentFile: {content: action.payload}}}});
     case appStateActions.openFile:

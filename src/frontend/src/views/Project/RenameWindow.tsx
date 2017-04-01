@@ -5,6 +5,8 @@ import {merge} from "ramda";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 
+import {showError} from "../../partials/Errors";
+
 export interface RenameWindowProps {questions: string[]; closefunc: Function; file: string};
 
 class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {question: string; file: string, prevFile: string}>{
@@ -37,7 +39,13 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" onClick={()=>{
-          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.currentFile.name, this.state.question + "/" + this.state.file);
+          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.currentFile.name, this.state.question + "/" + this.state.file).then(
+            ()=>this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.state.question + "/" + this.state.file)
+          ).catch((error)=>{
+            if(error !== null){
+              showError(error.message);
+            }
+          });
           this.props.closefunc();
           }}>Rename/Move</button>
       </div>
