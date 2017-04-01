@@ -13,9 +13,9 @@ import {merge} from "ramda";
 import CopyWindow from "./CopyWindow";
 import RenameWindow from "./RenameWindow";
 import DeleteWindow from "./DeleteWindow";
+import {RouteComponentProps} from "react-router";
 
-
-export interface ProjectProps { title: string; routeParams: any; }
+export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
 export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; fileOpTarget: string; toggleView: boolean; }
 
 

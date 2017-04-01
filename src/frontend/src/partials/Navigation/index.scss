@@ -23,9 +23,9 @@
     border-bottom:1px solid #EEE !important;
     border-style:none;
     box-shadow:none !important;
-    padding:0.4em 1em;
+    padding:0.4em 1em !important;
     justify-content: space-between;
-    height:auto;
+    height:auto !important;
     :global{
         .pt-align-right{
             display:flex;

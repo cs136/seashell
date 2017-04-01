@@ -1,6 +1,6 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
-import {Link} from "react-router";
+import {Link} from "react-router-dom";
 import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
