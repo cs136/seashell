@@ -42,7 +42,7 @@ export const appStateActions = {
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: [], currentQuestion: {name: "question", files: [], runFile: "file.txt", openFiles: [], currentFile: {name: "file.txt", content: "content"}}}, projects: []}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.getProjects:
       state=clone(state);
