@@ -88,7 +88,6 @@ class SeashellWebsocket {
 
   private timeoutCount: number;
   private timeoutInterval: any;
-  private key: number;
   private callbacks: Callback[];
 
   // this allows WebsocketService to access member functions by string key
@@ -283,8 +282,8 @@ class SeashellWebsocket {
     this.websocket.close();
   }
 
-   public register_callback(type: string, cb: (message?: any) => any, now?: boolean): number {
-    this.callbacks[this.key] = new Callback(type, cb, now);
+  public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
+    this.callbacks.push(new Callback(type, cb, now));
 
     if (type === "disconnected" && !this.isConnected() && now) {
       cb();
@@ -293,11 +292,6 @@ class SeashellWebsocket {
     } else if (type === "failed" && this.failed && now) {
       cb();
     }
-    return this.key++;
-  }
-
-  public unregister_callback(key: number): void {
-    delete this.callbacks[key];
   }
 
   public async invoke_cb(type: string, message?: any): Promise<Array<any>> {
