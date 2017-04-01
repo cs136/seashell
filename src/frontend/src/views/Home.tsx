@@ -5,7 +5,7 @@ import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
 const layoutStyles = require("../Layout.scss");
 const styles = require("./Home.scss");
-import { filter } from "ramda";
+
 
 export interface HomeProps { title: string; }
 export interface HomeState { open?: boolean; title?: string; }
