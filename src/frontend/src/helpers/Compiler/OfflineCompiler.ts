@@ -11,6 +11,9 @@ import {CompilerError} from "../Errors";
 
 export {OfflineCompiler};
 
+const CompilerWorker = require("worker-loader!../../../workers/offline-compile.js");
+const RunnerWorker = require("worker-loader!../../../workers/offline-run.js");
+
 interface PID {
   id: number;
   runner: Worker;
@@ -45,13 +48,13 @@ class OfflineCompiler extends AbstractCompiler {
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return new Promise<CompilerResult>(async (resolve, reject) => {
-      let compiler = new Worker("js/offline-compile.min.js");
+      let compiler = new CompilerWorker();
       compiler.onmessage = (result: CompilerWorkerResult) => {
         if (result.data.status === "compile-failed") {
           resolve(result.data);
         } else if (result.data.status === "running") {
           const pid = ++this.freePID;
-          let runner = new Worker("js/offline-run.min.js");
+          let runner = new RunnerWorker();
           runner.onmessage = (result: RunnerWorkerResult) => {
             this.handleIO(result.data);
           };
