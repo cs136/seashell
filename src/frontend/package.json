@@ -45,8 +45,8 @@
     "@blueprintjs/core": "1.11.1",
     "@types/history": "2.0.44",
     "@types/jest": "18.1.1",
-    "@types/node": "7.0.8",
     "@types/jquery": "2.0.41",
+    "@types/node": "7.0.8",
     "@types/pure-render-decorator": "0.2.27",
     "@types/ramda": "0.0.2",
     "@types/react": "15.0.0",
@@ -84,9 +84,10 @@
     "tslint-loader": "3.4.2",
     "typescript": "2.2.1",
     "url-loader": "0.5.7",
-    "webpack-archive-plugin": "^3.0.0",
     "webpack": "2.2.1",
-    "webpack-dev-server": "2.4.1"
+    "webpack-archive-plugin": "^3.0.0",
+    "webpack-dev-server": "2.4.1",
+    "websocket": "1.0.24"
   },
   "jest": {
     "transform": {
