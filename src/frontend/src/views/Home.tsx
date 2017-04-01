@@ -1,13 +1,14 @@
 import * as React from "react";
 import {map, actionsInterface} from "../actions";
-import {Link} from "react-router";
+import { Link } from "react-router-dom";
+import { RouteComponentProps } from "react-router";
 import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
 const layoutStyles = require("../Layout.scss");
 const styles = require("./Home.scss");
 import { filter } from "ramda";
 
-export interface HomeProps { title: string; }
+export interface HomeProps extends RouteComponentProps<{}> { title: string; }
 export interface HomeState { open?: boolean; title?: string; }
 
 class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
@@ -46,4 +47,4 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
   }
 }
 
-export default map(Home);
+export default map<HomeProps>(Home);
