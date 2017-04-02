@@ -52,7 +52,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 },
              updateEditorRatio: (ratio: number) => dispatch({type: settingsActions.updateEditorRatio, payload: ratio})
           },
-          // other than switchfile, openFile and closeFile, the file name parameter should always be the full path, for exmaple "q1/file.txt"
+          // other than openFile and closeFile, the file name parameter should always be the full path, for exmaple "q1/file.txt"
           file: {
               copyFile: (targetName: string) => {
                   // TODO: hook up to storage once we get a proper copy function
@@ -76,15 +76,15 @@ const mapDispatchToProps = (dispatch: Function) => {
               openFile: (name: string) => dispatch({type: appStateActions.openFile, payload: name}),
               closeFile: (name: string) => dispatch({type: appStateActions.closeFile, payload: name}),
               setRunFile: (name: string) => dispatch({type: appStateActions.setRunFile, payload: name}),
-              switchFile: (question: string, name: string) => {
-                    return asyncAction(Services.storage().readFile([question, name])).then((file: File) => dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: file.contents}}}));
+              switchFile: (project: string, name: string) => {
+                    return asyncAction(Services.storage().readFile([project, name])).then((file: File) => dispatch({type: appStateActions.switchFile, payload: {file: {name: name, content: file.contents}}}));
                 }
           },
           question: {
               addQuestion: (newQuestionName: string) => dispatch({type: appStateActions.addQuestion, payload: {name: newQuestionName}}),
               removeQuestion: (name: string) => dispatch({type: appStateActions.removeQuestion, payload: {name: name}}),
               switchQuestion: (project: string, name: string) => {
-                  return asyncAction(Services.storage().getFiles(project)).then((files) => dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, openFiles: [], files: files.filter((file) => file.name.split("/")[0] === name).map((file) => file.name)}}}));
+                  return asyncAction(Services.storage().getFiles(project)).then((files) => dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, runFile: "", currentFile: {name: "", content: ""}, openFiles: [], files: files.filter((file) => file.name.split("/")[0] === name).map((file) => file.name)}}}));
               }
           },
           user: {
@@ -121,8 +121,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                   function unique(val: any, idx: Number, arr: any){
                     return arr.indexOf(val) === idx;
                   }
-                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name).filter(unique),
-                    currentQuestion: {name: "", files: [], runFile: "", openFiles: [], currentFile: {name: "", connect: ""}}}}})));
+                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                    currentQuestion: {name: "", files: [], runFile: "", openFiles: [], currentFile: {name: "", content: ""}}}}})));
               },
               getAllProjects: ()=> {
                   asyncAction(Services.storage().getProjects()).then((projects)=>dispatch({type: appStateActions.getProjects, payload: {projects: projects.map((project)=>project.name)}}));

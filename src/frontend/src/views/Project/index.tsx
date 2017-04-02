@@ -14,7 +14,7 @@ import CopyWindow from "./CopyWindow";
 import RenameWindow from "./RenameWindow";
 import DeleteWindow from "./DeleteWindow";
 import {RouteComponentProps} from "react-router";
-
+import { showError } from "../../partials/Errors";
 export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
 export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; fileOpTarget: string; toggleView: boolean; }
 
@@ -30,6 +30,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         copyVisible: false,
         fileOpTarget: this.props.appState.currentProject.currentQuestion.currentFile.name
     };
+  }
+  componentWillMount(){
+    if(this.props.location.pathname.split("/").pop() !== this.props.appState.currentProject.name){
+        // force wait until promise is resolved
+        this.props.dispatch.project.switchProject(this.props.location.pathname.split("/").pop()).then(()=>console.log(this.props.appState)).catch((reason)=>{if(reason !== null){showError(reason.message);}});
+    }
   }
   changeTargetFile(file: string){
       this.setState(merge(this.state, {fileOpTarget: file}));
@@ -49,9 +55,6 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   render() {
     const project = this.props.appState.currentProject;
     const question = project.currentQuestion;
-    if(this.props.location.pathname.split("/").pop() !== this.props.appState.currentProject.name){
-        this.props.dispatch.project.switchProject(this.props.location.pathname.split("/").pop());
-    }
     return (<div><Navigation navLeft={[
           <div className="pt-navbar-heading" key="project-name">{project.name}</div>,
           <Popover content={<QuestionList project={project} />} key="project-question" position={Position.BOTTOM}>
@@ -66,7 +69,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           <Tooltip key="project-build-file" content="Test" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-comparison"></button></Tooltip>,
           question.runFile === "" ? <Tooltip key="project-run-file-set" content="Please set a run file" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip> : <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-play"></button></Tooltip>,
           <Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}><button className="pt-button pt-minimal pt-icon-publish-function"></button></Tooltip>]} />
-      <File className={this.state.toggleView ? styles.rightToggle : styles.leftToggle} file={question.currentFile.name} />
+      {this.props.appState.currentProject.currentQuestion.currentFile.name === "" ? <div /> : <File className={this.state.toggleView ? styles.rightToggle : styles.leftToggle} file={question.currentFile.name} />}
       <Dialog className={styles.dialogStyle} title="Delete File" isOpen={this.state.deleteVisible} onClose={this.toggleDelete.bind(this)}><DeleteWindow file={this.state.fileOpTarget} closefunc={this.toggleDelete.bind(this)}/></Dialog>
       <Dialog className={styles.dialogStyle} title="Rename/Move File" isOpen={this.state.renameVisible} onClose={this.toggleRename.bind(this)}><RenameWindow questions={this.props.appState.currentProject.questions} file={this.state.fileOpTarget} closefunc={this.toggleRename.bind(this)}/></Dialog>
       <Dialog className={styles.dialogStyle} title="Copy File" isOpen={this.state.copyVisible} onClose={this.toggleCopy.bind(this)}><CopyWindow questions={this.props.appState.currentProject.questions} file={this.state.fileOpTarget} closefunc={this.toggleCopy.bind(this)}/></Dialog>
