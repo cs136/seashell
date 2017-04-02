@@ -34,7 +34,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   componentWillMount(){
     if(this.props.location.pathname.split("/").pop() !== this.props.appState.currentProject.name){
         // force wait until promise is resolved
-        this.props.dispatch.project.switchProject(this.props.location.pathname.split("/").pop()).then(()=>console.log(this.props.appState)).catch((reason)=>{if(reason !== null){showError(reason.message);}});
+        this.props.dispatch.project.switchProject(this.props.location.pathname.split("/").pop()).then(()=>{
+            if(this.props.appState.currentProject.questions.length>0){
+                this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, this.props.appState.currentProject.questions[0]).then(()=>{}).catch(
+                    (reason)=>{if(reason !== null){showError(reason.message);}}
+                );
+            }
+        }).catch((reason)=>{if(reason !== null){showError(reason.message);}});
     }
   }
   changeTargetFile(file: string){
