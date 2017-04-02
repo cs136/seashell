@@ -38,7 +38,7 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
           </div>
           <div className={styles.column}>
             <h5>Personal</h5>
-            {projects.filter(function (project) {return !project.toUpperCase().startsWith("A")&&!project.toUpperCase().startsWith("TUT")&&!project.toUpperCase().startsWith("LEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
+            {projects.filter(function (project) {return !project.toUpperCase().startsWith("A")&&!project.toUpperCase().startsWith("TUT")&&!project.toUpperCase().startsWith("LEC")&&!project.toUpperCase().startsWith("SEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
           </div>
         </div>
         <div className={styles.clear} />
