@@ -4,6 +4,7 @@ import MonacoEditor from "react-monaco-editor";
 import Xterm from "./Console";
 import Loading from "./Loading";
 import * as Draggable from "react-draggable"; // Both at the same time
+import { merge } from "ramda";
 
 const styles = require("./project.scss");
 
@@ -55,7 +56,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         fontFamily: this.props.settings.font + ", monospace",
         fontSize: this.props.settings.fontSize
     };
-    this.setState({editorLastUpdated: this.props.settings.updated});
+    this.setState(merge(this.state, {editorLastUpdated: this.props.settings.updated}));
     if (this.editor) {
       this.editor.updateOptions(editorOptions);
       this.editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
