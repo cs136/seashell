@@ -73,9 +73,12 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       }
     });
   }
-  componentWillUmount = () => {
+  componentWillUnmount = () => {
     this.editor && this.editor.dispose();
     this.editor = null;
+  }
+  componentDidMount = () => {
+    this.loadMonaco(this.container);
   }
   loadMonaco = (container: HTMLElement) => {
     const { requireConfig } = this.props;
@@ -133,21 +136,14 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
   initMonaco = (container: HTMLElement) => {
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
-    if (container) {
-      if (container !== this.container) {
-         if (this.editor) {
-          this.editor.dispose();
-        }
-        this.container = container;
-        this.editor = this.monacoContext.monaco.editor.create(container, {
-          value,
-          language,
-          theme,
-          ...options,
-        });
-        this.editorDidMount();
-      }
-    }
+
+    this.editor = this.monacoContext.monaco.editor.create(container, {
+      value,
+      language,
+      theme,
+      ...options,
+    });
+    this.editorDidMount();
   }
 
   render() {
@@ -159,7 +155,7 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       height: fixedHeight,
     };
     return (<div style={style} ref={(container?: HTMLElement) => {
-        this.loadMonaco(container);
+        this.container = container;
       }}/>);
   }
 
