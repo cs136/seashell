@@ -26,7 +26,7 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
         <div className={styles.gradientBar} />
         <div className={styles.mainContent}>
           <Route exact path="/" component={Home} />
-          <Route path="project/:id" component={Project} />
+          <Route path="/project/:id" component={Project} />
         </div>
       </div>
     );

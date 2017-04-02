@@ -8,31 +8,33 @@ import * as Draggable from "react-draggable"; // Both at the same time
 const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
-export interface FileState { editor: any; dirty: boolean; editorLastUpdated: number; }
+export interface FileState { dirty: boolean; editorLastUpdated: number; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
+  editor: any;
+
   constructor(props: FileProps & actionsInterface) {
     super(props);
     this.state = {
-        editor: null,
         dirty: true,
         editorLastUpdated: -1
     };
     this.handleDrag = this.handleDrag.bind(this);
     this.stopDrag = this.stopDrag.bind(this);
     this.onResize = this.onResize.bind(this);
+    this.editor = null;
   }
   onResize() {
-    if (!("terminal" in this.refs) || this.state.editor == null) return; // ignore if not mounted properly yet
-    const newHeight = (window.innerHeight - this.state.editor.domElement.getBoundingClientRect().top);
+    if (!("terminal" in this.refs) || this.editor == null) return; // ignore if not mounted properly yet
+    const newHeight = (window.innerHeight - this.editor.domElement.getBoundingClientRect().top);
     const newHeightPx = newHeight + "px";
-    this.state.editor.domElement.style.height = newHeightPx;
+    this.editor.domElement.style.height = newHeightPx;
     (this.refs.resizeHandle as HTMLElement).style.height = newHeightPx;
     (this.refs.editorContainer as HTMLElement).style.height = newHeightPx;
-    this.state.editor.domElement.style.flex = this.props.settings.editorRatio;
+    this.editor.domElement.style.flex = this.props.settings.editorRatio;
     (this.refs.terminal as Xterm).setFlex(1 - this.props.settings.editorRatio);
     (this.refs.terminal as Xterm).setHeight(newHeight);
-    this.state.editor.layout();
+    this.editor.layout();
     (this.refs.terminal as Xterm).updateLayout();
   }
   updateEditorOptions() {
@@ -53,9 +55,11 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         fontFamily: this.props.settings.font + ", monospace",
         fontSize: this.props.settings.fontSize
     };
-    this.state.editorLastUpdated = this.props.settings.updated;
-    this.state.editor.updateOptions(editorOptions);
-    this.state.editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
+    this.setState({editorLastUpdated: this.props.settings.updated});
+    if (this.editor) {
+      this.editor.updateOptions(editorOptions);
+      this.editor.getModel().updateOptions({tabSize: this.props.settings.tabWidth});
+    }
   }
   updateConsoleOptions() {
     if (this.props.settings.theme) {
@@ -67,7 +71,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     }
   }
   editorDidMount(editor: any, monaco: any) {
-    this.state.editor = editor;
+    this.editor = editor;
     this.onResize();
     editor.focus();
     this.updateEditorOptions();
@@ -98,7 +102,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   }
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
-    this.state.editor.domElement.style.flex = percent;
+    this.editor.domElement.style.flex = percent;
     (this.refs.terminal as Xterm).setFlex(1 - percent);
   }
   render() {
