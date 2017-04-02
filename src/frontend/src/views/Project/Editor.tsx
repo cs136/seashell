@@ -20,6 +20,7 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
   editor: any;
   prevent_change: Boolean;
   current_value?: String;
+  container?: HTMLElement;
 
   public static defaultProps: Partial<MonacoEditorProps> = {
     width: "100%",
@@ -42,6 +43,7 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
     this.prevent_change = false;
     this.current_value = props.value;
     this.monacoContext = this.props.context || window;
+    this.container = null;
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
     if (this.props.value !== this.current_value) {
@@ -62,7 +64,7 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
     this.props.editorWillMount && this.props.editorWillMount(this.monacoContext.monaco);
   }
   editorDidMount = () => {
-    this.props.editorWillMount && this.props.editorDidMount(this.editor, this.monacoContext.monaco);
+    this.props.editorDidMount && this.props.editorDidMount(this.editor, this.monacoContext.monaco);
     this.editor.onDidChangeModelContent((event: Event) => {
       const value = this.editor.getValue();
       this.current_value = value;
@@ -131,13 +133,21 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
   initMonaco = (container: HTMLElement) => {
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
-    this.editor = this.monacoContext.monaco.editor.create(container, {
-      value,
-      language,
-      theme,
-      ...options,
-    });
-    this.editorDidMount();
+    if (container) {
+      if (container !== this.container) {
+         if (this.editor) {
+          this.editor.dispose();
+        }
+        this.container = container;
+        this.editor = this.monacoContext.monaco.editor.create(container, {
+          value,
+          language,
+          theme,
+          ...options,
+        });
+        this.editorDidMount();
+      }
+    }
   }
 
   render() {
@@ -149,7 +159,7 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       height: fixedHeight,
     };
     return (<div style={style} ref={(container?: HTMLElement) => {
-          container && this.loadMonaco(container);
+        this.loadMonaco(container);
       }}/>);
   }
 
