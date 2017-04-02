@@ -2,6 +2,7 @@ import {mergeBetter} from "../helpers/utils";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
+  fileOpTarget: string;
   projects: string[];
   currentProject: {
     name: string;
@@ -38,12 +39,22 @@ export const appStateActions = {
   copyFile: "file_copy",
   clearFiles: "file_clear",
   getProjects: "projects_get",
+  invalidateFile: "file_invalidate",
+  setFileOpTarget: "fileoptarget_set",
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {fileOpTarget: "", currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.setFileOpTarget:
+      state=clone(state);
+      state.fileOpTarget=action.payload.name;
+      return state;
+    case appStateActions.invalidateFile:
+      state=clone(state);
+      state.currentProject.currentQuestion.currentFile.name="";
+      return state;
     case appStateActions.getProjects:
       state=clone(state);
       state.projects=action.payload.projects;

@@ -54,6 +54,8 @@ const mapDispatchToProps = (dispatch: Function) => {
           },
           // other than openFile and closeFile, the file name parameter should always be the full path, for exmaple "q1/file.txt"
           file: {
+              setFileOpTarget: (file: string)=>dispatch({type: appStateActions.setFileOpTarget, payload: {name: file}}),
+              invalidateFile: ()=>dispatch({type: appStateActions.invalidateFile, payload: {}}),
               copyFile: (targetName: string) => {
                   // TODO: hook up to storage once we get a proper copy function
                   dispatch({type: appStateActions.copyFile, payload: {question: {name: "question", files: ["file1.txt"]}, newName: targetName.split("/").pop()}})},
@@ -68,10 +70,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                       dispatch({type: appStateActions.removeFile, payload: {name: name}});}).catch((reason)=>{throw reason;}); },
               renameFile: (project: string, currentname: string, targetName: string) => {
                   return asyncAction(Services.storage().renameFile([project, currentname], targetName)).then(()=>{
-                      dispatch({type: appStateActions.closeFile, payload: name});
-                      dispatch({type: appStateActions.removeFile, payload: name});
-                      dispatch({type: appStateActions.addFile, payload: targetName});
-                      dispatch({type: appStateActions.openFile, payload: targetName});
+                      dispatch({type: appStateActions.closeFile, payload: currentname});
+                      dispatch({type: appStateActions.removeFile, payload: {name: currentname}});
+                      dispatch({type: appStateActions.addFile, payload: {name: targetName}});
                   }).catch((reason)=>{throw reason;}); },
               openFile: (name: string) => dispatch({type: appStateActions.openFile, payload: name}),
               closeFile: (name: string) => dispatch({type: appStateActions.closeFile, payload: name}),

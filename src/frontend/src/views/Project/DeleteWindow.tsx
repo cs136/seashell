@@ -7,7 +7,7 @@ import {map, actionsInterface} from "../../actions";
 
 import {showError} from "../../partials/Errors";
 
-export interface DeleteWindowProps {file: string; closefunc: Function};
+export interface DeleteWindowProps {closefunc: Function};
 
 class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {}>{
   render(){
@@ -18,10 +18,10 @@ class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-danger" onClick={() => {
-          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.file).then(
+          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.fileOpTarget).then(
             ()=>{
               if(this.props.appState.currentProject.currentQuestion.files.length>0){
-                this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.files[0]);
+                this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.files[0]);
               }
             }
           ).catch((error)=>{
