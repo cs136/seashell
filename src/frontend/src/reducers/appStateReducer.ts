@@ -3,16 +3,16 @@ import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
   projects: string[];
-  currentProject?: {
+  currentProject: {
     name: string;
     id: string;
     questions: string[];
-    currentQuestion?: {
+    currentQuestion: {
       name: string
       files: string[];
-      runFile?: string;
+      runFile: string;
       openFiles: string[];
-      currentFile?: {
+      currentFile: {
         name: string;
         content: string
       };
@@ -42,7 +42,7 @@ export const appStateActions = {
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.getProjects:
       state=clone(state);
