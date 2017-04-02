@@ -97,6 +97,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                         asyncAction(Services.login(username, password)).then((response) => {
                             dispatch({type: userActions.SIGNIN, payload: username});
                             resolve();
+                        }).catch((e) => {
+                            reject(e);
                         });
                     }
                 });
