@@ -1,6 +1,6 @@
 // import React from "react";
 import * as React from "react";
-import {Route, RouteComponentProps} from "react-router";
+import {withRouter, Switch, Route, RouteComponentProps} from "react-router";
 import Navigation from "./partials/Navigation";
 import {map, actionsInterface} from "./actions";
 import Project from "./views/Project";
@@ -11,7 +11,7 @@ const styles = require("./Layout.scss");
 
 require("@blueprintjs/core/dist/blueprint.css");
 
-export interface LayoutProps { };
+export interface LayoutProps extends RouteComponentProps<{}> { };
 export interface LayoutState { };
 
 class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState> {
@@ -25,12 +25,14 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
       <div className={styles.app + " " + (this.props.settings.theme === 0 ? "pt-dark" : "")}>
         <div className={styles.gradientBar} />
         <div className={styles.mainContent}>
-          <Route exact path="/" component={Home} />
-          <Route path="/project/:id" component={Project} />
+          <Switch>
+            <Route exact path="/" component={Home} />
+            <Route path="/project/:id" component={Project} />
+          </Switch>
         </div>
       </div>
     );
   }
 }
 
-export default map<LayoutProps>(Layout);
+export default withRouter(map<LayoutProps>(Layout));
