@@ -25,10 +25,8 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
       <div className={styles.app + " " + (this.props.settings.theme === 0 ? "pt-dark" : "")}>
         <div className={styles.gradientBar} />
         <div className={styles.mainContent}>
-          <Switch>
-            <Route exact path="/" component={Home} />
-            <Route path="/project/:id" component={Project} />
-          </Switch>
+          <Route exact path="/" component={Home} />
+          <Route path="/project/:id" component={Project} />
         </div>
       </div>
     );

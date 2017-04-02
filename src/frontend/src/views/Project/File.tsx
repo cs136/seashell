@@ -1,6 +1,6 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
-import MonacoEditor from "react-monaco-editor";
+import MonacoEditor from "./Editor";
 import Xterm from "./Console";
 import Loading from "./Loading";
 import * as Draggable from "react-draggable"; // Both at the same time
@@ -88,6 +88,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   }
   componentWillUnmount() {
     window.removeEventListener("resize", this.onResize);
+    this.editor = null;
   }
   componentDidMount() {
       window.removeEventListener("resize", this.onResize);
@@ -118,11 +119,24 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         cursorBlink: true,
     };
     const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
-    return (this.props.file === currentFile.name ? (<div className={styles.filePanel}>
-        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer"><MonacoEditor ref="editor" value={currentFile.content} language="cpp" onChange={this.onChange.bind(this)} editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/><Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-          <div ref="resizeHandle" className={styles.resizeHandle} />
-      </Draggable><Xterm ref="terminal" className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" } readOnly={false}/></div>
-    </div>) : <Loading />);
+    if (this.props.file === currentFile.name) {
+      return (<div className={styles.filePanel}>
+        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
+          <MonacoEditor
+            value={currentFile.content} language="cpp"
+            onChange={this.onChange.bind(this)}
+            editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
+          <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
+            <div ref="resizeHandle" className={styles.resizeHandle} />
+          </Draggable>
+        <Xterm ref="terminal"
+          className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
+          readOnly={false}/>
+      </div>
+      </div>);
+    }
+    else
+      return <Loading/>
   }
 }
 export default map<FileProps>(File);
