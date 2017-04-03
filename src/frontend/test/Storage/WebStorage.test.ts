@@ -49,7 +49,9 @@ function websocketTest() {
   let socket = Services.storage();
 
   beforeAll(() => {
-    return Services.login(TestAccount.user, TestAccount.password).catch((err) => {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    console.warn(process.env);
+    return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend).catch((err) => {
       console.error(err);
     });
   });
@@ -61,7 +63,7 @@ function websocketTest() {
   it("Login multiple times. Should not crash.", async () => {
     // expect(socket.isConnected()).toEqual(true);
     for (const i of R.range(0, 3)) {
-      await Services.login(TestAccount.user, TestAccount.password);
+      await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
     }
     expect(socket.isOffline()).toEqual(false);
   });

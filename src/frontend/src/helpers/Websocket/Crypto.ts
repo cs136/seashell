@@ -2,7 +2,7 @@ import sjcl = require("sjcl");
 export {AbstractCoder, Coder, CoderEncrypted, ShittyCoder}
 
 const webcrypto = window.crypto ? window.crypto : <Crypto> (() => {
-  if (!IS_BROWSER) {
+  if (!this.IS_BROWSER) {
     const WebCrypto = eval("require")("node-webcrypto-ossl");
     return new WebCrypto();
   } else {
@@ -37,11 +37,7 @@ abstract class AbstractCoder {
   }
 }
 
-// new but doesn't work
 class Coder extends AbstractCoder {
-
-  key: NodeWebcryptoOpenSSL.CryptoKey;
-
   constructor(public rawKey?: number[]) {
     super();
   };
@@ -93,31 +89,9 @@ class Coder extends AbstractCoder {
     };
     return ourResult;
   }
-
-
-  public async decrypt(encryptionResult: CoderEncrypted): Promise<ArrayBuffer> {
-    let iv = encryptionResult.iv;
-    let encrypted = encryptionResult.encrypted;
-    let tag = encryptionResult.authTag;
-    let data = new Uint8Array(encrypted.length + tag.length);
-    data.set(new Uint8Array(encrypted), 0);
-    data.set(new Uint8Array(tag), encrypted.length);
-    let result = await webcrypto.subtle.decrypt({
-      name: "AES-GCM",
-      iv: iv,
-      additionalData: iv,
-      tagLength: 128,
-    }, this.key, data);
-    return result;
-  }
-
 }
 
-// shitty but works
 class ShittyCoder extends AbstractCoder {
-
-  key: NodeWebcryptoOpenSSL.CryptoKey;
-
   constructor(public rawKey?: number[]) {
     super(rawKey);
   };
