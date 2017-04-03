@@ -1,7 +1,6 @@
 import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
 import {Connection} from "../Services";
 import {WebsocketError} from "../Errors";
-import WebCrypto = require("node-webcrypto-ossl");
 
 export {WebsocketResult,
         SeashellWebsocket,
