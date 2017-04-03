@@ -27,7 +27,8 @@ add_custom_target(seashell-frontend-src-copy
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/package.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/webpack.config.prod.js" "${CMAKE_CURRENT_BINARY_DIR}/webpack.config.prod.js"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/manifest.json" "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
-    SOURCES ${seashell_frontend_src} tsconfig.json tslint.json package.json webpack.config.prod.js manifest.json 
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/test" "${CMAKE_CURRENT_BINARY_DIR}/test"
+    SOURCES ${seashell_frontend_src} tsconfig.json tslint.json package.json webpack.config.prod.js manifest.json
 )
 find_program(SEASHELL_NPM npm)
 add_custom_target(seashell-frontend-configure
