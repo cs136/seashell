@@ -1,4 +1,4 @@
-import {Coder, ShittyCoder} from "./Crypto";
+import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
 import {Connection} from "../Services";
 import {WebsocketError} from "../Errors";
 import WebCrypto = require("node-webcrypto-ossl");
@@ -74,7 +74,7 @@ class Callback {
 
 class SeashellWebsocket {
   private cnn: Connection;
-  private coder: ShittyCoder;
+  private coder: AbstractCoder;
   private websocket: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
@@ -141,7 +141,7 @@ class SeashellWebsocket {
     }
 
     this.cnn = cnn;
-    this.coder = new ShittyCoder(this.cnn.key);
+    this.coder = new Coder(this.cnn.key);
     this.websocket = new WebSocket(this.cnn.wsURI);
     this.websocket.onerror = () => {
       this.failed = true;

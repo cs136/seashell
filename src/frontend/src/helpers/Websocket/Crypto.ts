@@ -1,7 +1,14 @@
 import sjcl = require("sjcl");
-export {Coder, CoderEncrypted, ShittyCoder}
+export {AbstractCoder, Coder, CoderEncrypted, ShittyCoder}
 
-const win: any = window as any, webcrypto = (win.crypto || win.msCrypto);
+const webcrypto = window.crypto ? window.crypto : <Crypto> (() => {
+  if (!IS_BROWSER) {
+    const WebCrypto = eval("require")("node-webcrypto-ossl");
+    return new WebCrypto();
+  } else {
+    throw new Error("WebCrypto not found!");
+  }
+})();
 
 
 interface CoderEncrypted {
@@ -40,10 +47,10 @@ class Coder extends AbstractCoder {
   };
 
   public async genRandom(): Promise<{ iv: number[], nonce: number[]} > {
-    const iv = new Int32Array(32);
+    const iv = new Uint8Array(12);
     webcrypto.getRandomValues(iv);
     const client_nonce = new Uint8Array(32);
-    new webcrypto.getRandomValues(client_nonce);
+    webcrypto.getRandomValues(client_nonce);
     return {
       iv: Array.from(iv),
       nonce: Array.from(client_nonce)
@@ -51,30 +58,40 @@ class Coder extends AbstractCoder {
   };
 
   public async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted> {
-
     const raw_response = new Uint8Array(nonce.length + challenge.length);
     raw_response.set(nonce, 0);
     raw_response.set(challenge, nonce.length);
 
-    const key8 = new Int8Array(Int32Array.from(rawKey).buffer);
-    const key = await webcrypto.subtle.importKey("raw", key8, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+    /** Convert rawKey to bytes using a DataView
+     *  We do this as the key needs to be encoded big-endian.
+     */
+    let keyLength = rawKey.length * 4;
+    let buffer = new ArrayBuffer(keyLength);
+    let dataview = new DataView(buffer);
+    for (let i = 0; i < rawKey.length; i++) {
+      dataview.setInt32(i * 4, rawKey[i]);
+    }
+    let key8 = new Uint8Array(buffer);
+    const key = await webcrypto.subtle.importKey("raw", key8,
+      { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 
     let result = await webcrypto.subtle.encrypt({
       name: "AES-GCM",
-      iv: new Int32Array(iv),
-      additionalData: new Int32Array(iv),
+      iv: new Uint8Array(iv),
+      additionalData: new Uint8Array(iv),
       tagLength: 128
     }, key, raw_response);
 
     let encrypted = result.slice(0, result.byteLength - 16);
     let authTag = result.slice(result.byteLength - 16);
 
-    return {
+    let ourResult = {
       iv: iv,
       encrypted: Array.from(new Uint8Array(encrypted)),
       authTag: Array.from(new Uint8Array(authTag)),
       nonce: nonce
     };
+    return ourResult;
   }
 
 

@@ -8,4 +8,5 @@ declare module "md5";
 //    (paths: string[], callback: (...modules: any[]) => void): void;
 //    ensure: (paths: string[], callback: (require: <T>(path: string) => T) => void) => void;
 // };
+declare const IS_BROWSER: boolean;
 
