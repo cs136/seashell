@@ -49,8 +49,6 @@ function websocketTest() {
   let socket = Services.storage();
 
   beforeAll(() => {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    console.warn(process.env);
     return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend).catch((err) => {
       console.error(err);
     });
