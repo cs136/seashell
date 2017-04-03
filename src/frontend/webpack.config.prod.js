@@ -62,7 +62,10 @@ module.exports = {
         navigateFallbackURL: '/'
       }
     }),
-    new ArchivePlugin()
+    new ArchivePlugin(),
+    new webpack.DefinePlugin({
+      IS_BROWSER: true
+    })
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.

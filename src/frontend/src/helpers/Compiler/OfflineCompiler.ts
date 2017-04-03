@@ -11,8 +11,23 @@ import {CompilerError} from "../Errors";
 
 export {OfflineCompiler};
 
-const CompilerWorker = require("worker-loader!../../workers/offline-compile.js");
-const RunnerWorker = require("worker-loader!../../workers/offline-run.js");
+const CompilerWorker = (() => {
+  if (IS_BROWSER) {
+    return require("worker-loader!../../workers/offline-compile.js");
+  } else {
+    // TODO: Polyfill WebWorkers for Jest/Node.js
+    return null;
+  }
+})();
+
+const RunnerWorker = (() => {
+  if (IS_BROWSER) {
+    return require("worker-loader!../../workers/offline-run.js");
+  } else {
+    // TODO: Polyfill WebWorkers for Jest/Node.js
+    return null;
+  }
+})();
 
 interface PID {
   id: number;

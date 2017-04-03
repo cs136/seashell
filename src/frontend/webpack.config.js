@@ -21,6 +21,9 @@ module.exports = {
     new HtmlWebpackPlugin ({
       inject: true,
       template: './src/index.html'
+    }),
+    new webpack.DefinePlugin({
+      IS_BROWSER: true
     })
   ],
   devtool: "source-map",
