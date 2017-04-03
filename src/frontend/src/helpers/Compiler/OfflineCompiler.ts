@@ -12,7 +12,7 @@ import {CompilerError} from "../Errors";
 export {OfflineCompiler};
 
 const CompilerWorker = (() => {
-  if (this.IS_BROWSER) {
+  if (IS_BROWSER) {
     return require("worker-loader!../../workers/offline-compile.js");
   } else {
     // TODO: Polyfill WebWorkers for Jest/Node.js
@@ -21,7 +21,7 @@ const CompilerWorker = (() => {
 })();
 
 const RunnerWorker = (() => {
-  if (this.IS_BROWSER) {
+  if (IS_BROWSER) {
     return require("worker-loader!../../workers/offline-run.js");
   } else {
     // TODO: Polyfill WebWorkers for Jest/Node.js

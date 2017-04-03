@@ -2,7 +2,7 @@ import sjcl = require("sjcl");
 export {AbstractCoder, Coder, CoderEncrypted, ShittyCoder}
 
 const webcrypto = window.crypto ? window.crypto : <Crypto> (() => {
-  if (!this.IS_BROWSER) {
+  if (!IS_BROWSER) {
     const WebCrypto = eval("require")("node-webcrypto-ossl");
     return new WebCrypto();
   } else {

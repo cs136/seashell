@@ -102,6 +102,7 @@
       "ts",
       "tsx",
       "js"
-    ]
+    ],
+    "setupFiles": ["<rootDir>/test/before_test.js"]
   }
 }
