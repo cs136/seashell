@@ -1,9 +1,8 @@
-import {Coder, ShittyCoder} from "./Crypto";
+import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
 import {Connection} from "../Services";
-import WebCrypto = require("node-webcrypto-ossl");
 import * as R from "ramda";
 import * as E from "../Errors";
-import {Message, Request, Response, WebsocketResult, Callback} from "./Interface";
+import {Message, Request, Response, Callback} from "./Interface";
 
 export {SeashellWebsocket, MockInternet}
 
@@ -11,10 +10,11 @@ enum MockInternet {Online, Offline, Real};
 
 class SeashellWebsocket {
   private connection: Connection;
-  private coder: ShittyCoder;
+  private coder: AbstractCoder;
   private websocket: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
+  private failed: boolean; // not used?
   private authenticated: boolean;
   private closes: () => void;
   private failures: () => void;
@@ -80,7 +80,7 @@ class SeashellWebsocket {
     }
 
     this.connection = cnn;
-    this.coder = new ShittyCoder(this.connection.key);
+    this.coder = new Coder(this.connection.key);
 
     try {
       this.websocket = new WebSocket(this.connection.wsURI);
@@ -167,8 +167,9 @@ class SeashellWebsocket {
     }).catch((err) => {
       if (err instanceof E.RequestError) {
         rtvReject(new E.LoginRequired());
+      } else {
+        rtvReject(err);
       }
-      rtvReject(err);
     });
 
     return rtv;
@@ -218,23 +219,16 @@ class SeashellWebsocket {
     this.connection = undefined;
   }
 
-  // maybe consider this.websocket.addEventListener?
-
   public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
-  // this.callbacks[this.key] = new Callback(type, cb, now);
+    this.callbacks.push(new Callback(type, cb, now));
 
-  //   if (type === "disconnected" && !this.isConnected() && now) {
-  //     cb();
-  //   } else if (type === "connected" && this.isConnected() && now) {
-  //     cb();
-  //   } else if (type === "failed" && this.failed && now) {
-  //     cb();
-  //   }
-  //   return this.key++;
-  }
-
-  public unregister_callback(key: number): void {
-    delete this.callbacks[key];
+    if (type === "disconnected" && ! this.isConnected() && now) {
+      cb();
+    } else if (type === "connected" && this.isConnected() && now) {
+      cb();
+    } else if (type === "failed" && this.failed && now) {
+      cb();
+    }
   }
 
   public async invoke_cb(type: string, message?: any): Promise<Array<any>> {

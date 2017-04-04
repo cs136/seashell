@@ -1,13 +1,14 @@
 import * as React from "react";
 import {map, actionsInterface} from "../actions";
-import {Link} from "react-router";
+import { Link } from "react-router-dom";
+import { RouteComponentProps } from "react-router";
 import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
 const layoutStyles = require("../Layout.scss");
 const styles = require("./Home.scss");
-import { filter } from "ramda";
 
-export interface HomeProps { title: string; }
+
+export interface HomeProps extends RouteComponentProps<{}> { title: string; }
 export interface HomeState { open?: boolean; title?: string; }
 
 class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
@@ -18,7 +19,7 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
           <div className="pt-navbar-heading" key="project-name">My Projects</div>]}
           navRight={
             [<button className="pt-button" role="button" key="home-new-project"><span className="pt-icon-standard pt-icon-plus pt-align-left"></span>New Project</button>,
-            <button className="pt-button" role="button" key="home-refresh"><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</button>]
+            <button className="pt-button" role="button" key="home-refresh" onClick={()=>this.props.dispatch.project.getAllProjects()}><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</button>]
           }
            />
       <div className={styles.container}>
@@ -33,11 +34,11 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
           </div>
           <div className={styles.column}>
             <h5>Lectures</h5>
-            {projects.filter(function (project) {return project.toUpperCase().startsWith("LEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
+            {projects.filter(function (project) {return project.toUpperCase().startsWith("LEC")||project.toUpperCase().startsWith("SEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
           </div>
           <div className={styles.column}>
             <h5>Personal</h5>
-            {projects.filter(function (project) {return !project.toUpperCase().startsWith("A")&&!project.toUpperCase().startsWith("TUT")&&!project.toUpperCase().startsWith("LEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
+            {projects.filter(function (project) {return !project.toUpperCase().startsWith("A")&&!project.toUpperCase().startsWith("TUT")&&!project.toUpperCase().startsWith("LEC")&&!project.toUpperCase().startsWith("SEC");}).map((project) => (<ProjectLink key={project} project={project} />))}
           </div>
         </div>
         <div className={styles.clear} />
@@ -46,4 +47,4 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
   }
 }
 
-export default map(Home);
+export default map<HomeProps>(Home);

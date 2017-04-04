@@ -1,25 +1,19 @@
 import * as React from "react";
-import { Router, Route, IndexRoute, hashHistory } from "react-router";
+import { BrowserRouter } from "react-router-dom";
+import { withRouter, Router, Route, RouteComponentProps } from "react-router";
 import Layout from "./Layout";
-import Project from "./views/Project";
 import SignIn from "./views/SignIn";
-import Home from "./views/Home";
 import {map, actionsInterface} from "./actions";
 
-export interface AppProps { title: string; }
-export interface AppState { open?: boolean; title?: string; }
+export interface AppProps extends RouteComponentProps<{}> { }
+export interface AppState { }
 
 class App extends React.Component<AppProps&actionsInterface, AppState> {
   render() {
     const projects = this.props.appState.projects;
-    return this.props.user.questid == null ? <SignIn/> : (
-    <Router history={hashHistory} >
-      <Route path="/" component={Layout}>
-        <IndexRoute component={Home} />
-        <Route path="project/:id" component={Project} />
-      </Route>
-    </Router>);
+    return this.props.user.questid == null ? <SignIn/> :
+    (<Layout/>);
   }
 }
 
-export default map(App);
+export default withRouter(map<AppProps>(App));

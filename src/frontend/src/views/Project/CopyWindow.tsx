@@ -5,15 +5,15 @@ import {merge} from "ramda";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 
-export interface CopyWindowProps {questions: string[]; closefunc: Function; file: string};
+export interface CopyWindowProps {questions: string[]; closefunc: Function; };
 
 class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}>{
   constructor(props: CopyWindowProps&actionsInterface){
     super(props);
     this.state = {
       question: this.props.questions[0],
-      file: this.props.file,
-      prevFile: this.props.file
+      file: this.props.appState.fileOpTarget.split("/").pop(),
+      prevFile: this.props.appState.fileOpTarget.split("/").pop()
     };
   }
   render() {

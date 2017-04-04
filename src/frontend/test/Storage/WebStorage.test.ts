@@ -61,7 +61,9 @@ function websocketTests() {
   let socket = Services.storage();
 
   beforeAll(() => {
-    return Services.login(TestAccount.user, TestAccount.password);
+    return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend).catch((err) => {
+      console.error(err);
+    });
   });
 
   afterAll(() => {

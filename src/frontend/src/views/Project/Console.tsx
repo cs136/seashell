@@ -12,11 +12,14 @@ const styles = require("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     term: any;
+    container?: HTMLElement;
+
     constructor(props: ConsoleProps, context: any) {
         super(props, context);
         this.term = new Terminal({
             cursorBlink: true
         });
+        this.container = null;
     }
 
     dataReceived(payload: string) {
@@ -39,11 +42,11 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     setHeight(height: Number) {
-        (this.refs.console as HTMLDivElement).style.height = height + "px";
+        this.container.style.height = height + "px";
     }
 
     setFlex(flex: any) {
-        (this.refs.console as HTMLDivElement).style.flex = flex;
+        this.container.style.flex = flex;
     }
 
     updateLayout() {
@@ -51,12 +54,12 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     componentDidMount() {
-        this.term.open(this.refs.console);
+        this.term.open(this.container);
         this.setState({ input: true, line: 1, currString: "" });
         this.term.prompt = () => {
             this.term.write("\r\n > ");
         };
-        const consoleElement: HTMLElement = (this.refs.console as HTMLElement);
+        const consoleElement: HTMLElement = this.container;
         this.term.on("key", (key: string, evt: any) => {
             if (this.props.readOnly) { }
             else {
@@ -105,6 +108,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
 
     render() {
         let style = {...this.props.style};
-        return(<div style={this.props.style} className={this.props.className} ref="console"></div>);
+        return(<div style={this.props.style} className={this.props.className} ref={
+            (container: HTMLElement) => { this.container = container; }}></div>);
     }
 }

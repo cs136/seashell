@@ -9,7 +9,7 @@ export interface SignInProps { }
 export interface SignInState { loading: boolean; }
 
 class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> {
-    constructor(props: SignInProps){
+    constructor(props: SignInProps&actionsInterface){
         super(props);
         this.state = {
             loading: false

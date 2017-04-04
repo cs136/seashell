@@ -25,7 +25,7 @@ Services.init(null, {
 describe("Testing WebStorage interface", () => {
 
   beforeAll(() => {
-    return Services.login(TestAccount.user, TestAccount.password);
+    return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
   });
 
   afterAll(() => {
@@ -35,7 +35,7 @@ describe("Testing WebStorage interface", () => {
   it("Login multiple times. Should not crash.", async () => {
       // expect(socket.isConnected()).toEqual(true);
       for (const i of R.range(0, 3)) {
-        await Services.login(TestAccount.user, TestAccount.password);
+        await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
       }
     });
 
@@ -50,7 +50,7 @@ describe("Testing WebStorage interface", () => {
     // expect(socket.isConnected()).toEqual(true);
     for (const i of R.range(0, 3)) {
       await Services.logout();
-      await Services.login(TestAccount.user, TestAccount.password);
+      await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
     }
   });
 });

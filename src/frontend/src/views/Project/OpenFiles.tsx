@@ -5,7 +5,7 @@ import FileActions from "./FileActions";
 
 const styles = require("./project.scss");
 
-export interface OpenFilesProps {setTargetFile: Function; toggleDelete: Function; toggleCopy: Function; toggleRename: Function };
+export interface OpenFilesProps {toggleDelete: Function; toggleCopy: Function; toggleRename: Function };
 export interface OpenFilesState { };
 
 class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenFilesState> {
@@ -19,8 +19,8 @@ class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenF
             {question.openFiles.map((file: string) => (
                 <div className={styles.openFilesTab} key={"file-tab-" + file}>
                     <div className={"pt-button-group " + styles.openFilesTab + (file === question.currentFile.name ? " " + styles.active : "")}>
-                        <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, this.props.appState.currentProject.currentQuestion.name, file)}>{file === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}{file}</button>
-                        <Popover content={<FileActions file={file} setTargetFile={this.props.setTargetFile} toggleCopy={this.props.toggleCopy} toggleDelete={this.props.toggleDelete} toggleRename={this.props.toggleRename}/>} position={Position.BOTTOM}>
+                        <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, this.props.appState.currentProject.name, file)}>{file === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}{file.substring(file.indexOf("/") + 1)}</button>
+                        <Popover content={<FileActions file={file} toggleCopy={this.props.toggleCopy} toggleDelete={this.props.toggleDelete} toggleRename={this.props.toggleRename}/>} position={Position.BOTTOM}>
                             <button className={"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}></button>
                         </Popover>
                     </div>

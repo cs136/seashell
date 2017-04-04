@@ -2,6 +2,7 @@ import * as React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 import { createStore, applyMiddleware } from "redux";
+import { HashRouter } from "react-router-dom"
 import { install } from "offline-plugin/runtime";
 import {actionsInterface} from "./actions";
 import HotKeys from "./HotKeys";
@@ -19,7 +20,7 @@ const createStoreWithMiddleware = applyMiddleware()(createStore);
 const store = createStoreWithMiddleware(reducers);
 
 const rootEl = document.getElementById("root");
-render(<Provider store={store}><App /></Provider>, rootEl);
+render(<HashRouter><Provider store={store}><App /></Provider></HashRouter>, rootEl);
 
 Services.init(store.dispatch, {
   debugService: true,

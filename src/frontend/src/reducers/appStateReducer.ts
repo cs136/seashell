@@ -2,17 +2,19 @@ import {mergeBetter} from "../helpers/utils";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
+  fileOpTarget: string;
   projects: string[];
-  currentProject?: {
+  runState: number;
+  currentProject: {
     name: string;
     id: string;
     questions: string[];
-    currentQuestion?: {
+    currentQuestion: {
       name: string
       files: string[];
-      runFile?: string;
+      runFile: string;
       openFiles: string[];
-      currentFile?: {
+      currentFile: {
         name: string;
         content: string
       };
@@ -36,19 +38,41 @@ export const appStateActions = {
   closeFile: "file_close",
   setRunFile: "file_set_run",
   copyFile: "file_copy",
-  clearFiles: "file_clear",
   getProjects: "projects_get",
+  invalidateFile: "file_invalidate",
+  setFileOpTarget: "fileoptarget_set",
+  setRunning: "set_running",
+  setCompiling: "set_compiling",
+  setNotRunning: "set_not_running",
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {currentProject: {name: "project", id: "project", questions: [], currentQuestion: {name: "question", files: [], runFile: "file.txt", openFiles: [], currentFile: {name: "file.txt", content: "content"}}}, projects: []}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {runState: 0, fileOpTarget: "", currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
-    case appStateActions.getProjects:
-      return mergeBetter(state, {projects: action.payload.projects});
-    case appStateActions.clearFiles:
+    case appStateActions.setRunning:
       state=clone(state);
-      state.currentProject.currentQuestion.openFiles = [];
+      state.runState=2;
+      return state;
+    case appStateActions.setNotRunning:
+      state=clone(state);
+      state.runState=0;
+      return state;
+    case appStateActions.setCompiling:
+      state=clone(state);
+      state.runState=1;
+      return state;
+    case appStateActions.setFileOpTarget:
+      state=clone(state);
+      state.fileOpTarget=action.payload.name;
+      return state;
+    case appStateActions.invalidateFile:
+      state=clone(state);
+      state.currentProject.currentQuestion.currentFile.name="";
+      return state;
+    case appStateActions.getProjects:
+      state=clone(state);
+      state.projects=action.payload.projects;
       return state;
     case appStateActions.switchFile:
       state=clone(state);

@@ -7,15 +7,16 @@ import {map, actionsInterface} from "../../actions";
 
 import {showError} from "../../partials/Errors";
 
-export interface RenameWindowProps {questions: string[]; closefunc: Function; file: string};
+export interface RenameWindowProps {questions: string[]; closefunc: Function; };
 
 class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {question: string; file: string, prevFile: string}>{
   constructor(props: RenameWindowProps&actionsInterface){
     super(props);
+    console.log(this.props.appState.fileOpTarget);
     this.state={
       question: this.props.questions[0],
-      file: this.props.file,
-      prevFile: this.props.file
+      file: this.props.appState.fileOpTarget.split("/").pop(),
+      prevFile: this.props.appState.fileOpTarget.split("/").pop()
     }
   }
   render(){
@@ -39,8 +40,10 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" onClick={()=>{
-          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.name + "/" + this.props.appState.currentProject.currentQuestion.currentFile.name, this.state.question + "/" + this.state.file).then(
-            ()=>this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.state.question + "/" + this.state.file)
+          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.fileOpTarget, this.state.question + "/" + this.state.file).then(
+            ()=>this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, this.state.question).then(()=>{
+              this.props.dispatch.file.openFile(this.state.question + "/" + this.state.file);
+              this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.state.question + "/" + this.state.file)})
           ).catch((error)=>{
             if(error !== null){
               showError(error.message);

@@ -41,7 +41,7 @@ abstract class AbstractCompiler {
   // Function used by both compilers to group the test files appropriately
   //  to send to their respective backends
   protected async getTestsForQuestion(project: ProjectID, question: string): Promise<TestBrief[]> {
-    const files = await this.storage.getFiles(project);
+    const files = await this.storage.getProjectFiles(project);
     return groupBy(files.filter((f: FileBrief) => {
       return f.name.startsWith(question + "/tests/");
     }), (f: FileBrief) => {
