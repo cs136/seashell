@@ -5,8 +5,9 @@ import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, WebsocketResult, Callback} from "./Interface";
 
-export {SeashellWebsocket}
-// enum WSState {Connecting, Open, Closing, Closed};
+export {SeashellWebsocket, MockInternet}
+
+enum MockInternet {Online, Offline, Real};
 
 class SeashellWebsocket {
   private connection: Connection;
@@ -15,15 +16,12 @@ class SeashellWebsocket {
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
   private authenticated: boolean;
-  private failed: boolean;
-  private closed: boolean;
-  private started: boolean;
   private closes: () => void;
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
   private pingLoop: any;
   private callbacks: Callback[];
-
+  public mockInternet: MockInternet;
   // this allows WebsocketService to access member functions by string key
   // [key: string]: any;
 
@@ -39,8 +37,6 @@ class SeashellWebsocket {
     this.debug && console.log("Connecting to websocket...");
     this.lastMsgID = 0;
     this.authenticated = false;
-    this.failed = false;
-    this.closed = false;
     this.requests = {};
     this.requests[-1] = new Request({id: -1}); // server challenge
     this.requests[-2] = new Request({id: -2}); // reply challenge
@@ -48,6 +44,13 @@ class SeashellWebsocket {
     this.requests[-4] = new Request({id: -4});
     this.requests[-3].callback = this.io_cb;
     this.requests[-4].callback = this.test_cb;
+     // return resolved promise at the end
+    let rtvResolve: () => void;
+    let rtvReject: (reason: any) => void;
+    let rtv: Promise<void> = new Promise<void>((resolve, reject) => {
+      rtvResolve = resolve;
+      rtvReject = reject;
+    });
     // if there's an exisitng websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
@@ -78,17 +81,40 @@ class SeashellWebsocket {
 
     this.connection = cnn;
     this.coder = new ShittyCoder(this.connection.key);
-    this.websocket = new WebSocket(this.connection.wsURI);
 
+    try {
+      this.websocket = new WebSocket(this.connection.wsURI);
+    } catch (err) {
+      console.error(`Could not create WebSocket connection to ${this.connection.wsURI}:\n${err}`);
+      throw new E.LoginRequired(); // simply ask user to retry
+    }
+
+    // Websocket.onclose should race against authentication
     this.websocket.onclose = () => {
+      rtvReject(new E.NoInternet());
+      console.warn(`Websocket lost connection. Trying to reconnect...`);
       clearInterval(this.pingLoop);
+      // automatically reconnect after 3s
       if (this.connection) {
-        this.connect(this.connection);
+        setTimeout(() => {
+          this.connect(this.connection);
+        }, 3000);
       }
+      for (const i in this.requests) {
+        this.requests[i].reject(new E.NoInternet());
+      }
+    };
+
+    this.websocket.onerror = (err) => {
+      console.error(`Websocket encountered error. Closing websocket.\n${err}`);
+      this.websocket.close();
     };
 
     this.websocket.onopen = () => {
       let timeoutCount = 0;
+      if (this.pingLoop) {
+        clearInterval(this.pingLoop);
+      }
       this.pingLoop = setInterval(async () => {
         timeoutCount++;
         if (timeoutCount >= 3) {
@@ -131,29 +157,32 @@ class SeashellWebsocket {
     };
 
     this.debug && console.log("Authenticating websocket...");
-    this.sendRequest(this.requests[-2]);
-    try {
-      const result = await this.requests[-2].received;
+
+    // Authentication should race against websocket.onclose
+    this.sendRequest(this.requests[-2]).then(() => {
       this.debug && console.log("Authentication succeeded.");
       this.authenticated = true;
-    } catch (err) {
+      this.debug && console.log("Seashell is ready :)");
+      rtvResolve();
+    }).catch((err) => {
       if (err instanceof E.RequestError) {
-        throw new E.LoginRequired();
+        rtvReject(new E.LoginRequired());
       }
-      throw err;
-    }
+      rtvReject(err);
+    });
 
+    return rtv;
   }
 
-  private async resolveRequest(responseText: string): Promise<void> {
+  private resolveRequest(responseText: string): void {
     const response = <Response>(JSON.parse(responseText));
     // Assume the response holds the message and response.id holds the
     //  message identifier that corresponds with it
     // response.result will hold the result if the API call succeeded,
     //  error message otherwise.
     const request = this.requests[response.id];
+    const time = new Date();
     if (request.type !== "ping") {
-      const time = new Date();
       const diff = request.time ? time.getTime() - request.time : -1;
       if (response.success) {
         if (request.message.type !== "ping") {
@@ -168,20 +197,13 @@ class SeashellWebsocket {
     }
     if (response.success) {
       request.resolve(response.result);
+    } else if (! this.authenticated) {
+    // test if is not authenticated
+    // better have the backend reject with "unauthenticated" error,
+    // instead of the current "invalid message"
+      request.reject(new E.LoginRequired());
     } else {
-      // test if is not authenticated
-      // better have the backend reject with "unauthenticated" error,
-      // instead of the current "invalid message"
-      try {
-        await this.ping();
-      } catch (err) {
-        if (err instanceof E.RequestError) {
-          this.authenticated = false;
-          request.reject(new E.LoginRequired());
-        } else {
-          throw err;
-        }
-      }
+      const diff = request.time ? time.getTime() - request.time : -1;
       request.reject(new E.RequestError(`Request ${request.message.id} failed with response: ${response.result}`,
                                         request,
                                         response));
@@ -231,6 +253,9 @@ class SeashellWebsocket {
   }
 
   private sendRequest<T>(request: Request<T>): Promise<T> {
+    if (! this.isConnected()) {
+      throw new E.NoInternet();
+    }
     const msg   = request.message;
     const msgID = msg.id;
     this.requests[msgID] = request;
@@ -255,7 +280,14 @@ class SeashellWebsocket {
   }
 
   public isConnected() {
-    return this.websocket && this.websocket.readyState === this.websocket.OPEN;
+    if (this.mockInternet === MockInternet.Offline) {
+      return false;
+    }
+    if (this.mockInternet === MockInternet.Online) {
+      return true;
+    }
+    return this.websocket &&
+           this.websocket.readyState === this.websocket.OPEN;
   }
 
   public async ping(): Promise<void> {

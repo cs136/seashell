@@ -4,7 +4,9 @@ export {LoginError,
         WebsocketError,
         CompilerError,
         LoginRequired,
-        RequestError};
+        RequestError,
+        NoInternet,
+        RequestTimedOut};
 
 class GenericError extends Error {
   __proto__: Error;
@@ -30,10 +32,21 @@ class LoginRequired extends GenericError {
   }
 }
 
+class NoInternet extends GenericError {
+  constructor() {
+    super();
+  }
+}
+
 class RequestError extends GenericError {
   constructor(public message: string,
               public request: W.Request<any>,
               public response: W.Response) {
+    super(message);
+  }
+}
+class RequestTimedOut extends GenericError {
+  constructor(public message: string) {
     super(message);
   }
 }

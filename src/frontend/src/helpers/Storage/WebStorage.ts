@@ -19,10 +19,6 @@ class Callback {
 
 
 class WebStorage extends AbstractStorage implements AbstractWebStorage {
-  // private synced: boolean;
-  // private isSyncing: boolean;
-  private offlineMode: number;
-
   private socket: SeashellWebsocket;
   private storage: LocalStorage;
 
@@ -146,36 +142,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async getProjects(): Promise<ProjectBrief[]> {
     await this.syncAll();
     return this.storage.getProjects();
-    // const result = await this.socket.sendMessage({
-    //   type: "getProjects"
-    // });
-    // return R.map((pair: [string, number]) => ({
-    //   id: pair[0],
-    //   name: pair[0],
-    //   last_modified: pair[1],
-    // }), result);
   }
 
   public async getProject(pid: ProjectID): Promise<Project> {
-    // TODO: need backend support for recently opened tabs
     return this.storage.getProject(pid);
   }
 
   public async readFile(fid: FileID): Promise<File> {
     return this.storage.readFile(fid);
-    // let result = await this.socket.sendMessage({
-    //   type: "readFile",
-    //   project: proj,
-    //   file: name
-    // });
-    // return {
-    //   id: fid, // temp fix
-    //   contents: result.data,
-    //   name: name,
-    //   project: proj,
-    //   checksum: result.checksum,
-    //   last_modified: Date.now() // missing backend support
-    // };
   }
 
   public async writeFile(fid: FileID, contents: string): Promise<void> {
@@ -206,15 +180,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   public async setFileToRun(proj: ProjectID, question: string, id: FileID): Promise<void> {
     return this.storage.setFileToRun(proj, question, id);
-    // const file = id[1];
-    // const parts = file.split("/");
-    // await this.socket.sendMessage({
-    //   type: "setFileToRun",
-    //   project: proj,
-    //   question: question,
-    //   folder: question,
-    //   file: R.tail(parts).join("/")
-    // });
   };
 
   public async getOpenedTabs(proj: ProjectID, question: string): Promise<FileID[]> {
@@ -227,23 +192,10 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   public async setSettings(settings: Settings): Promise<void> {
     return this.storage.setSettings(settings);
-    // await this.socket.sendMessage({
-    //   type: "saveSettings",
-    //   settings: settings
-    // });
   }
 
-  public async getSettings(): Promise<Settings|undefined> {
+  public async getSettings(): Promise<Settings> {
     return this.storage.getSettings();
-    // const result = await this.socket.sendMessage({
-    //   type : "getSettings",
-    // });
-    // if (result) {
-    //   return result;
-    // } else {
-    //   console.warn("coundn't find a setting, returning the default");
-    //   return defaultSettings;
-    // }
   }
 
   // to be replaced by dexie
@@ -256,8 +208,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const settingsSent = await this.storage.getSettings();
     const result = await this.socket.sendMessage<{
       changes: ChangeLog[],
-      newProjects: ProjectID[],
-      deletedProjects: ProjectID[]
+      newProjects: string[],
+      deletedProjects: string[]
     }>({
       type: "sync",
       projects: projectsSent,

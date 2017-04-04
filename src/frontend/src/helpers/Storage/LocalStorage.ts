@@ -334,7 +334,7 @@ class LocalStorage implements AbstractStorage {
   // Will be replaced by Dexie.Syncable.ISyncProtocol
   public async applyChanges(changeLogs: ChangeLog[],
                             newProjects: string[],
-                            deletedProjects: ProjectID[]): Promise<void> {
+                            deletedProjects: string[]): Promise<void> {
     const tbs = [this.db.files, this.db.changeLogs, this.db.projects, this.db.settings];
     return await this.db.transaction("rw", tbs, async () => {
       Dexie.currentTransaction.on("abort", () => {
