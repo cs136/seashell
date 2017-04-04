@@ -16,6 +16,9 @@ module.exports = {
       {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
+      },
+      {
+        from: 'favicon.ico'
       }
     ]),
     new HtmlWebpackPlugin ({

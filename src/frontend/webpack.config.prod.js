@@ -19,6 +19,9 @@ module.exports = {
     new CleanWebpackPlugin(['dist'], { verbose: false }),
     new CopyWebpackPlugin([
       { from: 'images/', to: 'images/' },
+      {
+        from: 'favicon.ico'
+      },
       { from: 'manifest.json' },{
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
