@@ -38,7 +38,6 @@ export const appStateActions = {
   closeFile: "file_close",
   setRunFile: "file_set_run",
   copyFile: "file_copy",
-  clearFiles: "file_clear",
   getProjects: "projects_get",
   invalidateFile: "file_invalidate",
   setFileOpTarget: "fileoptarget_set",
@@ -74,10 +73,6 @@ export default function appStateReducer(state: appStateReducerState = {runState:
     case appStateActions.getProjects:
       state=clone(state);
       state.projects=action.payload.projects;
-      return state;
-    case appStateActions.clearFiles:
-      state=clone(state);
-      state.currentProject.currentQuestion.openFiles = [];
       return state;
     case appStateActions.switchFile:
       state=clone(state);

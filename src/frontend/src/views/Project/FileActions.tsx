@@ -29,7 +29,15 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
                 this.props.toggleDelete();
             }}/>
             <MenuDivider />
-            <MenuItem text="Close File" onClick={this.props.dispatch.file.closeFile.bind(null, file)}/>
+            <MenuItem text="Close File" onClick={()=>{
+                this.props.dispatch.file.closeFile.bind(null, file);
+                if(this.props.appState.currentProject.currentQuestion.openFiles.length>0){
+                    this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.openFiles[0]);
+                }
+                else{
+                    this.props.dispatch.file.invalidateFile();
+                }
+            }}/>
         </Menu>);
     }
 }

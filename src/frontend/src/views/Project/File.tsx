@@ -123,7 +123,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
-            value={currentFile.content} language="cpp"
+            defaultValue={currentFile.content} language="cpp"
             onChange={this.onChange.bind(this)}
             editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
