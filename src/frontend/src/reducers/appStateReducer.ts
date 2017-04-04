@@ -4,6 +4,7 @@ import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
   fileOpTarget: string;
   projects: string[];
+  runState: number;
   currentProject: {
     name: string;
     id: string;
@@ -41,12 +42,27 @@ export const appStateActions = {
   getProjects: "projects_get",
   invalidateFile: "file_invalidate",
   setFileOpTarget: "fileoptarget_set",
+  setRunning: "set_running",
+  setCompiling: "set_compiling",
+  setNotRunning: "set_not_running",
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {fileOpTarget: "", currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {runState: 0, fileOpTarget: "", currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.setRunning:
+      state=clone(state);
+      state.runState=2;
+      return state;
+    case appStateActions.setNotRunning:
+      state=clone(state);
+      state.runState=0;
+      return state;
+    case appStateActions.setCompiling:
+      state=clone(state);
+      state.runState=1;
+      return state;
     case appStateActions.setFileOpTarget:
       state=clone(state);
       state.fileOpTarget=action.payload.name;

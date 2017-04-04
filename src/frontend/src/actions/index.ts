@@ -116,7 +116,6 @@ const mapDispatchToProps = (dispatch: Function) => {
               addProject: (newProjectName: string) => asyncAction(Services.storage().newProject(newProjectName)).then(() => dispatch({type: appStateActions.addProject, payload: {name: newProjectName}})),
               removeProject: (name: string) => asyncAction(Services.storage().deleteProject(name)).then(() => dispatch({type: appStateActions.removeProject, payload: {name: name}})),
               switchProject: (name: string) => {
-                  // TODO interface with backend and get real data
                   // we will leave switching question and file to the UI
                   // efficiency is for noobs
                   function unique(val: any, idx: Number, arr: any){
@@ -129,9 +128,25 @@ const mapDispatchToProps = (dispatch: Function) => {
                   asyncAction(Services.storage().getProjects()).then((projects)=>dispatch({type: appStateActions.getProjects, payload: {projects: projects.map((project)=>project.name)}}));
               }
           },
-          app: {
-              // removeError: (errorIDX: Number) => dispatch({type: appStateActions.removeError, payload: {errorIDX: errorIDX}})
-
+          compile: {
+               compileAndRun: (project: string, filepath: string) => {
+                   dispatch({type: appStateActions.setCompiling, payload: {}});
+                   asyncAction(Services.compiler().compileAndRunProject(project, filepath.split("/")[0], [project, filepath], false)).then((result)=>{
+                       if(result.status!=="running"){
+                           dispatch({type: appStateActions.setNotRunning, payload: {}});
+                       }
+                       else{
+                           dispatch({type: appStateActions.setRunning, payload: {}});
+                       }
+                   }).catch((reason)=>{
+                       dispatch({type: appStateActions.setNotRunning, payload: {}});
+                       if(reason!=null){
+                        showError(reason.message);
+                    }
+                   })
+               },
+               setNotRunning: ()=>dispatch({type: appStateActions.setNotRunning, payload: {}}),
+               stopProgram: ()=>Services.compiler().programKill().then(()=>dispatch({type: appStateActions.setNotRunning, payload: {}})),
           }
         }
     };
