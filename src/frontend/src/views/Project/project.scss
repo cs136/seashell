@@ -181,7 +181,7 @@
 }
 
 .toggleView{
-    display:none;
+    display:none !important;
 }
 
 @media(max-width: $mobile-break){
@@ -194,10 +194,10 @@
         line-height:normal;
     }
     .resizeHandle{
-        display:none;
+        display:none !important;
     }
     .toggleView{
-        display:block;
+        display:block !important;
     }
     .editorContainer>div{
         flex:1 !important;
