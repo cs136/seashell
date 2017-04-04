@@ -129,9 +129,9 @@ const mapDispatchToProps = (dispatch: Function) => {
               }
           },
           compile: {
-               compileAndRun: (project: string, filepath: string) => {
+               compileAndRun: (project: string, filepath: string, test: boolean) => {
                    dispatch({type: appStateActions.setCompiling, payload: {}});
-                   asyncAction(Services.compiler().compileAndRunProject(project, filepath.split("/")[0], [project, filepath], false)).then((result)=>{
+                   asyncAction(Services.compiler().compileAndRunProject(project, filepath.split("/")[0], [project, filepath], test)).then((result)=>{
                        if(result.status!=="running"){
                            dispatch({type: appStateActions.setNotRunning, payload: {}});
                        }
