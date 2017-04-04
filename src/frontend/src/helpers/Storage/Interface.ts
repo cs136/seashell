@@ -8,7 +8,7 @@ const defaultSettings: Settings = {
   tab_width: 2
 };
 
-export {AbstractStorage,
+export {AbstractStorage, AbstractWebStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings}
@@ -16,26 +16,34 @@ export {AbstractStorage,
 
 abstract class AbstractStorage {
   // projects
-  public abstract async newProject(name: string): Promise<void>;
+  public abstract async newProject(name: string): Promise<ProjectID>;
   public abstract async getProject(proj: ProjectID): Promise<Project>;
   public abstract async getProjects(): Promise<ProjectBrief[]>;
   public abstract async deleteProject(proj: ProjectID): Promise<void>;
-  public abstract async getFiles(proj: ProjectID): Promise<FileBrief[]>;
+  public abstract async getProjectFiles(proj: ProjectID): Promise<FileBrief[]>;
   // files
   public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileID>;
   public abstract async readFile(file: FileID): Promise<File>;
   public abstract async writeFile(file: FileID, contents: string): Promise<void>;
-  public abstract async setFileToRun(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async getFileToRun(proj: ProjectID, question: string): Promise<FileID|undefined>;
   public abstract async renameFile(file: FileID, newName: string): Promise<void>;
   public abstract async deleteFile(file: FileID): Promise<void>;
+  // questions
+  public abstract async setFileToRun(proj: ProjectID, question: string, file: FileID): Promise<void>;
+  public abstract async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false>;
+  public abstract async setOpenedTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void>;
+  public abstract async getOpenedTabs(proj: ProjectID, question: string): Promise<FileID[]>;
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;
   public abstract async getSettings(): Promise<Settings>;
+  // table dump
+  public abstract async getAllFiles(): Promise<FileBrief[]>;
 }
 
+abstract class AbstractWebStorage {
+  public abstract async syncAll(): Promise<void>;
+}
 
-type FileID = [string, string]; // compound key
+type FileID = string; // compound key
 type ProjectID = string; // alias of name for now
 
 interface File extends FileBrief {
@@ -52,6 +60,7 @@ interface FileBrief {
   name: string; // a file name is (test|q*|common)/name
   last_modified: number;
   project: ProjectID;
+  checksum: string;
 }
 
 export const ext = (f: FileBrief) => {

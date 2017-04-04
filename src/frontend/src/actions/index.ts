@@ -85,7 +85,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               addQuestion: (newQuestionName: string) => dispatch({type: appStateActions.addQuestion, payload: {name: newQuestionName}}),
               removeQuestion: (name: string) => dispatch({type: appStateActions.removeQuestion, payload: {name: name}}),
               switchQuestion: (project: string, name: string) => {
-                  return asyncAction(Services.storage().getFiles(project)).then((files) => dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, runFile: "", currentFile: {name: "", content: ""}, openFiles: [], files: files.filter((file) => file.name.split("/")[0] === name).map((file) => file.name)}}}));
+                  return asyncAction(Services.storage().getProjectFiles(project)).then((files) => dispatch({type: appStateActions.switchQuestion, payload: {question: {name: name, runFile: "", currentFile: {name: "", content: ""}, openFiles: [], files: files.filter((file) => file.name.split("/")[0] === name).map((file) => file.name)}}}));
               }
           },
           user: {
@@ -121,7 +121,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   function unique(val: any, idx: Number, arr: any){
                     return arr.indexOf(val) === idx;
                   }
-                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  return asyncAction(Services.storage().getProjectFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
                     currentQuestion: {name: "", files: [], runFile: "", openFiles: [], currentFile: {name: "", content: ""}}}}})));
               },
               getAllProjects: ()=> {
