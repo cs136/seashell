@@ -1,7 +1,8 @@
 import {AbstractCompiler,
         Test,
         CompilerResult,
-        IOMessage} from "./Interface";
+        IOMessage,
+        TestMessage} from "./Interface";
 import {AbstractStorage,
         ProjectID,
         FileID,
@@ -45,6 +46,10 @@ interface RunnerWorkerResult {
   data: IOMessage;
 }
 
+interface TesterWorkerResult {
+  data: TestMessage;
+}
+
 class OfflineCompiler extends AbstractCompiler {
 
   constructor(storage: AbstractStorage, dispatch: DispatchFunction) {
@@ -67,6 +72,28 @@ class OfflineCompiler extends AbstractCompiler {
     }));
   }
 
+  private initTest(test: Test): PID {
+    const pid = ++this.freePID;
+    let tester = new RunnerWorker();
+
+    tester.onmessage = (result: TesterWorkerResult) => {
+      this.handleTest(result.data);
+    };
+
+    tester.postMessage({
+      type: "testdata",
+      pid: pid,
+      test_name: test.name,
+      in: test.in.contents,
+      expect: test.expect.contents
+    });
+
+    return {
+      id: pid,
+      runner: tester
+    };
+  }
+
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return new Promise<CompilerResult>(async (resolve, reject) => {
       let compiler = new CompilerWorker();
@@ -74,15 +101,26 @@ class OfflineCompiler extends AbstractCompiler {
         if (result.data.status === "compile-failed") {
           resolve(result.data);
         } else if (result.data.status === "running") {
-          const pid = ++this.freePID;
-          let runner = new RunnerWorker();
-          runner.onmessage = (result: RunnerWorkerResult) => {
-            this.handleIO(result.data);
-          };
-          this.activePIDs.push({
-            id: pid,
-            runner: runner
-          });
+          if (!runTests) {
+            // run the program interactively
+            const pid = ++this.freePID;
+            let runner = new RunnerWorker();
+            runner.onmessage = (result: RunnerWorkerResult) => {
+              this.handleIO(result.data);
+            };
+            this.activePIDs.push({
+              id: pid,
+              runner: runner
+            });
+          } else {
+            // run all the tests
+            let tests : Test[] = [];
+            for (let i = 0; i < tests.length; i++) {
+              const tester = this.initTest(tests[i]);
+              this.activePIDs.push(tester);
+              tester.runner.postMessage(result.data.obj);
+            }
+          }
         }
       };
       compiler.postMessage({

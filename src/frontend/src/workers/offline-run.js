@@ -82,13 +82,24 @@ function runObj(obj) {
         postMessage({status: runner.result(),
                     type: 'done'});
       } else {
-        postMessage({status: runner.result(),
-                    type: 'done',
-                    test_name: testcase_data.test_name,
-                    in: testcase_data.in,
-                    expect: testcase_data.expect,
-                    stdout: stdout,
-                    stderr: stderr });
+        var result;
+        if (runner.result() !== 0) {
+          result = "error";
+        } else if (!testcase_data.expect) {
+          result = "no-expect";
+        } else if (testcase_data.expect == stdout) {
+          result = "passed";
+        } else {
+          result = "failed";
+        }
+        postMessage({
+          pid: testcase_data.pid,
+          result: result,
+          stderr: stderr,
+          stdout: stdout,
+          test_name: testcase_data.test_name,
+          diff: testcase_data.expect ? testcase_data.expect.split("\n") : undefined
+        });
       }
       close();
     }

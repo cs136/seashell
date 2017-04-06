@@ -92,6 +92,7 @@ interface Test {
 interface CompilerResult {
   messages: CompilerMessage[];
   status: string;
+  obj?: string;
 }
 
 interface CompilerMessage {
