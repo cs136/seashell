@@ -61,7 +61,7 @@ export default function appStateReducer(state: appStateReducerState = {runState:
       if(state.currentProject.termWrite !== null){
         state.currentProject.termWrite(action.payload.content);
       }
-      break;
+      return state;
     case appStateActions.setRunning:
       state=clone(state);
       state.runState=2;
