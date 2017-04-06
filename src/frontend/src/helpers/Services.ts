@@ -11,7 +11,7 @@ import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,
         Test,
         CompilerResult,
-        CompilerMessage} from "./Compiler/Interface";
+        CompilerDiagnostic} from "./Compiler/Interface";
 import {LoginError} from "./Errors";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";

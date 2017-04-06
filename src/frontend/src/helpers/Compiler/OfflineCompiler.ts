@@ -110,6 +110,7 @@ class OfflineCompiler extends AbstractCompiler {
         if (result.data.status === "error") {
           throw new CompilerError(result.data.err);
         } else {
+          this.buffer.outputDiagnostics(result.data.messages);
           resolve(result.data);
         }
         if (result.data.status === "running") {
