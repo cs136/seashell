@@ -121,7 +121,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   function unique(val: any, idx: Number, arr: any){
                     return arr.indexOf(val) === idx;
                   }
-                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {termWrite: null, name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
                     currentQuestion: {name: "", files: [], runFile: "", openFiles: [], currentFile: {name: "", content: ""}}}}})));
               },
               getAllProjects: ()=> {
@@ -147,6 +147,10 @@ const mapDispatchToProps = (dispatch: Function) => {
                },
                setNotRunning: ()=>dispatch({type: appStateActions.setNotRunning, payload: {}}),
                stopProgram: ()=>Services.compiler().programKill().then(()=>dispatch({type: appStateActions.setNotRunning, payload: {}})),
+          },
+          app: {
+              setTerm: (termWrite: Function)=>dispatch({type: appStateActions.setTerm, payload: {termWrite: termWrite}}),
+              writeConsole: (content: string)=>dispatch({type: appStateActions.writeConsole, payload: {content: content}})
           }
         }
     };

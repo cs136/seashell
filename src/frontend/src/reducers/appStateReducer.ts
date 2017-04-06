@@ -6,6 +6,7 @@ export interface appStateReducerState {[key: string]: any;
   projects: string[];
   runState: number;
   currentProject: {
+    termWrite: Function
     name: string;
     id: string;
     questions: string[];
@@ -44,12 +45,23 @@ export const appStateActions = {
   setRunning: "set_running",
   setCompiling: "set_compiling",
   setNotRunning: "set_not_running",
+  setTerm: "term_set",
+  writeConsole: "console_write"
 };
 
 
 
-export default function appStateReducer(state: appStateReducerState = {runState: 0, fileOpTarget: "", currentProject: {name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {runState: 0, fileOpTarget: "", currentProject: {termWrite: null, name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
+    case appStateActions.setTerm:
+      state=clone(state);
+      state.currentProject.termWrite = action.payload.termWrite;
+      return state;
+    case appStateActions.writeConsole:
+      if(state.currentProject.termWrite !== null){
+        state.currentProject.termWrite(action.payload.content);
+      }
+      break;
     case appStateActions.setRunning:
       state=clone(state);
       state.runState=2;

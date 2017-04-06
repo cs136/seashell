@@ -15,7 +15,7 @@ interface MonacoEditorProps {
   context?: any;
 }
 
-export default class MonacoEditor extends React.Component<MonacoEditorProps, {}> {
+export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
   monacoContext: any;
   editor: any;
   prevent_change: Boolean;

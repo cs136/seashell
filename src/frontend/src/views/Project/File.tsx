@@ -1,7 +1,7 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
 import MonacoEditor from "./Editor";
-import Xterm from "./Console";
+import  Xterm  from "./Console";
 import Loading from "./Loading";
 import * as Draggable from "react-draggable"; // Both at the same time
 import { merge } from "ramda";
@@ -123,7 +123,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
-            defaultValue={currentFile.content} language="cpp"
+            value={currentFile.content} language="cpp"
             onChange={this.onChange.bind(this)}
             editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
@@ -131,7 +131,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
           </Draggable>
         <Xterm ref="terminal"
           className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-          readOnly={false}/>
+          readOnly={this.props.appState.runState!==2} dispatch={this.props.dispatch}/>
       </div>
       </div>);
     }
