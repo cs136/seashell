@@ -65,6 +65,11 @@ export const basename = (f: FileBrief) => {
   return arr.join(".");
 };
 
+export const fileQuestion = (f: FileBrief): string => {
+  let arr = this.name.split("/");
+  return arr[0];
+};
+
 interface Project extends ProjectBrief {
   id: ProjectID;
   name: string;

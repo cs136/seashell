@@ -5,7 +5,9 @@ import {AbstractCompiler,
 import {AbstractStorage,
         ProjectID,
         FileID,
-        File} from "../Storage/Interface";
+        File,
+        FileBrief,
+        fileQuestion} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
 
@@ -57,8 +59,12 @@ class OfflineCompiler extends AbstractCompiler {
 
   // For now we will just grab all files for the question as the dependencies.
   private async getDependencies(proj: ProjectID, question: string): Promise<File[]> {
-    // TODO
-    return [];
+    return Promise.all((await this.storage.getFiles(proj)).filter((f : FileBrief) => {
+      const q = fileQuestion(f);
+      return q == question || q === "common";
+    }).map((f : FileBrief) => {
+      return this.storage.readFile(f.id);
+    }));
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
