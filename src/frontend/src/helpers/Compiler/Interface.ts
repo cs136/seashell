@@ -93,6 +93,7 @@ interface CompilerResult {
   messages: CompilerMessage[];
   status: string;
   obj?: string;
+  err?: string;
 }
 
 interface CompilerMessage {

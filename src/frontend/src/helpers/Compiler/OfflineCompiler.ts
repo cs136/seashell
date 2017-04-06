@@ -1,4 +1,5 @@
 import {AbstractCompiler,
+        TestBrief,
         Test,
         CompilerResult,
         IOMessage,
@@ -94,13 +95,24 @@ class OfflineCompiler extends AbstractCompiler {
     };
   }
 
+  private async getFullTest(tst: TestBrief): Promise<Test> {
+    return {
+      name: tst.name,
+      in: await this.storage.readFile(tst.in.id),
+      expect: await this.storage.readFile(tst.expect.id)
+    };
+  }
+
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return new Promise<CompilerResult>(async (resolve, reject) => {
       let compiler = new CompilerWorker();
-      compiler.onmessage = (result: CompilerWorkerResult) => {
-        if (result.data.status === "compile-failed") {
+      compiler.onmessage = async (result: CompilerWorkerResult) => {
+        if (result.data.status === "error") {
+          throw new CompilerError(result.data.err);
+        } else {
           resolve(result.data);
-        } else if (result.data.status === "running") {
+        }
+        if (result.data.status === "running") {
           if (!runTests) {
             // run the program interactively
             const pid = ++this.freePID;
@@ -114,7 +126,8 @@ class OfflineCompiler extends AbstractCompiler {
             });
           } else {
             // run all the tests
-            let tests : Test[] = [];
+            let tests : Test[] = await Promise.all((await this.getTestsForQuestion(proj, question))
+              .map(this.getFullTest));
             for (let i = 0; i < tests.length; i++) {
               const tester = this.initTest(tests[i]);
               this.activePIDs.push(tester);
