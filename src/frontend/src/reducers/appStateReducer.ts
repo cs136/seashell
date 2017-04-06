@@ -44,7 +44,7 @@ export const appStateActions = {
   setFileOpTarget: "fileoptarget_set",
   setRunning: "set_running",
   setCompiling: "set_compiling",
-  setNotRunning: "set_not_running",
+  setNotRunning: "programDone",
   setTerm: "term_set",
   writeConsole: "console_write"
 };

@@ -21,8 +21,8 @@ class OutputBuffer {
 
   private output(out: string): void {
     this.dispatch({
-      type: "output",
-      payload: out
+      type: "console_write",
+      payload: {content: out}
     });
   }
 
