@@ -358,60 +358,6 @@ class WebStorage extends AbstractStorage {
     }
   }
 
-  /*public async compileAndRunProject(project: string, question: string, file: SeashellFile, tests: Array<Test>) {
-    if (!this.isOffline()) {
-      let test_names = tests.map((test: Test) => {
-        return test.test_name;
-      });
-      return this.socket.compileAndRunProject(project, question, test_names);
-    } else {
-      if (file.ext() === "rkt") {
-        throw new WebsocketError("Racket files cannot be run in offline mode.");
-      }
-      let deps = await file.getDependencies(question);
-      let file_arr = await deps.map(async (f: SeashellFile) => {
-        return f.toWorker();
-      });
-      let result = await this.compiler.compile(project, question, file_arr, file.fullname());
-      if (tests.length === 0) {
-        // Fill in the PID with a fake, offline PID
-        result.pid = await this.runner.run(result.obj, (message: Object, data: Object) => {
-          this.io_cb(message, data);
-        });
-      } else {
-        // Run the tests
-        result.pids = await this.tester.runTests(result.obj, (message: Object, data: Object) => {
-          this.test_cb(message, data);
-        }, tests);
-      }
-      return result;
-    }
-  }
-
-  public async programKill(pid: SeashellPID) {
-    if (typeof pid === "object") {
-      pid.kill();
-    } else {
-      return this.socket.programKill(pid);
-    }
-  }
-
-  public async sendEOF(pid: number|SeashellPID) {
-    if (typeof pid === "object") {
-      pid.sendEOF();
-    } else {
-      return this.socket.sendEOF(pid);
-    }
-  }
-
-  public async startIO(project: string, pid: number|SeashellPID) {
-    if (typeof pid === "object") {
-      pid.startIO();
-    } else {
-      return this.socket.startIO(project, pid);
-    }
-  }*/
-
   /**
    * Sync everything, to be called when we first connect to the websocket.
    *
