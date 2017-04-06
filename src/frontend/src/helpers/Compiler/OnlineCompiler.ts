@@ -48,6 +48,7 @@ class OnlineCompiler extends AbstractCompiler {
     if (result.status === "running") {
       this.activePIDs.push(result.pid);
     }
+    this.buffer.outputDiagnostics(result.messages);
     return {
       messages: result.messages,
       status: result.status

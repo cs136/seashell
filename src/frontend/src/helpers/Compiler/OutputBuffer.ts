@@ -1,8 +1,10 @@
-import {IOMessage,
+import {CompilerDiagnostic,
+        IOMessage,
         TestMessage,
         DiffLine,
         ASANOutput} from "./Interface";
 import {DispatchFunction} from "../Services";
+import {groupBy} from "../utils";
 
 export {OutputBuffer};
 
@@ -132,6 +134,30 @@ class OutputBuffer {
     if (ASAN && ASAN.raw_message !== "") {
       output += "AddressSanitizer Output:\n";
       output += this.outputASAN(ASAN);
+    }
+    this.output(output);
+  }
+
+  public outputDiagnostics(diags: CompilerDiagnostic[]): void {
+    if (!diags.length) {
+      return;
+    }
+    const warnOnly = !groupBy(diags, (d: CompilerDiagnostic) => {
+      return d.error ? "err" : "warn";
+    }).err;
+    let output = "";
+    if (warnOnly) {
+      output += "Compilation generated warnings:\n";
+    } else {
+      output += "Compilation failed with errors:\n";
+    }
+    // Remove excessive undefined main linker errors
+    diags = diags.filter((d: CompilerDiagnostic) => {
+      return !(d.message.endsWith("In function `_start':") ||
+        /relocation \d+ has invalid symbol index \d+$/.test(d.message));
+    });
+    for (let i = 0; i < diags.length; i++) {
+      output += "${diags[i].file}:${diags[i].line}:${diags[i].column}: ${diags[i].message}\n";
     }
     this.output(output);
   }
