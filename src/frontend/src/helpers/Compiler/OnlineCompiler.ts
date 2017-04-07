@@ -125,7 +125,6 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   protected programDone(pid: number) {
-    console.log("programDone");
     const ind = this.activePIDs.indexOf(pid);
     if (ind === -1) {
       throw new CompilerError("Program that was not running has ended.");
