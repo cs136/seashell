@@ -78,7 +78,7 @@ class OfflineCompiler extends AbstractCompiler {
     let tester = new RunnerWorker();
 
     tester.onmessage = (result: TesterWorkerResult) => {
-      this.handleTest(result.data);
+      this.handleTest()(result.data);
     };
 
     tester.postMessage({
@@ -119,7 +119,7 @@ class OfflineCompiler extends AbstractCompiler {
             const pid = ++this.freePID;
             let runner = new RunnerWorker();
             runner.onmessage = (result: RunnerWorkerResult) => {
-              this.handleIO(result.data);
+              this.handleIO()(result.data);
             };
             this.activePIDs.push({
               id: pid,

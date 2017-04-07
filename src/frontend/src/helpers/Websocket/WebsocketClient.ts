@@ -242,8 +242,8 @@ class SeashellWebsocket {
         console.error(err);
       }
     }, 4000);
-    this.requests[-3].callback = this.io_cb;
-    this.requests[-4].callback = this.test_cb;
+    this.requests[-3].callback = this.io_cb();
+    this.requests[-4].callback = this.test_cb();
     // Run the callbacks.
     await this.invoke_cb("connected");
     this.debug && console.log("Seashell is ready :)");
@@ -274,6 +274,8 @@ class SeashellWebsocket {
     }
     if (response.id >= 0) {
       delete this.requests[response.id];
+    } else if (this.requests[response.id].callback) {
+      this.requests[response.id].callback(response.result);
     }
   }
 
@@ -300,12 +302,16 @@ class SeashellWebsocket {
   }
 
   // Helper function to invoke the I/O callback.
-  public io_cb(ignored: any, message: any) {
-    return this.invoke_cb("io", message);
+  private io_cb() {
+    return async (message: any) => {
+      return this.invoke_cb("io", message);
+    };
   }
 
-  public test_cb(ignored: any, message: any) {
-    return this.invoke_cb("test", message);
+  private test_cb() {
+    return async (message: any) => {
+      return this.invoke_cb("test", message);
+    };
   }
 
   /** Sends a message along the connection. Internal use only.

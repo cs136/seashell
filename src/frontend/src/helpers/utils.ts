@@ -5,6 +5,7 @@ export const groupBy = (lst: any[], grp: (a: any) => string): {[key: string]: an
     const k = grp(item);
     if (!acc[k]) acc[k] = [];
     acc[k].push(item);
+    return acc;
   }, []);
   let result = [];
   for (const k in hash) {

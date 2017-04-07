@@ -64,16 +64,20 @@ abstract class AbstractCompiler {
     });
   }
 
-  protected handleIO(result: IOMessage): void {
-    this.buffer.outputIO(result);
-    if (result.type === "done") {
-      this.programDone(result.pid);
-    }
+  protected handleIO(): (result: IOMessage) => void {
+    return (result: IOMessage): void => {
+      this.buffer.outputIO(result);
+      if (result.type === "done") {
+        this.programDone(result.pid);
+      }
+    };
   }
 
-  protected handleTest(result: TestMessage): void {
-    this.buffer.outputTest(result);
-    this.programDone(result.pid);
+  protected handleTest(): (result: TestMessage) => void {
+    return (result: TestMessage): void => {
+      this.buffer.outputTest(result);
+      this.programDone(result.pid);
+    };
   }
 }
 

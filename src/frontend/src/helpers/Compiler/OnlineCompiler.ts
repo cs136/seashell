@@ -4,6 +4,7 @@ import {Connection} from "../Services";
 import {AbstractCompiler,
         TestBrief,
         CompilerResult,
+        CompilerDiagnostic,
         CompilerError} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
 import {AbstractStorage,
@@ -25,8 +26,8 @@ class OnlineCompiler extends AbstractCompiler {
     this.offlineCompiler = offComp;
     this.activePIDs = [];
 
-    this.socket.register_callback("io", this.handleIO);
-    this.socket.register_callback("test", this.handleTest);
+    this.socket.register_callback("io", this.handleIO());
+    this.socket.register_callback("test", this.handleTest());
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
@@ -45,10 +46,28 @@ class OnlineCompiler extends AbstractCompiler {
       question: question,
       tests: tests.map((tst: TestBrief) => { return tst.name; })
     });
+
+    // Handle compiler diagnostics
+    result.messages = result.messages.map((msg: [boolean, string, number, number, string]): CompilerDiagnostic => {
+      return {
+        error: msg[0],
+        file: msg[1],
+        line: msg[2],
+        column: msg[3],
+        message: msg[4]
+      };
+    });
+    this.buffer.outputDiagnostics(result.messages);
+
+    // Start running the program
     if (result.status === "running") {
       this.activePIDs.push(result.pid);
+      this.socket.sendMessage({
+        type: "startIO",
+        project: proj,
+        pid: result.pid
+      });
     }
-    this.buffer.outputDiagnostics(result.messages);
     return {
       messages: result.messages,
       status: result.status
@@ -106,11 +125,12 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   protected programDone(pid: number) {
+    console.log("programDone");
     const ind = this.activePIDs.indexOf(pid);
     if (ind === -1) {
       throw new CompilerError("Program that was not running has ended.");
     } else {
-      this.activePIDs = this.activePIDs.splice(ind, 1);
+      this.activePIDs.splice(ind, 1);
     }
     // if everything has finished running, notify frontend
     if (this.activePIDs.length === 0) {

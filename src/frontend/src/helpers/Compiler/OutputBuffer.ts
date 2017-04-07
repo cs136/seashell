@@ -26,10 +26,12 @@ class OutputBuffer {
     });
   }
 
-  private flush(): void {
-    this.output(this.stdout + this.stderr);
-    this.stdout = "";
-    this.stderr = "";
+  private flush(): () => void {
+    return (): void => {
+      this.output(this.stdout + this.stderr);
+      this.stdout = "";
+      this.stderr = "";
+    }
   }
 
   private outputASAN(ASAN: ASANOutput): string {
@@ -79,33 +81,33 @@ class OutputBuffer {
       }
       this.stderr = spl[spl.length - 1];
     } else if (result.type === "done") {
-      this.flush();
+      this.flush()();
       const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
       if (ASAN) {
         output += this.outputASAN(ASAN);
       }
-      output += "Program finished with exit code " + result.status + ".\n";
+      output += `Program finished with exit code ${result.status}.\n`;
     }
     this.output(output);
     clearTimeout(this.timeout);
-    this.timeout = setTimeout(this.flush, 100);
+    this.timeout = setTimeout(this.flush(), 100);
   }
 
   public outputTest(result: TestMessage): void {
     let output = "----------------------------------\n";
     const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
     if (result.result === "passed") {
-      output += "Test \"" + result.test_name + "\" passed.\n";
+      output += `Test "${result.test_name}" passed.\n`;
     } else if (result.result === "failed") {
-      output += "Test \"" + result.test_name + "\" failed.\n";
+      output += `Test "${result.test_name}" failed.\n`;
     } else if (result.result === "error") {
-      output += "Test \"${result.test_name}\" caused an error (with return code ${result.status})!\n";
+      output += `Test "${result.test_name}" caused an error!\n`;
     } else if (result.result === "no-expect") {
-      output += "Test \"${result.test_name}\" completed.\n";
+      output += `Test "${result.test_name}" completed.\n`;
     } else if (result.result === "timeout") {
-      output += "Test \"${result.test_name}\" timed out.\n";
+      output += `Test "${result.test_name}" timed out.\n`;
     } else if (result.result === "killed") {
-      output += "Test \"${result.test_name}\" was killed.\n";
+      output += `Test "${result.test_name}" was killed.\n`;
     };
     if (result.result !== "passed") {
       output += "Produced output (stdout):\n";
@@ -157,7 +159,7 @@ class OutputBuffer {
         /relocation \d+ has invalid symbol index \d+$/.test(d.message));
     });
     for (let i = 0; i < diags.length; i++) {
-      output += "${diags[i].file}:${diags[i].line}:${diags[i].column}: ${diags[i].message}\n";
+      output += `${diags[i].file}:${diags[i].line}:${diags[i].column}: ${diags[i].message}\n`;
     }
     this.output(output);
   }
