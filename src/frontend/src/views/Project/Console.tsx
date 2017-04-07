@@ -38,6 +38,10 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
         this.setState(merge(this.state, { line: this.term.y + 1 }));
     }
 
+    clear(): void {
+        this.term.clear();
+    }
+
     getLines(): number {
         return document.getElementsByClassName("xterm-rows")[0].childElementCount;
     }
@@ -55,7 +59,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     componentWillMount(){
-        this.props.dispatch.app.setTerm(this.dataReceived.bind(this));
+        this.props.dispatch.app.setTerm(this.dataReceived.bind(this), this.clear.bind(this));
     }
 
     componentDidMount() {

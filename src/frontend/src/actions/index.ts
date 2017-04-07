@@ -122,7 +122,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   function unique(val: any, idx: Number, arr: any){
                     return arr.indexOf(val) === idx;
                   }
-                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {termWrite: null, name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  return asyncAction(Services.storage().getFiles(name)).then((files) => Services.storage().getProject(name).then((project)=>dispatch({type: appStateActions.switchProject, payload: {project: {termWrite: null, termClear: null, name: name, id: project.id, questions: files.map((file) => file.name.split("/")[0]).filter(unique),
                     currentQuestion: {name: "", files: [], runFile: "", openFiles: [], currentFile: {name: "", content: ""}}}}})));
               },
               getAllProjects: ()=> {
@@ -131,17 +131,18 @@ const mapDispatchToProps = (dispatch: Function) => {
           },
           compile: {
                compileAndRun: (project: string, question: string, filepath: string, test: boolean) => {
+                   dispatch({type: appStateActions.clearConsole, payload: {}});
                    dispatch({type: appStateActions.setCompiling, payload: {}});
                    asyncAction(Services.compiler().compileAndRunProject(project, question, [project, filepath], test)).then((result)=>{
-                       if(result.status!=="running"){
+                       if (result.status!=="running"){
                            dispatch({type: appStateActions.setNotRunning, payload: {}});
-                       }
-                       else{
+                       } 
+                       else {
                            dispatch({type: appStateActions.setRunning, payload: {}});
                        }
                    }).catch((reason)=>{
                        dispatch({type: appStateActions.setNotRunning, payload: {}});
-                       if(reason!=null){
+                       if (reason!=null){
                         showError(reason.message);
                     }
                    })
@@ -150,8 +151,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                stopProgram: ()=>Services.compiler().programKill().then(()=>dispatch({type: appStateActions.setNotRunning, payload: {}})),
           },
           app: {
-              setTerm: (termWrite: Function)=>dispatch({type: appStateActions.setTerm, payload: {termWrite: termWrite}}),
-              writeConsole: (content: string)=>dispatch({type: appStateActions.writeConsole, payload: {content: content}})
+              setTerm: (termWrite: Function, termClear: Function) => dispatch({type: appStateActions.setTerm, payload: {termWrite: termWrite, termClear: termClear}}),
+              writeConsole: (content: string) => dispatch({type: appStateActions.writeConsole, payload: {content: content}})
           }
         }
     };
