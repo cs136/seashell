@@ -29,6 +29,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             const result = await pr;
             return result;
         }catch (e) {
+            console.log(e);
             if (e instanceof LoginError) {
                 showError(e.message);
                 dispatch({type: userActions.INVALIDATE});
