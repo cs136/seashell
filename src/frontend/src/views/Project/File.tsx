@@ -63,6 +63,8 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     }
   }
   updateConsoleOptions() {
+    if (!this.refs.terminal)
+      return;
     if (this.props.settings.theme) {
       (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-light");
       (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-default");
