@@ -1,4 +1,5 @@
 import {mergeBetter} from "../helpers/utils";
+import {CompilerDiagnostic} from "../helpers/Services";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
 export interface appStateReducerState {[key: string]: any;
@@ -16,6 +17,7 @@ export interface appStateReducerState {[key: string]: any;
       files: string[];
       runFile: string;
       openFiles: string[];
+      diags: CompilerDiagnostic[];
       currentFile: {
         name: string;
         content: string
@@ -53,7 +55,27 @@ export const appStateActions = {
 
 
 
-export default function appStateReducer(state: appStateReducerState = {runState: 0, fileOpTarget: "", currentProject: {termWrite: null, termClear: null, name: "", id: "", questions: ["question"], currentQuestion: {name: "question", files: ["file1.txt"], runFile: "file.txt", openFiles: ["question/file1.txt"], currentFile: {name: "file.txt", content: "content"}}}, projects: ["A1"]}, action: appStateReducerAction) {
+export default function appStateReducer(state: appStateReducerState = {
+    runState: 0,
+    fileOpTarget: "",
+    currentProject: {
+      termWrite: null,
+      termClear: null,
+      name: "",
+      id: "",
+      questions: ["question"],
+      currentQuestion: {
+        name: "question",
+        files: ["file1.txt"],
+        runFile: "file.txt",
+        openFiles: ["question/file1.txt"],
+        diags: [],
+        currentFile: {
+          name: "file.txt",
+          content: "content"
+        }
+      }
+    }, projects: ["A1"]}, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.setTerm:
       state=clone(state);

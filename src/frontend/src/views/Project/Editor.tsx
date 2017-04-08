@@ -1,4 +1,5 @@
 import * as React from "react";
+import {CompilerDiagnostic} from "../../helpers/Services";
 
 interface MonacoEditorProps {
   editorWillMount?: Function;
@@ -13,14 +14,18 @@ interface MonacoEditorProps {
   onChange?: Function;
   requireConfig?: any;
   context?: any;
+  glyphMargin?: boolean;
+  diags: CompilerDiagnostic[];
 }
 
 export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
   monacoContext: any;
   editor: any;
+  decorations: any;
   prevent_change: Boolean;
   current_value?: String;
   container?: HTMLElement;
+  diags: CompilerDiagnostic[];
 
   public static defaultProps: Partial<MonacoEditorProps> = {
     width: "100%",
@@ -34,7 +39,9 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     editorWillMount: null,
     onChange: null,
     requireConfig: {},
-    context: null
+    context: null,
+    glyphMargin: true,
+    diags: []
   };
 
   constructor(props: MonacoEditorProps) {
@@ -44,6 +51,8 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.current_value = props.value;
     this.monacoContext = this.props.context || window;
     this.container = null;
+    this.diags = props.diags;
+    this.decorations = [];
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
     if (this.props.value !== this.current_value) {
@@ -143,6 +152,22 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       theme,
       ...options,
     });
+
+    this.decorations = this.editor.deltaDecorations([],
+      this.diags.map((d: CompilerDiagnostic) => {
+        const classPrefix = d.error ? "Error" : "Warning";
+        return {
+          range: new this.monacoContext.monaco.Range(d.line, d.column, d.line, d.column),
+          options: {
+            isWholeLine: true,
+            className: `monaco${classPrefix}Line`,
+            glyphMarginClassName: `monaco${classPrefix}Margin`,
+            hoverMessage: d.message,
+            glyphMarginHoverMessage: d.message
+          }
+        };
+      }));
+
     this.editorDidMount();
   }
 

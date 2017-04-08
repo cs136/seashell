@@ -3,6 +3,7 @@ import {map, actionsInterface} from "../../actions";
 import MonacoEditor from "./Editor";
 import  Xterm  from "./Console";
 import Loading from "./Loading";
+import {CompilerDiagnostic} from "../../helpers/Services";
 import * as Draggable from "react-draggable"; // Both at the same time
 import { merge } from "ramda";
 
@@ -120,12 +121,19 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         tabstopwidth: this.props.settings.tabWidth,
         cursorBlink: true,
     };
-    const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
+    const currentQuestion = this.props.appState.currentProject.currentQuestion;
+    const currentFile = currentQuestion.currentFile;
+    const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
+      // TODO filter out according to file.
+      return true;
+    });
     if (this.props.file === currentFile.name) {
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
-            value={currentFile.content} language="cpp"
+            value={currentFile.content}
+            language="cpp"
+            diags={currentQuestion.diags}
             onChange={this.onChange.bind(this)}
             editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
