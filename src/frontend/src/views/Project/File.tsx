@@ -122,11 +122,10 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         cursorBlink: true,
     };
     const currentQuestion = this.props.appState.currentProject.currentQuestion;
-    console.log(currentQuestion);
+    console.log("File.render(): currentQuestion", currentQuestion);
     const currentFile = currentQuestion.currentFile;
     const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
-      // TODO filter out according to file.
-      return true;
+      return d.file === currentFile.name;
     });
     if (this.props.file === currentFile.name) {
       return (<div className={styles.filePanel}>

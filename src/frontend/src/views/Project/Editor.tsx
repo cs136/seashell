@@ -1,29 +1,30 @@
 import * as React from "react";
 import {CompilerDiagnostic} from "../../helpers/Services";
 
+const styles = require("./project.scss");
+
 interface MonacoEditorProps {
   editorWillMount?: Function;
   editorDidMount?: Function;
-  width?: Number | String;
-  height?: Number | String;
-  value?: String;
-  defaultValue?: String;
-  language?: String;
-  theme?: String;
+  width?: number | string;
+  height?: number | string;
+  value?: string;
+  defaultValue?: string;
+  language?: string;
+  theme?: string;
   options?: any;
   onChange?: Function;
   requireConfig?: any;
   context?: any;
-  glyphMargin?: boolean;
   diags: CompilerDiagnostic[];
 }
 
 export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
   monacoContext: any;
   editor: any;
-  decorations: any;
-  prevent_change: Boolean;
-  current_value?: String;
+  decorations: string[];
+  prevent_change: boolean;
+  current_value?: string;
   container?: HTMLElement;
   diags: CompilerDiagnostic[];
 
@@ -40,7 +41,6 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     onChange: null,
     requireConfig: {},
     context: null,
-    glyphMargin: true,
     diags: []
   };
 
@@ -153,17 +153,16 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       ...options,
     });
 
-    this.decorations = this.editor.deltaDecorations([],
+    console.log("this.diags", this.diags);
+    this.decorations = this.editor.deltaDecorations(this.decorations,
       this.diags.map((d: CompilerDiagnostic) => {
         const classPrefix = d.error ? "Error" : "Warning";
         return {
-          range: new this.monacoContext.monaco.Range(d.line, d.column, d.line, d.column),
+          range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 80),
           options: {
             isWholeLine: true,
             className: `monaco${classPrefix}Line`,
-            glyphMarginClassName: `monaco${classPrefix}Margin`,
             hoverMessage: d.message,
-            glyphMarginHoverMessage: d.message
           }
         };
       }));
@@ -179,7 +178,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       width: fixedWidth,
       height: fixedHeight,
     };
-    return (<div style={style} ref={(container?: HTMLElement) => {
+    return (<div className={styles.monacoContainer} style={style} ref={(container?: HTMLElement) => {
         this.container = container;
       }}/>);
   }

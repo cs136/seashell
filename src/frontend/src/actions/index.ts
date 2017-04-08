@@ -180,7 +180,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 runFile: "",
                 currentFile: {name: "", content: ""},
                 openFiles: [],
-                diags: [],
+                diags: [{file:"default/main.c",error:false,line:8,column:10,message:"hi"}],
                 files: files.filter((file) => file.name.split("/")[0] === name)
                   .map((file) => file.name)
               }
@@ -277,7 +277,6 @@ const mapDispatchToProps = (dispatch: Function) => {
         });
         asyncAction(Services.compiler().compileAndRunProject(project,
             question, [project, filepath], test)).then((result) => {
-          console.log("result.messages", result.messages);
           dispatch({
             type: appStateActions.setDiags,
             payload: result.messages

@@ -184,22 +184,14 @@
     display:none !important;
 }
 
-.monacoErrorLine {
+.monacoContainer .monacoErrorLine {
+  color: rgb(186, 12, 0);
   text-decoration: underline;
-  text-decoration-color: #ba0c00;
 }
 
-.monacoErrorMargin {
-  background: #ba0c00;
-}
-
-.monacoWarningLine {
+.monacoContainer .monacoWarningLine {
+  color: rgb(211, 204, 0);
   text-decoration: underline;
-  text-decoration-color: #d3cc00;
-}
-
-.monacoWarningMargin {
-  background: #d3cc00;
 }
 
 @media(max-width: $mobile-break){
