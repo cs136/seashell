@@ -144,9 +144,9 @@ class OutputBuffer {
     if (!diags.length) {
       return;
     }
-    const warnOnly = !groupBy(diags, (d: CompilerDiagnostic) => {
-      return d.error ? "err" : "warn";
-    }).err;
+    const warnOnly = diags.filter((d: CompilerDiagnostic) => {
+      return d.error;
+    }).length === 0;
     let output = "";
     if (warnOnly) {
       output += "Compilation generated warnings:\n";

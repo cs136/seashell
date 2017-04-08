@@ -60,7 +60,9 @@ class OnlineCompiler extends AbstractCompiler {
     // Handle compiler diagnostics
     result.messages = result.messages.map((msg: [boolean, string, number, number, string]): CompilerDiagnostic => {
       return {
-        error: msg[0],
+        // For some reason msg[0] is always true in the backend response,
+        //  so we will rely on whether compilation failed or not...
+        error: result.status === "compile-failed",
         file: msg[1],
         line: msg[2],
         column: msg[3],
