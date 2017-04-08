@@ -36,16 +36,26 @@ class OnlineCompiler extends AbstractCompiler {
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
+
     let tests: TestBrief[] = [];
     if (runTests) {
       tests = await this.getTestsForQuestion(proj, question);
     }
-    const result = await this.socket.sendMessage({
-      type: "compileAndRunProject",
-      project: proj,
-      question: question,
-      tests: tests.map((tst: TestBrief) => { return tst.name; })
-    });
+
+    let result: any = null;
+    try {
+      result = await this.socket.sendMessage({
+        type: "compileAndRunProject",
+        project: proj,
+        question: question,
+        tests: tests.map((tst: TestBrief) => { return tst.name; })
+      });
+    } catch (res) {
+      if (!res.status || res.status !== "compile-failed") {
+        throw result;
+      }
+      result = res;
+    }
 
     // Handle compiler diagnostics
     result.messages = result.messages.map((msg: [boolean, string, number, number, string]): CompilerDiagnostic => {
@@ -71,16 +81,17 @@ class OnlineCompiler extends AbstractCompiler {
     return {
       messages: result.messages,
       status: result.status
-    };
+    } as CompilerResult;
   }
 
   public async programKill(): Promise<void> {
     if (this.activePIDs.length > 0 && this.socket.isConnected()) {
-      await this.socket.sendMessage({
-        type: "programKill",
-        pid: this.activePIDs
-      });
-      this.activePIDs = [];
+      await Promise.all(this.activePIDs.map((pid: number) => {
+        return this.socket.sendMessage({
+          type: "programKill",
+          pid: pid
+        });
+      }));
       // In case we have some weirdness with disconnecting & reconnecting,
       //  let's kill any programs running offline as well
       try {

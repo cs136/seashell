@@ -269,8 +269,8 @@ class SeashellWebsocket {
     }
     if (response.success) {
       request.resolve(response.result);
-    } else if (!response.success) {
-      request.reject(`Request ${request.message.id} failed with response: ${response.result}`);
+    } else {
+      request.reject(response.result);
     }
     if (response.id >= 0) {
       delete this.requests[response.id];
