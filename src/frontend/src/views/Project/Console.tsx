@@ -24,18 +24,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     dataReceived(payload: string) {
-        this.term.eraseRight(0, this.term.y);
-        this.term.x = 0;
-        this.term.write(" " + payload + "\r\n");
-        if (this.state.line === this.getLines()) {
-            this.term.scroll();
-            this.term.refresh(this.term.y, this.term.y, false);
-        } else {
-            this.term.refresh(this.state.line, this.state.line+1, false);
-        }
-        this.term.write(" > ");
-        this.term.write(this.state.currString);
-        this.setState(merge(this.state, { line: this.term.y + 1 }));
+        this.term.write(payload.replace("\n", "\r\n"));
     }
 
     clear(): void {
@@ -75,7 +64,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
                 Services.compiler().programInput(key);
             }
         });
-        this.term.prompt();
+        //this.term.prompt();
     }
 
     componentWillUnmount() {
