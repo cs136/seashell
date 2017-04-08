@@ -99,7 +99,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.addFile,
             payload: path
           })).catch((reason) => {
-            throw reason;
+            showError(reason);
           });
       },
       deleteFile: (project: string, name: string) => {
@@ -114,7 +114,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: {name: name}
             });
           }).catch((reason) => {
-            throw reason;
+            showError(reason);
           });
       },
       renameFile: (project: string, currentname: string, targetName: string) => {
@@ -133,7 +133,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: {name: targetName}
             });
           }).catch((reason) => {
-            throw reason;
+            showError(reason);
           });
       },
       openFile: (name: string) => dispatch({
@@ -180,6 +180,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 runFile: "",
                 currentFile: {name: "", content: ""},
                 openFiles: [],
+                diags: [],
                 files: files.filter((file) => file.name.split("/")[0] === name)
                   .map((file) => file.name)
               }
@@ -244,6 +245,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                     files: [],
                     runFile: "",
                     openFiles: [],
+                    diags: [],
                     currentFile: {
                       name: "",
                       content: ""
@@ -275,6 +277,11 @@ const mapDispatchToProps = (dispatch: Function) => {
         });
         asyncAction(Services.compiler().compileAndRunProject(project,
             question, [project, filepath], test)).then((result) => {
+          console.log("result.messages", result.messages);
+          dispatch({
+            type: appStateActions.setDiags,
+            payload: result.messages
+          });
           if (result.status !== "running") {
             dispatch({
               type: appStateActions.setNotRunning,
@@ -323,7 +330,6 @@ const mapDispatchToProps = (dispatch: Function) => {
 };
 
 const actionsStoreType = returnType(mapDispatchToProps);
-
 
 export function getDispatch<actionsStoreType>(dispatch: Function) {
   return mapDispatchToProps(dispatch);

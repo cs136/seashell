@@ -184,6 +184,24 @@
     display:none !important;
 }
 
+.monacoErrorLine {
+  text-decoration: underline;
+  text-decoration-color: #ba0c00;
+}
+
+.monacoErrorMargin {
+  background: #ba0c00;
+}
+
+.monacoWarningLine {
+  text-decoration: underline;
+  text-decoration-color: #d3cc00;
+}
+
+.monacoWarningMargin {
+  background: #d3cc00;
+}
+
 @media(max-width: $mobile-break){
     .openFiles{
         padding-left:0 !important;

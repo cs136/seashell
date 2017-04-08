@@ -50,7 +50,8 @@ export const appStateActions = {
   setNotRunning: "programDone",
   setTerm: "term_set",
   writeConsole: "console_write",
-  clearConsole: "console_clear"
+  clearConsole: "console_clear",
+  setDiags: "set_diags"
 };
 
 
@@ -168,6 +169,10 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.setRunFile:
       state = clone(state);
       return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload}}});
+    case appStateActions.setDiags:
+      state = clone(state);
+      state.currentProject.currentQuestion.diags = action.payload;
+      return state;
     default:
       return state;
   }

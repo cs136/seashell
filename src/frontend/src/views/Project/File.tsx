@@ -122,6 +122,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         cursorBlink: true,
     };
     const currentQuestion = this.props.appState.currentProject.currentQuestion;
+    console.log(currentQuestion);
     const currentFile = currentQuestion.currentFile;
     const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
       // TODO filter out according to file.
