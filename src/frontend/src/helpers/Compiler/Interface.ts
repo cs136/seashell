@@ -113,7 +113,7 @@ interface IOMessage {
   pid: number;
   type: string;
   status?: number;
-  asan_output?: string;
+  asan?: string;
 }
 
 type DiffLine = string | [boolean, string];

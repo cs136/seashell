@@ -82,7 +82,7 @@ class OutputBuffer {
       this.stderr = spl[spl.length - 1];
     } else if (result.type === "done") {
       this.flush()();
-      const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
+      const ASAN = result.asan ? JSON.parse(result.asan) : false;
       if (ASAN) {
         output += this.outputASAN(ASAN);
       }
