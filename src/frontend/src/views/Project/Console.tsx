@@ -79,6 +79,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     componentWillUnmount() {
+        this.props.dispatch.app.setTerm(null, null);
         this.term.destroy();
     }
 
