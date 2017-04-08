@@ -26,7 +26,6 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
   prevent_change: boolean;
   current_value?: string;
   container?: HTMLElement;
-  diags: CompilerDiagnostic[];
 
   public static defaultProps: Partial<MonacoEditorProps> = {
     width: "100%",
@@ -51,7 +50,6 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.current_value = props.value;
     this.monacoContext = this.props.context || window;
     this.container = null;
-    this.diags = props.diags;
     this.decorations = [];
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
@@ -142,6 +140,23 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       }
     }
   }
+
+  setDiags(diags: CompilerDiagnostic[]) {
+    if (this.editor) {
+      this.decorations = this.editor.deltaDecorations(this.decorations,
+        diags.map((d: CompilerDiagnostic) => {
+          const classPrefix = d.error ? "Error" : "Warning";
+          return {
+            range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 100),
+            options: {
+              inlineClassName: `monaco${classPrefix}Line`,
+              hoverMessage: d.message,
+            }
+          };
+        }));
+    }
+  }
+
   initMonaco = (container: HTMLElement) => {
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
@@ -153,19 +168,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       ...options,
     });
 
-    console.log("this.diags", this.diags);
-    this.decorations = this.editor.deltaDecorations(this.decorations,
-      this.diags.map((d: CompilerDiagnostic) => {
-        const classPrefix = d.error ? "Error" : "Warning";
-        return {
-          range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 80),
-          options: {
-            isWholeLine: true,
-            className: `monaco${classPrefix}Line`,
-            hoverMessage: d.message,
-          }
-        };
-      }));
+    this.setDiags(this.props.diags);
 
     this.editorDidMount();
   }
@@ -178,7 +181,10 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       width: fixedWidth,
       height: fixedHeight,
     };
-    return (<div className={styles.monacoContainer} style={style} ref={(container?: HTMLElement) => {
+
+    this.setDiags(this.props.diags);
+
+    return (<div style={style} ref={(container?: HTMLElement) => {
         this.container = container;
       }}/>);
   }

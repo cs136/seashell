@@ -14,6 +14,7 @@ export interface FileState { dirty: boolean; editorLastUpdated: number; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
   editor: any;
+  monaco: any;
 
   constructor(props: FileProps & actionsInterface) {
     super(props);
@@ -76,6 +77,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   }
   editorDidMount(editor: any, monaco: any) {
     this.editor = editor;
+    this.monaco = monaco;
     this.onResize();
     editor.focus();
     this.updateEditorOptions();
@@ -122,7 +124,6 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         cursorBlink: true,
     };
     const currentQuestion = this.props.appState.currentProject.currentQuestion;
-    console.log("File.render(): currentQuestion", currentQuestion);
     const currentFile = currentQuestion.currentFile;
     const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
       return d.file === currentFile.name;
@@ -149,4 +150,5 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       return <Loading/>
   }
 }
+
 export default map<FileProps>(File);

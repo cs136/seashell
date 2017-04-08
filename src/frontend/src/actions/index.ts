@@ -180,7 +180,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 runFile: "",
                 currentFile: {name: "", content: ""},
                 openFiles: [],
-                diags: [{file:"default/main.c",error:false,line:8,column:10,message:"hi"}],
+                diags: [],
                 files: files.filter((file) => file.name.split("/")[0] === name)
                   .map((file) => file.name)
               }
