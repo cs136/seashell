@@ -31,7 +31,7 @@ class OutputBuffer {
       this.output(this.stdout + this.stderr);
       this.stdout = "";
       this.stderr = "";
-    }
+    };
   }
 
   private outputASAN(ASAN: ASANOutput): string {

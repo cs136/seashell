@@ -68,7 +68,7 @@ class OfflineCompiler extends AbstractCompiler {
     return Promise.all((await this.storage.getFiles(proj)).filter((f: FileBrief) => {
       const q = fileQuestion(f);
       return q === question || q === "common";
-    }).map((f : FileBrief) => {
+    }).map((f: FileBrief) => {
       return this.storage.readFile(f.id);
     }));
   }
@@ -127,8 +127,9 @@ class OfflineCompiler extends AbstractCompiler {
             });
           } else {
             // run all the tests
-            let tests : Test[] = await Promise.all((await this.getTestsForQuestion(proj, question))
-              .map(this.getFullTest));
+            let tests: Test[] = await Promise.all(
+              (await this.getTestsForQuestion(proj, question))
+                .map(this.getFullTest));
             for (let i = 0; i < tests.length; i++) {
               const tester = this.initTest(tests[i]);
               this.activePIDs.push(tester);
