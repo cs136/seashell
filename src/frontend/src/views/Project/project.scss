@@ -147,15 +147,17 @@
             }
         }
     }
-
-  .monacoErrorLine {
-    color: rgb(186, 12, 0) !important;
-    text-decoration: underline;
+  
+  .monacoErrorGlyph {
+    background: rgb(186, 12, 0);
   }
 
-  .monacoWarningLine {
-    color: rgb(211, 204, 0) !important;
-    text-decoration: underline;
+  .monacoWarningGlyph {
+    background: rgb(211, 204, 0);
+  }
+
+  .monacoDiagnosticLineBackground {
+    background: lightblue;
   }
 }
 

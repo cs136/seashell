@@ -34,7 +34,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     defaultValue: "",
     language: "javascript",
     theme: "vs",
-    options: {},
+    options: {glyphMargin: true},
     editorDidMount: null,
     editorWillMount: null,
     onChange: null,
@@ -141,10 +141,13 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
         diags.map((d: CompilerDiagnostic) => {
           const classPrefix = d.error ? "Error" : "Warning";
           return {
-            range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 100),
+            range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 999),
             options: {
-              inlineClassName: `monaco${classPrefix}Line`,
+              isWholeLine: true,
+              glyphMarginClassName: `monaco${classPrefix}Glyph`,
+              className: "monacoDiagnosticLineBackground",
               hoverMessage: d.message,
+              glyphMarginHoverMessage: d.message
             }
           };
         }));
