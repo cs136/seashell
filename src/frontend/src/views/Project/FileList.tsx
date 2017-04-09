@@ -16,7 +16,7 @@ class FileList extends React.Component<FileListProps & actionsInterface, FileLis
         const question = this.props.question;
         return (<Menu>
             <MenuItem iconName="plus" text="New File" />
-            {question.files.map((file: any) => (<MenuItem key={"file-list-item-" + file} onClick={()=>{
+            {question.files.map((file: any) => (<MenuItem key={"file-list-item-" + file} onClick={() => {
                 this.props.dispatch.file.openFile(file);
                 this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, file);
             }} iconName="document" text={file.substring(file.indexOf("/") + 1)} />))}

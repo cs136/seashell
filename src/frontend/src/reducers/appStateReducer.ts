@@ -2,6 +2,7 @@ import {mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
+
 export interface appStateReducerState {[key: string]: any;
   fileOpTarget: string;
   projects: string[];
@@ -28,7 +29,12 @@ export interface appStateReducerState {[key: string]: any;
     };
   };
 };
-export interface appStateReducerAction {type: string; payload: any; };
+
+export interface appStateReducerAction {
+  type: string;
+  payload: any;
+};
+
 export const appStateActions = {
   changeFileContent: "file_change_content",
   changeFileBufferedContent: "file_change_write_buffer",
@@ -57,8 +63,6 @@ export const appStateActions = {
   clearConsole: "console_clear",
   setDiags: "set_diags"
 };
-
-
 
 export default function appStateReducer(state: appStateReducerState = {
     runState: 0,
