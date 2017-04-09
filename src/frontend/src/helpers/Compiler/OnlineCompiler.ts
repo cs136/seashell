@@ -73,11 +73,14 @@ class OnlineCompiler extends AbstractCompiler {
 
     // Start running the program
     if (result.status === "running") {
-      this.activePIDs.push(result.pid);
-      this.socket.sendMessage({
-        type: "startIO",
-        project: proj,
-        pid: result.pid
+      const pids = runTests ? result.pids : [result.pid];
+      this.activePIDs = this.activePIDs.concat(pids);
+      pids.map((pid: number) => {
+        this.socket.sendMessage({
+          type: "startIO",
+          project: proj,
+          pid: pid
+        });
       });
     }
     return {

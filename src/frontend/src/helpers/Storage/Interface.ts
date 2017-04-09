@@ -55,18 +55,19 @@ interface FileBrief {
 }
 
 export const ext = (f: FileBrief) => {
-  let arr = this.name.split(".");
+  let arr = f.name.split(".");
   return arr.pop();
 };
 
 export const basename = (f: FileBrief) => {
-  let arr = this.name.split(".");
+  let arr = f.name.split("/");
+  arr = arr[arr.length - 1].split(".");
   arr.pop();
   return arr.join(".");
 };
 
 export const fileQuestion = (f: FileBrief): string => {
-  let arr = this.name.split("/");
+  let arr = f.name.split("/");
   return arr[0];
 };
 
