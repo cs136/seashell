@@ -142,12 +142,12 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
           </Draggable>
         <Xterm ref="terminal"
           className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-          readOnly={this.props.appState.runState!==2} dispatch={this.props.dispatch}/>
+          readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
       </div>
       </div>);
     }
     else
-      return <Loading/>
+      return <Loading/>;
   }
 }
 

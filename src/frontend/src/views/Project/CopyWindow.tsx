@@ -7,8 +7,8 @@ import {map, actionsInterface} from "../../actions";
 
 export interface CopyWindowProps {questions: string[]; closefunc: Function; };
 
-class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}>{
-  constructor(props: CopyWindowProps&actionsInterface){
+class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+  constructor(props: CopyWindowProps&actionsInterface) {
     super(props);
     this.state = {
       question: this.props.questions[0],
