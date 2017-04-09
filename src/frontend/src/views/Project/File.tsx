@@ -10,7 +10,7 @@ import { merge } from "ramda";
 const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
-export interface FileState { dirty: boolean; editorLastUpdated: number; }
+export interface FileState { editorLastUpdated: number; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
   editor: any;
@@ -19,7 +19,6 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   constructor(props: FileProps & actionsInterface) {
     super(props);
     this.state = {
-        dirty: true,
         editorLastUpdated: -1
     };
     this.handleDrag = this.handleDrag.bind(this);
@@ -132,6 +131,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
+            dirty={!!currentFile.unwrittenContent}
             value={currentFile.content}
             language="cpp"
             diags={currentQuestion.diags}
@@ -147,7 +147,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
       </div>);
     }
     else
-      return <Loading/>
+      return <Loading/>;
   }
 }
 

@@ -4,6 +4,7 @@ import {CompilerDiagnostic} from "../../helpers/Services";
 const styles = require("./project.scss");
 
 interface MonacoEditorProps {
+  dirty: boolean;
   editorWillMount?: Function;
   editorDidMount?: Function;
   width?: number | string;
@@ -28,6 +29,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
   container?: HTMLElement;
 
   public static defaultProps: Partial<MonacoEditorProps> = {
+    dirty: false,
     width: "100%",
     height: "100%",
     value: null,
@@ -53,7 +55,10 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.decorations = [];
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
-    if (this.props.value !== this.current_value) {
+    // Update value if and only if it changed from previous prop OR
+    // if dirty goes from true => false.
+    if (this.props.value !== previous.value ||
+        (previous.dirty) && !this.props.dirty) {
       this.current_value = this.props.value;
 
       if (this.editor) {

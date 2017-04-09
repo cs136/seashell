@@ -40,292 +40,317 @@ const mapDispatchToProps = (dispatch: Function) => {
     }
   }
 
-  return {
+  const actions =  {
     dispatch: {
-    settings: {
-      updateSettings: (newSettings: settingsReducerState) => {
-        asyncAction(Services.storage().setSettings({
-          id: 0,
-          editor_mode: "standard",
-          font_size: newSettings.fontSize,
-          font: newSettings.font,
-          theme: newSettings.theme ? "light" : "dark",
-          space_tab: true,
-          tab_width: newSettings.tabWidth
-        })).then(() => dispatch({
-          type: settingsActions.updateSettings,
-          payload: newSettings
-        }));
-      },
-      updateEditorRatio: (ratio: number) => dispatch({
-        type: settingsActions.updateEditorRatio,
-        payload: ratio
-      })
-    },
-    // other than openFile and closeFile, the file name parameter should always
-    //  be the full path, for exmaple "q1/file.txt"
-    file: {
-      setFileOpTarget: (file: string) => dispatch({
-        type: appStateActions.setFileOpTarget,
-        payload: {name: file}
-      }),
-      invalidateFile: () => dispatch({
-        type: appStateActions.invalidateFile,
-        payload: {}
-      }),
-      copyFile: (targetName: string) => {
-        // TODO: hook up to storage once we get a proper copy function
-        dispatch({
-          type: appStateActions.copyFile,
-          payload: {
-            question: {name: "question", files: ["file1.txt"]},
-            newName: targetName.split("/").pop()
-          }
-        });
-      },
-      updateFile: (project: string, path: string, newFileContent: string) => {
-        asyncAction(Services.storage().writeFile([project, path], newFileContent))
-          .then(() => dispatch({
-            type: appStateActions.changeFileContent,
-            payload: newFileContent
-        }));
-      },
-      addFile: (project: string, path: string,
-                newFileContent: string, currentQuestion: string) => {
-        // writes a new file, returns a promise the caller can use when finished
-        //  to do other stuff (i.e. switch to the file)
-        return asyncAction(Services.storage().newFile(project, path, newFileContent))
-          .then(() => dispatch({
-            type: appStateActions.addFile,
-            payload: path
-          })).catch((reason) => {
-            showError(reason);
-          });
-      },
-      deleteFile: (project: string, name: string) => {
-        return asyncAction(Services.storage().deleteFile([project, name]))
-          .then(() => {
-            dispatch({
-              type: appStateActions.closeFile,
-              payload: name
-            });
-            dispatch({
-              type: appStateActions.removeFile,
-              payload: {name: name}
-            });
-          }).catch((reason) => {
-            showError(reason);
-          });
-      },
-      renameFile: (project: string, currentname: string, targetName: string) => {
-        return asyncAction(Services.storage().renameFile([project, currentname], targetName))
-          .then(() => {
-            dispatch({
-              type: appStateActions.closeFile,
-              payload: currentname
-            });
-            dispatch({
-              type: appStateActions.removeFile,
-              payload: {name: currentname}
-            });
-            dispatch({
-              type: appStateActions.addFile,
-              payload: {name: targetName}
-            });
-          }).catch((reason) => {
-            showError(reason);
-          });
-      },
-      openFile: (name: string) => dispatch({
-        type: appStateActions.openFile,
-        payload: name
-      }),
-      closeFile: (name: string) => dispatch({
-        type: appStateActions.closeFile,
-        payload: name
-      }),
-      setRunFile: (name: string) => dispatch({
-        type: appStateActions.setRunFile,
-        payload: name
-      }),
-      switchFile: (project: string, name: string) => {
-        return asyncAction(Services.storage().readFile([project, name]))
-          .then((file: File) => dispatch({
-            type: appStateActions.switchFile,
-            payload: {
-              file: {
-                name: name,
-                content: file.contents
-              }
-            }
+      settings: {
+        updateSettings: (newSettings: settingsReducerState) => {
+          asyncAction(Services.storage().setSettings({
+            id: 0,
+            editor_mode: "standard",
+            font_size: newSettings.fontSize,
+            font: newSettings.font,
+            theme: newSettings.theme ? "light" : "dark",
+            space_tab: true,
+            tab_width: newSettings.tabWidth
+          })).then(() => dispatch({
+            type: settingsActions.updateSettings,
+            payload: newSettings
           }));
-      }
-    },
-    question: {
-      addQuestion: (newQuestionName: string) => dispatch({
-        type: appStateActions.addQuestion,
-        payload: {name: newQuestionName}
-      }),
-      removeQuestion: (name: string) => dispatch({
-        type: appStateActions.removeQuestion,
-        payload: {name: name}
-      }),
-      switchQuestion: (project: string, name: string) => {
-        return asyncAction(Services.storage().getFiles(project))
-          .then((files) => dispatch({
-            type: appStateActions.switchQuestion,
+        },
+        updateEditorRatio: (ratio: number) => dispatch({
+          type: settingsActions.updateEditorRatio,
+          payload: ratio
+        })
+      },
+      // other than openFile and closeFile, the file name parameter should always
+      //  be the full path, for exmaple "q1/file.txt"
+      file: {
+        setFileOpTarget: (file: string) => dispatch({
+          type: appStateActions.setFileOpTarget,
+          payload: {name: file}
+        }),
+        invalidateFile: () => dispatch({
+          type: appStateActions.invalidateFile,
+          payload: {}
+        }),
+        copyFile: (targetName: string) => {
+          // TODO: hook up to storage once we get a proper copy function
+          dispatch({
+            type: appStateActions.copyFile,
             payload: {
-              question: {
-                name: name,
-                runFile: "",
-                currentFile: {name: "", content: ""},
-                openFiles: [],
-                diags: [],
-                files: files.filter((file) => file.name.split("/")[0] === name)
-                  .map((file) => file.name)
-              }
+              question: {name: "question", files: ["file1.txt"]},
+              newName: targetName.split("/").pop()
             }
-          }));
-      }
-    },
-    user: {
-      signin: (username: string, password: string) => {
-        return new Promise((resolve, reject) => {
-          if (trim(username) === "" || trim(password) === "") {
-            showError("Please fill in all fields!");
-            reject(null);
-          } else {
-            asyncAction(Services.login(username, password)).then((response) => {
-              dispatch({type: userActions.SIGNIN, payload: username});
-              resolve();
-            }).catch((e) => {
-              reject(e);
+          });
+        },
+        updateFile: (project: string, path: string, newFileContent: string) => {
+          dispatch({type: appStateActions.changeFileBufferedContent, payload: {
+            unwrittenContent: newFileContent,
+            target: [project, path],
+            flusher: () => {
+              actions.dispatch.file.flushFileBuffer();
+            }}});
+        },
+        flushFileBuffer: () => {
+          return new Promise((resolve, reject) => {
+            dispatch((dispatch: Function, getState: () => globalState) => {
+              const {flusher, target, unwrittenContent} = getState().appState.currentProject.currentQuestion.currentFile;
+              if (flusher) {
+                clearTimeout(flusher);
+              }
+              if (target && unwrittenContent) {
+                asyncAction(Services.storage().writeFile(target, unwrittenContent))
+                  .then(() => dispatch({
+                    type: appStateActions.changeFileContent,
+                    payload: unwrittenContent,
+                })).then(resolve).catch(reject);
+              } else {
+                resolve();
+              }
             });
-          }
-        });
-      },
-      signout: () => {
-        asyncAction(Services.logout()).then((response) => {
-          dispatch({type: userActions.SIGNOUT});
-        }).catch((reason) => {
-          if (reason !== null) throw reason;
-        });
-      },
-    },
-    project: {
-      addProject: (newProjectName: string) =>
-        asyncAction(Services.storage().newProject(newProjectName)).then(() => dispatch({
-          type: appStateActions.addProject,
-          payload: {name: newProjectName}
-      })),
-      removeProject: (name: string) =>
-        asyncAction(Services.storage().deleteProject(name)).then(() => dispatch({
-          type: appStateActions.removeProject,
-          payload: {name: name}
-      })),
-      switchProject: (name: string) => {
-        // we will leave switching question and file to the UI
-        // efficiency is for noobs
-        function unique(val: any, idx: Number, arr: any) {
-          return arr.indexOf(val) === idx;
-        }
-        return asyncAction(Services.storage().getFiles(name))
-          .then((files) => Services.storage().getProject(name)
-            .then((project) => dispatch({
-              type: appStateActions.switchProject,
+          });
+        },
+        switchFile: (project: string, name: string) => {
+          return actions.dispatch.file.flushFileBuffer()
+            .then(() => { return asyncAction(Services.storage().readFile([project, name])); })
+            .then((file: File) => dispatch({
+              type: appStateActions.switchFile,
               payload: {
-                project: {
-                  termWrite: null,
-                  termClear: null,
+                file: {
                   name: name,
-                  id: project.id,
-                  questions: files.map((file) => file.name.split("/")[0]).filter(unique),
-                  currentQuestion: {
-                    name: "",
-                    files: [],
-                    runFile: "",
-                    openFiles: [],
-                    diags: [],
-                    currentFile: {
+                  content: file.contents,
+                  unwrittenContent: null,
+                  target: null,
+                  flusher: null
+                }
+              }
+            }));
+        },
+        addFile: (project: string, path: string,
+                  newFileContent: string, currentQuestion: string) => {
+          // writes a new file, returns a promise the caller can use when finished
+          //  to do other stuff (i.e. switch to the file)
+          return asyncAction(Services.storage().newFile(project, path, newFileContent))
+            .then(() => dispatch({
+              type: appStateActions.addFile,
+              payload: path
+            })).catch((reason) => {
+              showError(reason);
+            });
+        },
+        deleteFile: (project: string, name: string) => {
+          return asyncAction(Services.storage().deleteFile([project, name]))
+            .then(() => {
+              dispatch({
+                type: appStateActions.closeFile,
+                payload: name
+              });
+              dispatch({
+                type: appStateActions.removeFile,
+                payload: {name: name}
+              });
+            }).catch((reason) => {
+              showError(reason);
+            });
+        },
+        renameFile: (project: string, currentname: string, targetName: string) => {
+          return asyncAction(Services.storage().renameFile([project, currentname], targetName))
+            .then(() => {
+              dispatch({
+                type: appStateActions.closeFile,
+                payload: currentname
+              });
+              dispatch({
+                type: appStateActions.removeFile,
+                payload: {name: currentname}
+              });
+              dispatch({
+                type: appStateActions.addFile,
+                payload: {name: targetName}
+              });
+            }).catch((reason) => {
+              showError(reason);
+            });
+        },
+        openFile: (name: string) => dispatch({
+          type: appStateActions.openFile,
+          payload: name
+        }),
+        closeFile: (name: string) => dispatch({
+          type: appStateActions.closeFile,
+          payload: name
+        }),
+        setRunFile: (name: string) => dispatch({
+          type: appStateActions.setRunFile,
+          payload: name
+        })
+      },
+      question: {
+        addQuestion: (newQuestionName: string) => dispatch({
+          type: appStateActions.addQuestion,
+          payload: {name: newQuestionName}
+        }),
+        removeQuestion: (name: string) => dispatch({
+          type: appStateActions.removeQuestion,
+          payload: {name: name}
+        }),
+        switchQuestion: (project: string, name: string) => {
+          return asyncAction(Services.storage().getFiles(project))
+            .then((files) => dispatch({
+              type: appStateActions.switchQuestion,
+              payload: {
+                question: {
+                  name: name,
+                  runFile: "",
+                  currentFile: {name: "", content: ""},
+                  openFiles: [],
+                  diags: [],
+                  files: files.filter((file) => file.name.split("/")[0] === name)
+                    .map((file) => file.name)
+                }
+              }
+            }));
+        }
+      },
+      user: {
+        signin: (username: string, password: string) => {
+          return new Promise((resolve, reject) => {
+            if (trim(username) === "" || trim(password) === "") {
+              showError("Please fill in all fields!");
+              reject(null);
+            } else {
+              asyncAction(Services.login(username, password)).then((response) => {
+                dispatch({type: userActions.SIGNIN, payload: username});
+                resolve();
+              }).catch((e) => {
+                reject(e);
+              });
+            }
+          });
+        },
+        signout: () => {
+          asyncAction(Services.logout()).then((response) => {
+            dispatch({type: userActions.SIGNOUT});
+          }).catch((reason) => {
+            if (reason !== null) throw reason;
+          });
+        },
+      },
+      project: {
+        addProject: (newProjectName: string) =>
+          asyncAction(Services.storage().newProject(newProjectName)).then(() => dispatch({
+            type: appStateActions.addProject,
+            payload: {name: newProjectName}
+        })),
+        removeProject: (name: string) =>
+          asyncAction(Services.storage().deleteProject(name)).then(() => dispatch({
+            type: appStateActions.removeProject,
+            payload: {name: name}
+        })),
+        switchProject: (name: string) => {
+          // we will leave switching question and file to the UI
+          // efficiency is for noobs
+          function unique(val: any, idx: Number, arr: any) {
+            return arr.indexOf(val) === idx;
+          }
+          return asyncAction(Services.storage().getFiles(name))
+            .then((files) => Services.storage().getProject(name)
+              .then((project) => dispatch({
+                type: appStateActions.switchProject,
+                payload: {
+                  project: {
+                    termWrite: null,
+                    termClear: null,
+                    name: name,
+                    id: project.id,
+                    questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                    currentQuestion: {
                       name: "",
-                      content: ""
+                      files: [],
+                      runFile: "",
+                      openFiles: [],
+                      diags: [],
+                      currentFile: {
+                        name: "",
+                        content: ""
+                      }
                     }
                   }
                 }
-              }
-            }))
-          );
+              }))
+            );
+        },
+        getAllProjects: () => {
+          asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
+            type: appStateActions.getProjects,
+            payload: {
+              projects: projects.map((project) => project.name)
+            }
+          }));
+        }
       },
-      getAllProjects: () => {
-        asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
-          type: appStateActions.getProjects,
-          payload: {
-            projects: projects.map((project) => project.name)
-          }
-        }));
-      }
-    },
-    compile: {
-      compileAndRun: (project: string, question: string, filepath: string, test: boolean) => {
-        dispatch({
-          type: appStateActions.clearConsole,
-          payload: {}
-        });
-        dispatch({
-          type: appStateActions.setCompiling,
-          payload: {}
-        });
-        asyncAction(Services.compiler().compileAndRunProject(project,
-            question, [project, filepath], test)).then((result) => {
+      compile: {
+        compileAndRun: (project: string, question: string, filepath: string, test: boolean) => {
           dispatch({
-            type: appStateActions.setDiags,
-            payload: result.messages
+            type: appStateActions.clearConsole,
+            payload: {}
           });
-          if (result.status !== "running") {
+          dispatch({
+            type: appStateActions.setCompiling,
+            payload: {}
+          });
+          asyncAction(Services.compiler().compileAndRunProject(project,
+              question, [project, filepath], test)).then((result) => {
+            dispatch({
+              type: appStateActions.setDiags,
+              payload: result.messages
+            });
+            if (result.status !== "running") {
+              dispatch({
+                type: appStateActions.setNotRunning,
+                payload: {}
+              });
+            } else {
+              dispatch({
+                type: appStateActions.setRunning,
+                payload: {}
+              });
+            }
+          }).catch((reason) => {
             dispatch({
               type: appStateActions.setNotRunning,
               payload: {}
             });
-          } else {
-            dispatch({
-              type: appStateActions.setRunning,
-              payload: {}
-            });
-          }
-        }).catch((reason) => {
-          dispatch({
-            type: appStateActions.setNotRunning,
-            payload: {}
+            if (reason !== null) {
+              showError(reason.message);
+            }
           });
-          if (reason !== null) {
-            showError(reason.message);
-          }
-        });
+        },
+        setNotRunning: () => dispatch({
+          type: appStateActions.setNotRunning,
+          payload: {}
+        }),
+        stopProgram: () => Services.compiler().programKill().then(() => dispatch({
+          type: appStateActions.setNotRunning,
+          payload: {}
+        })),
       },
-      setNotRunning: () => dispatch({
-        type: appStateActions.setNotRunning,
-        payload: {}
-      }),
-      stopProgram: () => Services.compiler().programKill().then(() => dispatch({
-        type: appStateActions.setNotRunning,
-        payload: {}
-      })),
-    },
-    app: {
-      setTerm: (termWrite: Function, termClear: Function) => dispatch({
-        type: appStateActions.setTerm,
-        payload: {
-          termWrite: termWrite,
-          termClear: termClear
-        }
-      }),
-      writeConsole: (content: string) => dispatch({
-        type: appStateActions.writeConsole,
-        payload: {content: content}
-      })
-    }
+      app: {
+        setTerm: (termWrite: Function, termClear: Function) => dispatch({
+          type: appStateActions.setTerm,
+          payload: {
+            termWrite: termWrite,
+            termClear: termClear
+          }
+        }),
+        writeConsole: (content: string) => dispatch({
+          type: appStateActions.writeConsole,
+          payload: {content: content}
+        })
+      }
     }
   };
+  return actions;
 };
 
 const actionsStoreType = returnType(mapDispatchToProps);
