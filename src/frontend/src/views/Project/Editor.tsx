@@ -55,6 +55,12 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
   componentDidUpdate = (previous: MonacoEditorProps) => {
     if (this.props.value !== this.current_value) {
       this.current_value = this.props.value;
+
+      if (this.editor) {
+        this.prevent_change = true;
+        this.editor.setValue(this.current_value);
+        this.prevent_change = false;
+      }
     }
 
     if (this.props.language !== previous.language) {
