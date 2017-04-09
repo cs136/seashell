@@ -2,7 +2,7 @@ import * as React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 import { createStore, applyMiddleware } from "redux";
-import { HashRouter } from "react-router-dom"
+import { HashRouter } from "react-router-dom";
 import { install } from "offline-plugin/runtime";
 import {actionsInterface} from "./actions";
 import HotKeys from "./HotKeys";
