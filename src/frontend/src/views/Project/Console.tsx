@@ -24,7 +24,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     }
 
     dataReceived(payload: string) {
-        this.term.write(payload.replace("\n", "\r\n"));
+        this.term.write(payload.replace(/\r?\n/g, "\r\n"));
     }
 
     clear(): void {
@@ -54,17 +54,12 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     componentDidMount() {
         this.term.open(this.container);
         this.setState({ input: true, line: 1, currString: "" });
-        this.term.prompt = () => {
-            this.term.write("\r\n > ");
-        };
         const consoleElement: HTMLElement = this.container;
         this.term.on("key", (key: string, evt: any) => {
-            if (this.props.readOnly) { }
-            else {
+            if (!this.props.readOnly) {
                 Services.compiler().programInput(key);
             }
         });
-        //this.term.prompt();
     }
 
     componentWillUnmount() {

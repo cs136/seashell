@@ -47,15 +47,14 @@ class OutputBuffer {
     for (let stack = 0; stack < ASAN.call_stacks.length; stack++) {
       const framelist = ASAN.call_stacks[stack].framelist;
       const fmisc = ASAN.call_stacks[stack].misc;
-      const indent = framelist.length <= 1 ? "\t" : "\t  ";
       for (let frame = 0; frame < framelist.length; frame++) {
-        output += indent + "frame " + framelist[frame].frame + ":" +
+        output += "  frame " + framelist[frame].frame + ":" +
           " function " + framelist[frame].function +
           " in line " + framelist[frame].line +
           ("column" in framelist[frame] ? ", column " + framelist[frame].column : "") + "\n";
       }
       for (let key in fmisc) {
-        output += "\t" + key.replace(/_/g, " ") + ": " + fmisc[key] + "\n";
+        output += "  " + key.replace(/_/g, " ") + ": " + fmisc[key] + "\n";
       }
     }
     for (let key in ASAN.misc) {
