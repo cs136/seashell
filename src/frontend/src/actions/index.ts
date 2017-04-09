@@ -195,21 +195,24 @@ const mapDispatchToProps = (dispatch: Function) => {
           payload: {name: name}
         }),
         switchQuestion: (project: string, name: string) => {
-          return asyncAction(Services.storage().getFiles(project))
-            .then((files) => dispatch({
-              type: appStateActions.switchQuestion,
-              payload: {
-                question: {
-                  name: name,
-                  runFile: "",
-                  currentFile: {name: "", content: ""},
-                  openFiles: [],
-                  diags: [],
-                  files: files.filter((file) => file.name.split("/")[0] === name)
-                    .map((file) => file.name)
+          return actions.dispatch.file.flushFileBuffer()
+            .then(() => {
+              return asyncAction(Services.storage().getFiles(project))
+              .then((files) => dispatch({
+                type: appStateActions.switchQuestion,
+                payload: {
+                  question: {
+                    name: name,
+                    runFile: "",
+                    currentFile: {name: "", content: ""},
+                    openFiles: [],
+                    diags: [],
+                    files: files.filter((file) => file.name.split("/")[0] === name)
+                      .map((file) => file.name)
+                  }
                 }
-              }
             }));
+          });
         }
       },
       user: {
