@@ -58,13 +58,19 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     // Update value if and only if it changed from previous prop OR
     // if dirty goes from true => false.
     if (this.props.value !== previous.value ||
-        (previous.dirty) && !this.props.dirty) {
-      this.current_value = this.props.value;
+        (previous.dirty && !this.props.dirty)) {
+      // By the time componentDidUpdate triggers, the state of
+      // the file in Redux should have settled to the value
+      // we currently have in the editor.
+      // Hence if this if test fails, we're switching files.
+      if (this.current_value !== this.props.value) {
+        this.current_value = this.props.value;
 
-      if (this.editor) {
-        this.prevent_change = true;
-        this.editor.setValue(this.current_value);
-        this.prevent_change = false;
+        if (this.editor) {
+          this.prevent_change = true;
+          this.editor.setValue(this.current_value);
+          this.prevent_change = false;
+        }
       }
     }
 
