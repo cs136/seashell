@@ -1,7 +1,7 @@
 @import '../../Layout';
 :global{
     .terminal{
-        margin:1em;
+        margin:0 1em;
     }
     .xterm-theme-default, .xterm-theme-default .xterm-viewport, .xterm-wrapper-default{
         background-color:$darkTerminal !important;
