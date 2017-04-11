@@ -27,40 +27,40 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
           <div className={styles.column}>
             <h5>Assignments</h5>{
               projects.filter((project) => {
-                return project.toUpperCase().startsWith("A");
+                return project.name.toUpperCase().startsWith("A");
               }).map((project) => (
-                <ProjectLink key={project} project={project} />
+                <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Tutorials</h5>{
               projects.filter((project) => {
-                return project.toUpperCase().startsWith("TUT");
+                return project.name.toUpperCase().startsWith("TUT");
               }).map((project) => (
-                <ProjectLink key={project} project={project} />
+                <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Lectures</h5>{
               projects.filter((project) => {
-                return project.toUpperCase().startsWith("LEC")
-                  || project.toUpperCase().startsWith("SEC");
+                return project.name.toUpperCase().startsWith("LEC")
+                  || project.name.toUpperCase().startsWith("SEC");
               }).map((project) => (
-                <ProjectLink key={project} project={project} />
+                <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Personal</h5>{
               projects.filter((project) => {
-                return !project.toUpperCase().startsWith("A")
-                  && !project.toUpperCase().startsWith("TUT")
-                  && !project.toUpperCase().startsWith("LEC")
-                  && !project.toUpperCase().startsWith("SEC");
+                return !project.name.toUpperCase().startsWith("A")
+                  && !project.name.toUpperCase().startsWith("TUT")
+                  && !project.name.toUpperCase().startsWith("LEC")
+                  && !project.name.toUpperCase().startsWith("SEC");
               }).map((project) => (
-                <ProjectLink key={project} project={project} />
+                <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>

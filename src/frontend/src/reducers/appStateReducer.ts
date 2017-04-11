@@ -12,7 +12,7 @@ interface CurrentFile extends S.File {
 
 export interface appStateReducerState {[key: string]: any;
   fileOpTarget: S.FileBrief;
-  projects: string[];
+  projects: S.ProjectBrief[];
   runState: number;
   currentProject: {
     termWrite: Function;

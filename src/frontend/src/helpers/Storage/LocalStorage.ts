@@ -205,7 +205,7 @@ class LocalStorage implements AbstractStorage {
         contents = window.atob(rmatch[4]);
       }
     }
-    const checksum = md5(contents);
+    const checksum = contents ? "X000" : md5(contents);
     const tbs = [this.db.files, this.db.projects, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       /*

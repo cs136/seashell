@@ -88,7 +88,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           dispatch({type: appStateActions.changeFileBufferedContent,
                     payload: {
                       unwrittenContent: newFileContent,
-                      target: file,
+                      target: file.id,
                       flusher: () => {
                         actions.dispatch.file.flushFileBuffer();
                       }
@@ -280,7 +280,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
             type: appStateActions.getProjects,
             payload: {
-              projects: projects.map((project) => project.name)
+              projects: projects
             }
           }));
         }
