@@ -84,13 +84,16 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        updateFile: (project: string, path: string, newFileContent: string) => {
-          dispatch({type: appStateActions.changeFileBufferedContent, payload: {
-            unwrittenContent: newFileContent,
-            target: [project, path],
-            flusher: () => {
-              actions.dispatch.file.flushFileBuffer();
-            }}});
+        updateFile: (file: S.FileBrief, newFileContent: string) => {
+          dispatch({type: appStateActions.changeFileBufferedContent,
+                    payload: {
+                      unwrittenContent: newFileContent,
+                      target: file,
+                      flusher: () => {
+                        actions.dispatch.file.flushFileBuffer();
+                      }
+                    }
+                  });
         },
         flushFileBuffer: () => {
           return new Promise((resolve, reject) => {

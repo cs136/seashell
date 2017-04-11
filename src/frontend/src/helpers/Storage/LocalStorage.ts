@@ -75,7 +75,7 @@ class LocalStorage implements AbstractStorage {
   public async readFile(fid: FileID): Promise<File> {
     const file = await this.db.files.get(fid);
     if (! file) {
-      throw new LocalStorageError(`readFile("${fid}"):\nFile "${fid}" does not exist.`);
+      throw new LocalStorageError(`file "${fid}" does not exist`);
     }
     return file;
   }
@@ -90,7 +90,7 @@ class LocalStorage implements AbstractStorage {
         file: {file: file.name, project: file.project}
       });
       // also remove from run files
-      let dbProj = await this.db.projects.get(file.project);
+      let dbProj = await this.getProject(file.project);
       // when a project is deleted by both frontend abd backend,
       // in the next sync backend still asks the frontend to delete children
       // which no longer exists
@@ -127,19 +127,16 @@ class LocalStorage implements AbstractStorage {
   }
 
   public async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false> {
-    let p = await this.db.projects.get(proj);
+    let p = await this.getProject(proj);
     return p.runs[question] || false;
   }
 
   // a file name is (test|q*|common)/name
-  public async setFileToRun(proj: ProjectID, question: string, file: FileID): Promise<void> {
+  public async setFileToRun(pid: ProjectID, question: string, file: FileID): Promise<void> {
     return await this.db.transaction("rw", this.db.projects, async () => {
-      let current = await this.db.projects.get(proj);
-      if (! current) {
-        throw new LocalStorageError(`setFileToRun: project ${proj} does not exist.`);
-      }
+      let current = await this.getProject(pid);
       current.runs[question] = file;
-      await this.db.projects.update(proj, current);
+      await this.db.projects.update(pid, current);
     });
   }
 
@@ -223,11 +220,11 @@ class LocalStorage implements AbstractStorage {
         project: proj
       });
       if (await file.count() > 0) {
-        throw new LocalStorageError(`file "${proj}" "${name}" already exists.`);
+        throw new LocalStorageError(`file "${proj}" "${name}" already exists`);
       }
-      const project = await this.db.projects.get(proj);
+      const project = await this.getProject(proj);
       if (! project) {
-        throw new LocalStorageError(`Project "${proj}" doesn't exist.`);
+        throw new LocalStorageError(`project "${proj}" doesn't exist`);
       }
       const fid = await this.db.files.add({
         id: id,
@@ -247,14 +244,15 @@ class LocalStorage implements AbstractStorage {
   }
 
   public async newProject(name: string): Promise<ProjectID> {
+    const pid = md5(name);
     await this.db.projects.add({
-      id: name,
+      id: pid,
       name: name,
       runs: {},
       last_modified: Date.now(),
       open_tabs: {}
     });
-    return name;
+    return pid;
   }
 
   public async deleteProject(proj: ProjectID): Promise<void> {
@@ -269,7 +267,7 @@ class LocalStorage implements AbstractStorage {
   public async getProject(pid: ProjectID): Promise<Project> {
     const p = await this.db.projects.get(pid);
     if (! p) {
-      throw new LocalStorageError(`Project ${pid} doesn't exist.`);
+      throw new LocalStorageError(`project "${pid}" doesn't exist`);
     }
     return p;
   }
@@ -335,7 +333,7 @@ class LocalStorage implements AbstractStorage {
   // Will be replaced by Dexie.Syncable.ISyncProtocol
   public async applyChanges(changeLogs: ChangeLog[],
                             newProjects: string[],
-                            deletedProjects: string[]): Promise<void> {
+                            deletedProjects: ProjectID[]): Promise<void> {
     const tbs = [this.db.files, this.db.changeLogs, this.db.projects, this.db.settings];
     return await this.db.transaction("rw", tbs, async () => {
       Dexie.currentTransaction.on("abort", () => {
@@ -345,19 +343,20 @@ class LocalStorage implements AbstractStorage {
         await this.newProject(proj);
       }
       for (const change of changeLogs) {
-        const fid = md5(change.file.project + change.file.file);
+        const pid = md5(change.file.project);
+        const fid = md5(pid + change.file.file);
         if (change.type === "deleteFile") {
-          await this.deleteFile(fid);
+          // await this.deleteFile(fid);
         } else if (change.type === "editFile") {
-          await this.writeFile(fid, change.contents);
+          // await this.writeFile(fid, change.contents);
         } else if (change.type === "newFile") {
-          await this.newFile(change.file.project, change.file.file, change.contents);
+          // await this.newFile(pid, change.file.file, change.contents);
         } else {
           throw sprintf("applyChanges: unknown change %s!", change);
         }
       }
-      for (const proj of deletedProjects) {
-        await this.store.deleteProject(proj, true);
+      for (const pid of deletedProjects) {
+        await this.deleteProject(pid);
       };
       await this.clearChangeLogs();
     });
@@ -376,7 +375,7 @@ class StorageDB extends Dexie {
     this.version(1).stores({
       changeLogs: "++id",
       files: "id, [name+project], name, project",
-      projects: "name",
+      projects: "id",
       settings: "id"
     });
   }

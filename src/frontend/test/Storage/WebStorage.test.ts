@@ -43,13 +43,12 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 Services.init(null, {
   debugWebSocket: false,
-  debugWebStorage: false,
+  debugWebStorage: true,
   debugService: false
 });
 
 if (TestAccount.user) {
   describe("Testing WebStorage interface", websocketTests);
-  // describe.skip("Testing offline mode synchronization", syncTests);
 } else {
   describe.skip("Skipped websocket related tests. You need to set up account.json", () => {
     it("skipping");
@@ -70,17 +69,17 @@ function websocketTests() {
     Services.logout();
   });
 
-  it("syncAll: sync multiple times. Should not crash.", async () => {
+  it.skip("syncAll: sync multiple times. Should not crash.", async () => {
     for (const i of R.range(0, 3)) {
       await socket.syncAll();
     }
   });
 
   let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
-    id: `X${s}`,
+    id: md5(`X${s}`),
     name: `X${s}`,
     runs: {},
-    opened_tabs: {},
+    open_tabs: {},
     last_modified: 0
   }), uniqStrArr(testSize, 20)()));
 
@@ -90,7 +89,7 @@ function websocketTests() {
     const text = uniqStr(5000)();
     return {
       id: fid,
-      project: p.name,
+      project: p.id,
       name: name,
       contents: text,
       checksum: md5(text),
@@ -111,7 +110,7 @@ function websocketTests() {
       name: p.name,
       runs: p.runs,
       last_modified: 0,
-      opened_tabs: p.opened_tabs
+      open_tabs: p.open_tabs
     }), remote)) || [];
   }
 
@@ -133,24 +132,26 @@ function websocketTests() {
     }), <File[]> remoteFiles);
   }
 
-  it(`newProject: create ${testSize} projects`, async () => {
+  it.only(`newProject: create ${testSize} projects`, async () => {
+    let ids: ProjectID[] = [];
     for (const p of projs) {
-      await socket.newProject(p.name);
+      ids.push(await socket.newProject(p.name));
     }
+    expect(ids).toEqual(R.map(prop("id"), projs));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
+/*
   it(`getProjects: list all projects`, async () => {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
   it("getFileToRun: should return false when no run files", async () => {
     for (const p of projs) {
-      const f = await socket.getFileToRun(p.name, "default");
+      const f = await socket.getFileToRun(p.id, "default");
       expect(f).toEqual(false);
     }
   });
-
   it(`newFile: create ${testSize} files per project`, async () => {
     for (const f of files) {
       await socket.newFile(f.project, f.name, f.contents);
@@ -159,7 +160,7 @@ function websocketTests() {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
-  it(`getFiles: list all files`, async () => {
+  it(`getAllFiles: list all files`, async () => {
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
   });
 
@@ -171,7 +172,7 @@ function websocketTests() {
       expect(a).toEqual(b);
     };
   });
-
+/*
   it(`writeFile: update ${halfTestSize} files`, async () => {
     const fs = R.take(halfTestSize, files);
     for (const f of fs) {
@@ -186,7 +187,7 @@ function websocketTests() {
     return R.zipObj(uniqStrArr(testSize, 30)(),
                     J.array(testSize, J.one_of(map((file) => [p, file.name], files)))());
   }
-
+/*
   it(`setFileToRun: randomly pick a run file per project`, async () => {
     for (const f of files) {
       await socket.setFileToRun(f.project, "default", f.id);
@@ -204,7 +205,7 @@ function websocketTests() {
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
-
+/*
   it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
     const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
@@ -264,33 +265,8 @@ function websocketTests() {
       files = R.filter((f) => f.project !== proj.id, files);
     }
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
-    // expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
-  });
-}
-
-
-function syncTests() {
-
-  let socket = Services.storage();
-
-  beforeAll(() => {
-    return Services.login(TestAccount.user, TestAccount.password);
+    expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
-  afterAll(() => {
-    Services.logout();
-  });
-
-  it.skip("Initial state check", async () => {
-  });
-
-  it.skip("writeFile should leave a ChangeLog", async () => {
-
-  });
-
-  it.skip("Write to the same file mutiple times should leave a single ChangeLog", async () => {
-
-  });
-
-
+//*/
 }

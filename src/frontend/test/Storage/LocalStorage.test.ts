@@ -35,11 +35,11 @@ describe("Testing LocalStorage interface functions", () => {
   store.connect("test");
 
   let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
-    id: s,
+    id: md5(s),
     name: s,
     runs: {},
     last_modified: 0,
-    opened_tabs: {}
+    open_tabs: {}
   }), uniqStrArr(testSize, 30)()));
 
   let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
@@ -49,7 +49,7 @@ describe("Testing LocalStorage interface functions", () => {
     const checksum = md5(text);
     return {
       id: fid,
-      project: p.name,
+      project: p.id,
       name: name,
       contents: text,
       checksum: checksum,
@@ -91,14 +91,16 @@ describe("Testing LocalStorage interface functions", () => {
       name: p.name,
       runs: p.runs,
       last_modified: 0,
-      opened_tabs: p.opened_tabs
+      open_tabs: p.open_tabs
     }), local)) || [];
   }
 
   it(`newProject: create ${testSize} projects`, async () => {
+    let ids: ProjectID[] = [];
     for (const p of projs) {
-      await store.newProject(p.name);
+      ids.push(await store.newProject(p.name));
     }
+    expect(R.sortBy(prop("id"), ids)).toEqual(R.map(prop("id"), projs));
     expect(await localProjs()).toEqual(projs);
   });
 
@@ -178,7 +180,7 @@ describe("Testing LocalStorage interface functions", () => {
   it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
     const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name === p, projs);
+      const pj = R.find((x) => x.id === p, projs);
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
@@ -194,10 +196,11 @@ describe("Testing LocalStorage interface functions", () => {
   it(`deleteFile: delete ${halfTestSize} files per project. Should also remove from run files.`, async () => {
     const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name === p, projs);
+      const pj = R.find((x) => x.id === p, projs);
+      console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
-        await store.setFileToRun(pj.name, "default", file.id);
+        await store.setFileToRun(pj.id, "default", file.id);
         await store.deleteFile(file.id);
         files = filter((x) => x.id !== file.id, files);
         delete pj.runs.default;

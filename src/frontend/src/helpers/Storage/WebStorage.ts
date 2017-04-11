@@ -22,76 +22,21 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   private socket: SeashellWebsocket;
   private storage: LocalStorage;
 
-  // public newProjectFrom: (name: string, src_url: string) => Promise<WebsocketResult>;
-  // public deleteProject: (name: string) => Promise<WebsocketResult>;
-  // public restoreFileFrom: (name: string, file: string, contents: string, history: History) => Promise<WebsocketResult>;
-  // public getUploadFileToken: (name: string, file: string) => Promise<WebsocketResult>;
-  // public getExportToken: (name: string) => Promise<WebsocketResult>;
-  // public marmosetSubmit: (name: string, assn: string, subdir?: string) => Promise<WebsocketResult>;
-
-  // public lockProject: (name: string) => Promise<WebsocketResult>;
-  // public forceLockProject: (name: string) => Promise<WebsocketResult>;
-  // public unlockProject: (name: string) => Promise<WebsocketResult>;
-  // public archiveProjects: () => Promise<WebsocketResult>;
-
-  // public getSettings: () => Promise<WebsocketResult>;
-  // public getMostRecentlyUsed: (proj: string, question: string) => Promise<WebsocketResult>;
-  // public updateMostRecentlyUsed: (proj: string, question: string, file: string) => Promise<WebsocketResult>;
-
   public debug: boolean; // toggle this.debug && console.log
 
   constructor(wbclient: SeashellWebsocket, store: LocalStorage, debug?: boolean) {
     super();
-    // this.synced = false;
-    // this.isSyncing = false;
-    // this.offlineMode = 0; // TODO change this to look up the cookie
     this.storage = store;
     this.socket = wbclient;
     this.debug = debug;
-
-    // These functions are not available in offline mode.
-    // this.ping = this.make_offline_disabled("ping");
-    // this.newProject = this.make_offline_disabled("newProject");/
-    // this.newProjectFrom = this.make_offline_disabled("newProjectFrom");
-    // this.deleteProject = this.make_offline_disabled("deleteProject");
-    // this.restoreFileFrom = this.make_offline_disabled("restoreFileFrom");
-    // this.getUploadFileToken = this.make_offline_disabled("getUploadFileToken");
-    // this.getExportToken = this.make_offline_disabled("getExportToken");
-    // this.marmosetSubmit = this.make_offline_disabled("marmosetSubmit");
-    // These functions do nothing and just resolve in offline mode.
-    // this.lockProject = this.make_offline_noop("lockProject");
-    // this.forceLockProject = this.make_offline_noop("forceLockProject");
-    // this.unlockProject = this.make_offline_noop("unlockProject");
-    // this.archiveProjects = this.make_offline_noop("archiveProjects");
-
-    // These functions either:
-    //  - return the online result if online.
-    //  - return the offline result if offline.
-    // this.getProjects = this.make_offline_enabled("getProjects");
-    // this.getFiles = this.make_offline_enabled("getFiles");
-    // this.readFile = this.make_offline_enabled("readFile");
-    // this.getFileToRun = this.make_offline_enabled("getFileToRun");
-    // this.getSettings = this.make_offline_enabled("getSettings");
-    // this.getMostRecentlyUsed = this.make_offline_enabled("getMostRecentlyUsed");
-
-    // These functions:
-    //  - invoke the offline version if offline
-    //  - invoke the both the offline version and the online
-    //    version if online, returning the offline version.
-    //  - marks the local storage as dirty and queues up a sync
-    // this.newFile = this.make_offline_enabled("newFile", true);
-    // this.writeFile = this.make_offline_enabled("writeFile", true);
-    // this.deleteFile = this.make_offline_enabled("deleteFile", true);
-    // this.renameFile = this.make_offline_enabled("renameFile", true);
-    // this.setSettings = this.make_offline_enabled("setSettings", true);
-    // this.updateMostRecentlyUsed = this.make_offline_enabled("updateMostRecentlyUsed", true)
   }
 
-  public async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileID> {
-    const fid = await this.storage.newFile(proj, filename, contents);
+  public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileID> {
+    const fid = await this.storage.newFile(pid, filename, contents);
+    const proj = await this.storage.getProject(pid);
     await this.socket.sendMessage({
       type: "newFile",
-      project: proj,
+      project: proj.name,
       file: filename,
       contents: contents || "",
       encoding: "raw",
@@ -131,12 +76,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   };
 
   public async newProject(name: string): Promise<ProjectID> {
-    await this.storage.newProject(name);
+    const pid = await this.storage.newProject(name);
     await this.socket.sendMessage({
       type: "newProject",
       project: name
     });
-    return name;
+    return pid;
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {
@@ -204,6 +149,10 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const startTime = Date.now();
     const projectsSent = await this.storage.getProjects();
     const filesSent = await this.storage.getAllFiles();
+    for (const file of filesSent) {
+      (<any>file).file = file.name;
+      (<any>file).project = (await this.storage.getProject(file.project)).name;
+    }
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
     const result = await this.socket.sendMessage<{
@@ -213,11 +162,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     }>({
       type: "sync",
       projects: projectsSent,
-      files: filesSent.map((file) => ({
-        file: file.name,
-        project: file.project,
-        checksum: file.checksum
-      })),
+      files: filesSent,
       changes: changesSent,
       settings: {
         modified: Date.now(),
@@ -226,8 +171,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       }
     });
     const changesGot = result.changes;
-    const newProjects = result.newProjects;
-    const deletedProjects = result.deletedProjects;
+    const newProjects: string[] = result.newProjects;
+    const deletedProjects: ProjectID[] = result.deletedProjects.map<string>(md5);
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
     // this.isSyncing = false;
     const timeSpent = Date.now() - startTime;
