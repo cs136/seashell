@@ -21,8 +21,15 @@ Services.init(null, {
   debugWebStorage: false,
   debugService: false
 });
+if (TestAccount.user) {
+  describe("Testing Services interface", servicesTest);
+} else {
+  describe.skip("Skipped websocket related tests. You need to set up account.json", () => {
+    it("skipping");
+  });
+}
 
-describe("Testing WebStorage interface", () => {
+function servicesTest() {
 
   beforeAll(() => {
     return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);

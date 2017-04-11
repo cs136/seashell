@@ -22,6 +22,7 @@ class SeashellWebsocket {
   private pingLoop: any;
   private callbacks: Callback[];
   public mockInternet: MockInternet;
+  private connected: boolean;
   // this allows WebsocketService to access member functions by string key
   // [key: string]: any;
 
@@ -44,13 +45,7 @@ class SeashellWebsocket {
     this.requests[-4] = new Request({id: -4});
     this.requests[-3].callback = this.io_cb;
     this.requests[-4].callback = this.test_cb;
-     // return resolved promise at the end
-    let rtvResolve: () => void;
-    let rtvReject: (reason: any) => void;
-    let rtv: Promise<void> = new Promise<void>((resolve, reject) => {
-      rtvResolve = resolve;
-      rtvReject = reject;
-    });
+    this.connected = false;
     // if there's an exisitng websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
@@ -90,11 +85,13 @@ class SeashellWebsocket {
     }
 
     // Websocket.onclose should race against authentication
-    this.websocket.onclose = () => {
+    this.websocket.onclose = (evt: CloseEvent) => {
       // Presumbaly the scenario when .connect() is called and waited for is user trying to login.
       // At this moment if we can't connect to the backend, we guess the internet is disconnected
-      rtvReject(new E.NoInternet());
-      console.warn(`Websocket lost connection. Trying to reconnect...`);
+      if (!this.connected)
+        console.warn("Websocket couldn't connect; trying to reconnect...");
+      else
+        console.warn(`Websocket lost connection. Trying to reconnect...`);
       clearInterval(this.pingLoop);
       // automatically reconnect after 3s
       if (this.connection) {
@@ -103,13 +100,19 @@ class SeashellWebsocket {
         }, 3000);
       }
       for (const i in this.requests) {
-        this.requests[i].reject(new E.RequestAborted());
+        if (evt.code === 4000) {
+          this.requests[i].reject(new E.WebsocketError(evt.reason));
+        } else if (!this.connected) {
+          this.requests[i].reject(new E.NoInternet());
+        } else {
+          this.requests[i].reject(new E.RequestAborted());
+        }
       }
     };
 
     this.websocket.onerror = (err) => {
       console.error(`Websocket encountered error. Closing websocket.\n${err}`);
-      this.websocket.close();
+      this.websocket.close(4000, err.toString());
     };
 
     this.websocket.onopen = () => {
@@ -146,35 +149,32 @@ class SeashellWebsocket {
 
     this.debug && console.log("Waiting for server response...");
     const serverChallenge = await this.requests[-1].received;
-    const result = await this.coder.answer(serverChallenge);
-    const response = [result.iv,
-                      result.encrypted,
-                      result.authTag,
-                      result.nonce];
+    try {
+      const result = await this.coder.answer(serverChallenge);
+      const response = [result.iv,
+                        result.encrypted,
+                        result.authTag,
+                        result.nonce];
 
-    this.requests[-2].message = {
-      id: -2,
-      type: "clientAuth",
-      response: response
-    };
+      this.requests[-2].message = {
+        id: -2,
+        type: "clientAuth",
+        response: response
+      };
 
-    this.debug && console.log("Authenticating websocket...");
+      this.debug && console.log("Authenticating websocket...");
 
-    // Authentication should race against websocket.onclose
-    this.sendRequest(this.requests[-2]).then(() => {
-      this.debug && console.log("Authentication succeeded.");
-      this.authenticated = true;
-      this.debug && console.log("Seashell is ready :)");
-      rtvResolve();
-    }).catch((err) => {
+      // Authentication should race against websocket.onclose
+      await this.sendRequest(this.requests[-2]);
+    } catch (err) {
       if (err instanceof E.RequestError) {
-        rtvReject(new E.LoginRequired());
+        throw new E.LoginRequired();
       } else {
-        rtvReject(err);
+        throw err;
       }
-    });
+    }
 
-    return rtv;
+    return;
   }
 
   private resolveRequest(responseText: string): void {

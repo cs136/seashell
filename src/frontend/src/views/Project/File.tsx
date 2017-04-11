@@ -82,7 +82,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     this.updateEditorOptions();
   }
   onChange(newValue: string, e: any) {
-    this.props.dispatch.file.updateFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.currentFile.name, newValue);
+    this.props.dispatch.file.updateFile(this.props.appState.currentProject.currentQuestion.currentFile, newValue);
   }
   componentDidUpdate() {
     if (this.state.editorLastUpdated !== this.props.settings.updated) {
