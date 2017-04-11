@@ -44,6 +44,8 @@ class LocalStorage implements AbstractStorage {
       IDBKeyRange: (<any>window).IDBKeyRange,
       indexedDB: (<any>window).indexedDB
     });
+
+    await this.db.open();
   }
 
   /*
@@ -346,11 +348,11 @@ class LocalStorage implements AbstractStorage {
         const pid = md5(change.file.project);
         const fid = md5(pid + change.file.file);
         if (change.type === "deleteFile") {
-          // await this.deleteFile(fid);
+          this.deleteFile(fid);
         } else if (change.type === "editFile") {
-          // await this.writeFile(fid, change.contents);
+          this.writeFile(fid, change.contents);
         } else if (change.type === "newFile") {
-          // await this.newFile(pid, change.file.file, change.contents);
+          this.newFile(pid, change.file.file, change.contents);
         } else {
           throw sprintf("applyChanges: unknown change %s!", change);
         }
