@@ -18,6 +18,12 @@
     width: 100%;
 }
 
+.splashContainer{
+    max-width:800px;
+    margin:2em auto;
+    padding:0 2em;
+}
+
 .editorContainer {
     display: flex;
 }
@@ -147,6 +153,18 @@
             }
         }
     }
+  
+  .monacoErrorGlyph {
+    background: rgb(186, 12, 0);
+  }
+
+  .monacoWarningGlyph {
+    background: rgb(211, 204, 0);
+  }
+
+  .monacoDiagnosticLineBackground {
+    background: lightblue;
+  }
 }
 
 .resizeHandle:focus,
@@ -181,7 +199,7 @@
 }
 
 .toggleView{
-    display:none;
+    display:none !important;
 }
 
 @media(max-width: $mobile-break){
@@ -194,10 +212,10 @@
         line-height:normal;
     }
     .resizeHandle{
-        display:none;
+        display:none !important;
     }
     .toggleView{
-        display:block;
+        display:block !important;
     }
     .editorContainer>div{
         flex:1 !important;

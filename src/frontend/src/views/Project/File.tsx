@@ -1,23 +1,24 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
 import MonacoEditor from "./Editor";
-import Xterm from "./Console";
+import  Xterm  from "./Console";
 import Loading from "./Loading";
+import {CompilerDiagnostic} from "../../helpers/Services";
 import * as Draggable from "react-draggable"; // Both at the same time
 import { merge } from "ramda";
 
 const styles = require("./project.scss");
 
 export interface FileProps { file: string; className?: string; };
-export interface FileState { dirty: boolean; editorLastUpdated: number; }
+export interface FileState { editorLastUpdated: number; }
 
 class File extends React.Component<FileProps & actionsInterface, FileState> {
   editor: any;
+  monaco: any;
 
   constructor(props: FileProps & actionsInterface) {
     super(props);
     this.state = {
-        dirty: true,
         editorLastUpdated: -1
     };
     this.handleDrag = this.handleDrag.bind(this);
@@ -63,6 +64,8 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     }
   }
   updateConsoleOptions() {
+    if (!this.refs.terminal)
+      return;
     if (this.props.settings.theme) {
       (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-light");
       (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-default");
@@ -73,6 +76,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   }
   editorDidMount(editor: any, monaco: any) {
     this.editor = editor;
+    this.monaco = monaco;
     this.onResize();
     editor.focus();
     this.updateEditorOptions();
@@ -118,12 +122,19 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         tabstopwidth: this.props.settings.tabWidth,
         cursorBlink: true,
     };
-    const currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
+    const currentQuestion = this.props.appState.currentProject.currentQuestion;
+    const currentFile = currentQuestion.currentFile;
+    const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
+      return d.file === currentFile.name;
+    });
     if (this.props.file === currentFile.name) {
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
-            defaultValue={currentFile.content} language="cpp"
+            dirty={!!currentFile.unwrittenContent}
+            value={currentFile.contents}
+            language="cpp"
+            diags={currentQuestion.diags}
             onChange={this.onChange.bind(this)}
             editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
@@ -131,12 +142,13 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
           </Draggable>
         <Xterm ref="terminal"
           className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-          readOnly={false}/>
+          readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
       </div>
       </div>);
     }
     else
-      return <Loading/>
+      return <Loading/>;
   }
 }
+
 export default map<FileProps>(File);

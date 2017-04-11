@@ -2,6 +2,7 @@ import * as React from "react";
 import {Menu, MenuItem} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 import File from "./File";
+import * as S from "../../helpers/Storage/Interface";
 
 const styles = require("./project.scss");
 
@@ -16,10 +17,10 @@ class FileList extends React.Component<FileListProps & actionsInterface, FileLis
         const question = this.props.question;
         return (<Menu>
             <MenuItem iconName="plus" text="New File" />
-            {question.files.map((file: any) => (<MenuItem key={"file-list-item-" + file} onClick={()=>{
+            {question.files.map((file: S.FileBrief) => (<MenuItem key={"file-list-item-" + file.name} onClick={() => {
                 this.props.dispatch.file.openFile(file);
-                this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, file);
-            }} iconName="document" text={file.substring(file.indexOf("/") + 1)} />))}
+                this.props.dispatch.file.switchFile(file);
+            }} iconName="document" text={file.name.substring(file.name.indexOf("/") + 1)} />))}
         </Menu>);
     }
 }

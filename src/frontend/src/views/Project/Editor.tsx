@@ -1,40 +1,48 @@
 import * as React from "react";
+import {CompilerDiagnostic} from "../../helpers/Services";
+
+const styles = require("./project.scss");
 
 interface MonacoEditorProps {
+  dirty: boolean;
   editorWillMount?: Function;
   editorDidMount?: Function;
-  width?: Number | String;
-  height?: Number | String;
-  value?: String;
-  defaultValue?: String;
-  language?: String;
-  theme?: String;
+  width?: number | string;
+  height?: number | string;
+  value?: string;
+  defaultValue?: string;
+  language?: string;
+  theme?: string;
   options?: any;
   onChange?: Function;
   requireConfig?: any;
   context?: any;
+  diags: CompilerDiagnostic[];
 }
 
-export default class MonacoEditor extends React.Component<MonacoEditorProps, {}> {
+export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
   monacoContext: any;
   editor: any;
-  prevent_change: Boolean;
-  current_value?: String;
+  decorations: string[];
+  prevent_change: boolean;
+  current_value?: string;
   container?: HTMLElement;
 
   public static defaultProps: Partial<MonacoEditorProps> = {
+    dirty: false,
     width: "100%",
     height: "100%",
     value: null,
     defaultValue: "",
     language: "javascript",
     theme: "vs",
-    options: {},
+    options: {glyphMargin: true},
     editorDidMount: null,
     editorWillMount: null,
     onChange: null,
     requireConfig: {},
-    context: null
+    context: null,
+    diags: []
   };
 
   constructor(props: MonacoEditorProps) {
@@ -44,15 +52,25 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
     this.current_value = props.value;
     this.monacoContext = this.props.context || window;
     this.container = null;
+    this.decorations = [];
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
-    if (this.props.value !== this.current_value) {
-      this.current_value = this.props.value;
+    // Update value if and only if it changed from previous prop OR
+    // if dirty goes from true => false.
+    if (this.props.value !== previous.value ||
+        (previous.dirty && !this.props.dirty)) {
+      // By the time componentDidUpdate triggers, the state of
+      // the file in Redux should have settled to the value
+      // we currently have in the editor.
+      // Hence if this if test fails, we're switching files.
+      if (this.current_value !== this.props.value) {
+        this.current_value = this.props.value;
 
-      if (this.editor) {
-        this.prevent_change = true;
-        this.editor.setValue(this.current_value);
-        this.prevent_change = false;
+        if (this.editor) {
+          this.prevent_change = true;
+          this.editor.setValue(this.current_value);
+          this.prevent_change = false;
+        }
       }
     }
 
@@ -133,6 +151,26 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       }
     }
   }
+
+  setDiags(diags: CompilerDiagnostic[]) {
+    if (this.editor) {
+      this.decorations = this.editor.deltaDecorations(this.decorations,
+        diags.map((d: CompilerDiagnostic) => {
+          const classPrefix = d.error ? "Error" : "Warning";
+          return {
+            range: new this.monacoContext.monaco.Range(d.line, 0, d.line, 999),
+            options: {
+              isWholeLine: true,
+              glyphMarginClassName: `monaco${classPrefix}Glyph`,
+              className: "monacoDiagnosticLineBackground",
+              hoverMessage: d.message,
+              glyphMarginHoverMessage: d.message
+            }
+          };
+        }));
+    }
+  }
+
   initMonaco = (container: HTMLElement) => {
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
@@ -143,6 +181,9 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       theme,
       ...options,
     });
+
+    this.setDiags(this.props.diags);
+
     this.editorDidMount();
   }
 
@@ -154,6 +195,9 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps, {}>
       width: fixedWidth,
       height: fixedHeight,
     };
+
+    this.setDiags(this.props.diags);
+
     return (<div style={style} ref={(container?: HTMLElement) => {
         this.container = container;
       }}/>);

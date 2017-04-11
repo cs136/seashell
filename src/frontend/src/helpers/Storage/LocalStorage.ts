@@ -178,16 +178,13 @@ class LocalStorage implements AbstractStorage {
   //   });
   // }
 
-  public async getProjectFiles(proj: string): Promise<FileBrief[]> {
+  public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     // this is called when we open a project, so we will update the last modified time here as well
     return await this.db.transaction("rw", this.db.projects, this.db.files, async () => {
-      const p: Project = await this.db.projects.get(proj);
-      if (! p) {
-        throw new LocalStorageError(`Project ${proj} doesn't exist.`);
-      }
+      const p: Project = await this.getProject(pid);
       p.last_modified = Date.now();
       await this.db.projects.put(p);
-      return await this.db.files.where("project").equals(proj).toArray((arr) => {
+      return await this.db.files.where("project").equals(pid).toArray((arr) => {
         // you should remove fields that are too large here if necessary
         for (const item of arr) {
           delete item.contents;
@@ -255,7 +252,7 @@ class LocalStorage implements AbstractStorage {
       name: name,
       runs: {},
       last_modified: Date.now(),
-      opened_tabs: {}
+      open_tabs: {}
     });
     return name;
   }
@@ -269,8 +266,12 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async getProject(id: ProjectID): Promise<Project> {
-    return await this.db.projects.get(id);
+  public async getProject(pid: ProjectID): Promise<Project> {
+    const p = await this.db.projects.get(pid);
+    if (! p) {
+      throw new LocalStorageError(`Project ${pid} doesn't exist.`);
+    }
+    return p;
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {
@@ -288,11 +289,11 @@ class LocalStorage implements AbstractStorage {
     }), result);
   }
 
-  public async getOpenedTabs(proj: ProjectID, question: string): Promise<FileID[]> {
+  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]> {
     return [];
   }
 
-  public async setOpenedTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void> {
+  public async setOpenTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void> {
   }
 
   public async getChangeLogs(): Promise<ChangeLog[]> {

@@ -30,8 +30,8 @@ abstract class AbstractStorage {
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, file: FileID): Promise<void>;
   public abstract async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false>;
-  public abstract async setOpenedTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void>;
-  public abstract async getOpenedTabs(proj: ProjectID, question: string): Promise<FileID[]>;
+  public abstract async setOpenTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void>;
+  public abstract async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]>;
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;
   public abstract async getSettings(): Promise<Settings>;
@@ -64,14 +64,20 @@ interface FileBrief {
 }
 
 export const ext = (f: FileBrief) => {
-  let arr = this.name.split(".");
+  let arr = f.name.split(".");
   return arr.pop();
 };
 
 export const basename = (f: FileBrief) => {
-  let arr = this.name.split(".");
+  let arr = f.name.split("/");
+  arr = arr[arr.length - 1].split(".");
   arr.pop();
   return arr.join(".");
+};
+
+export const fileQuestion = (f: FileBrief): string => {
+  let arr = f.name.split("/");
+  return arr[0];
 };
 
 interface Project extends ProjectBrief {
@@ -79,7 +85,7 @@ interface Project extends ProjectBrief {
   name: string;
   last_modified: number;
   runs: {[index: string]: FileID};
-  opened_tabs: {[index: string]: FileID};
+  open_tabs: {[index: string]: FileID};
 }
 
 interface ProjectBrief {

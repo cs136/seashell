@@ -3,6 +3,7 @@ import {Connection} from "../Services";
 import {AbstractCompiler,
         TestBrief,
         CompilerResult,
+        CompilerDiagnostic,
         CompilerError} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
 import {AbstractStorage,
@@ -24,8 +25,8 @@ class OnlineCompiler extends AbstractCompiler {
     this.offlineCompiler = offComp;
     this.activePIDs = [];
 
-    this.socket.register_callback("io", this.handleIO);
-    this.socket.register_callback("test", this.handleTest);
+    this.socket.register_callback("io", this.handleIO());
+    this.socket.register_callback("test", this.handleTest());
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
@@ -34,32 +35,67 @@ class OnlineCompiler extends AbstractCompiler {
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
+
     let tests: TestBrief[] = [];
     if (runTests) {
       tests = await this.getTestsForQuestion(proj, question);
     }
-    const result = await this.socket.sendMessage<CompilerResult>({
-      type: "compileAndRunProject",
-      project: proj,
-      question: question,
-      tests: tests.map((tst: TestBrief) => { return tst.name; })
+
+    let result: any = null;
+    try {
+      result = await this.socket.sendMessage({
+        type: "compileAndRunProject",
+        project: proj,
+        question: question,
+        tests: tests.map((tst: TestBrief) => { return tst.name; })
+      });
+    } catch (res) {
+      if (!res.status || res.status !== "compile-failed") {
+        throw result;
+      }
+      result = res;
+    }
+
+    // Handle compiler diagnostics
+    result.messages = result.messages.map((msg: [boolean, string, number, number, string]): CompilerDiagnostic => {
+      return {
+        // For some reason msg[0] is always true in the backend response,
+        //  so we will rely on whether compilation failed or not...
+        error: result.status === "compile-failed",
+        file: msg[1],
+        line: msg[2],
+        column: msg[3],
+        message: msg[4]
+      };
     });
+    this.buffer.outputDiagnostics(result.messages);
+
+    // Start running the program
     if (result.status === "running") {
-      this.activePIDs.push(result.pid);
+      const pids = runTests ? result.pids : [result.pid];
+      this.activePIDs = this.activePIDs.concat(pids);
+      pids.map((pid: number) => {
+        this.socket.sendMessage({
+          type: "startIO",
+          project: proj,
+          pid: pid
+        });
+      });
     }
     return {
       messages: result.messages,
       status: result.status
-    };
+    } as CompilerResult;
   }
 
   public async programKill(): Promise<void> {
     if (this.activePIDs.length > 0 && this.socket.isConnected()) {
-      await this.socket.sendMessage({
-        type: "programKill",
-        pid: this.activePIDs
-      });
-      this.activePIDs = [];
+      await Promise.all(this.activePIDs.map((pid: number) => {
+        return this.socket.sendMessage({
+          type: "programKill",
+          pid: pid
+        });
+      }));
       // In case we have some weirdness with disconnecting & reconnecting,
       //  let's kill any programs running offline as well
       try {
@@ -108,7 +144,7 @@ class OnlineCompiler extends AbstractCompiler {
     if (ind === -1) {
       throw new CompilerError("Program that was not running has ended.");
     } else {
-      this.activePIDs = this.activePIDs.splice(ind, 1);
+      this.activePIDs.splice(ind, 1);
     }
     // if everything has finished running, notify frontend
     if (this.activePIDs.length === 0) {

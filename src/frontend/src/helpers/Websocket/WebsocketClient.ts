@@ -91,6 +91,8 @@ class SeashellWebsocket {
 
     // Websocket.onclose should race against authentication
     this.websocket.onclose = () => {
+      // Presumbaly the scenario when .connect() is called and waited for is user trying to login.
+      // At this moment if we can't connect to the backend, we guess the internet is disconnected
       rtvReject(new E.NoInternet());
       console.warn(`Websocket lost connection. Trying to reconnect...`);
       clearInterval(this.pingLoop);
@@ -101,7 +103,7 @@ class SeashellWebsocket {
         }, 3000);
       }
       for (const i in this.requests) {
-        this.requests[i].reject(new E.NoInternet());
+        this.requests[i].reject(new E.RequestAborted());
       }
     };
 
@@ -193,8 +195,11 @@ class SeashellWebsocket {
         this.debug && console.warn(`Request ${response.id} failed after ${diff} ms`, request.message, response);
       }
     }
+
     if (response.id >= 0) {
       delete this.requests[response.id];
+    } else if (this.requests[response.id].callback) {
+      this.requests[response.id].callback(response.result);
     }
     if (response.success) {
       request.resolve(response.result);
@@ -238,12 +243,16 @@ class SeashellWebsocket {
   }
 
   // Helper function to invoke the I/O callback.
-  public io_cb(ignored: any, message: any) {
-    return this.invoke_cb("io", message);
+  private io_cb() {
+    return async (message: any) => {
+      return this.invoke_cb("io", message);
+    };
   }
 
-  public test_cb(ignored: any, message: any) {
-    return this.invoke_cb("test", message);
+  private test_cb() {
+    return async (message: any) => {
+      return this.invoke_cb("test", message);
+    };
   }
 
   private sendRequest<T>(request: Request<T>): Promise<T> {

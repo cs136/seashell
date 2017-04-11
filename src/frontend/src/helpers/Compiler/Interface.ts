@@ -12,7 +12,7 @@ import {OutputBuffer} from "./OutputBuffer";
 
 export {AbstractCompiler,
         CompilerResult,
-        CompilerMessage,
+        CompilerDiagnostic,
         TestBrief,
         Test,
         CompilerError,
@@ -36,7 +36,7 @@ abstract class AbstractCompiler {
 
   protected abstract programDone(pid: number): void;
 
-  private buffer: OutputBuffer;
+  protected buffer: OutputBuffer;
 
   // Function used by both compilers to group the test files appropriately
   //  to send to their respective backends
@@ -64,16 +64,20 @@ abstract class AbstractCompiler {
     });
   }
 
-  protected handleIO(result: IOMessage): void {
-    this.buffer.outputIO(result);
-    if (result.type === "done") {
-      this.programDone(result.pid);
-    }
+  protected handleIO(): (result: IOMessage) => void {
+    return (result: IOMessage): void => {
+      this.buffer.outputIO(result);
+      if (result.type === "done") {
+        this.programDone(result.pid);
+      }
+    };
   }
 
-  protected handleTest(result: TestMessage): void {
-    this.buffer.outputTest(result);
-    this.programDone(result.pid);
+  protected handleTest(): (result: TestMessage) => void {
+    return (result: TestMessage): void => {
+      this.buffer.outputTest(result);
+      this.programDone(result.pid);
+    };
   }
 }
 
@@ -90,11 +94,13 @@ interface Test {
 }
 
 interface CompilerResult {
-  messages: CompilerMessage[];
+  messages: CompilerDiagnostic[];
   status: string;
+  obj?: string;
+  err?: string;
 }
 
-interface CompilerMessage {
+interface CompilerDiagnostic {
   error: boolean;
   file: string;
   line: number;
@@ -107,7 +113,7 @@ interface IOMessage {
   pid: number;
   type: string;
   status?: number;
-  asan_output?: string;
+  asan?: string;
 }
 
 type DiffLine = string | [boolean, string];

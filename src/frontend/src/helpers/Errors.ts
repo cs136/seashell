@@ -6,6 +6,7 @@ export {LoginError,
         LoginRequired,
         RequestError,
         NoInternet,
+        RequestAborted,
         RequestTimedOut};
 
 class GenericError extends Error {
@@ -33,6 +34,12 @@ class LoginRequired extends GenericError {
 }
 
 class NoInternet extends GenericError {
+  constructor() {
+    super();
+  }
+}
+
+class RequestAborted extends GenericError {
   constructor() {
     super();
   }

@@ -1,11 +1,15 @@
 import {AbstractCompiler,
+        TestBrief,
         Test,
         CompilerResult,
-        IOMessage} from "./Interface";
+        IOMessage,
+        TestMessage} from "./Interface";
 import {AbstractStorage,
         ProjectID,
         FileID,
-        File} from "../Storage/Interface";
+        File,
+        FileBrief,
+        fileQuestion} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
 
@@ -43,6 +47,10 @@ interface RunnerWorkerResult {
   data: IOMessage;
 }
 
+interface TesterWorkerResult {
+  data: TestMessage;
+}
+
 class OfflineCompiler extends AbstractCompiler {
 
   constructor(storage: AbstractStorage, dispatch: DispatchFunction) {
@@ -57,26 +65,77 @@ class OfflineCompiler extends AbstractCompiler {
 
   // For now we will just grab all files for the question as the dependencies.
   private async getDependencies(proj: ProjectID, question: string): Promise<File[]> {
-    // TODO
-    return [];
+    return Promise.all((await this.storage.getProjectFiles(proj)).filter((f: FileBrief) => {
+      const q = fileQuestion(f);
+      return q === question || q === "common";
+    }).map((f: FileBrief) => {
+      return this.storage.readFile(f.id);
+    }));
+  }
+
+  private initTest(test: Test): PID {
+    const pid = ++this.freePID;
+    let tester = new RunnerWorker();
+
+    tester.onmessage = (result: TesterWorkerResult) => {
+      this.handleTest()(result.data);
+    };
+
+    tester.postMessage({
+      type: "testdata",
+      pid: pid,
+      test_name: test.name,
+      in: test.in.contents,
+      expect: test.expect.contents
+    });
+
+    return {
+      id: pid,
+      runner: tester
+    };
+  }
+
+  private async getFullTest(tst: TestBrief): Promise<Test> {
+    return {
+      name: tst.name,
+      in: await this.storage.readFile(tst.in.id),
+      expect: await this.storage.readFile(tst.expect.id)
+    };
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return new Promise<CompilerResult>(async (resolve, reject) => {
       let compiler = new CompilerWorker();
-      compiler.onmessage = (result: CompilerWorkerResult) => {
-        if (result.data.status === "compile-failed") {
+      compiler.onmessage = async (result: CompilerWorkerResult) => {
+        if (result.data.status === "error") {
+          throw new CompilerError(result.data.err);
+        } else {
+          this.buffer.outputDiagnostics(result.data.messages);
           resolve(result.data);
-        } else if (result.data.status === "running") {
-          const pid = ++this.freePID;
-          let runner = new RunnerWorker();
-          runner.onmessage = (result: RunnerWorkerResult) => {
-            this.handleIO(result.data);
-          };
-          this.activePIDs.push({
-            id: pid,
-            runner: runner
-          });
+        }
+        if (result.data.status === "running") {
+          if (!runTests) {
+            // run the program interactively
+            const pid = ++this.freePID;
+            let runner = new RunnerWorker();
+            runner.onmessage = (result: RunnerWorkerResult) => {
+              this.handleIO()(result.data);
+            };
+            this.activePIDs.push({
+              id: pid,
+              runner: runner
+            });
+          } else {
+            // run all the tests
+            let tests: Test[] = await Promise.all(
+              (await this.getTestsForQuestion(proj, question))
+                .map(this.getFullTest));
+            for (let i = 0; i < tests.length; i++) {
+              const tester = this.initTest(tests[i]);
+              this.activePIDs.push(tester);
+              tester.runner.postMessage(result.data.obj);
+            }
+          }
         }
       };
       compiler.postMessage({

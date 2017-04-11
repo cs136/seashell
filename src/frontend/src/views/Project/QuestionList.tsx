@@ -15,7 +15,7 @@ class QuestionList extends React.Component<QuestionListProps & actionsInterface,
     render() {
         const project = this.props.project;
         return (<Menu>
-            {project.questions.map((question: string) => (<MenuItem onClick={()=>this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, question)} key={"question-list-item-" + question} iconName="comment" text={question} />))}
+            {project.questions.map((question: string) => (<MenuItem onClick={() => this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.id, question)} key={"question-list-item-" + question} iconName="comment" text={question} />))}
         </Menu>);
     }
 }

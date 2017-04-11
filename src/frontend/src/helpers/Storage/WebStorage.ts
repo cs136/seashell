@@ -164,9 +164,9 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   }
 
-  public async getProjectFiles(proj: ProjectID): Promise<FileBrief[]> {
+  public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     await this.syncAll();
-    return this.storage.getProjectFiles(proj);
+    return this.storage.getProjectFiles(pid);
   };
 
   public async getAllFiles(): Promise<FileBrief[]> {
@@ -182,12 +182,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return this.storage.setFileToRun(proj, question, id);
   };
 
-  public async getOpenedTabs(proj: ProjectID, question: string): Promise<FileID[]> {
-    return this.storage.getOpenedTabs(proj, question);
+  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]> {
+    return this.storage.getOpenTabs(proj, question);
   }
 
-  public async setOpenedTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void> {
-    return this.storage.setOpenedTabs(proj, question, files);
+  public async setOpenTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void> {
+    return this.storage.setOpenTabs(proj, question, files);
   }
 
   public async setSettings(settings: Settings): Promise<void> {

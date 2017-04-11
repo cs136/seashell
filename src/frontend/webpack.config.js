@@ -16,6 +16,9 @@ module.exports = {
       {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
+      },
+      {
+        from: 'favicon.ico'
       }
     ]),
     new HtmlWebpackPlugin ({
@@ -51,8 +54,18 @@ module.exports = {
       }, {
         test: /\.(jpe?g|png|gif|svg)$/i,
         loaders: [
-          'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
-          'image-webpack-loader?bypassOnDebug&optimizationLevel=7&interlaced=false'
+          'file-loader?hash=sha512&digest=hex&name=[hash].[ext]', {
+            loader: 'image-webpack-loader',
+            query: {
+              bypassOnDebug: true,
+              gifsicle: {
+                interlaced: false
+              },
+              pngquant: {
+                optimizationLevel: 7
+              }
+            }
+          }
         ]
       }
     ]
