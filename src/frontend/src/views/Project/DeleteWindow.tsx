@@ -20,10 +20,10 @@ class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-danger" onClick={() => {
-          this.props.dispatch.file.deleteFile(this.props.appState.currentProject.name, this.props.appState.fileOpTarget).then(
+          this.props.dispatch.file.deleteFile(this.props.appState.fileOpTarget).then(
             () => {
-              if (this.props.appState.currentProject.currentQuestion.files.length > 0) {
-                this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.props.appState.currentProject.currentQuestion.files[0]);
+              if (this.props.appState.currentProject.currentQuestion.openFiles.length > 0) {
+                this.props.dispatch.file.switchFile(this.props.appState.currentProject.currentQuestion.openFiles[0]);
               }
             }
           ).catch((error) => {

@@ -65,7 +65,7 @@ class OfflineCompiler extends AbstractCompiler {
 
   // For now we will just grab all files for the question as the dependencies.
   private async getDependencies(proj: ProjectID, question: string): Promise<File[]> {
-    return Promise.all((await this.storage.getFiles(proj)).filter((f: FileBrief) => {
+    return Promise.all((await this.storage.getProjectFiles(proj)).filter((f: FileBrief) => {
       const q = fileQuestion(f);
       return q === question || q === "common";
     }).map((f: FileBrief) => {

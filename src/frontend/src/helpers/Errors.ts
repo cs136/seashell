@@ -1,8 +1,13 @@
+import * as W from "./Websocket/Interface";
 export {LoginError,
         GenericError,
-        SyncError,
         WebsocketError,
-        CompilerError};
+        CompilerError,
+        LoginRequired,
+        RequestError,
+        NoInternet,
+        RequestAborted,
+        RequestTimedOut};
 
 class GenericError extends Error {
   __proto__: Error;
@@ -22,8 +27,33 @@ class LoginError extends GenericError {
   }
 }
 
-class SyncError extends GenericError {
-  constructor(message: string) {
+class LoginRequired extends GenericError {
+  constructor() {
+    super();
+  }
+}
+
+class NoInternet extends GenericError {
+  constructor() {
+    super();
+  }
+}
+
+class RequestAborted extends GenericError {
+  constructor() {
+    super();
+  }
+}
+
+class RequestError extends GenericError {
+  constructor(public message: string,
+              public request: W.Request<any>,
+              public response: W.Response) {
+    super(message);
+  }
+}
+class RequestTimedOut extends GenericError {
+  constructor(public message: string) {
     super(message);
   }
 }

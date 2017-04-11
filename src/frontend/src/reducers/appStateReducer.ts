@@ -2,9 +2,16 @@ import {mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
 import {clone, reject, equals} from "ramda";
 import {projectRef, fileRef} from "../types";
+import * as S from "../helpers/Storage/Interface";
+
+interface CurrentFile extends S.File {
+  unwrittenContent?: string;
+  target?: S.FileID;
+  flusher?: number;
+}
 
 export interface appStateReducerState {[key: string]: any;
-  fileOpTarget: string;
+  fileOpTarget: S.FileBrief;
   projects: string[];
   runState: number;
   currentProject: {
@@ -14,80 +21,77 @@ export interface appStateReducerState {[key: string]: any;
     id: string;
     questions: string[];
     currentQuestion: {
-      name: string
-      files: string[];
+      name: string;
+      files: S.FileBrief[];
       runFile: string;
-      openFiles: string[];
+      openFiles: S.FileBrief[];
       diags: CompilerDiagnostic[];
-      currentFile: {
-        name: string;
-        content: string;
-        unwrittenContent?: string;
-        target?: [string, string];
-        flusher?: number;
-      };
+      currentFile: CurrentFile;
     };
   };
 };
 
 export interface appStateReducerAction {
-  type: string;
+  type: appStateActions;
   payload: any;
 };
 
-export const appStateActions = {
-  changeFileContent: "file_change_content",
-  changeFileBufferedContent: "file_change_write_buffer",
-  addFile: "file_add",
-  addProject: "project_add",
-  addQuestion: "question_add",
-  removeFile: "file_add",
-  removeProject: "project_add",
-  removeQuestion: "question_add",
-  switchFile: "file_switch",
-  switchQuestion: "question_switch",
-  switchProject: "project_switch",
-  renameFile: "file_rename",
-  openFile: "file_open",
-  closeFile: "file_close",
-  setRunFile: "file_set_run",
-  copyFile: "file_copy",
-  getProjects: "projects_get",
-  invalidateFile: "file_invalidate",
-  setFileOpTarget: "fileoptarget_set",
-  setRunning: "set_running",
-  setCompiling: "set_compiling",
-  setNotRunning: "programDone",
-  setTerm: "term_set",
-  writeConsole: "console_write",
-  clearConsole: "console_clear",
-  setDiags: "set_diags"
+export enum appStateActions {
+  changeFileContent,
+  changeFileBufferedContent,
+  addFile,
+  addProject,
+  addQuestion,
+  removeFile,
+  removeProject,
+  removeQuestion,
+  switchFile,
+  switchQuestion,
+  switchProject,
+  renameFile,
+  openFile,
+  closeFile,
+  setRunFile,
+  copyFile,
+  getProjects,
+  invalidateFile,
+  setFileOpTarget,
+  setRunning,
+  setCompiling,
+  setNotRunning,
+  setTerm,
+  writeConsole,
+  clearConsole,
+  setDiags
 };
 
 export default function appStateReducer(state: appStateReducerState = {
+    fileOpTarget: null,
+    projects: [],
     runState: 0,
-    fileOpTarget: "",
     currentProject: {
       termWrite: null,
       termClear: null,
       name: "",
       id: "",
-      questions: ["question"],
+      questions: [],
       currentQuestion: {
-        name: "question",
-        files: ["file1.txt"],
-        runFile: "file.txt",
-        openFiles: ["question/file1.txt"],
+        name: "",
+        files: [],
+        runFile: "",
+        openFiles: [],
         diags: [],
         currentFile: {
-          name: "file.txt",
-          content: "content",
-          unwrittenContent: null,
-          target: null,
-          flusher: null,
-        }
-      }
-    }, projects: ["A1"]}, action: appStateReducerAction) {
+          id: "",
+          name: "",
+          project: "",
+          checksum: "",
+          last_modified: 0,
+          contents: ""
+        },
+      },
+    }
+  }, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.setTerm:
       state = clone(state);
@@ -118,7 +122,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.setFileOpTarget:
       state = clone(state);
-      state.fileOpTarget = action.payload.name;
+      state.fileOpTarget = action.payload;
       return state;
     case appStateActions.invalidateFile:
       state = clone(state);
@@ -130,7 +134,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.switchFile:
       state = clone(state);
-      state.currentProject.currentQuestion.currentFile = action.payload.file;
+      state.currentProject.currentQuestion.currentFile = action.payload;
       return state;
     case appStateActions.switchQuestion:
       state = clone(state);

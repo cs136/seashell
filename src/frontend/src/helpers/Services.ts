@@ -94,9 +94,9 @@ namespace Services {
                                   response.port,
                                   response.pingPort);
     } catch (ajax) {
+      const status     = ajax.status;
       const code       = ajax.responseJSON.error.code;
       const msg        = ajax.responseJSON.error.message;
-      const status     = ajax.status;
       const statusText = ajax.statusText;
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
@@ -108,5 +108,6 @@ namespace Services {
 
   export async function logout() {
     await socketClient.disconnect();
+    debug && console.log("User logged out.");
   }
 }

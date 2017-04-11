@@ -1,15 +1,16 @@
 import { connect } from "react-redux";
 import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
-import {projectRef, fileRef} from "../types";
-import {appStateActions} from "../reducers/appStateReducer";
-import {userActions} from "../reducers/userReducer";
+import { projectRef, fileRef } from "../types";
+import { appStateActions}  from "../reducers/appStateReducer";
+import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
 import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
-import {settingsActions, settingsReducerState} from "../reducers/settingsReducer";
-import {File} from "../helpers/Storage/Interface";
+import { settingsActions, settingsReducerState } from "../reducers/settingsReducer";
+import * as S from "../helpers/Storage/Interface";
+import * as C from "../helpers/Compiler/Interface";
 
 
 interface Func<T> {
@@ -29,7 +30,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       const result = await pr;
       return result;
     } catch (e) {
-      console.log(e);
+      console.error(e);
       if (e instanceof LoginError) {
         showError(e.message);
         dispatch({type: userActions.INVALIDATE});
@@ -65,9 +66,9 @@ const mapDispatchToProps = (dispatch: Function) => {
       // other than openFile and closeFile, the file name parameter should always
       //  be the full path, for exmaple "q1/file.txt"
       file: {
-        setFileOpTarget: (file: string) => dispatch({
+        setFileOpTarget: (file: S.FileBrief) => dispatch({
           type: appStateActions.setFileOpTarget,
-          payload: {name: file}
+          payload: file
         }),
         invalidateFile: () => dispatch({
           type: appStateActions.invalidateFile,
@@ -83,13 +84,16 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        updateFile: (project: string, path: string, newFileContent: string) => {
-          dispatch({type: appStateActions.changeFileBufferedContent, payload: {
-            unwrittenContent: newFileContent,
-            target: [project, path],
-            flusher: () => {
-              actions.dispatch.file.flushFileBuffer();
-            }}});
+        updateFile: (file: S.FileBrief, newFileContent: string) => {
+          dispatch({type: appStateActions.changeFileBufferedContent,
+                    payload: {
+                      unwrittenContent: newFileContent,
+                      target: file,
+                      flusher: () => {
+                        actions.dispatch.file.flushFileBuffer();
+                      }
+                    }
+                  });
         },
         flushFileBuffer: () => {
           return new Promise((resolve, reject) => {
@@ -110,20 +114,12 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
           });
         },
-        switchFile: (project: string, name: string) => {
+        switchFile: (file: S.FileBrief) => {
           return actions.dispatch.file.flushFileBuffer()
-            .then(() => { return asyncAction(Services.storage().readFile([project, name])); })
-            .then((file: File) => dispatch({
+            .then(() => { return asyncAction(Services.storage().readFile(file.id)); })
+            .then((file: S.File) => dispatch({
               type: appStateActions.switchFile,
-              payload: {
-                file: {
-                  name: name,
-                  content: file.contents,
-                  unwrittenContent: null,
-                  target: null,
-                  flusher: null
-                }
-              }
+              payload: file
             }));
         },
         addFile: (project: string, path: string,
@@ -138,31 +134,31 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        deleteFile: (project: string, name: string) => {
-          return asyncAction(Services.storage().deleteFile([project, name]))
+        deleteFile: (file: S.FileBrief) => {
+          return asyncAction(Services.storage().deleteFile(file.id))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: name
+                payload: file.name
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: name}
+                payload: {name: file.name}
               });
             }).catch((reason) => {
               showError(reason);
             });
         },
-        renameFile: (project: string, currentname: string, targetName: string) => {
-          return asyncAction(Services.storage().renameFile([project, currentname], targetName))
+        renameFile: (file: S.FileBrief, targetName: string) => {
+          return asyncAction(Services.storage().renameFile(file.id, targetName))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: currentname
+                payload: file.name
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: currentname}
+                payload: {name: file.name}
               });
               dispatch({
                 type: appStateActions.addFile,
@@ -172,17 +168,17 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (name: string) => dispatch({
+        openFile: (file: S.FileBrief) => dispatch({
           type: appStateActions.openFile,
-          payload: name
+          payload: file
         }),
-        closeFile: (name: string) => dispatch({
+        closeFile: (file: S.FileBrief) => dispatch({
           type: appStateActions.closeFile,
-          payload: name
+          payload: file
         }),
-        setRunFile: (name: string) => dispatch({
+        setRunFile: (file: S.FileBrief) => dispatch({
           type: appStateActions.setRunFile,
-          payload: name
+          payload: file
         })
       },
       question: {
@@ -194,11 +190,11 @@ const mapDispatchToProps = (dispatch: Function) => {
           type: appStateActions.removeQuestion,
           payload: {name: name}
         }),
-        switchQuestion: (project: string, name: string) => {
+        switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              return asyncAction(Services.storage().getFiles(project))
-              .then((files) => dispatch({
+              return asyncAction(Services.storage().getProjectFiles(pid))
+              .then((files: S.FileBrief[]) => dispatch({
                 type: appStateActions.switchQuestion,
                 payload: {
                   question: {
@@ -208,7 +204,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                     openFiles: [],
                     diags: [],
                     files: files.filter((file) => file.name.split("/")[0] === name)
-                      .map((file) => file.name)
                   }
                 }
             }));
@@ -245,43 +240,41 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.addProject,
             payload: {name: newProjectName}
         })),
-        removeProject: (name: string) =>
+        removeProject: (pid: S.ProjectID) =>
           asyncAction(Services.storage().deleteProject(name)).then(() => dispatch({
             type: appStateActions.removeProject,
             payload: {name: name}
         })),
-        switchProject: (name: string) => {
+        switchProject: (pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
-          return asyncAction(Services.storage().getFiles(name))
-            .then((files) => Services.storage().getProject(name)
-              .then((project) => dispatch({
-                type: appStateActions.switchProject,
-                payload: {
-                  project: {
-                    termWrite: null,
-                    termClear: null,
-                    name: name,
-                    id: project.id,
-                    questions: files.map((file) => file.name.split("/")[0]).filter(unique).reverse(),
-                    currentQuestion: {
+          return asyncAction(Services.storage().getProjectFiles(pid)
+            .then((files: S.FileBrief[]) => dispatch({
+              type: appStateActions.switchProject,
+              payload: {
+                project: {
+                  termWrite: null,
+                  termClear: null,
+                  name: name,
+                  id: pid,
+                  questions: files.map((file) => file.name.split("/")[0]).filter(unique).reverse(),
+                  currentQuestion: {
+                    name: "",
+                    files: [],
+                    runFile: "",
+                    openFiles: [],
+                    diags: [],
+                    currentFile: {
                       name: "",
-                      files: [],
-                      runFile: "",
-                      openFiles: [],
-                      diags: [],
-                      currentFile: {
-                        name: "",
-                        content: ""
-                      }
+                      content: ""
                     }
                   }
                 }
-              }))
-            );
+              }
+            })));
         },
         getAllProjects: () => {
           asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
@@ -293,7 +286,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         }
       },
       compile: {
-        compileAndRun: (project: string, question: string, filepath: string, test: boolean) => {
+        compileAndRun: (project: string, question: string, fid: S.FileID, test: boolean) => {
           dispatch({
             type: appStateActions.clearConsole,
             payload: {}
@@ -303,7 +296,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             payload: {}
           });
           asyncAction(Services.compiler().compileAndRunProject(project,
-              question, [project, filepath], test)).then((result) => {
+              question, fid, test)).then((result: C.CompilerResult) => {
             dispatch({
               type: appStateActions.setDiags,
               payload: result.messages

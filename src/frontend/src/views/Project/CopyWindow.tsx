@@ -12,8 +12,8 @@ class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {ques
     super(props);
     this.state = {
       question: this.props.questions[0],
-      file: this.props.appState.fileOpTarget.split("/").pop(),
-      prevFile: this.props.appState.fileOpTarget.split("/").pop()
+      file: this.props.appState.fileOpTarget.name.split("/").pop(),
+      prevFile: this.props.appState.fileOpTarget.name.split("/").pop()
     };
   }
   render() {

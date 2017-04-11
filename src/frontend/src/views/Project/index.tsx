@@ -16,6 +16,7 @@ import DeleteWindow from "./DeleteWindow";
 import Splash from "./Splash";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
+import * as S from "../../helpers/Storage/Interface";
 export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
 export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; toggleView: boolean; }
 
@@ -32,12 +33,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     };
   }
   componentWillMount() {
-    if (this.props.location.pathname.split("/").pop() !== this.props.appState.currentProject.name) {
+    const willOpenPid: S.ProjectID = this.props.location.pathname.split("/").pop();
+    if (willOpenPid !== this.props.appState.currentProject.name) {
         this.props.dispatch.file.invalidateFile();
         // force wait until promise is resolved
-        this.props.dispatch.project.switchProject(this.props.location.pathname.split("/").pop()).then(() => {
+        this.props.dispatch.project.switchProject(willOpenPid).then(() => {
             if (this.props.appState.currentProject.questions.length > 0) {
-                /*this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, this.props.appState.currentProject.questions[0]).catch(
+                /*this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.id, this.props.appState.currentProject.questions[0]).catch(
                     (reason) => {
                       if (reason !== null) {
                         showError(reason.message);
