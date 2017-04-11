@@ -1,5 +1,4 @@
-import {SeashellWebsocket,
-        WebsocketResult} from "../Websocket/WebsocketClient";
+import {SeashellWebsocket} from "../Websocket/WebsocketClient";
 import {Connection} from "../Services";
 import {AbstractCompiler,
         TestBrief,
@@ -118,7 +117,7 @@ class OnlineCompiler extends AbstractCompiler {
     try {
       await this.offlineCompiler.programKill();
     } catch (err) { /* Ignore if there is no program running offline */}
-    return this.socket.sendMessage({
+    return this.socket.sendMessage<void>({
       type: "programInput",
       pid: this.activePIDs[0],
       contents: contents
@@ -134,7 +133,7 @@ class OnlineCompiler extends AbstractCompiler {
     try {
       await this.offlineCompiler.programKill();
     } catch (err) { /* Ignore if there is no program running offline */}
-    return this.socket.sendMessage({
+    return this.socket.sendMessage<void>({
       type: "sendEOF",
       pid: this.activePIDs[0]
     });

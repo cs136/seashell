@@ -132,7 +132,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
             dirty={!!currentFile.unwrittenContent}
-            value={currentFile.content}
+            value={currentFile.contents}
             language="cpp"
             diags={currentQuestion.diags}
             onChange={this.onChange.bind(this)}

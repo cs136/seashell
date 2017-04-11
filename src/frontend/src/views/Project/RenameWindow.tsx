@@ -18,8 +18,8 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
     console.log(this.props.appState.fileOpTarget);
     this.state = {
       question: this.props.questions[0],
-      file: this.props.appState.fileOpTarget.split("/").pop(),
-      prevFile: this.props.appState.fileOpTarget.split("/").pop()
+      file: this.props.appState.fileOpTarget.name.split("/").pop(),
+      prevFile: this.props.appState.fileOpTarget.name.split("/").pop()
     };
   }
   render() {
@@ -43,10 +43,10 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface, {
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" onClick={() => {
-          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.fileOpTarget, this.state.question + "/" + this.state.file).then(
-            () => this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, this.state.question).then(() => {
-              this.props.dispatch.file.openFile(this.state.question + "/" + this.state.file);
-              this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.state.question + "/" + this.state.file);
+          this.props.dispatch.file.renameFile(this.props.appState.fileOpTarget, this.state.question + "/" + this.state.file).then(
+            () => this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.id, this.state.question).then(() => {
+              this.props.dispatch.file.openFile(this.props.appState.fileOpTarget);
+              this.props.dispatch.file.switchFile(this.props.appState.fileOpTarget);
               })
           ).catch((error) => {
             if (error !== null) {

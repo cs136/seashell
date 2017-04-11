@@ -22,22 +22,19 @@ class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenF
     const question = this.props.appState.currentProject.currentQuestion;
     const switchFile = this.props.dispatch.file.switchFile;
     return (<div className={styles.openFiles}>
-      {question.openFiles.map((file: string) => (
-        <div className={styles.openFilesTab} key={"file-tab-" + file}>
-          <div className={"pt-button-group " + styles.openFilesTab
-              + (file === question.currentFile.name ? " " + styles.active : "")}>
-            <button className={"pt-button pt-minimal " + styles.openFilesTabFile}
-                onClick={switchFile.bind(null, this.props.appState.currentProject.name, file)}>
-              {file === question.runFile ?
-                <span className="pt-icon-standard pt-icon-play" /> :
-                null}
-              {file.substring(file.indexOf("/") + 1)}
+      {question.openFiles.map((file) => (
+        <div className={styles.openFilesTab} key={`file-tab-${file.id}`}>
+          <div className={`pt-button-group ${styles.openFilesTab} ${(file.id === question.currentFile.id) ? styles.active : ""}`}>
+            <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, file)}>
+              {file.id === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
+              {file.name.substring(file.name.indexOf("/") + 1)}
             </button>
-            <Popover content={<FileActions file={file} toggleCopy={this.props.toggleCopy}
-                  toggleDelete={this.props.toggleDelete} toggleRename={this.props.toggleRename}/>}
-                position={Position.BOTTOM}>
-              <button className=
-                {"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}>
+            <Popover content={<FileActions file={file}
+                                           toggleCopy={this.props.toggleCopy}
+                                           toggleDelete={this.props.toggleDelete}
+                                           toggleRename={this.props.toggleRename}/>}
+                     position={Position.BOTTOM}>
+              <button className={"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}>
               </button>
             </Popover>
           </div>

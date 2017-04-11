@@ -1,5 +1,5 @@
 import "jest";
-import {LocalStorage} from "../../src/helpers/Storage/LocalStorage";
+import {LocalStorage, ChangeLog} from "../../src/helpers/Storage/LocalStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings} from "../../src/helpers/Services";
@@ -11,10 +11,12 @@ import {map, filter, flatten, repeat, head, prop} from "ramda";
 import R = require("ramda");
 import md5 = require("md5");
 
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 10*1000;
+(<any>jasmine).DEFAULT_TIMEOUT_INTERVAL = 10 * 1000;
+(<any>window).indexedDB = FakeIndexedDB;
+(<any>window).IDBKeyRange = FDBKeyRange;
 
 const testSize = 5;
-const halfTestSize = Math.ceil(testSize/2);
+const halfTestSize = Math.ceil(testSize / 2);
 
 let unique = 0;
 // should return a thunk, see jscheck documentation
@@ -26,57 +28,92 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
   return J.array(arrLen, uniqStr(strLen));
 }
 
-describe("Testing LocalStorage.ts", () => {
+describe("Testing LocalStorage interface functions", () => {
 
-  const store = new LocalStorage({
-    IDBKeyRange: FDBKeyRange,
-    indexedDB: FakeIndexedDB
-  });
+  const store = new LocalStorage();
 
   store.connect("test");
 
-  let projs: Project[] = R.sortBy(prop("name"), map((s: string) => ({
-    id: s,
+  let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
+    id: md5(s),
     name: s,
-    runs: {}
-  }), uniqStrArr(testSize,30)()));
+    runs: {},
+    last_modified: 0,
+    open_tabs: {}
+  }), uniqStrArr(testSize, 30)()));
 
-  let files: File[] = map((p:Project) => {
+  let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
     const name = uniqStr(30)();
+    const fid = md5(p.id + name);
+    const text = uniqStr(5000)();
+    const checksum = md5(text);
     return {
-      id: <[string,string]>[p.id, name],
-      project: p.name,
+      id: fid,
+      project: p.id,
       name: name,
-      contents: uniqStr(5000)()
-    }
-  }, flatten(repeat(projs, testSize)));
+      contents: text,
+      checksum: checksum,
+      last_modified: 0
+    };
+  }, flatten(repeat(projs, testSize))));
 
-  it(`newProject: create ${testSize} projects`, async () => {
-    for (const p of projs) {
-      await store.newProject(p.name);
-    }
-    await expectProjectsToEq(projs);
-  });
-
-  async function expectProjectsToEq(exp: Project[]) {
-    const ls: Project[] = await store.getProjects();
-    const dbProjs: Project[] = R.sortBy(prop("name"), map((p) => ({
-      id: p.id,
-      name: p.name,
-      runs: p.runs
-    }), ls));
-    expect(dbProjs).toEqual(exp);
+  function genRunFiles(p: string): {[index: string]: FileID} {
+    return R.zipObj(uniqStrArr(testSize, 1)(),
+                    J.array(testSize, J.one_of(map((file) => [p, file.name], files)))());
   }
 
+  async function localFiles(): Promise<File[]> {
+    let localFiles = await store.getAllFiles();
+    for (let x of localFiles) {
+      const file = await store.readFile(x.id);
+      Object.assign(x, file);
+    }
+    localFiles = R.sortBy(prop("id"), localFiles) || [];
+    return map((x) => ({
+      id: x.id,
+      project: x.project,
+      name: x.name,
+      contents: x.contents,
+      checksum: x.checksum,
+      last_modified: 0
+    }), <File[]> localFiles);
+  }
+
+  async function localProjs() {
+    let dbProjs: ProjectBrief[] = await store.getProjects();
+    const local: Project[] = [];
+    for (const p of dbProjs) {
+      local.push(await store.getProject(p.id));
+    }
+    return R.sortBy(prop("id"), map((p) => ({
+      // properties you want to check
+      id: p.id,
+      name: p.name,
+      runs: p.runs,
+      last_modified: 0,
+      open_tabs: p.open_tabs
+    }), local)) || [];
+  }
+
+  it(`newProject: create ${testSize} projects`, async () => {
+    let ids: ProjectID[] = [];
+    for (const p of projs) {
+      ids.push(await store.newProject(p.name));
+    }
+    expect(R.sortBy(prop("id"), ids)).toEqual(R.map(prop("id"), projs));
+    expect(await localProjs()).toEqual(projs);
+  });
+
+
   it(`getProjects: list all projects`, async () => {
-    await expectProjectsToEq(projs);
+    expect(await localProjs()).toEqual(projs);
   });
 
   it(`getFileToRun: should return undefined when no run files`, async () => {
     for (const p of projs) {
       for (const d in p.runs) {
         const f = await store.getFileToRun(p.name, d);
-        expect(f).toEqual(undefined);
+        expect(f).toEqual(false);
       }
     }
   });
@@ -86,35 +123,17 @@ describe("Testing LocalStorage.ts", () => {
       const id = await store.newFile(f.project, f.name, f.contents);
       f.id = id;
     }
-    await expectFilesToEq(files);
-    await expectProjectsToEq(projs);
+    expect(await localFiles()).toEqual(files);
+    expect(await localProjs()).toEqual(projs);
   });
 
-  async function expectFilesToEq(files: File[]) {
-    let projGps = R.groupBy((x:File) => x.project, files);
-    for (const p of projs) {
-      let dbFiles: File[] = await store.getFiles(p.name);
-      let projFiles       = projGps[p.name];
-      dbFiles   = R.sortBy(prop("name"), dbFiles);
-      projFiles = R.sortBy(prop("name"), projGps[p.name]);
-      expect(map((x) => {
-        return {
-          id: x.id,
-          project: x.project,
-          name: x.name,
-          contents: x.contents,
-        }
-      }, dbFiles)).toEqual(projFiles || []);
-    }
-  }
-
   it(`getFiles: list files per project`, async () => {
-    await expectFilesToEq(files);
+    expect(await localFiles()).toEqual(files);
   });
 
   it(`readFile: read all files`, async () => {
     for (const f of files) {
-      const r = await store.readFile([f.project, f.name]);
+      const r = await store.readFile(f.id);
       const a = [f.name, f.project, f.contents];
       const b = [r.name, r.project, r.contents];
       expect(a).toEqual(b);
@@ -124,25 +143,29 @@ describe("Testing LocalStorage.ts", () => {
   it(`writeFile: update ${halfTestSize} files`, async () => {
     const fs = R.take(halfTestSize, files);
     for (const f of fs) {
-      f.contents = uniqStr(5000)();
-      await store.writeFile([f.project, f.name], f.contents);
-      await expectFilesToEq(files);
+      const text = uniqStr(5000)();
+      f.contents = text;
+      f.checksum = md5(text);
+      await store.writeFile(f.id, f.contents);
+      expect(await localFiles()).toEqual(files);
     }
   });
 
-  function genRunFiles(p: string) : {[index: string]: FileID} {
-    return R.zipObj(uniqStrArr(testSize,30)(),
-                    J.array(testSize, J.one_of(map((file) => [p, file.name], files)))())
-  }
-
-  it(`setFileToRun: randomly pick a run file per project`, async () => {
-    for (const f of files) {
-      const id: [string, string] = [f.project, f.name];
-      const dir = uniqStr(30)();
-      await store.setFileToRun(f.project, dir, id);
-      const proj = R.find((p) => f.project == p.id, projs);
-      proj.runs[dir] = id;
-      await expectProjectsToEq(projs);
+  it(`setFileToRun: set each file as the run file for "default" in its project`, async () => {
+    // group files by project id
+    const projGps = R.groupBy((x: File) => x.project, files);
+    for (const pid in projGps) {
+      const proj = R.find((x) => x.id === pid, projs); // project object
+      const pfiles = projGps[pid]; // files for current project
+      for (const f of pfiles) {
+        await store.setFileToRun(pid, "default", f.id);
+        await store.setFileToRun(pid, `dummy`, f.id);
+        await store.setFileToRun(pid, "dummy2", "dummy2");
+        proj.runs.default = f.id;
+        proj.runs.dummy = f.id;
+        proj.runs.dummy2 = "dummy2";
+        expect(await localProjs()).toEqual(projs);
+      }
     }
   });
 
@@ -151,79 +174,206 @@ describe("Testing LocalStorage.ts", () => {
   //     p.runs = genRunFiles(p.name);
   //     await store.updateProject(p);
   //   }
-  //   await expectProjectsToEq(projs);
+  //   expect(await localProjs()).toEqual(projs);
   // });
 
-  it(`deleteFile: delete ${halfTestSize} files per project, should also remove from run files`, async () => {
-    const projGps = R.groupBy((x:File) => x.project, files);
+  it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
+    const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name == p, projs);
-      for (const i of R.range(0,Math.min(halfTestSize, projGps[p].length))) {
-        const nm = projGps[p][i].name;
-        const fid: [string, string] = [p, nm];
-        await store.setFileToRun(pj.name, nm, fid);
-        await store.deleteFile(fid);
-        files = filter((x) => x.project != p || x.name != nm, files);
-        for (const d in pj.runs) {
-          if (R.equals(pj.runs[d], fid)) {
-            delete pj.runs[d];
-          }
-        }
-        await expectProjectsToEq(projs);
-        await expectFilesToEq(files);
+      const pj = R.find((x) => x.id === p, projs);
+      console.assert(pj);
+      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
+        const file = projGps[p][i];
+        const newname = file.name + "_new_name";
+        await store.renameFile(file.id, newname);
+        file.name += "_new_name";
+        expect(await localFiles()).toEqual(files);
+        expect(await localProjs()).toEqual(projs);
       }
     }
   });
 
-  it(`renameFile: rename ${halfTestSize} file per project, should also rename run files`, async () => {
-    const projGps = R.groupBy((x:File) => x.project, files);
+  it(`deleteFile: delete ${halfTestSize} files per project. Should also remove from run files.`, async () => {
+    const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name == p, projs);
-      for (const i of R.range(0,Math.min(halfTestSize, projGps[p].length))) {
-        const oldname = projGps[p][i].name;
-        const newname = (projGps[p][i].name += "_new_name");
-        const fid: [string, string] = [p, oldname];
-        for (const d in pj.runs) {
-          if (R.equals(pj.runs[d], fid)) {
-            pj.runs[d][1] = newname;
-          }
-        }
-        await store.renameFile(fid, newname);
-        await expectFilesToEq(files);
-        await expectProjectsToEq(projs);
+      const pj = R.find((x) => x.id === p, projs);
+      console.assert(pj);
+      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
+        const file = projGps[p][i];
+        await store.setFileToRun(pj.id, "default", file.id);
+        await store.deleteFile(file.id);
+        files = filter((x) => x.id !== file.id, files);
+        delete pj.runs.default;
       }
     }
+    expect(await localProjs()).toEqual(projs);
+    expect(await localFiles()).toEqual(files);
   });
 
-  it(`deleteProject: delete ${halfTestSize} projects, should also delete children`, async () => {
-    for (const i of R.range(0,halfTestSize)) {
-      const p = projs[0].name;
-      await store.deleteProject(projs[0].name);
-      projs = R.tail(projs);
-      files = R.filter((f) => f.project != p, files);
-      await expectProjectsToEq(projs);
-      await expectFilesToEq(files);
+  it(`deleteProject: delete ${halfTestSize} projects. Should also delete children.`, async () => {
+    for (const i of R.range(0, halfTestSize)) {
+      const proj = projs[i];
+      await store.newFile(proj.id, "should_be_removed", "should_be_removed");
+      await store.deleteProject(proj.id);
+      projs = R.remove(i, 1, projs);
+      files = R.filter((f) => f.project !== proj.id, files);
     }
+    expect(await localProjs()).toEqual(projs);
+    expect(await localFiles()).toEqual(files);
   });
 
-  it("getSettings: should return undefined when unset", async () => {
+  it("getSettings: should return defaultSettings when unset", async () => {
     const s = await store.getSettings();
-    expect(s).toEqual(undefined);
+    expect(s).toEqual(defaultSettings);
   });
 
   it("setSettings: set random properties", async () => {
     const s: Settings = defaultSettings;
-    s.fontSize = 100;
+    s.font_size = 100;
     await store.setSettings(s);
     const r = await store.getSettings();
     expect(r).toEqual(s);
   });
 
   it("checking final state" , async () => {
-    await expectProjectsToEq(projs);
-    await expectFilesToEq(files);
+    expect(await localProjs()).toEqual(projs);
+    expect(await localFiles()).toEqual(files);
   });
 
 });
 
 
+
+
+describe("Testing offline mode synchronization", () => {
+
+  const store = new LocalStorage();
+
+  store.connect("test");
+
+  it("clearChangeLogs: clear existing change logs", async () => {
+    store.clearChangeLogs();
+    expect(await store.getChangeLogs()).toEqual([]);
+  });
+
+  it("getChangeLogs: should return empty array when there is no change log", async () => {
+    expect(await store.getChangeLogs()).toEqual([]);
+  });
+
+  it("topChangeLog: should return false when there is no change log", async () => {
+    expect(await store.topChangeLog()).toEqual(false);
+  });
+
+  it("popChangeLog: should return false when there is no change log", async () => {
+    expect(await store.popChangeLog()).toEqual(false);
+  });
+
+  it("countChangeLog: should return 0 when there is no change log", async () => {
+    expect(await store.countChangeLogs()).toEqual(0);
+  });
+
+  it("pushChangeLog: push some changes", async () => {
+    await store.pushChangeLog({type: "dummy1"});
+    await store.pushChangeLog({type: "dummy2"});
+    await store.pushChangeLog({type: "dummy3"});
+  });
+
+  it("countChangeLog: count pushed changes", async () => {
+    expect(await store.countChangeLogs()).toEqual(3);
+  });
+
+  it("getChangeLogs: get all changes", async () => {
+    let logs = await store.getChangeLogs();
+    expect(logs).toEqual([
+      {id: logs[0].id, type: "dummy3"},
+      {id: logs[1].id, type: "dummy2"},
+      {id: logs[2].id, type: "dummy1"}
+    ]);
+  });
+
+  it("topChangeLog: get latest change", async () => {
+    const log = <ChangeLog> await store.topChangeLog();
+    expect(log).toEqual({
+      id: log.id,
+      type: "dummy3"
+    });
+  });
+
+  it("popChangeLog: remove and return the latest change", async () => {
+    let top;
+    top = await store.popChangeLog();
+    expect(top).toEqual({
+      id: top.id,
+      type: "dummy3"
+    });
+    top = await store.topChangeLog();
+    expect(top).toEqual({
+      id: top.id,
+      type: "dummy2"
+    });
+  });
+
+  const projName: string = uniqStr(30)();
+  const fileName: string = uniqStr(30)();
+  const fileContents: string = uniqStr(5000)();
+  let fileID;
+  let projID;
+
+  it("newFile: should push a change", async () => {
+    projID = await store.newProject(projName);
+    fileID = await store.newFile(projID, fileName, fileContents);
+    const log = <ChangeLog> await store.topChangeLog();
+    expect(log).toEqual({
+      id: log.id,
+      type: "newFile",
+      contents: fileContents,
+      file: {file: fileName, project: projID}
+    });
+  });
+
+  it("Write to the same file mutiple times should leave a single editFile change", async () => {
+    await store.writeFile(fileID, `${fileContents}_1`);
+    await store.writeFile(fileID, `${fileContents}_2`);
+    await store.writeFile(fileID, `${fileContents}_3`);
+    let top;
+    top = await store.popChangeLog();
+    expect(top).toEqual({
+      id: top.id,
+      type: "editFile",
+      file: {file: fileName, project: projID},
+      contents: `${fileContents}_3`
+    });
+    top = await store.topChangeLog();
+    expect(top).toEqual({
+      id: top.id,
+      type: "newFile",
+      file: {file: fileName, project: projID},
+      contents: `${fileContents}`
+    });
+    await store.writeFile(fileID, fileContents);
+  });
+
+  it("renameFile: should push two changes", async () => {
+    await store.clearChangeLogs();
+    await store.renameFile(fileID, `${fileName}_newname`);
+    let logs = await store.getChangeLogs();
+    expect(logs.length).toEqual(2);
+    expect(logs[0]).toEqual({
+      id: logs[0].id,
+      type: "deleteFile",
+      file: {file: `${fileName}`, project: projID}
+    });
+    expect(logs[1]).toEqual({
+      id: logs[1].id,
+      type: "newFile",
+      file: {file: `${fileName}_newname`, project: projID},
+      contents: logs[1].contents
+    });
+    await store.renameFile(fileID, fileName);
+  });
+
+  it("deleteFile: should push a change", async () => {
+    // await store.deleteFile(fileID);
+  });
+
+});
