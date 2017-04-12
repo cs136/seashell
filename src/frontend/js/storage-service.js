@@ -31,8 +31,28 @@
           projects: 'name',
           settings: 'name'
         });
+        self.database.version(2).stores({
+          changelog: '++id',
+          files: '[project+file], project',
+          projects: 'name',
+          settings: 'name',
+          meta: 'key'
+        });
 
         self.has_offline_changes = false;
+
+        self.isInitialized = function() {
+          return self.database.meta.get("init").then(function(init) {
+            return init !== undefined;
+          }).catch(function(err) {
+            console.log(err);
+            return false;
+          });
+        };
+
+        self.setInitialized = function() {
+          return self.database.meta.put({key:"init"});
+        };
 
         /*
          * Save a file to local storage.
@@ -310,7 +330,7 @@
       };
 
       self.applyChanges = function (changes, newProjects, deletedProjects, updatedProjects, settings) {
-        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, self.database.settings, function () {
+        return self.database.transaction('rw', self.database.files, self.database.changelog, self.database.projects, self.database.settings, self.database.meta, function () {
           Dexie.currentTransaction.on('abort', function(ev) {
             console.log("applyChanges transaction aborted", ev);
             throw ev.target.error;
@@ -339,6 +359,7 @@
             self.saveSettings(JSON.parse(settings));
           }
           self.database.changelog.clear();
+          self.setInitialized();
         });
       };
 
