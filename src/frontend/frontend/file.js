@@ -565,6 +565,7 @@ angular.module('frontend-app')
           });
           self.console.running = false;
           self.console.PIDs = null;
+          self.console.stopTestingProgressNote();
           return p;
         };
 
