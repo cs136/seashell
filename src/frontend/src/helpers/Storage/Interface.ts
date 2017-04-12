@@ -16,13 +16,13 @@ export {AbstractStorage, AbstractWebStorage,
 
 abstract class AbstractStorage {
   // projects
-  public abstract async newProject(name: string): Promise<ProjectID>;
+  public abstract async newProject(name: string): Promise<ProjectBrief>;
   public abstract async getProject(proj: ProjectID): Promise<Project>;
   public abstract async getProjects(): Promise<ProjectBrief[]>;
   public abstract async deleteProject(proj: ProjectID): Promise<void>;
   public abstract async getProjectFiles(proj: ProjectID): Promise<FileBrief[]>;
   // files
-  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileID>;
+  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
   public abstract async writeFile(file: FileID, contents: string): Promise<void>;
   public abstract async renameFile(file: FileID, newName: string): Promise<void>;

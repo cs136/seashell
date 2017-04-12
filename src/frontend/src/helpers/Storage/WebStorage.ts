@@ -31,7 +31,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     this.debug = debug || false;
   }
 
-  public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileID> {
+  public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileBrief> {
     const fid = await this.storage.newFile(pid, filename, contents);
     const proj = await this.storage.getProject(pid);
     await this.socket.sendMessage({
@@ -75,7 +75,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async newProject(name: string): Promise<ProjectID> {
+  public async newProject(name: string): Promise<ProjectBrief> {
     const pid = await this.storage.newProject(name);
     await this.socket.sendMessage({
       type: "newProject",
