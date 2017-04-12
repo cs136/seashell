@@ -7,7 +7,7 @@ import FileList from "./FileList";
 
 const styles = require("./project.scss");
 
-export interface SplashProps { project: any; };
+export interface SplashProps { };
 export interface SplashState {  }
 
 class Splash extends React.Component<SplashProps & actionsInterface, SplashState> {
@@ -15,12 +15,15 @@ class Splash extends React.Component<SplashProps & actionsInterface, SplashState
         super(props);
     }
     render() {
-        const project = this.props.project;
+        const project = this.props.appState.currentProject;
+        if (!project) {
+            throw new Error("Invoking Splash on undefined project!");
+        }
         const question = project.currentQuestion;
         return (<div className={styles.splashContainer}>
-            <h4>{project.name + (question.name ? "/" + question.name : "")}</h4>
-            <p>Select a {question.name ? "file" : "question" } to get started</p>
-            {question.name ? <FileList question={question} /> : <QuestionList project={project} />}
+            <h4>{project.name + (question ? "/" + question.name : "")}</h4>
+            <p>Select a {question ? "file" : "question" } to get started</p>
+            {question ? <FileList question={question} /> : <QuestionList />}
         </div>);
     }
 }

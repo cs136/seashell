@@ -11,22 +11,22 @@ interface CurrentFile extends S.File {
 }
 
 export interface appStateReducerState {[key: string]: any;
-  fileOpTarget: S.FileBrief;
+  fileOpTarget?: S.FileBrief;
   projects: S.ProjectBrief[];
-  runState: number;
-  currentProject: {
-    termWrite: Function;
-    termClear: Function;
+  runState?: number;
+  currentProject?: {
+    termWrite?: Function;
+    termClear?: Function;
     name: string;
     id: string;
     questions: string[];
-    currentQuestion: {
+    currentQuestion?: {
       name: string;
       files: S.FileBrief[];
       runFile: string;
       openFiles: S.FileBrief[];
       diags: CompilerDiagnostic[];
-      currentFile: CurrentFile;
+      currentFile?: CurrentFile;
     };
   };
 };
@@ -66,46 +66,37 @@ export enum appStateActions {
 };
 
 export default function appStateReducer(state: appStateReducerState = {
-    fileOpTarget: null,
+    fileOpTarget: undefined,
     projects: [],
     runState: 0,
-    currentProject: {
-      termWrite: null,
-      termClear: null,
-      name: "",
-      id: "",
-      questions: [],
-      currentQuestion: {
-        name: "",
-        files: [],
-        runFile: "",
-        openFiles: [],
-        diags: [],
-        currentFile: {
-          id: "",
-          name: "",
-          project: "",
-          checksum: "",
-          last_modified: 0,
-          contents: ""
-        },
-      },
-    }
+    currentProject: undefined
   }, action: appStateReducerAction) {
   switch (action.type) {
     case appStateActions.setTerm:
       state = clone(state);
-      state.currentProject.termWrite = action.payload.termWrite;
-      state.currentProject.termClear = action.payload.termClear;
+      if (state.currentProject) {
+        state.currentProject.termWrite = action.payload.termWrite;
+        state.currentProject.termClear = action.payload.termClear;
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject is undefined in setTerm");
+      }
       return state;
     case appStateActions.writeConsole:
-      if (state.currentProject.termWrite !== null) {
-        state.currentProject.termWrite(action.payload.content);
+      if (state.currentProject) {
+        if (state.currentProject.termWrite) {
+          state.currentProject.termWrite(action.payload.content);
+        }
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject is undefined in writeConsole");
       }
       return state;
     case appStateActions.clearConsole:
-      if (state.currentProject.termClear !== null) {
-        state.currentProject.termClear();
+      if (state.currentProject) {
+        if (state.currentProject.termClear) {
+          state.currentProject.termClear();
+        }
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject is undefined in clearConsole");
       }
       return state;
     case appStateActions.setRunning:
@@ -126,7 +117,11 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.invalidateFile:
       state = clone(state);
-      state.currentProject.currentQuestion.currentFile.name = "";
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.currentFile = undefined;
+      } else {
+        throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in invalidateFile");
+      }
       return state;
     case appStateActions.getProjects:
       state = clone(state);
@@ -134,11 +129,19 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.switchFile:
       state = clone(state);
-      state.currentProject.currentQuestion.currentFile = action.payload;
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.currentFile = action.payload;
+      } else {
+        throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
+      }
       return state;
     case appStateActions.switchQuestion:
       state = clone(state);
-      state.currentProject.currentQuestion = action.payload.question;
+      if (state.currentProject) {
+        state.currentProject.currentQuestion = action.payload.question;
+      } else {
+        throw new Error("Invalid state reached -- currentProject is undefined in switchQuestion");
+      }
       return state;
     case appStateActions.switchProject:
       state = clone(state);
@@ -147,40 +150,71 @@ export default function appStateReducer(state: appStateReducerState = {
     // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       state = clone(state);
-      state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
+      if (state.currentProject) {
+        state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
+      } else {
+        throw new Error("Invalid state reached -- currentProject is undefined in removeQuestion");
+      }
       return state;
     case appStateActions.removeProject:
+      // TODO: broken
       state = clone(state);
-      state.projects.splice(state.projects.indexOf(action.payload.name), 1);
+      if (state.projects) {
+        state.projects.splice(state.projects.indexOf(action.payload.name), 1);
+      }
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
+      } else {
+        throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
+      }
       return state;
     case appStateActions.addQuestion:
       state = clone(state);
-      state.currentProject.questions.push(action.payload.name);
+      if (state.currentProject) {
+        state.currentProject.questions.push(action.payload.name);
+      } else {
+        throw new Error("Invalid state reached -- currentProject is undefined in addQuestion");
+      }
       return state;
     case appStateActions.addProject:
+      // TODO: make sure projectbrief is passed in
       state = clone(state);
-      state.projects.push(action.payload.name);
+      if (state.projects) {
+        state.projects.push(action.payload);
+      } else {
+        state.projects = [action.payload];
+      }
       return state;
     // leave switching project/question to the UI
     case appStateActions.addFile:
       state = clone(state);
-      state.currentProject.currentQuestion.files.push(action.payload.name);
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.files.push(action.payload.name);
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject/Question is undefined in addFile");
+      }
       return state;
     case appStateActions.changeFileBufferedContent:
       const {unwrittenContent, target, flusher} = action.payload;
-      if (state.currentProject.currentQuestion.currentFile.flusher)
-        clearTimeout(state.currentProject.currentQuestion.currentFile.flusher);
-      return mergeBetter(state,
-      {currentProject:
-        {currentQuestion:
-          {currentFile:
-            {unwrittenContent: unwrittenContent,
-             target: target,
-             flusher: setTimeout(flusher, 2500)}}}});
+      if (state.currentProject &&
+          state.currentProject.currentQuestion &&
+          state.currentProject.currentQuestion.currentFile) {
+        if (state.currentProject.currentQuestion.currentFile.flusher) {
+          clearTimeout(state.currentProject.currentQuestion.currentFile.flusher);
+          return mergeBetter(state,
+          {currentProject:
+            {currentQuestion:
+              {currentFile:
+                {unwrittenContent: unwrittenContent,
+                target: target,
+                flusher: setTimeout(flusher, 2500)}}}});
+        }
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
+      }
     case appStateActions.changeFileContent:
       return mergeBetter(state,
       {currentProject:
@@ -191,20 +225,33 @@ export default function appStateReducer(state: appStateReducerState = {
               flusher: null,
               unwrittenContent: null}}}});
     case appStateActions.openFile:
-      if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1) return state; // don't duplicate files
       state = clone(state);
-      state.currentProject.currentQuestion.openFiles.push(action.payload);
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1)
+          return state; // don't duplicate files
+        state.currentProject.currentQuestion.openFiles.push(action.payload);
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+      }
       return state;
     case appStateActions.closeFile:
       state = clone(state);
-      state.currentProject.currentQuestion.openFiles = reject(equals(action.payload), state.currentProject.currentQuestion.openFiles);
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.openFiles = reject(equals(action.payload), state.currentProject.currentQuestion.openFiles);
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+      }
       return state;
     case appStateActions.setRunFile:
       state = clone(state);
       return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload}}});
     case appStateActions.setDiags:
       state = clone(state);
-      state.currentProject.currentQuestion.diags = action.payload;
+      if (state.currentProject && state.currentProject.currentQuestion) {
+        state.currentProject.currentQuestion.diags = action.payload;
+      } else {
+        throw new Error("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
+      }
       return state;
     default:
       return state;

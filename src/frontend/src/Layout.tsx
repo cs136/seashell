@@ -20,7 +20,6 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
   }
 
   render() {
-    const question = this.props.appState.currentProject.currentQuestion;
     return (
       <div className={styles.app + " " + (this.props.settings.theme === 0 ? "pt-dark" : "")}>
         <div className={styles.gradientBar} />

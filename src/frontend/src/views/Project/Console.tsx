@@ -30,7 +30,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
     this.term = new Terminal({
       cursorBlink: true
     });
-    this.container = null;
+    this.container = undefined;
   }
 
   dataReceived(payload: string) {
@@ -46,11 +46,11 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
   }
 
   setHeight(height: Number) {
-    this.container.style.height = height + "px";
+    this.container && (this.container.style.height = height + "px");
   }
 
   setFlex(flex: any) {
-    this.container.style.flex = flex;
+    this.container && (this.container.style.flex = flex);
   }
 
   updateLayout() {
@@ -66,12 +66,14 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
   componentDidMount() {
     this.term.open(this.container);
     this.setState({ input: true, line: 1, currString: "" });
-    const consoleElement: HTMLElement = this.container;
-    this.term.on("key", (key: string, evt: any) => {
-      if (!this.props.readOnly) {
-        Services.compiler().programInput(key);
-      }
-    });
+    if (this.container) { // Always reachable
+      const consoleElement: HTMLElement = this.container;
+      this.term.on("key", (key: string, evt: any) => {
+        if (!this.props.readOnly) {
+          Services.compiler().programInput(key);
+        }
+      });
+    }
   }
 
   componentWillUnmount() {

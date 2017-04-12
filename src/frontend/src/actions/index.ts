@@ -8,7 +8,7 @@ import { Services } from "../helpers/Services";
 import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
-import { settingsActions, settingsReducerState } from "../reducers/settingsReducer";
+import { settingsActions, settingsReducerState, settingsReducerStateNullable } from "../reducers/settingsReducer";
 import * as S from "../helpers/Storage/Interface";
 import * as C from "../helpers/Compiler/Interface";
 
@@ -18,7 +18,7 @@ interface Func<T> {
 }
 
 function returnType<T>(func: Func<T>) {
-  return null as T;
+  return (false as true) && func([]);
 }
 
 const mapStoreToProps = (state: globalState) => state;
@@ -44,19 +44,23 @@ const mapDispatchToProps = (dispatch: Function) => {
   const actions =  {
     dispatch: {
       settings: {
-        updateSettings: (newSettings: settingsReducerState) => {
-          asyncAction(Services.storage().setSettings({
-            id: 0,
-            editor_mode: "standard",
-            font_size: newSettings.fontSize,
-            font: newSettings.font,
-            theme: newSettings.theme ? "light" : "dark",
-            space_tab: true,
-            tab_width: newSettings.tabWidth
-          })).then(() => dispatch({
+        updateSettings: (newSettings: settingsReducerStateNullable) => {
+          dispatch({
             type: settingsActions.updateSettings,
             payload: newSettings
-          }));
+          });
+          dispatch((dispatch: Function, getState: () => globalState) => {
+            let newSettings = getState().settings;
+            asyncAction(Services.storage().setSettings({
+              id: 0,
+              editor_mode: "standard",
+              font_size: newSettings.fontSize,
+              font: newSettings.font,
+              theme: newSettings.theme ? "light" : "dark",
+              space_tab: true,
+              tab_width: newSettings.tabWidth
+            }));
+          });
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
@@ -98,18 +102,24 @@ const mapDispatchToProps = (dispatch: Function) => {
         flushFileBuffer: () => {
           return new Promise((resolve, reject) => {
             dispatch((dispatch: Function, getState: () => globalState) => {
-              const {flusher, target, unwrittenContent} = getState().appState.currentProject.currentQuestion.currentFile;
-              if (flusher) {
-                clearTimeout(flusher);
-              }
-              if (target && unwrittenContent) {
-                asyncAction(Services.storage().writeFile(target, unwrittenContent))
-                  .then(() => dispatch({
-                    type: appStateActions.changeFileContent,
-                    payload: unwrittenContent,
-                })).then(resolve).catch(reject);
-              } else {
-                resolve();
+              const state = getState();
+              if (state.appState.currentProject &&
+                state.appState.currentProject &&
+                state.appState.currentProject.currentQuestion &&
+                state.appState.currentProject.currentQuestion.currentFile) {
+                const {flusher, target, unwrittenContent} = state.appState.currentProject.currentQuestion.currentFile;
+                if (flusher) {
+                  clearTimeout(flusher);
+                }
+                if (target && unwrittenContent) {
+                  asyncAction(Services.storage().writeFile(target, unwrittenContent))
+                    .then(() => dispatch({
+                      type: appStateActions.changeFileContent,
+                      payload: unwrittenContent,
+                  })).then(resolve).catch(reject);
+                } else {
+                  resolve();
+                }
               }
             });
           });
@@ -199,8 +209,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 payload: {
                   question: {
                     name: name,
-                    runFile: "",
-                    currentFile: {name: "", content: ""},
+                    runFile: undefined,
+                    currentFile: undefined,
                     openFiles: [],
                     diags: [],
                     files: files.filter((file) => file.name.split("/")[0] === name)
@@ -236,14 +246,14 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       project: {
         addProject: (newProjectName: string) =>
-          asyncAction(Services.storage().newProject(newProjectName)).then(() => dispatch({
+          asyncAction(Services.storage().newProject(newProjectName)).then((id) => dispatch({
             type: appStateActions.addProject,
             payload: {name: newProjectName}
         })),
         removeProject: (pid: S.ProjectID) =>
-          asyncAction(Services.storage().deleteProject(name)).then(() => dispatch({
+          asyncAction(Services.storage().deleteProject(pid)).then(() => dispatch({
             type: appStateActions.removeProject,
-            payload: {name: name}
+            payload: {id: pid}
         })),
         switchProject: (pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
@@ -261,17 +271,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   name: name,
                   id: pid,
                   questions: files.map((file) => file.name.split("/")[0]).filter(unique).reverse(),
-                  currentQuestion: {
-                    name: "",
-                    files: [],
-                    runFile: "",
-                    openFiles: [],
-                    diags: [],
-                    currentFile: {
-                      name: "",
-                      content: ""
-                    }
-                  }
+                  currentQuestion: undefined
                 }
               }
             })));

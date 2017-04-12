@@ -9,7 +9,7 @@ const defaultSettings: Settings = {
 };
 
 export {AbstractStorage, AbstractWebStorage,
-        File, FileID, FileBrief,
+        StoredFile, File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings}
 
@@ -46,7 +46,18 @@ abstract class AbstractWebStorage {
 type FileID = string; // compound key
 type ProjectID = string; // alias of name for now
 
-interface File extends FileBrief {
+
+
+interface StoredFile extends FileBrief {
+  id: FileID;
+  name: string; // a file name is (tests|q*|common)/name
+  project: ProjectID;
+  contents?: string;
+  checksum: string;
+  last_modified: number;
+}
+
+interface File extends StoredFile {
   id: FileID;
   name: string; // a file name is (tests|q*|common)/name
   project: ProjectID;

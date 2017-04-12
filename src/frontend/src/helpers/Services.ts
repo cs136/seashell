@@ -34,12 +34,12 @@ type DispatchFunction = (act: Object) => Object;
 
 namespace Services {
   let connection: Connection;
-  let dispatch: DispatchFunction = null;
-  let socketClient: SeashellWebsocket = null;
-  let localStorage: LocalStorage = null;
-  let webStorage: WebStorage = null;
-  let offlineCompiler: OfflineCompiler = null;
-  let onlineCompiler: OnlineCompiler = null;
+  let dispatch: DispatchFunction | null = null;
+  let socketClient: SeashellWebsocket | null = null;
+  let localStorage: LocalStorage | null = null;
+  let webStorage: WebStorage | null = null;
+  let offlineCompiler: OfflineCompiler | null = null;
+  let onlineCompiler: OnlineCompiler | null = null;
   let debug: boolean;
 
   export function init(disp: DispatchFunction,
@@ -48,7 +48,7 @@ namespace Services {
                                    debugWebStorage?: boolean; }) {
     dispatch = disp;
     options = options || {};
-    debug = options.debugService;
+    debug = options.debugService || false;
     socketClient = new SeashellWebsocket(options.debugWebSocket);
     localStorage = new LocalStorage();
     webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
@@ -75,9 +75,12 @@ namespace Services {
                               rebootBackend?: boolean,
                               uri?: string): Promise<void> {
     uri = uri || "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
+    if (!localStorage || !socketClient) {
+      throw new Error("Must call Services.init() before Services.login()");
+    }
     try {
       debug && console.log("Logging in...");
-      const response = await $.ajax({
+      const response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
         data: {
@@ -107,7 +110,8 @@ namespace Services {
   }
 
   export async function logout() {
-    await socketClient.disconnect();
+    if (socketClient)
+      await socketClient.disconnect();
     debug && console.log("User logged out.");
   }
 }

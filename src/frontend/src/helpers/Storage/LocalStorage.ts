@@ -3,7 +3,7 @@ import md5 = require("md5");
 import {sprintf} from "sprintf-js";
 import * as R from "ramda";
 import {AbstractStorage,
-        File, FileID, FileBrief,
+        StoredFile, File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
         Settings, defaultSettings} from "./Interface";
 import * as E from "../Errors";
@@ -56,8 +56,8 @@ class LocalStorage implements AbstractStorage {
     * @param {string} file_history: The history of the file.
     * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
     */
-  public async writeFile(fid: FileID, contents: string): Promise<void> {
-    const checksum = md5(contents);
+  public async writeFile(fid: FileID, contents?: string): Promise<void> {
+    const checksum = contents ? md5(contents) : "X000";
     const tbs = [this.db.files, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file: File = await this.readFile(fid);
@@ -79,7 +79,10 @@ class LocalStorage implements AbstractStorage {
     if (! file) {
       throw new LocalStorageError(`file "${fid}" does not exist`);
     }
-    return file;
+    if (file.contents)
+      return <File>file;
+    else
+      throw new LocalStorageError(`file "${fid}" is not available offline`);
   }
 
   public async deleteFile(id: FileID): Promise<void> {
@@ -197,15 +200,17 @@ class LocalStorage implements AbstractStorage {
                        name: string,
                        contents?: string,
                        base64?: boolean): Promise<FileID> {
-    let rmatch: RegExpMatchArray;
-    if (base64 && (rmatch = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/))) {
-      const mime = rmatch[1];
-      const b64 = rmatch[3];
-      if (b64 || mime === "base64") {
-        contents = window.atob(rmatch[4]);
+    let rmatch: RegExpMatchArray | null;
+    if (contents) {
+      if (base64 && (rmatch = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/))) {
+        const mime = rmatch[1];
+        const b64 = rmatch[3];
+        if (b64 || mime === "base64") {
+          contents = window.atob(rmatch[4]);
+        }
       }
     }
-    const checksum = contents ? "X000" : md5(contents);
+    const checksum = contents ? md5(contents) : "X000";
     const tbs = [this.db.files, this.db.projects, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       /*
@@ -317,8 +322,12 @@ class LocalStorage implements AbstractStorage {
   public async popChangeLog(): Promise<ChangeLog|false> {
     const top = await this.topChangeLog();
     if (top) {
-      await this.db.changeLogs.delete(top.id);
-      return top;
+      if (top.id) {
+        await this.db.changeLogs.delete(top.id);
+        return top;
+      } else {
+        return false;
+      }
     } else {
       return false;
     }
@@ -368,7 +377,7 @@ class LocalStorage implements AbstractStorage {
 
 class StorageDB extends Dexie {
   public changeLogs: Dexie.Table<ChangeLog, number>;
-  public files: Dexie.Table<File, FileID>;
+  public files: Dexie.Table<StoredFile, FileID>;
   public projects: Dexie.Table<Project, ProjectID>;
   public settings: Dexie.Table<Settings, number>;
 

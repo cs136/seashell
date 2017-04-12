@@ -85,8 +85,8 @@ class OfflineCompiler extends AbstractCompiler {
       type: "testdata",
       pid: pid,
       test_name: test.name,
-      in: test.in.contents,
-      expect: test.expect.contents
+      in: test.in ? test.in.contents : undefined,
+      expect: test.expect ? test.expect.contents : undefined
     });
 
     return {
@@ -98,8 +98,8 @@ class OfflineCompiler extends AbstractCompiler {
   private async getFullTest(tst: TestBrief): Promise<Test> {
     return {
       name: tst.name,
-      in: await this.storage.readFile(tst.in.id),
-      expect: await this.storage.readFile(tst.expect.id)
+      in: tst.in ? await this.storage.readFile(tst.in.id) : undefined,
+      expect: tst.expect ? await this.storage.readFile(tst.expect.id) : undefined
     };
   }
 
@@ -108,7 +108,7 @@ class OfflineCompiler extends AbstractCompiler {
       let compiler = new CompilerWorker();
       compiler.onmessage = async (result: CompilerWorkerResult) => {
         if (result.data.status === "error") {
-          throw new CompilerError(result.data.err);
+          throw new CompilerError(result.data.err || "Unknown error");
         } else {
           this.buffer.outputDiagnostics(result.data.messages);
           resolve(result.data);

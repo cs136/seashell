@@ -9,9 +9,9 @@ export {SeashellWebsocket, MockInternet}
 enum MockInternet {Online, Offline, Real};
 
 class SeashellWebsocket {
-  private connection: Connection;
+  private connection?: Connection;
   private coder: AbstractCoder;
-  private websocket: WebSocket;
+  private websocket?: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
   private failed: boolean; // not used?
@@ -27,7 +27,7 @@ class SeashellWebsocket {
   // [key: string]: any;
 
   constructor(debug?: boolean) {
-    this.debug = debug;
+    this.debug = debug || false;
     this.callbacks = [];
   }
 
@@ -50,25 +50,26 @@ class SeashellWebsocket {
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
     if (this.websocket) {
-      switch (this.websocket.readyState) {
-        case this.websocket.CONNECTING: {
+      let websocket = this.websocket;
+      switch (websocket.readyState) {
+        case websocket.CONNECTING: {
           this.debug && console.log("Socket is already connecting. Action ignored.");
           return;
         }
-        case this.websocket.OPEN: {
+        case websocket.OPEN: {
           this.debug && console.log("Socket is already connected. Action ignored.");
           return;
         }
-        case this.websocket.CLOSING: {
+        case websocket.CLOSING: {
           this.debug && console.log(`Existing websocket is closing. Wait to reopen new connection.`);
           const promise = new Promise<void>((accept, reject) => {
-            this.websocket.onclose = () => {
+            websocket.onclose = () => {
               this.connect(cnn).then(accept);
             };
           });
           return promise;
         }
-        case this.websocket.CLOSED: {
+        case websocket.CLOSED: {
           this.debug && console.log(`Existing websocket is closed. Reopening new connection.`);
         }
       }
@@ -95,8 +96,9 @@ class SeashellWebsocket {
       clearInterval(this.pingLoop);
       // automatically reconnect after 3s
       if (this.connection) {
+        let connection = this.connection;
         setTimeout(() => {
-          this.connect(this.connection);
+          this.connect(connection);
         }, 3000);
       }
       for (const i in this.requests) {
@@ -112,7 +114,8 @@ class SeashellWebsocket {
 
     this.websocket.onerror = (err) => {
       console.error(`Websocket encountered error. Closing websocket.\n${err}`);
-      this.websocket.close(4000, err.toString());
+      if (this.websocket) // Always reachable
+        this.websocket.close(4000, err.toString());
     };
 
     this.websocket.onopen = () => {
@@ -124,7 +127,8 @@ class SeashellWebsocket {
         timeoutCount++;
         if (timeoutCount >= 3) {
           console.warn("Ping timed out. Server is not responsive.");
-          this.websocket.close(); // force reconnect
+          if (this.websocket) // Always reachable
+            this.websocket.close(); // force reconnect
         }
         this.debug && console.log("ping");
         await this.ping();
@@ -225,7 +229,7 @@ class SeashellWebsocket {
   }
 
   public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
-    this.callbacks.push(new Callback(type, cb, now));
+    this.callbacks.push(new Callback(type, cb, now || false));
 
     if (type === "disconnected" && ! this.isConnected() && now) {
       cb();
@@ -266,7 +270,10 @@ class SeashellWebsocket {
     if (msg.type !== "ping") {
       this.debug && console.log(`Request ${msgID} was sent`, msg);
     }
-    this.websocket.send(blob);
+    if (this.websocket)
+      this.websocket.send(blob);
+    else
+      throw new E.NoInternet();
     return request.received;
   }
 

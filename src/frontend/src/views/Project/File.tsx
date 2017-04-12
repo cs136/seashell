@@ -82,7 +82,13 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     this.updateEditorOptions();
   }
   onChange(newValue: string, e: any) {
-    this.props.dispatch.file.updateFile(this.props.appState.currentProject.currentQuestion.currentFile, newValue);
+    let state = this.props.appState;
+    if (state.currentProject &&
+        state.currentProject.currentQuestion &&
+        state.currentProject.currentQuestion.currentFile)
+      this.props.dispatch.file.updateFile(state.currentProject.currentQuestion.currentFile, newValue);
+    else
+      throw new Error("Updating undefined file?!");
   }
   componentDidUpdate() {
     if (this.state.editorLastUpdated !== this.props.settings.updated) {
@@ -122,31 +128,37 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
         tabstopwidth: this.props.settings.tabWidth,
         cursorBlink: true,
     };
-    const currentQuestion = this.props.appState.currentProject.currentQuestion;
-    const currentFile = currentQuestion.currentFile;
-    const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
-      return d.file === currentFile.name;
-    });
-    if (this.props.file === currentFile.name) {
-      return (<div className={styles.filePanel}>
-        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
-          <MonacoEditor
-            dirty={!!currentFile.unwrittenContent}
-            value={currentFile.contents}
-            language="cpp"
-            diags={currentQuestion.diags}
-            onChange={this.onChange.bind(this)}
-            editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
-          <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-            <div ref="resizeHandle" className={styles.resizeHandle} />
-          </Draggable>
-        <Xterm ref="terminal"
-          className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-          readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
-      </div>
-      </div>);
-    }
-    else
+    let state = this.props.appState;
+    if (state.currentProject &&
+        state.currentProject.currentQuestion &&
+        state.currentProject.currentQuestion.currentFile) {
+      const currentQuestion = state.currentProject.currentQuestion;
+      const currentFile = state.currentProject.currentQuestion.currentFile;
+      const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
+        return d.file === currentFile.name;
+      });
+      if (this.props.file === currentFile.name) {
+        return (<div className={styles.filePanel}>
+          <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
+            <MonacoEditor
+              dirty={!!currentFile.unwrittenContent}
+              value={currentFile.contents}
+              language="cpp"
+              diags={currentQuestion.diags}
+              onChange={this.onChange.bind(this)}
+              editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
+            <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
+              <div ref="resizeHandle" className={styles.resizeHandle} />
+            </Draggable>
+          <Xterm ref="terminal"
+            className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
+            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
+        </div>
+        </div>);
+      }
+      else
+        return <Loading/>;
+    } else
       return <Loading/>;
   }
 }

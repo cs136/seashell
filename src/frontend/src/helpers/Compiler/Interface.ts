@@ -49,8 +49,8 @@ abstract class AbstractCompiler {
     }).map((t: FileBrief[]) => {
       let test: TestBrief = {
         name: basename(t[0]),
-        in: null,
-        expect: null
+        in: undefined,
+        expect: undefined
        };
       if (ext(t[0]) === "in")
         test.in = t[0];
@@ -83,14 +83,14 @@ abstract class AbstractCompiler {
 
 interface TestBrief {
   name: string;
-  in: FileBrief;
-  expect: FileBrief;
+  in?: FileBrief;
+  expect?: FileBrief;
 }
 
-interface Test {
+interface Test extends TestBrief {
   name: string;
-  in: File;
-  expect: File;
+  in?: File;
+  expect?: File;
 }
 
 interface CompilerResult {

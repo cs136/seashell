@@ -28,7 +28,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     super();
     this.storage = store;
     this.socket = wbclient;
-    this.debug = debug;
+    this.debug = debug || false;
   }
 
   public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileID> {

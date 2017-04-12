@@ -5,18 +5,23 @@ import File from "./File";
 
 const styles = require("./project.scss");
 
-export interface QuestionListProps { project: any; };
+export interface QuestionListProps {  };
 export interface QuestionListState {  }
 
 class QuestionList extends React.Component<QuestionListProps & actionsInterface, QuestionListState> {
     constructor(props: QuestionListProps & actionsInterface) {
         super(props);
     }
-    render() {
-        const project = this.props.project;
-        return (<Menu>
-            {project.questions.map((question: string) => (<MenuItem onClick={() => this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.id, question)} key={"question-list-item-" + question} iconName="comment" text={question} />))}
-        </Menu>);
+    render() {;
+        const project = this.props.appState.currentProject;
+        if (project)
+            return (<Menu>
+                {project.questions.map((question: string) =>
+                    (<MenuItem onClick={() =>
+                        this.props.dispatch.question.switchQuestion(project.id, question)} key={"question-list-item-" + question} iconName="comment" text={question} />))}
+            </Menu>);
+        else
+            throw new Error("Invoking QuestionList on undefined project!");
     }
 }
 export default map<QuestionListProps>(QuestionList);

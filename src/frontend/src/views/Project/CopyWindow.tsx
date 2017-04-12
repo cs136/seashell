@@ -10,11 +10,16 @@ export interface CopyWindowProps {questions: string[]; closefunc: Function; };
 class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}> {
   constructor(props: CopyWindowProps&actionsInterface) {
     super(props);
-    this.state = {
-      question: this.props.questions[0],
-      file: this.props.appState.fileOpTarget.name.split("/").pop(),
-      prevFile: this.props.appState.fileOpTarget.name.split("/").pop()
-    };
+    let file = this.props.appState.fileOpTarget;
+    if (file) {
+      this.state = {
+        question: this.props.questions[0],
+        file: file.name.split("/").pop() || "", // Both of these are unreachable
+        prevFile: file.name.split("/").pop() || "" // As above ^ ^
+      };
+    } else {
+      throw new Error("CopyWindow invoked on undefined file!");
+    }
   }
   render() {
     return(<div className="pt-dialog-body">

@@ -39,11 +39,17 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
       <MenuDivider />
       <MenuItem text="Close File" onClick={() => {
         this.props.dispatch.file.closeFile.bind(null, file);
-        if (this.props.appState.currentProject.currentQuestion.openFiles.length > 0) {
-          this.props.dispatch.file.switchFile(this.props.appState.currentProject.currentQuestion.openFiles[0]);
-        }
-        else {
-          this.props.dispatch.file.invalidateFile();
+        let state = this.props.appState;
+
+        if (state.currentProject && state.currentProject && state.currentProject.currentQuestion) {
+          if (state.currentProject.currentQuestion.openFiles.length > 0) {
+            this.props.dispatch.file.switchFile(state.currentProject.currentQuestion.openFiles[0]);
+          }
+          else {
+            this.props.dispatch.file.invalidateFile();
+          }
+        } else {
+          throw new Error("Tried to close file in an undefined project/question?!");
         }
       }}/>
     </Menu>);

@@ -13,7 +13,7 @@ const layoutStyles = require("../../Layout.scss");
 
 
 export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; }
-export interface NavigationState { helpVisible?: boolean; settingsVisible?: boolean; }
+export interface NavigationState { helpVisible: boolean; settingsVisible: boolean; }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
   constructor(props: NavigationProps&actionsInterface) {
