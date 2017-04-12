@@ -45,6 +45,12 @@ angular.module('frontend-app')
       "255":"Timeout"
     };
 
+    // These variables can be used to implement a progress bar
+    // for how many tests are left unfinished.
+    self.total_tests = -1; // total number of tests
+    self.unfinished_tests = 0; // number of tests remaining
+    self.timer_id = null; // ID returned by Javascript setInterval function
+
     // err is a json object (parsed & filtered in backend, only printed here)
     // TODO: better logic (self.write or something?)
     function maybe_log(string){
@@ -181,6 +187,9 @@ angular.module('frontend-app')
       self.PIDs = self.PIDs.length === 0 ? null : self.PIDs;
       var parsedASAN = res.asan_output ? JSON.parse(res.asan_output) : false;
 
+      if(self.unfinished_tests > 0) { self.unfinished_tests -= 1; }
+      if(self.unfinished_tests <= 0) { self.stopTestingProgressNote(); }
+
       if(res.result==="passed") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
@@ -227,13 +236,31 @@ angular.module('frontend-app')
       } else if(res.result==="timeout") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" timed out.\n", res.test_name));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('---\n');
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
       }
       else if(res.result==="killed") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" was killed.\n", res.test_name));
+        self.write('Produced output (stdout):\n');
+        self.write(res.stdout);
+        self.write('---\n');
+        self.write('Produced output (stderr):\n');
+        self.write(res.stderr);
       }
       self.flush();
     });
+
+    self.stopTestingProgressNote = function() {
+        console.log("Testing progress notes stopped");
+        clearInterval(self.timer_id);
+        self.timer_id = null;
+        self.total_tests = -1;
+        self.unfinished_tests = 0;
+    };
 
     self.setRunning = function(project, PIDs, testing) {
       self.running = !testing;
@@ -241,6 +268,16 @@ angular.module('frontend-app')
       _.each(self.PIDs, function (pid) {
         socket.startIO(project.name, pid);
       });
+      if(testing) {
+        self.unfinished_tests = PIDs.length;
+        self.total_tests = PIDs.length;
+        self.timer_id = setInterval(function () {
+            if(self.unfinished_tests > 0) {
+                self.write("Still testing. " + self.unfinished_tests.toString() + " " +
+                    (self.unfinished_tests==1 ? "test" : "tests") + " left....\n");
+            }
+        }, 8000);
+      }
     };
     self.clear = function() {
       self.contents = self._contents = "";

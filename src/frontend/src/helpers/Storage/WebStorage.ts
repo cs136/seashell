@@ -109,6 +109,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   }
 
+  public async getTestResults(marmosetProject: string): Promise<any> {
+    await this.socket.sendMessage({
+      type: "marmosetTestResults",
+      project: marmosetProject,
+      testtype: "public"
+    });
+  }
+
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     await this.syncAll();
     return this.storage.getProjectFiles(pid);
