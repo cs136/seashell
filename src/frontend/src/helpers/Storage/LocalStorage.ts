@@ -110,7 +110,7 @@ class LocalStorage implements AbstractStorage {
         return;
       }
       for (const q in dbProj.runs) {
-        if (R.equals(dbProj.runs[q], id)) {
+        if (dbProj.runs[q] === id) {
           delete dbProj.runs[q];
         }
       }
@@ -126,19 +126,19 @@ class LocalStorage implements AbstractStorage {
       await this.db.files.update(fid, {
         name: newName
       });
-      this.pushChangeLog({
+      await this.pushChangeLog({
         type: "newFile",
         contents: file.contents,
         file: {file: newName, project: file.project}
       });
-      this.pushChangeLog({
+      await this.pushChangeLog({
         type: "deleteFile",
         file: {file: file.name, project: file.project}
       });
     });
   }
 
-  public async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false> {
+  public async getFileToRun(proj: ProjectID, question: string): Promise<string|false> {
     this.debug && console.log(`getFileToRun`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
@@ -148,12 +148,12 @@ class LocalStorage implements AbstractStorage {
   }
 
   // a file name is (test|q*|common)/name
-  public async setFileToRun(pid: ProjectID, question: string, file: FileID): Promise<void> {
+  public async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void> {
     this.debug && console.log(`setFileToRun`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let current = await this.getProject(pid);
-      current.runs[question] = file;
+      current.runs[question] = filename;
       await this.db.projects.update(pid, current);
     });
   }
@@ -290,12 +290,12 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async deleteProject(proj: ProjectID): Promise<void> {
+  public async deleteProject(pid: ProjectID): Promise<void> {
     this.debug && console.log(`deleteProject`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
-      await this.db.projects.delete(proj);
-      const files = await this.db.files.where("project").equals(proj);
+      await this.db.projects.delete(pid);
+      const files = await this.db.files.where("project").equals(pid);
       await files.delete();
     });
   }

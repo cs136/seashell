@@ -128,12 +128,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return this.storage.getAllFiles();
   };
 
-  public async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false> {
+  public async getFileToRun(proj: ProjectID, question: string): Promise<string|false> {
     return this.storage.getFileToRun(proj, question);
   };
 
-  public async setFileToRun(proj: ProjectID, question: string, id: FileID): Promise<void> {
-    return this.storage.setFileToRun(proj, question, id);
+  public async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void> {
+    return this.storage.setFileToRun(proj, question, filename);
   };
 
   public async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]> {
