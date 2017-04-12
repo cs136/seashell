@@ -44,6 +44,22 @@ const mapDispatchToProps = (dispatch: Function) => {
   const actions =  {
     dispatch: {
       settings: {
+        initSettings: ()=> {
+          Services.storage().getSettings().then((settings)=>{
+            dispatch({
+              type: settingsActions.updateSettings,
+              payload: {
+                font: settings.font,
+                fontSize: settings.font_size,
+                editorMode: 0,
+                tabWidth: settings.tab_width,
+                theme: settings.theme === "light" ? 1 : 0,
+                offlineMode: 0,
+                editorRatio: 0.5,
+                updated: 0,
+              }});
+          });
+        },
         updateSettings: (newSettings: settingsReducerStateNullable) => {
           dispatch({
             type: settingsActions.updateSettings,
