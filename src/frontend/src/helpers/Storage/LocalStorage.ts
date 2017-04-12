@@ -51,17 +51,10 @@ class LocalStorage implements AbstractStorage {
   public async deleteDB(): Promise<void> {
     return this.db.delete();
   }
-  /*
-    * Save a file to local storage.
-    * @param {string} name: project name.
-    * @param {string} file_name: filename.
-    * @param {string} file_content: The contents of the file.
-    * @param {string} file_history: The history of the file.
-    * @param {string || any false value} checksum : The online checksum of the file, false to not update (offline write).
-    */
-  public async writeFile(fid: FileID, contents: string = ""): Promise<void> {
+
+  public async writeFile(fid: FileID, contents: string|undefined): Promise<void> {
     this.debug && console.log(`writeFile`);
-    const checksum = md5(contents);
+    const checksum = contents === undefined ? "" : md5(contents);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file: File = await this.readFile(fid);
