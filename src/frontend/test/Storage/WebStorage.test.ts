@@ -43,7 +43,8 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 Services.init(null, {
   debugWebSocket: false,
-  debugWebStorage: true,
+  debugLocalStorage: false,
+  debugWebStorage: false,
   debugService: false
 });
 
@@ -67,12 +68,6 @@ function websocketTests() {
 
   afterAll(() => {
     Services.logout();
-  });
-
-  it.skip("syncAll: sync multiple times. Should not crash.", async () => {
-    for (const i of R.range(0, 3)) {
-      await socket.syncAll();
-    }
   });
 
   let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
@@ -132,7 +127,7 @@ function websocketTests() {
     }), <File[]> remoteFiles);
   }
 
-  it.only(`newProject: create ${testSize} projects`, async () => {
+  it(`newProject: create ${testSize} projects`, async () => {
     let ids: ProjectID[] = [];
     for (const p of projs) {
       ids.push(await socket.newProject(p.name));
@@ -141,7 +136,6 @@ function websocketTests() {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
-/*
   it(`getProjects: list all projects`, async () => {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
@@ -171,8 +165,9 @@ function websocketTests() {
       const b = [r.name, r.project, r.contents];
       expect(a).toEqual(b);
     };
+    expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
   });
-/*
+
   it(`writeFile: update ${halfTestSize} files`, async () => {
     const fs = R.take(halfTestSize, files);
     for (const f of fs) {
@@ -187,7 +182,7 @@ function websocketTests() {
     return R.zipObj(uniqStrArr(testSize, 30)(),
                     J.array(testSize, J.one_of(map((file) => [p, file.name], files)))());
   }
-/*
+
   it(`setFileToRun: randomly pick a run file per project`, async () => {
     for (const f of files) {
       await socket.setFileToRun(f.project, "default", f.id);
@@ -205,11 +200,11 @@ function websocketTests() {
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
-/*
+
   it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
     const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
-      const pj = R.find((x) => x.name === p, projs);
+      const pj = R.find((x) => x.id === p, projs);
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
@@ -239,7 +234,7 @@ function websocketTests() {
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
-        await socket.setFileToRun(pj.name, "default", file.id);
+        await socket.setFileToRun(pj.id, "default", file.id);
         await socket.deleteFile(file.id);
         removed.concat(filter((x) => x.id === file.id, files));
         files = filter((x) => x.id !== file.id, files);
@@ -268,5 +263,10 @@ function websocketTests() {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
-//*/
+  it("syncAll: sync multiple times. Should not crash.", async () => {
+    for (const i of R.range(0, 3)) {
+      await socket.syncAll();
+    }
+  });
+
 }

@@ -99,11 +99,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   public async writeFile(fid: FileID, contents: string): Promise<void> {
     const file = await this.storage.readFile(fid);
+    const proj = await this.storage.getProject(file.project);
     await this.storage.writeFile(fid, contents);
     await this.socket.sendMessage({
       type: "writeFile",
       file: file.name,
-      project: file.project,
+      project: proj.name,
       contents: contents,
       history: ""
     });
@@ -180,7 +181,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
     const changesGot = result.changes;
     const newProjects: string[] = result.newProjects;
-    const deletedProjects: ProjectID[] = result.deletedProjects.map<string>(md5);
+    const deletedProjects: ProjectID[] = R.map<string, string>(md5, result.deletedProjects);
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
     // this.isSyncing = false;
     const timeSpent = Date.now() - startTime;
