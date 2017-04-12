@@ -661,7 +661,7 @@ angular.module('frontend-app')
               if (conts.data.length === 0) self.loaded = true;
               self.project.updateMostRecentlyUsed(self.question, self.folder, self.file);
               self.editor.clearHistory();
-              if (conts.history.slice(1).length > 1) {
+              if (conts.history && conts.history.slice(1).length > 1) {
                 self.undoHistory = JSON.parse(conts.history);
                 self.editor.setHistory(self.undoHistory);
               } else {

@@ -127,8 +127,15 @@ angular.module('seashell-compiler', [])
               return test_name;
             },
             kill: function () {
+              // TODO: Retrieve stdout and stderr contents if students
+              // kill running tests in offline mode.
               runner.terminate();
-              test_cb(null, {'type': 'done', status: 255});
+              test_cb(null, {result: 'killed',
+                             status: 255,
+                             test_name: test_name,
+                             pid: test_name,
+                             stdout: "Output is not available when stopping tests in offline mode.",
+                             stderr: "Error output is not available when stopping tests in offline mode."});
             },
             sendEOF: function(){},
             programInput: function(){},
