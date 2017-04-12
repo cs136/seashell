@@ -142,11 +142,12 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
           <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
             <MonacoEditor
               dirty={!!currentFile.unwrittenContent}
-              value={currentFile.contents}
+              value={currentFile.contents || "Unavailable in browser!"}
               language="cpp"
               diags={currentQuestion.diags}
               onChange={this.onChange.bind(this)}
-              editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}/>
+              editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
+              readOnly={!currentFile.contents}/>
             <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
               <div ref="resizeHandle" className={styles.resizeHandle} />
             </Draggable>

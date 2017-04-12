@@ -202,16 +202,15 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject &&
           state.currentProject.currentQuestion &&
           state.currentProject.currentQuestion.currentFile) {
-        if (state.currentProject.currentQuestion.currentFile.flusher) {
+        if (state.currentProject.currentQuestion.currentFile.flusher)
           clearTimeout(state.currentProject.currentQuestion.currentFile.flusher);
-          return mergeBetter(state,
+        return mergeBetter(state,
           {currentProject:
             {currentQuestion:
               {currentFile:
                 {unwrittenContent: unwrittenContent,
                 target: target,
                 flusher: setTimeout(flusher, 2500)}}}});
-        }
       } else {
         throw new Error("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
       }

@@ -120,6 +120,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 } else {
                   resolve();
                 }
+              } else {
+                resolve(); // Nothing to flush
               }
             });
           });

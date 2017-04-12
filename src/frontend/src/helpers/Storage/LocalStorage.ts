@@ -79,10 +79,7 @@ class LocalStorage implements AbstractStorage {
     if (! file) {
       throw new LocalStorageError(`file "${fid}" does not exist`);
     }
-    if (file.contents)
-      return <File>file;
-    else
-      throw new LocalStorageError(`file "${fid}" is not available offline`);
+    return <File>file;
   }
 
   public async deleteFile(id: FileID): Promise<void> {

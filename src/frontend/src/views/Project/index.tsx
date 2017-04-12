@@ -38,7 +38,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     let state = this.props.appState;
     if (!state.currentProject ||
         willOpenPid !== state.currentProject.id) {
-        this.props.dispatch.file.invalidateFile();
+        if (state.currentProject)
+            this.props.dispatch.file.invalidateFile();
         // force wait until promise is resolved
         this.props.dispatch.project.switchProject(willOpenPid).then(() => {
             /*

@@ -61,7 +61,7 @@ interface File extends StoredFile {
   id: FileID;
   name: string; // a file name is (tests|q*|common)/name
   project: ProjectID;
-  contents: string;
+  contents?: string; // undefined ==> unavailable offline / unreadable
   checksum: string;
   last_modified: number;
 }

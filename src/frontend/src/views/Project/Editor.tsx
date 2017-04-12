@@ -18,6 +18,7 @@ export interface MonacoEditorProps {
   requireConfig?: any;
   context?: any;
   diags?: CompilerDiagnostic[];
+  readOnly?: boolean;
 }
 
 export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
@@ -42,7 +43,8 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     onChange: undefined,
     requireConfig: {},
     context: undefined,
-    diags: []
+    diags: [],
+    readOnly: false
   };
 
   constructor(props: MonacoEditorProps) {

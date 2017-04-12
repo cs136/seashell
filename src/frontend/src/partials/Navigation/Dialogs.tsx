@@ -130,8 +130,8 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
               }}>Cancel</button>
             <button type="button" className="pt-button pt-intent-primary" onClick={() => {
                 this.props.dispatch.settings.updateSettings({
-                font: this.state.font || "Consolas",
-                fontSize: this.state.fontSize || 13,
+                font: this.state.font,
+                fontSize: this.state.fontSize,
                 editorMode: this.state.editorMode,
                 tabWidth: this.state.tabWidth,
                 theme: this.state.theme,
