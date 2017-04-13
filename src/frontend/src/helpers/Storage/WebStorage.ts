@@ -97,7 +97,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return this.storage.readFile(fid);
   }
 
-  public async writeFile(fid: FileID, contents: string|undefined): Promise<void> {
+  public async writeFile(fid: FileID, contents: string): Promise<void> {
     const file = await this.storage.readFile(fid);
     const proj = await this.storage.getProject(file.project);
     await this.storage.writeFile(fid, contents);
