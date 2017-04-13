@@ -12,7 +12,7 @@ class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface,
   constructor(props: AddFileWindowProps&actionsInterface) {
     super(props);
     if(this.props.appState.currentProject){
-      this.project = this.props.appState.currentProject.name;
+      this.project = this.props.appState.currentProject.id;
       this.state = {
       question: this.props.questions[0],
       file: "",

@@ -264,14 +264,11 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       project: {
         addProject: (newProjectName: string) =>
-          asyncAction(Services.storage().newProject(newProjectName)).then((id) => {
+          asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) => {
             var d=new Date();
             dispatch({
             type: appStateActions.addProject,
-            payload: {
-              name: newProjectName,
-              id: id,
-              last_modified: d.getTime()}
+            payload: projBrief
         });
       }),
         removeProject: (pid: S.ProjectID) =>
