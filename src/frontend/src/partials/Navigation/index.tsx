@@ -5,6 +5,7 @@ import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
+import AddProjectWindow from "./AddProject";
 
 
 const logo = require("../../assets/logo.svg");
@@ -12,7 +13,7 @@ const styles = require("./index.scss");
 const layoutStyles = require("../../Layout.scss");
 
 
-export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; }
+export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; addProjectVisible: boolean; closeAddProj: Function}
 export interface NavigationState { helpVisible: boolean; settingsVisible: boolean; }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
@@ -52,7 +53,11 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             </Dialog>
             <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
               <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
-            </Dialog></div>
+            </Dialog>
+            <Dialog className={styles.dialogStyle} title="Add Project" isOpen={this.props.addProjectVisible} onClose={() => this.props.closeAddProj()}>
+              <AddProjectWindow closefunc={this.props.closeAddProj}/>
+            </Dialog>  
+            </div>
         </div>
       </nav>
     );

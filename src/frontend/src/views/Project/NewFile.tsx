@@ -42,7 +42,7 @@ class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface,
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
                 }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.file === ""} onClick={() => {
+        <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.file === "" || this.state.file.includes("/")} onClick={() => {
           this.props.dispatch.file.addFile(this.project, this.state.question + "/" + this.state.file,
           this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" : 
           this.state.file.split(".").pop() === "h" ? "//put your interface here\n" :
