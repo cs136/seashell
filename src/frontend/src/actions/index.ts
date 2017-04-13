@@ -84,7 +84,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         })
       },
       // other than openFile and closeFile, the file name parameter should always
-      //  be the full path, for exmaple "q1/file.txt"
+      //  be the full path, for example "q1/file.txt"
       file: {
         setFileOpTarget: (file: S.FileBrief) => dispatch({
           type: appStateActions.setFileOpTarget,
@@ -151,7 +151,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             }));
         },
         addFile: (project: string, path: string,
-                  newFileContent: string, currentQuestion: string) => {
+                  newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(Services.storage().newFile(project, path, newFileContent))
