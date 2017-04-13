@@ -13,13 +13,14 @@ import {merge} from "ramda";
 import CopyWindow from "./CopyWindow";
 import RenameWindow from "./RenameWindow";
 import DeleteWindow from "./DeleteWindow";
+import AddFileWindow from "./NewFile";
 import Splash from "./Splash";
 import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
 import * as S from "../../helpers/Storage/Interface";
 export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
-export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; toggleView: boolean; }
+export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; toggleView: boolean; addFileVisible: boolean}
 
 
 
@@ -31,6 +32,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         deleteVisible: false,
         renameVisible: false,
         copyVisible: false,
+        addFileVisible: false,
     };
   }
   componentWillMount() {
@@ -68,6 +70,9 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   toggleCopy() {
       this.setState(merge(this.state, {copyVisible: !this.state.copyVisible}));
   }
+  toggleAddFile() {
+      this.setState(merge(this.state, {addFileVisible: !this.state.addFileVisible}));
+  }
   toggleView() {
       this.setState(merge(this.state, {toggleView: !this.state.toggleView}));
   }
@@ -82,7 +87,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                     <button className="pt-button pt-intent-primary"><span className="pt-icon-standard pt-icon-caret-down" />{question.name || "Select a Question"}</button>
                 </Popover>,
                 <span className="pt-navbar-divider" key="project-divider"></span>,
-                <Popover content={<FileList question={question}/>} position={Position.BOTTOM} key="project-open-file">
+                <Popover content={<FileList question={question} toggleAddFile={this.toggleAddFile.bind(this)}/>} position={Position.BOTTOM} key="project-open-file">
                     <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
                 </Popover>]} navRight={[
                 <OpenFiles key="project-open-files" toggleDelete={this.toggleDelete.bind(this)} toggleCopy={this.toggleCopy.bind(this)} toggleRename={this.toggleRename.bind(this)}/>,
@@ -117,6 +122,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             <Dialog className={styles.dialogStyle} title="Delete File" isOpen={this.state.deleteVisible} onClose={this.toggleDelete.bind(this)}><DeleteWindow closefunc={this.toggleDelete.bind(this)}/></Dialog>
             <Dialog className={styles.dialogStyle} title="Rename/Move File" isOpen={this.state.renameVisible} onClose={this.toggleRename.bind(this)}><RenameWindow questions={project.questions} closefunc={this.toggleRename.bind(this)}/></Dialog>
             <Dialog className={styles.dialogStyle} title="Copy File" isOpen={this.state.copyVisible} onClose={this.toggleCopy.bind(this)}><CopyWindow questions={project.questions} closefunc={this.toggleCopy.bind(this)}/></Dialog>
+            <Dialog className={styles.dialogStyle} title="Add File" isOpen={this.state.addFileVisible} onClose={this.toggleAddFile.bind(this)}><AddFileWindow questions={project.questions} closefunc={this.toggleAddFile.bind(this)}/></Dialog>
             </div>);
         } else {
             return <Splash/>;
