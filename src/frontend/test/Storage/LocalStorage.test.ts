@@ -98,7 +98,7 @@ describe("Testing LocalStorage interface functions", () => {
   it(`newProject: create ${testSize} projects`, async () => {
     let ids: ProjectID[] = [];
     for (const p of projs) {
-      ids.push(await store.newProject(p.name));
+      ids.push((await store.newProject(p.name)).id);
     }
     expect(R.sortBy(prop("id"), ids)).toEqual(R.map(prop("id"), projs));
     expect(await localProjs()).toEqual(projs);
@@ -120,8 +120,8 @@ describe("Testing LocalStorage interface functions", () => {
 
   it(`newFile: create ${testSize} files per project`, async () => {
     for (const f of files) {
-      const id = await store.newFile(f.project, f.name, f.contents);
-      f.id = id;
+      const file = await store.newFile(f.project, f.name, f.contents);
+      f.id = file.id;
     }
     expect(await localFiles()).toEqual(files);
     expect(await localProjs()).toEqual(projs);
@@ -320,8 +320,8 @@ describe("Testing offline mode synchronization", () => {
   let projID;
 
   it("newFile: should push a change", async () => {
-    projID = await store.newProject(projName);
-    fileID = await store.newFile(projID, fileName, fileContents);
+    projID = (await store.newProject(projName)).id;
+    fileID = (await store.newFile(projID, fileName, fileContents)).id;
     const log = <ChangeLog> await store.topChangeLog();
     expect(log).toEqual({
       id: log.id,

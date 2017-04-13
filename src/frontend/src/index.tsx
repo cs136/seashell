@@ -26,6 +26,7 @@ render(<HashRouter><Provider store={store}><App /></Provider></HashRouter>, root
 Services.init(store.dispatch, {
   debugService: true,
   debugWebSocket: true,
+  debugLocalStorage: true,
   debugWebStorage: true
 });
 

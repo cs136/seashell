@@ -31,7 +31,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     this.debug = debug || false;
   }
 
-  public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileID> {
+  public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileBrief> {
     const fid = await this.storage.newFile(pid, filename, contents);
     const proj = await this.storage.getProject(pid);
     await this.socket.sendMessage({
@@ -75,7 +75,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async newProject(name: string): Promise<ProjectID> {
+  public async newProject(name: string): Promise<ProjectBrief> {
     const pid = await this.storage.newProject(name);
     await this.socket.sendMessage({
       type: "newProject",
@@ -97,13 +97,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return this.storage.readFile(fid);
   }
 
-  public async writeFile(fid: FileID, contents: string): Promise<void> {
+  public async writeFile(fid: FileID, contents: string|undefined): Promise<void> {
     const file = await this.storage.readFile(fid);
+    const proj = await this.storage.getProject(file.project);
     await this.storage.writeFile(fid, contents);
     await this.socket.sendMessage({
       type: "writeFile",
       file: file.name,
-      project: file.project,
+      project: proj.name,
       contents: contents,
       history: ""
     });
@@ -127,12 +128,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return this.storage.getAllFiles();
   };
 
-  public async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false> {
+  public async getFileToRun(proj: ProjectID, question: string): Promise<string|false> {
     return this.storage.getFileToRun(proj, question);
   };
 
-  public async setFileToRun(proj: ProjectID, question: string, id: FileID): Promise<void> {
-    return this.storage.setFileToRun(proj, question, id);
+  public async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void> {
+    return this.storage.setFileToRun(proj, question, filename);
   };
 
   public async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]> {
@@ -180,7 +181,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
     const changesGot = result.changes;
     const newProjects: string[] = result.newProjects;
-    const deletedProjects: ProjectID[] = result.deletedProjects.map<string>(md5);
+    const deletedProjects: ProjectID[] = R.map<string, string>(md5, result.deletedProjects);
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
     // this.isSyncing = false;
     const timeSpent = Date.now() - startTime;
