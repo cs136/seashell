@@ -16,20 +16,20 @@ export {AbstractStorage, AbstractWebStorage,
 
 abstract class AbstractStorage {
   // projects
-  public abstract async newProject(name: string): Promise<ProjectID>;
+  public abstract async newProject(name: string): Promise<ProjectBrief>;
   public abstract async getProject(proj: ProjectID): Promise<Project>;
   public abstract async getProjects(): Promise<ProjectBrief[]>;
   public abstract async deleteProject(proj: ProjectID): Promise<void>;
   public abstract async getProjectFiles(proj: ProjectID): Promise<FileBrief[]>;
   // files
-  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileID>;
+  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
-  public abstract async writeFile(file: FileID, contents: string): Promise<void>;
+  public abstract async writeFile(file: FileID, contents: string|undefined): Promise<void>;
   public abstract async renameFile(file: FileID, newName: string): Promise<void>;
   public abstract async deleteFile(file: FileID): Promise<void>;
   // questions
-  public abstract async setFileToRun(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async getFileToRun(proj: ProjectID, question: string): Promise<FileID|false>;
+  public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
+  public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
   public abstract async setOpenTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void>;
   public abstract async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]>;
   // settings

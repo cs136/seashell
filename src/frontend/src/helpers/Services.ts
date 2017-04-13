@@ -45,12 +45,13 @@ namespace Services {
   export function init(disp: DispatchFunction,
                        options?: { debugService?: boolean;
                                    debugWebSocket?: boolean;
-                                   debugWebStorage?: boolean; }) {
+                                   debugWebStorage?: boolean;
+                                   debugLocalStorage?: boolean; }) {
     dispatch = disp;
     options = options || {};
     debug = options.debugService || false;
     socketClient = new SeashellWebsocket(options.debugWebSocket);
-    localStorage = new LocalStorage();
+    localStorage = new LocalStorage(options.debugLocalStorage);
     webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
@@ -72,9 +73,8 @@ namespace Services {
 
   export async function login(user: string,
                               password: string,
-                              rebootBackend?: boolean,
-                              uri?: string): Promise<void> {
-    uri = uri || "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
+                              rebootBackend: boolean = false,
+                              uri = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
     if (!localStorage || !socketClient) {
       throw new Error("Must call Services.init() before Services.login()");
     }
@@ -105,13 +105,19 @@ namespace Services {
     }
 
     // login successful
-    await localStorage.connect(`seashell-${connection.username}`);
+    await localStorage.connect(`seashell2-${connection.username}`);
     await socketClient.connect(connection);
   }
 
-  export async function logout() {
-    if (socketClient)
-      await socketClient.disconnect();
+  export async function logout(deleteDB: boolean = false) {
+    if (!localStorage || !socketClient) {
+      throw new Error("Must call Services.init() before Services.logout()");
+    }
+    await socketClient.disconnect();
+    if (deleteDB) {
+      await localStorage.deleteDB();
+      debug && console.log("Deleted user's indexedDB.");
+    }
     debug && console.log("User logged out.");
   }
 }

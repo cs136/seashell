@@ -222,6 +222,7 @@ class SeashellWebsocket {
 
   public disconnect(): void {
     if (this.websocket) {
+      this.websocket.onclose = () => {};
       this.websocket.close();
     }
     this.websocket = undefined;
