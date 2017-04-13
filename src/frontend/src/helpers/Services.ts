@@ -105,9 +105,7 @@ namespace Services {
     }
 
     // login successful
-    await localStorage.connect(`seashell-${connection.username}`);
-    await localStorage.deleteDB();
-    await localStorage.connect(`seashell-${connection.username}`);
+    await localStorage.connect(`seashell2-${connection.username}`);
     await socketClient.connect(connection);
   }
 
