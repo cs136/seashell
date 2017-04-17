@@ -6,7 +6,7 @@ import * as S from "../../helpers/Storage/Interface";
 
 const styles = require("./project.scss");
 
-export interface FileListProps { question: any; toggleAddFile: Function};
+export interface FileListProps { question: any; toggleAddFile: Function; };
 export interface FileListState {  }
 
 class FileList extends React.Component<FileListProps & actionsInterface, FileListState> {
