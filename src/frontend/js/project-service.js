@@ -1045,6 +1045,15 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       };
 
       /**
+       * Returns true if a project is deletable.
+       * @param {String} name - Name of project.
+       * @returns {Boolean} 
+       */
+      self.isDeleteable = function (name) {
+          return ! /^[aA][1-9]+/.test(name);
+      };
+
+      /**
        * Deletes a project.
        * @param {String} name - Name of project.
        * @returns {Angular.$q -> ?} Angular deferred that resolves when
