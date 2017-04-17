@@ -54,7 +54,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled")),
+                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
                 editorRatio: 0.5,
                 updated: 0,
               }});
