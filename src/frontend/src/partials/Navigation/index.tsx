@@ -13,8 +13,8 @@ const styles = require("./index.scss");
 const layoutStyles = require("../../Layout.scss");
 
 
-export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; addProjectVisible: boolean; closeAddProj: Function}
-export interface NavigationState { helpVisible: boolean; settingsVisible: boolean; }
+export interface NavigationProps { navLeft?: JSX.Element[]; navRight?: JSX.Element[]; className?: string; }
+export interface NavigationState {  }
 
 class Navigation extends React.Component<NavigationProps&actionsInterface, NavigationState> {
   constructor(props: NavigationProps&actionsInterface) {
@@ -23,12 +23,6 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
       helpVisible: false,
       settingsVisible: false,
     };
-  }
-  toggleHelp() {
-    this.setState({helpVisible: !this.state.helpVisible});
-  }
-  toggleSettings() {
-    this.setState({settingsVisible: !this.state.settingsVisible});
   }
   render() {
     return (
@@ -40,22 +34,30 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
         <div className="pt-navbar-group pt-align-right">
           {this.props.navRight}
           <Popover className={styles.options} content={<Menu>
-            <MenuItem iconName="help" text="Help" onClick={this.toggleHelp.bind(this)}/>
+            <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
             <MenuItem iconName="refresh" text="Sync All" />
-            <MenuItem iconName="cog" text="Settings" onClick={this.toggleSettings.bind(this)} />
+            <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
             <MenuItem iconName="changes" text="Reset Seashell" />
             <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
         </Menu>} position={Position.BOTTOM_RIGHT}>
             <button className="pt-button pt-icon-more pt-minimal"></button>
         </Popover>
-            <div><Dialog className={styles.dialogStyle} title="Seashell Help" isOpen={this.state.helpVisible} onClose={this.toggleHelp.bind(this)}>
+            <div>
+            <Dialog className={styles.dialogStyle} title="Seashell Help"
+              isOpen={this.props.dialog.help_open}
+              onClose={this.props.dispatch.dialog.toggleHelp}>
               <HelpDialog />
             </Dialog>
-            <Dialog className={styles.dialogStyle} title="Settings" isOpen={this.state.settingsVisible} onClose={this.toggleSettings.bind(this)}>
-              <SettingsDialog closefunc={this.toggleSettings.bind(this)}/>
+            <Dialog className={styles.dialogStyle} title="Settings"
+              isOpen={this.props.dialog.settings_open}
+              onClose={this.props.dispatch.dialog.toggleSettings}>
+              <SettingsDialog closefunc={this.props.dispatch.dialog.toggleSettings}/>
             </Dialog>
-            <Dialog className={styles.dialogStyle} title="Add Project" isOpen={this.props.addProjectVisible} onClose={() => this.props.closeAddProj()}>
-              <AddProjectWindow closefunc={this.props.closeAddProj}/>
+            <Dialog className={styles.dialogStyle}
+              title="Add Project"
+              isOpen={this.props.dialog.add_project_open}
+              onClose={this.props.dispatch.dialog.toggleAddProject}>
+              <AddProjectWindow closefunc={this.props.dispatch.dialog.toggleAddProject}/>
             </Dialog>  
             </div>
         </div>

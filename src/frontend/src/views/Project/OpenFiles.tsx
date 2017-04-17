@@ -5,11 +5,7 @@ import FileActions from "./FileActions";
 
 const styles = require("./project.scss");
 
-export interface OpenFilesProps {
-  toggleDelete: Function;
-  toggleCopy: Function;
-  toggleRename: Function;
-}
+export interface OpenFilesProps {}
 
 export interface OpenFilesState { };
 
@@ -32,10 +28,7 @@ class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenF
                   {file.id === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
                   {file.name.substring(file.name.indexOf("/") + 1)}
                 </button>
-                <Popover content={<FileActions file={file}
-                                              toggleCopy={this.props.toggleCopy}
-                                              toggleDelete={this.props.toggleDelete}
-                                              toggleRename={this.props.toggleRename}/>}
+                <Popover content={<FileActions file={file}/>}
                         position={Position.BOTTOM}>
                   <button className={"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}>
                   </button>

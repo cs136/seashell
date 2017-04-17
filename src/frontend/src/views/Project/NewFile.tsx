@@ -11,14 +11,14 @@ class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface,
   project: string;
   constructor(props: AddFileWindowProps&actionsInterface) {
     super(props);
-    if(this.props.appState.currentProject){
+    if (this.props.appState.currentProject) {
       this.project = this.props.appState.currentProject.id;
       this.state = {
-      question: this.props.questions[0],
-      file: "",
-      prevFile: ""
-    };}
-    else{
+        question: this.props.questions[0],
+        file: "",
+        prevFile: ""
+      };
+    } else {
       throw new Error("AddFile invoke on undefined project!");
     }
   }
@@ -44,7 +44,7 @@ class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface,
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.file === "" || this.state.file.includes("/")} onClick={() => {
           this.props.dispatch.file.addFile(this.project, this.state.question + "/" + this.state.file,
-          this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" : 
+          this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" :
           this.state.file.split(".").pop() === "h" ? "//put your interface here\n" :
           this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "");
           this.props.closefunc();

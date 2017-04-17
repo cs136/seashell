@@ -9,27 +9,28 @@ const styles = require("./Home.scss");
 
 
 export interface HomeProps extends RouteComponentProps<{}> { title: string; }
-export interface HomeState { open?: boolean; title?: string; addProjectVisible: boolean}
+export interface HomeState { open?: boolean; title?: string; }
 
 class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
-  constructor(props: HomeProps&actionsInterface){
+  constructor(props: HomeProps&actionsInterface) {
     super(props);
-    this.state={
-      addProjectVisible: false,
-    }
   }
-  toggleAddProj(){
-    this.setState({addProjectVisible: !this.state.addProjectVisible});
-  }
+
   render() {
     const projects = this.props.appState.projects;
     return (<div>
-      <Navigation addProjectVisible={this.state.addProjectVisible} closeAddProj={this.toggleAddProj.bind(this)}
-      navLeft={[
+      <Navigation
+          navLeft={[
           <div className="pt-navbar-heading" key="project-name">My Projects</div>]}
           navRight={
-            [<button className="pt-button" role="button" key="home-new-project" onClick={()=>this.toggleAddProj()}><span className="pt-icon-standard pt-icon-plus pt-align-left"></span>New Project</button>,
-            <button className="pt-button" role="button" key="home-refresh" onClick={() => this.props.dispatch.project.getAllProjects()}><span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>Refresh</button>]
+            [<button className="pt-button" role="button" key="home-new-project" onClick={this.props.dispatch.dialog.toggleAddProject}>
+              <span className="pt-icon-standard pt-icon-plus pt-align-left"></span>
+              New Project
+            </button>,
+            <button className="pt-button" role="button" key="home-refresh" onClick={this.props.dispatch.project.getAllProjects}>
+              <span className="pt-icon-standard pt-icon-refresh pt-align-left"></span>
+              Refresh
+            </button>]
           }
            />
       <div className={styles.container}>

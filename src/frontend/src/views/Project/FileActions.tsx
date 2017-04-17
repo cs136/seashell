@@ -6,9 +6,6 @@ const styles = require("./project.scss");
 
 export interface FileActionsProps {
   file: S.FileBrief;
-  toggleDelete: Function;
-  toggleCopy: Function;
-  toggleRename: Function;
 }
 
 export interface FileActionsState {  }
@@ -26,15 +23,15 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
       <MenuDivider />
       <MenuItem text="Rename/Move" onClick={() => {
         this.props.dispatch.file.setFileOpTarget(this.props.file);
-        this.props.toggleRename();
+        this.props.dispatch.dialog.toggleRenameFile();
       }}/>
       <MenuItem text="Copy" onClick={() => {
         this.props.dispatch.file.setFileOpTarget(this.props.file);
-        this.props.toggleCopy();
+        this.props.dispatch.dialog.toggleCopyFile();
       }}/>
       <MenuItem text="Delete" onClick={() => {
         this.props.dispatch.file.setFileOpTarget(this.props.file);
-        this.props.toggleDelete();
+        this.props.dispatch.dialog.toggleDeleteFile();
       }}/>
       <MenuDivider />
       <MenuItem text="Close File" onClick={() => {
