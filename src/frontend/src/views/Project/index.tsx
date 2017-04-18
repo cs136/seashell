@@ -20,19 +20,14 @@ import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
 import * as S from "../../helpers/Storage/Interface";
 export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
-export interface ProjectState { deleteVisible: boolean; renameVisible: boolean; copyVisible: boolean; toggleView: boolean; addFileVisible: boolean}
-
+export interface ProjectState { toggleView: boolean; }
 
 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
     this.state = {
-        toggleView: false,
-        deleteVisible: false,
-        renameVisible: false,
-        copyVisible: false,
-        addFileVisible: false,
+        toggleView: false
     };
   }
   componentWillMount() {
@@ -61,18 +56,6 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         });
     }
   }
-  toggleDelete() {
-      this.setState(merge(this.state, {deleteVisible: !this.state.deleteVisible}));
-  }
-  toggleRename() {
-      this.setState(merge(this.state, {renameVisible: !this.state.renameVisible}));
-  }
-  toggleCopy() {
-      this.setState(merge(this.state, {copyVisible: !this.state.copyVisible}));
-  }
-  toggleAddFile() {
-      this.setState(merge(this.state, {addFileVisible: !this.state.addFileVisible}));
-  }
   toggleView() {
       this.setState(merge(this.state, {toggleView: !this.state.toggleView}));
   }
@@ -81,48 +64,77 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     if (project) {
         const question = project.currentQuestion;
         if (question) {
-            return (<div><Navigation navLeft={[
-                <div className="pt-navbar-heading" key="project-name">{project.name}</div>,
-                <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
-                    <button className="pt-button pt-intent-primary"><span className="pt-icon-standard pt-icon-caret-down" />{question.name || "Select a Question"}</button>
-                </Popover>,
-                <span className="pt-navbar-divider" key="project-divider"></span>,
-                <Popover content={<FileList question={question} toggleAddFile={this.toggleAddFile.bind(this)}/>} position={Position.BOTTOM} key="project-open-file">
-                    <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
-                </Popover>]} navRight={[
-                <OpenFiles key="project-open-files" toggleDelete={this.toggleDelete.bind(this)} toggleCopy={this.toggleCopy.bind(this)} toggleRename={this.toggleRename.bind(this)}/>,
-                <Tooltip key="project-toggle-view" content="Toggle Editor/Console" position={Position.BOTTOM}><button onClick={this.toggleView.bind(this)} className={"pt-button pt-minimal pt-icon-applications " + styles.toggleView}></button></Tooltip>,
-                <Tooltip key="project-build-file" content="Test" position={Position.BOTTOM_RIGHT}>{this.props.appState.runState !== 0 || question.runFile === "" ? <button className="pt-button pt-minimal pt-disabled pt-icon-comparison"></button> : <button className="pt-button pt-minimal pt-icon-comparison" onClick={() => this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.name, question.name, question.runFile, true))}></button>}</Tooltip>,
-                question.runFile ?
-                    <Tooltip key="project-run-file-set" content="Please set a run file" position={Position.BOTTOM_RIGHT}>
-                        <button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip>
-                    : this.props.appState.runState === 0 ?
-                        <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}>
+            return (<div>
+                <Navigation navLeft={[
+                        <div className="pt-navbar-heading" key="project-name">{project.name}</div>,
+                        <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
+                            <button className="pt-button pt-intent-primary"><span className="pt-icon-standard pt-icon-caret-down" />{question.name || "Select a Question"}</button>
+                        </Popover>,
+                        <span className="pt-navbar-divider" key="project-divider" />,
+                        <Popover content={<FileList question={question}/>} position={Position.BOTTOM} key="project-open-file">
+                            <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
+                        </Popover>]}
+                    navRight={[
+                        <OpenFiles key="project-open-files" />,
+                        <Tooltip key="project-toggle-view" content="Toggle Editor/Console" position={Position.BOTTOM}>
+                            <button onClick={this.toggleView.bind(this)} className={"pt-button pt-minimal pt-icon-applications " + styles.toggleView}>
+                            </button>
+                        </Tooltip>,
+                        <Tooltip key="project-build-file" content="Test" position={Position.BOTTOM_RIGHT}>
+                            {this.props.appState.runState !== 0 || question.runFile === "" ?
+                                <button className="pt-button pt-minimal pt-disabled pt-icon-comparison"> </button>
+                                :
+                                <button className="pt-button pt-minimal pt-icon-comparison"
+                                    onClick={() =>
+                                        this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.name, question.name, question.runFile, true))}>
+                                </button>}
+                        </Tooltip>,
+                        question.runFile ?
+                            <Tooltip key="project-run-file-set" content="Please set a run file" position={Position.BOTTOM_RIGHT}>
+                            <button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip>
+                        : this.props.appState.runState === 0 ?
+                            <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}>
                             <button className="pt-button pt-minimal pt-icon-play"
                                 onClick={() => this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.name, question.name, question.runFile, false))}>
                             </button>
-                        </Tooltip>
-                        : this.props.appState.runState === 1 ?
-                            <Tooltip key="project-run-file" content="Compiling" position={Position.BOTTOM_RIGHT}>
-                                <button className="pt-button pt-minimal pt-disabled pt-icon-build">
-                                </button>
                             </Tooltip>
-                            : <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
-                                <button className="pt-button pt-minimal pt-icon-stop" onClick={() => this.props.dispatch.compile.stopProgram()}>
+                            : this.props.appState.runState === 1 ?
+                                <Tooltip key="project-run-file" content="Compiling" position={Position.BOTTOM_RIGHT}>
+                                    <button className="pt-button pt-minimal pt-disabled pt-icon-build">
                                 </button>
-                              </Tooltip>,
-                <Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
-                    <button className="pt-button pt-minimal pt-icon-publish-function">
-                    </button>
-                </Tooltip>]}/>
-            {!question.currentFile ?
-                <Splash/> :
-                <File className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}
-                    file={question.currentFile.name} />}
-            <Dialog className={styles.dialogStyle} title="Delete File" isOpen={this.state.deleteVisible} onClose={this.toggleDelete.bind(this)}><DeleteWindow closefunc={this.toggleDelete.bind(this)}/></Dialog>
-            <Dialog className={styles.dialogStyle} title="Rename/Move File" isOpen={this.state.renameVisible} onClose={this.toggleRename.bind(this)}><RenameWindow questions={project.questions} closefunc={this.toggleRename.bind(this)}/></Dialog>
-            <Dialog className={styles.dialogStyle} title="Copy File" isOpen={this.state.copyVisible} onClose={this.toggleCopy.bind(this)}><CopyWindow questions={project.questions} closefunc={this.toggleCopy.bind(this)}/></Dialog>
-            <Dialog className={styles.dialogStyle} title="Add File" isOpen={this.state.addFileVisible} onClose={this.toggleAddFile.bind(this)}><AddFileWindow questions={project.questions} closefunc={this.toggleAddFile.bind(this)}/></Dialog>
+                                </Tooltip>
+                                : <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
+                                    <button className="pt-button pt-minimal pt-icon-stop" onClick={() => this.props.dispatch.compile.stopProgram()}>
+                                    </button>
+                                 </Tooltip>,
+                        <Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
+                            <button className="pt-button pt-minimal pt-icon-publish-function">
+                            </button>
+                        </Tooltip>]}/>
+                {!question.currentFile ?
+                    <Splash/> :
+                    <File className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}
+                        file={question.currentFile.name} />}
+                <Dialog className={styles.dialogStyle} title="Delete File"
+                    isOpen={this.props.dialog.delete_file_open}
+                    onClose={this.props.dispatch.dialog.toggleDeleteFile}>
+                        <DeleteWindow closefunc={this.props.dispatch.dialog.toggleDeleteFile}/>
+                </Dialog>
+                <Dialog className={styles.dialogStyle} title="Rename/Move File"
+                    isOpen={this.props.dialog.rename_file_open}
+                    onClose={this.props.dispatch.dialog.toggleRenameFile}>
+                    <RenameWindow questions={project.questions} closefunc={this.props.dispatch.dialog.toggleRenameFile}/>
+                </Dialog>
+                <Dialog className={styles.dialogStyle} title="Copy File"
+                    isOpen={this.props.dialog.copy_file_open}
+                    onClose={this.props.dispatch.dialog.toggleCopyFile}>
+                        <CopyWindow questions={project.questions} closefunc={this.props.dispatch.dialog.toggleCopyFile}/>
+                </Dialog>
+                <Dialog className={styles.dialogStyle} title="Add File"
+                    isOpen={this.props.dialog.add_file_open}
+                    onClose={this.props.dispatch.dialog.toggleAddFile}>
+                        <AddFileWindow questions={project.questions} closefunc={this.props.dispatch.dialog.toggleAddFile}/>
+                </Dialog>
             </div>);
         } else {
             return <Splash/>;

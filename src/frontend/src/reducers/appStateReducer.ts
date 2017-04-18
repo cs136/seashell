@@ -157,10 +157,9 @@ export default function appStateReducer(state: appStateReducerState = {
       }
       return state;
     case appStateActions.removeProject:
-      // TODO: broken
       state = clone(state);
       if (state.projects) {
-        state.projects.splice(state.projects.indexOf(action.payload.name), 1);
+        state.projects = state.projects.filter((project) => project.id !== action.payload.id);
       }
       return state;
     case appStateActions.removeFile:
@@ -219,10 +218,10 @@ export default function appStateReducer(state: appStateReducerState = {
       {currentProject:
         {currentQuestion:
           {currentFile:
-            {content: action.payload,
-              target: null,
-              flusher: null,
-              unwrittenContent: null}}}});
+            {contents: action.payload,
+              target: undefined,
+              flusher: undefined,
+              unwrittenContent: undefined}}}});
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {

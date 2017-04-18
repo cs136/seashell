@@ -2,7 +2,7 @@ import { connect } from "react-redux";
 import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import { projectRef, fileRef } from "../types";
-import { appStateActions}  from "../reducers/appStateReducer";
+import { appStateActions }  from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
 import { GenericError, LoginError } from "../helpers/Errors";
@@ -11,6 +11,7 @@ import { trim } from "ramda";
 import { settingsActions, settingsReducerState, settingsReducerStateNullable } from "../reducers/settingsReducer";
 import * as S from "../helpers/Storage/Interface";
 import * as C from "../helpers/Compiler/Interface";
+import { dialogActions } from "../reducers/dialogReducer";
 
 
 interface Func<T> {
@@ -43,9 +44,32 @@ const mapDispatchToProps = (dispatch: Function) => {
 
   const actions =  {
     dispatch: {
+      dialog: {
+        toggleHelp: () => {
+          dispatch({type: dialogActions.toggle, payload: "help_open"});
+        },
+        toggleSettings: () => {
+          dispatch({type: dialogActions.toggle, payload: "settings_open"});
+        },
+        toggleAddProject: () => {
+          dispatch({type: dialogActions.toggle, payload: "add_project_open"});
+        },
+        toggleDeleteFile: () => {
+          dispatch({type: dialogActions.toggle, payload: "delete_file_open"});
+        },
+        toggleRenameFile: () => {
+          dispatch({type: dialogActions.toggle, payload: "rename_file_open"});
+        },
+        toggleCopyFile: () => {
+          dispatch({type: dialogActions.toggle, payload: "copy_file_open"});
+        },
+        toggleAddFile: () => {
+          dispatch({type: dialogActions.toggle, payload: "add_file_open"});
+        }
+      },
       settings: {
-        initSettings: ()=> {
-          Services.storage().getSettings().then((settings)=>{
+        initSettings: () => {
+          Services.storage().getSettings().then((settings) => {
             dispatch({
               type: settingsActions.updateSettings,
               payload: {
@@ -54,7 +78,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: 0,
+                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
                 editorRatio: 0.5,
                 updated: 0,
               }});
@@ -77,6 +101,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               tab_width: newSettings.tabWidth
             }));
           });
+          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
@@ -266,13 +291,13 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
       },
       project: {
-        addProject: (newProjectName: string) =>
-          {return asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) => 
+        addProject: (newProjectName: string) => {
+          return asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) =>
             dispatch({
             type: appStateActions.addProject,
             payload: projBrief
-        })
-      )},
+          }));
+        },
         removeProject: (pid: S.ProjectID) =>
           asyncAction(Services.storage().deleteProject(pid)).then(() => dispatch({
             type: appStateActions.removeProject,

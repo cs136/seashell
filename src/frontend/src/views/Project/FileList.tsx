@@ -6,7 +6,7 @@ import * as S from "../../helpers/Storage/Interface";
 
 const styles = require("./project.scss");
 
-export interface FileListProps { question: any; toggleAddFile: Function};
+export interface FileListProps { question: any; };
 export interface FileListState {  }
 
 class FileList extends React.Component<FileListProps & actionsInterface, FileListState> {
@@ -16,7 +16,7 @@ class FileList extends React.Component<FileListProps & actionsInterface, FileLis
     render() {
         const question = this.props.question;
         return (<Menu>
-            <MenuItem iconName="plus" text="New File" onClick={() => this.props.toggleAddFile()}/>
+            <MenuItem iconName="plus" text="New File" onClick={() => this.props.dispatch.dialog.toggleAddFile()}/>
             {question.files.map((file: S.FileBrief) => (<MenuItem key={"file-list-item-" + file.name} onClick={() => {
                 this.props.dispatch.file.openFile(file);
                 this.props.dispatch.file.switchFile(file);
