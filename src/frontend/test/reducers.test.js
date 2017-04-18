@@ -10,9 +10,9 @@ describe("App States", () => {
       {currentQuestion:
         {currentFile:
           {contents: outputString,
-            flusher: null,
-            target: null,
-            unwrittenContent: null}}}};
+            flusher: undefined,
+            target: undefined,
+            unwrittenContent: undefined}}}};
     expect(appStateReducer.default({currentProject:
       {currentQuestion:
         {currentFile:
