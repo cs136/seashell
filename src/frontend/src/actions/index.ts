@@ -196,10 +196,13 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (file: S.FileBrief) => dispatch({
-          type: appStateActions.openFile,
-          payload: file
-        }),
+        openFile: (file: S.FileBrief, files: string[]) => {
+          files.push(file.name);
+          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files).then((questions)=>
+          dispatch({
+            type: appStateActions.openFile,
+            payload: file
+        }))},
         closeFile: (file: S.FileBrief) => dispatch({
           type: appStateActions.closeFile,
           payload: file
