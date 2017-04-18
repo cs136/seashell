@@ -9,14 +9,14 @@ describe("App States", () => {
     const expectedData = {currentProject:
       {currentQuestion:
         {currentFile:
-          {content: outputString,
+          {contents: outputString,
             flusher: null,
             target: null,
             unwrittenContent: null}}}};
     expect(appStateReducer.default({currentProject:
       {currentQuestion:
         {currentFile:
-          {content: "fail",
+          {contents: "fail",
             flusher: 15,
             target: ["A","B"],
             unwrittenContent: "fail"}}}}, action(appStateReducer.appStateActions.changeFileContent, outputString))
