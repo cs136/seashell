@@ -14,18 +14,20 @@ export interface RenameWindowProps {
 
 class RenameWindow extends React.Component<RenameWindowProps&actionsInterface,
   {question: string; file: string, prevFile: string, target: FileBrief}> {
+  openFiles: any;
   constructor(props: RenameWindowProps&actionsInterface) {
     super(props);
     console.log(this.props.appState.fileOpTarget);
-    if (this.props.appState.fileOpTarget) {
+    if (this.props.appState.fileOpTarget&&this.props.appState.currentProject&&this.props.appState.currentProject.currentQuestion) {
       this.state = {
         question: this.props.questions[0],
         file: this.props.appState.fileOpTarget.name.split("/").pop() || "",
         prevFile: this.props.appState.fileOpTarget.name.split("/").pop() || "",
         target: this.props.appState.fileOpTarget
       };
+      this.openFiles=this.props.appState.currentProject.currentQuestion.openFiles;
     } else {
-      throw new Error("Invoking RenameWindow on undefined fileOpTarget!");
+      throw new Error("Invoking RenameWindow on undefined fileOpTarget or currentProject or currentQuestion!");
     }
   }
   render() {
@@ -53,7 +55,7 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface,
           <button type="button" className="pt-button pt-intent-primary" onClick={() => {
             this.props.dispatch.file.renameFile(this.state.target, this.state.question + "/" + this.state.file).then(
               () => this.props.dispatch.question.switchQuestion(project.id, this.state.question).then(() => {
-                this.props.dispatch.file.openFile(this.state.target);
+                this.props.dispatch.file.openFile(this.state.target, this.openFiles);
                 this.props.dispatch.file.switchFile(this.state.target);
                 })
             ).catch((error) => {

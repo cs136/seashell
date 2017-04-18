@@ -11,8 +11,15 @@ export interface FileActionsProps {
 export interface FileActionsState {  }
 
 class FileActions extends React.Component<FileActionsProps & actionsInterface, FileActionsState> {
+  openFiles: any;
   constructor(props: FileActionsProps & actionsInterface) {
     super(props);
+    if(!this.props.appState.currentProject||!this.props.appState.currentProject.currentQuestion){
+      throw new Error("Invoking FileActions on undefined currentProject or currentQuestion!");
+    }
+    else{
+      this.openFiles=this.props.appState.currentProject.currentQuestion.openFiles;
+    }
   }
   render() {
     const file = this.props.file;
@@ -35,7 +42,7 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
       }}/>
       <MenuDivider />
       <MenuItem text="Close File" onClick={() => {
-        this.props.dispatch.file.closeFile.bind(null, file);
+        this.props.dispatch.file.closeFile(file, this.openFiles);
         let state = this.props.appState;
 
         if (state.currentProject && state.currentProject && state.currentProject.currentQuestion) {

@@ -221,21 +221,25 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (file: S.FileBrief, files: string[]) => {
-          files.push(file.name);
-          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files).then((questions)=>
+        openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+          files.push(file);
+          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files.map((file)=>file.id)).then((questions)=>
           dispatch({
             type: appStateActions.openFile,
             payload: file
         }))},
-        closeFile: (file: S.FileBrief) => dispatch({
-          type: appStateActions.closeFile,
-          payload: file
-        }),
-        setRunFile: (file: S.FileBrief) => dispatch({
+        closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+          files.splice(files.indexOf(file), 1);
+          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files.map((file)=>file.id)).then((questions)=>
+            dispatch({
+            type: appStateActions.closeFile,
+            payload: file
+         }));
+        },
+        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(()=>dispatch({
           type: appStateActions.setRunFile,
           payload: file
-        })
+        })),
       },
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
@@ -249,20 +253,22 @@ const mapDispatchToProps = (dispatch: Function) => {
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              return asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) => dispatch({
+              asyncAction(Services.storage().getProjectFiles(pid))
+              .then((files: S.FileBrief[]) => asyncAction(Services.storage().getOpenTabs(pid, name)).then((openFiles)=>asyncAction(Services.storage().getFileToRun(pid, name).then((runFile)=>
+              dispatch({
                 type: appStateActions.switchQuestion,
                 payload: {
                   question: {
                     name: name,
-                    runFile: undefined,
+                    runFile: runFile,
                     currentFile: undefined,
-                    openFiles: [],
+                    openFiles: openFiles,
                     diags: [],
                     files: files.filter((file) => file.name.split("/")[0] === name)
                   }
                 }
-            }));
+            }))))
+              );
           });
         }
       },
