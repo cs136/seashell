@@ -315,6 +315,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
+          dispatch({type: appStateActions.switchProject, payload: {project: null}});
           return asyncAction(Services.storage().getProjectFiles(pid)).then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
