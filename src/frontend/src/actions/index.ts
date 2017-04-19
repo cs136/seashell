@@ -315,8 +315,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
-          return asyncAction(Services.storage().getProjectFiles(pid)
-            .then((files: S.FileBrief[]) => dispatch({
+          return asyncAction(Services.storage().getProjectFiles(pid)).then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
                 project: {
@@ -328,7 +327,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                   currentQuestion: undefined
                 }
               }
-            })));
+            })).catch((reason) => {
+            if (reason !== null) showError(reason.message);
+          });
         },
         getAllProjects: () => {
           return asyncAction(Services.storage().getProjects()).then((projects) => dispatch({

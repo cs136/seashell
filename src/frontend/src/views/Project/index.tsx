@@ -35,12 +35,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     let state = this.props.appState;
     if (!state.currentProject ||
         willOpenPid !== state.currentProject.id) {
-        if (state.currentProject)
-            this.props.dispatch.file.invalidateFile();
+        if (state.currentProject) this.props.dispatch.file.invalidateFile();
         // force wait until promise is resolved
         this.props.dispatch.project.switchProject(willOpenPid).then(() => {
-            /*
-            if (state.currentProject.questions.length > 0) {
+            if (this.props.appState.currentProject&&this.props.appState.currentProject.questions.length > 0) {
                 this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.id, this.props.appState.currentProject.questions[0]).catch(
                     (reason) => {
                       if (reason !== null) {
@@ -48,7 +46,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                       }
                     }
                 );
-            } */
+            }
         }).catch((reason) => {
           if (reason !== null) {
             showError(reason.message);
