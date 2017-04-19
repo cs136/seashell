@@ -624,6 +624,12 @@
         `#hash((id . ,id)
                (success . #t)
                (result . #t))]
+      [(hash-table
+        ('id id)
+        ('type "fetchAssignments"))
+        `#hash((id . ,id)
+               (success . #t)
+               (result . ,(fetch-assignments)))]
       ;; Fall through case.
       [_
        `#hash((id . ,(hash-ref message 'id))
