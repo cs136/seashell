@@ -22,14 +22,18 @@ body {
   padding-right: 30px;
 }
 
-#console-editor-container {
+#editor-console-container {
   padding: 0;
   margin: 10px 0px 10px 0px;
 }
 
+.CodeMirror-overlayscroll-horizontal {
+  display: none !important;
+}
+
 @media (max-width: 1440px) {
 
-  #console-editor-container {
+  #editor-console-container {
     padding: 0;
     margin: 10px -15px 0 -15px;
   }
