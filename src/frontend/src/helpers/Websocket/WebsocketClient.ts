@@ -130,9 +130,9 @@ class SeashellWebsocket {
           if (this.websocket) // Always reachable
             this.websocket.close(); // force reconnect
         }
-        this.debug && console.log("ping");
+        // this.debug && console.log("ping");
         await this.ping();
-        this.debug && console.log("pong");
+        // this.debug && console.log("pong");
         timeoutCount = 0;
       }, 5000);
     };

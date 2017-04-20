@@ -85,7 +85,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getProjects();
   }
 
@@ -119,12 +119,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getProjectFiles(pid);
   };
 
   public async getAllFiles(): Promise<FileBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getAllFiles();
   };
 
