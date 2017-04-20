@@ -223,20 +223,21 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
           files.push(file);
-          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files.map((file)=>file.id)).then((questions)=>
+          Services.storage().setOpenTabs(file.project, file.question(), files).then((questions) =>
           dispatch({
             type: appStateActions.openFile,
             payload: file
-        }))},
+          }));
+        },
         closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
           files.splice(files.indexOf(file), 1);
-          Services.storage().setOpenTabs(file.project, file.name.split("/")[0], files.map((file)=>file.id)).then((questions)=>
+          Services.storage().setOpenTabs(file.project, file.question(), files).then((questions) =>
             dispatch({
             type: appStateActions.closeFile,
             payload: file
          }));
         },
-        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(()=>dispatch({
+        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(() => dispatch({
           type: appStateActions.setRunFile,
           payload: file
         })),
@@ -254,7 +255,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
               asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) => asyncAction(Services.storage().getOpenTabs(pid, name)).then((openFiles)=>asyncAction(Services.storage().getFileToRun(pid, name).then((runFile)=>
+              .then((files: S.FileBrief[]) => asyncAction(Services.storage().getOpenTabs(pid, name)).then((openFiles) => asyncAction(Services.storage().getFileToRun(pid, name).then((runFile) =>
               dispatch({
                 type: appStateActions.switchQuestion,
                 payload: {
