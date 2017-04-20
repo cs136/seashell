@@ -2,9 +2,7 @@ import {AbstractStorage,
         ProjectID,
         FileID,
         FileBrief,
-        File,
-        ext,
-        basename} from "../Storage/Interface";
+        File} from "../Storage/Interface";
 import {groupBy} from "../utils";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
@@ -45,18 +43,18 @@ abstract class AbstractCompiler {
     return groupBy(files.filter((f: FileBrief) => {
       return f.name.startsWith(question + "/tests/");
     }), (f: FileBrief) => {
-      return basename(f);
+      return f.basename();
     }).map((t: FileBrief[]) => {
       let test: TestBrief = {
-        name: basename(t[0]),
+        name: t[0].basename(),
         in: undefined,
         expect: undefined
        };
-      if (ext(t[0]) === "in")
+      if (t[0].extension() === "in")
         test.in = t[0];
       else
         test.expect = t[0];
-      if (t[1] && ext(t[1]) === "in")
+      if (t[1] && t[1].extension() === "in")
         test.in = t[1];
       else if (t[1])
         test.expect = t[1];
@@ -81,7 +79,7 @@ abstract class AbstractCompiler {
   }
 }
 
-interface TestBrief {
+interface TestBrief  {
   name: string;
   in?: FileBrief;
   expect?: FileBrief;
@@ -92,6 +90,7 @@ interface Test extends TestBrief {
   in?: File;
   expect?: File;
 }
+
 
 interface CompilerResult {
   messages: CompilerDiagnostic[];
