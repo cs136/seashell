@@ -101,6 +101,63 @@ angular.module('frontend-app')
             fn();
           }
         }
+
+        (function initResizableUI() {
+          var consoleDOM = $("#console");
+          var editorDOM = $("#editor");
+          var containerDOM = $("#editor-console-container");
+          var w = containerDOM.width();
+          var h = editorDOM.height();
+          var minEditorW = 470;
+          var minConsoleW = 220;
+          editorDOM.resizable({
+            handles: "e",
+            resize: function(event, ui) {
+              editorDOM.css({
+                width: ui.size.width
+              });
+              consoleDOM.css({
+                width: w - ui.size.width
+              });
+              self.editor.refresh();
+              self.consoleEditor.refresh();
+              event.stopPropagation();
+            }
+          });
+          function resizeToFit() {
+            w = containerDOM.width();
+            h = editorDOM.height();
+            if (minEditorW + minConsoleW < w) {
+              editorDOM.resizable("option", "minWidth", minEditorW);
+              editorDOM.resizable("option", "maxWidth", w - minConsoleW);
+            } else {
+              editorDOM.resizable("option", "minWidth", 50);
+              editorDOM.resizable("option", "maxWidth", w - 50);
+            }
+            editorDOM.resizable("option", "minHeight", h);
+            editorDOM.resizable("option", "maxHeight", h);
+            if (! settings.settings.force_narrow) {
+              editorDOM.css({width: w / 2});
+              consoleDOM.css({width: w / 2});
+            }
+            if (self.editor) {self.editor.refresh();}
+            if (self.consoleEditor) {self.consoleEditor.refresh();}
+          }
+          resizeToFit();
+          window.onresize = resizeToFit;
+          if (settings.settings.force_narrow) {
+            disableResizableUI();
+          }
+        })();
+
+        function disableResizableUI() {
+          $("#editor").resizable("disable").css({width: '', height: ''});
+          $("#console").css({width: '', height: ''});
+        }
+        
+        function enableResizableUI() {
+          $("#editor").resizable("enable");
+        }
         
         $scope.$on('run-when-saved', function (evt, fn) {
           runWhenSaved(fn);
@@ -108,6 +165,11 @@ angular.module('frontend-app')
 
         self.onResize = function() {
           settings.settings.force_narrow = !(settings.settings.force_narrow);
+          if (settings.settings.force_narrow) {
+            disableResizableUI();
+          } else {
+            enableResizableUI();
+          }
           settings.save();
         };
 

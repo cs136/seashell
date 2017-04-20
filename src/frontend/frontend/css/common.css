@@ -22,16 +22,21 @@ body {
   padding-right: 30px;
 }
 
-#console-editor-container {
+#editor-console-container {
   padding: 0;
-  margin: 10px 0px 10px 0px;
+  margin: 15px 0px 10px 0px;
+  overflow: hidden;
+}
+
+.CodeMirror-overlayscroll-horizontal {
+  display: none !important;
 }
 
 @media (max-width: 1440px) {
 
-  #console-editor-container {
+  #editor-console-container {
     padding: 0;
-    margin: 10px -15px 0 -15px;
+    margin: 15px -15px 0 -15px;
   }
   .container-fluid {
     padding-left: 15px;
@@ -85,14 +90,6 @@ body {
 
 .CodeMirror-gutters {
   border: none;
-}
-
-.editor-console {
-  margin-top: 5px;
-  margin-bottom: none;
-}
-
-#editor {
 }
 
 #editor > .CodeMirror {
