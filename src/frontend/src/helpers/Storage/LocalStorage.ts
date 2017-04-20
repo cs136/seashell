@@ -246,20 +246,26 @@ class LocalStorage implements AbstractStorage {
       if (! project) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
       }
-      const file = new File();
-      file.id = fid;
-      file.project = pid;
-      file.name = name;
-      file.contents = contents;
-      file.checksum = checksum;
-      file.last_modified = Date.now();
-      await this.db.files.add(file);
+      await this.db.files.add({
+        id: fid,
+        project: pid,
+        name: name,
+        contents: contents,
+        checksum: checksum,
+        last_modified: Date.now()
+      });
       await this.pushChangeLog({
         type: "newFile",
         contents: contents,
         file: {file: name, project: pid}
       });
-      return file.toFileBrief();
+      const fb = new FileBrief();
+      fb.id = fid;
+      fb.project = pid;
+      fb.name = name;
+      fb.checksum = checksum;
+      fb.last_modified = Date.now();
+      return fb;
     });
   }
 
@@ -439,9 +445,19 @@ class LocalStorage implements AbstractStorage {
 }
 
 
+// interface FileStored {
+//   id: FileID;
+//   name: string; // a file name is (test|q*|common)/name
+//   last_modified: number;
+//   project: ProjectID;
+//   checksum: string;
+//   open: boolean;
+//   contents: string | undefined;
+// }
+
 class StorageDB extends Dexie {
   public changeLogs: Dexie.Table<ChangeLog, number>;
-  public files: Dexie.Table<File, FileID>;
+  public files: Dexie.Table<any, FileID>;
   public projects: Dexie.Table<Project, ProjectID>;
   public settings: Dexie.Table<Settings, number>;
 
