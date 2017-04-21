@@ -22,8 +22,11 @@ abstract class AbstractStorage {
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
   public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
-  public abstract async setOpenTabs(proj: ProjectID, question: string, files: FileBrief[]): Promise<void>;
+  // public abstract async setOpenTabs(proj: ProjectID, question: string, files: FileBrief[]): Promise<void>;
+  public abstract async addOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
+  public abstract async removeOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
   public abstract async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]>;
+
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;
   public abstract async getSettings(): Promise<Settings>;
@@ -54,7 +57,9 @@ class File implements FileStored {
     this.last_modified = obj.last_modified;
     this.project = obj.project;
     this.checksum = obj.checksum;
-    this.open = obj.open;
+    // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
+    // and very carefully convert it to boolean in File constructor!
+    this.open = obj.open === 1;
     this.contents = obj.contents;
   }
 
@@ -73,7 +78,7 @@ class File implements FileStored {
 }
 
 class FileBrief extends File {
-  public contents: undefined = undefined;
+  public contents: string | undefined = undefined;
   constructor(obj: FileStored) {
     super(obj);
     this.contents = undefined;
@@ -121,7 +126,9 @@ interface FileStored {
   last_modified: number;
   project: ProjectID;
   checksum: string;
-  open: boolean;
+  // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
+  // and very carefully convert it to boolean in File constructor!
+  open: 0 | 1 | boolean;
   contents: string | undefined; // undefined ==> unavailable offline / unreadable
 }
 

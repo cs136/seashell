@@ -156,7 +156,6 @@ class LocalStorage implements AbstractStorage {
 
   public async setSettings(settings: Settings): Promise<void> {
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    console.log(settings);
     return await this.db.transaction("rw", tbs, async () => {
       this.debug && console.log(`setSettings`);
       await this.db.settings.put({
@@ -170,32 +169,6 @@ class LocalStorage implements AbstractStorage {
       });
     });
   }
-
-  // public getMostRecentlyUsed(project: string, question: string): Promise<FileID> {
-  //   return await this.db.transaction("rw", this.db.projects, function() {
-  //     return await this.db.projects.get(project).then(function(current: Project) {
-  //       if (question) {
-  //         if (current.settings[question+"_most_recently_used"])
-  //           return current.settings[question+"_most_recently_used"];
-  //         return false;
-  //       }
-  //       return current.settings.most_recently_used ? current.settings.most_recently_used : false;
-  //     });
-  //   });
-  // }
-
-  // public updateMostRecentlyUsed(project: string, question: string, file: string): Promise<FileID> {
-  //   return await this.db.transaction("rw", this.db.projects, function() {
-  //     this.db.projects.get(project).then(function(current: Project) {
-  //       if (question) {
-  //         current.settings[question+"_most_recently_used"] = file;
-  //       } else {
-  //         current.settings.most_recently_used = file;
-  //       }
-  //       return await this.db.projects.put(current);
-  //     });
-  //   });
-  // }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     this.debug && console.log(`getProjectFiles`);
@@ -256,23 +229,15 @@ class LocalStorage implements AbstractStorage {
         contents: contents,
         checksum: checksum,
         last_modified: Date.now(),
-        open: false
+        open: 0
       });
       await this.pushChangeLog({
         type: "newFile",
         contents: contents,
         file: {file: name, project: pid}
       });
-      const fb = new FileBrief({
-        id: fid,
-        project: pid,
-        name: name,
-        checksum: checksum,
-        last_modified: Date.now(),
-        open: false,
-        contents: undefined
-      });
-      return fb;
+      const result: File = await this.readFile(fid);
+      return new FileBrief(result);
     });
   }
 
@@ -288,7 +253,7 @@ class LocalStorage implements AbstractStorage {
         last_modified: Date.now(),
         open_tabs: {}
       });
-      const proj = await this.db.projects.get(pid) as Project;
+      const proj: Project = await this.getProject(pid);
       return new ProjectBrief(proj);
     });
   }
@@ -342,19 +307,30 @@ class LocalStorage implements AbstractStorage {
     await this.db.files.where({
       project: proj,
       open: 1,
-    }).each((file: File) => {
+    }).each((file: FileStored) => {
       files.push(new FileBrief(file));
     });
     return files;
   }
 
-  public async setOpenTabs(proj: ProjectID, question: string, files: FileBrief[]): Promise<void> {
-    this.debug && console.log(`setOpenTabs`);
-    for (const file of files) {
-      await this.db.files.update(file.id, {
+  public async addOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`addOpenTab`);
+    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
+    return await this.db.transaction("rw", tbs, async () => {
+      await this.db.files.update(fid, {
         open: 1
       });
-    }
+    });
+  }
+
+  public async removeOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`removeOpenTab`);
+    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
+    return await this.db.transaction("rw", tbs, async () => {
+      await this.db.files.update(fid, {
+        open: 0
+      });
+    });
   }
 
   public async getChangeLogs(): Promise<ChangeLog[]> {
@@ -474,7 +450,7 @@ class StorageDB extends Dexie {
     super(dbName, options);
     this.version(1).stores({
       changeLogs: "++id",
-      files: "id, [name+project], name, project",
+      files: "id, [name+project], [project+open], name, project",
       projects: "id, name",
       settings: "id"
     });

@@ -15,7 +15,7 @@ import md5 = require("md5");
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;
 
-const testSize = 5;
+const testSize = 5; // must be >= 5
 const halfTestSize = Math.ceil(testSize / 2);
 
 let unique = 0;
@@ -54,7 +54,7 @@ describe("Testing LocalStorage interface functions", () => {
       contents: text,
       checksum: checksum,
       last_modified: 0,
-      open: false
+      open: 0
     });
   }, flatten(repeat(projs, testSize))));
 
@@ -237,14 +237,54 @@ describe("Testing LocalStorage interface functions", () => {
     expect(r).toEqual(s);
   });
 
+  it("getOpenTabs: should return empty initially", async () => {
+    for (const pj of projs) {
+      const ls: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+      expect(ls).toEqual([]);
+    }
+  });
+
+  it(`addOpenTab: open ${halfTestSize} files per project`, async () => {
+    for (const pj of projs) {
+      const pjfs: FileBrief[]
+        = R.map((f) => new FileBrief(f),
+                R.sortBy(prop("id"),
+                         R.take(halfTestSize,
+                                R.filter((f: File) => f.project === pj.id,
+                                         files))));
+      for (const f of pjfs) {
+        await store.addOpenTab(pj.id, "default", f.id);
+        f.open = true;
+      }
+      const result: FileBrief[] = R.sortBy(prop("id"), await store.getOpenTabs(pj.id, "default"));
+      result.forEach((fb: FileBrief) => {
+        fb.last_modified = 0;
+      });
+      expect(result).toEqual(pjfs);
+    }
+  });
+
+  it(`removeOpenTab: close all files per project`, async () => {
+    for (const pj of projs) {
+      let openFiles: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+      for (const f of openFiles) {
+        await store.removeOpenTab(pj.id, "default", f.id);
+        const result: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+        const target: FileBrief = R.find((fb: FileBrief) => fb.id === f.id, openFiles);
+        openFiles = R.without([target], openFiles);
+        expect(result).toEqual(openFiles);
+        const testFile = R.find((fb: FileBrief) => fb.id === f.id, files);
+        testFile.open = false;
+      }
+    }
+  });
+
   it("checking final state" , async () => {
     expect(await localProjs()).toEqual(projs);
     expect(await localFiles()).toEqual(files);
   });
 
 });
-
-
 
 
 describe("Testing offline mode synchronization", () => {
