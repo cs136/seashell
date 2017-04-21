@@ -5,25 +5,26 @@ import {merge} from "ramda";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 
-export interface CopyProps {questions: string[]; closefunc: Function; };
+export interface AddFileProps {questions: string[]; closefunc: Function; };
 
-class Copy extends React.Component<CopyProps&actionsInterface, {question: string; file: string, prevFile: string}> {
-  constructor(props: CopyProps&actionsInterface) {
+class AddFile extends React.Component<AddFileProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+  project: string;
+  constructor(props: AddFileProps&actionsInterface) {
     super(props);
-    let file = this.props.appState.fileOpTarget;
-    if (file) {
+    if (this.props.appState.currentProject) {
+      this.project = this.props.appState.currentProject.id;
       this.state = {
         question: this.props.questions[0],
-        file: file.name.split("/").pop() || "", // Both of these are unreachable
-        prevFile: file.name.split("/").pop() || "" // As above ^ ^
+        file: "",
+        prevFile: ""
       };
     } else {
-      throw new Error("CopyWindow invoked on undefined file!");
+      throw new Error("AddFile invoke on undefined project!");
     }
   }
   render() {
     return(<div className="pt-dialog-body">
-      <p>Where would you like to copy this file?</p>
+      <p>What would you like to call this file?</p>
       <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
         {this.props.questions.map((question: string) => (<option value={question}>{question}</option>))}
         </select></div>
@@ -41,14 +42,17 @@ class Copy extends React.Component<CopyProps&actionsInterface, {question: string
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
                 }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-primary" onClick={() => {
-          this.props.dispatch.file.copyFile(this.state.question + "/" + this.state.file);
+        <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.file === "" || this.state.file.includes("/")} onClick={() => {
+          this.props.dispatch.file.addFile(this.project, this.state.question + "/" + this.state.file,
+          this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" :
+          this.state.file.split(".").pop() === "h" ? "//put your interface here\n" :
+          this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "");
           this.props.closefunc();
-          }}>Copy</button>
+          }}>Add File</button>
       </div>
     </div>
     );
   }
 }
 
-export default map<CopyProps>(Copy);
+export default map<AddFileProps>(AddFile);

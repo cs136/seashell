@@ -22,7 +22,7 @@ interface CoderEncrypted {
 // factored some code out in the abstract class
 // so that you can migrate away from the shitty sjcl later if every possible
 abstract class AbstractCoder {
-  constructor(public rawKey?: number[]) {};
+  constructor(public rawKey: number[]) {};
   public abstract async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted>;
   public abstract async genRandom(): Promise<{iv: number[], nonce: number[]}>;
 
@@ -39,8 +39,8 @@ abstract class AbstractCoder {
 }
 
 class Coder extends AbstractCoder {
-  constructor(public rawKey?: number[]) {
-    super();
+  constructor(public rawKey: number[]) {
+    super(rawKey);
   };
 
   public async genRandom(): Promise<{ iv: number[], nonce: number[]} > {
@@ -93,7 +93,7 @@ class Coder extends AbstractCoder {
 }
 
 class ShittyCoder extends AbstractCoder {
-  constructor(public rawKey?: number[]) {
+  constructor(public rawKey: number[]) {
     super(rawKey);
   };
 
@@ -103,7 +103,8 @@ class ShittyCoder extends AbstractCoder {
                        iv: number[]): Promise<CoderEncrypted> {
     let cipher = new sjcl.cipher.aes(rawKey);
     /** OK, now we proceed to authenticate. */
-    let raw_response = [].concat(client_nonce, server_challenge);
+    let raw_response: number[] = [];
+    raw_response.concat(client_nonce, server_challenge);
 
     let ivArr = this.toBits(iv);
 
@@ -139,8 +140,8 @@ class ShittyCoder extends AbstractCoder {
 
   /** Convert from a bitArray to an array of bytes. */
   public fromBits(arr: number[]) {
-    let out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
-    for (i = 0; i < bl / 8; i++) {
+    let out = [], bl = sjcl.bitArray.bitLength(arr), tmp: number = 0;
+    for (let i = 0; i < bl / 8; i++) {
       if ((i & 3) === 0) {
         tmp = arr[i / 4];
       }

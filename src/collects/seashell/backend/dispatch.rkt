@@ -109,7 +109,9 @@
             (program-destroy-handle pid)]
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
             (send-message connection `#hash((id . -4) (success . #t)
-                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)))))]
+                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)
+                                                                         (stdout . ,(bytes->string/utf-8 stdout #\?))
+                                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
            [(list pid test-name "error" exit-code stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
@@ -137,7 +139,10 @@
                                                               diff))
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))
-                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))])))))
+                                                           (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
+           [unmatched-result
+            (logf 'error "Unmatched test result: ~a" unmatched-result)
+            (send-message connection `#hash((id . -4) (success . #f) (result . "backend error")))])))))
 
   ;; (project-output-runner-thread)
   ;; Helper thread for dealing with output from running

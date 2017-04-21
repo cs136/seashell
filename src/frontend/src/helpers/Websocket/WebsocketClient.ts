@@ -1,252 +1,179 @@
 import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
 import {Connection} from "../Services";
-import {WebsocketError} from "../Errors";
+import * as R from "ramda";
+import * as E from "../Errors";
+import {Message, Request, Response, Callback} from "./Interface";
 
-export {WebsocketResult,
-        SeashellWebsocket,
-        WebsocketError};
+export {SeashellWebsocket, MockInternet}
 
-interface Message {
-  [index: string]: any;
-  // type: string;
-  // project?: string;
-  // question?: string;
-  // folder?: string;
-  // pid?: number;
-  // file?: string;
-  // tests?: Array<string>;
-  // source?: string;
-  // contents?: string;
-  // encoding?: string;
-  // normalize?: boolean;
-  // template?: string;
-  // history?: History | false;
-  // oldName?: string;
-  // newName?: string;
-  // settings?: Settings;
-  // assn?: string;
-  // subdir?: string | false;
-  // location?: string | false;
-  // response?: ArrayBuffer[];
-  // projects?: Array<string>;
-  // files?: Array<string>;
-  // changes?: Array<Change>;
-  // type     = msg && msg.type;
-  // project  = msg && msg.project;
-  // question = msg && msg.question;
-  // pid      = msg && msg.pid;
-  // file     = msg && msg.file;
-  // tests    = msg && msg.tests;
-  // response = msg && msg.response;
-}
-
-class Request<T> {
-  [index: string]: any;
-  public time: number;
-  public received: Promise<T>; // resolves when the response message is received
-  public resolve: (value: T) => any | PromiseLike<any>;
-  public reject: (reason: any) => any | PromiseLike<any>;
-  constructor(public message: Message) {
-    this.time = Date.now();
-    this.received = new Promise<any>((s, f) => {
-      this.resolve = s;
-      this.reject  = f;
-    });
-  }
-}
-
-interface WebsocketResult extends Message {
-  newProjects: Array<string>;
-  deletedProjects: Array<string>;
-  updatedProjects: Array<string>;
-}
-
-class Response {
-  id: number;
-  success: boolean;
-  result: WebsocketResult;
-}
-
-class Callback {
-  constructor(public type: string, public cb: (message?: any) => any, public now: boolean) { }
-}
+enum MockInternet {Online, Offline, Real};
 
 class SeashellWebsocket {
-  private cnn: Connection;
+  private connection?: Connection;
   private coder: AbstractCoder;
-  private websocket: WebSocket;
+  private websocket?: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
+  private failed: boolean; // not used?
   private authenticated: boolean;
-  private failed: boolean;
-  private closed: boolean;
-  private started: boolean;
   private closes: () => void;
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
-
-  private timeoutCount: number;
-  private timeoutInterval: any;
+  private pingLoop: any;
   private callbacks: Callback[];
-
+  public mockInternet: MockInternet;
+  private connected: boolean;
   // this allows WebsocketService to access member functions by string key
   // [key: string]: any;
 
   constructor(debug?: boolean) {
+    this.debug = debug || false;
+    this.callbacks = [];
+  }
+
+  // Connects and authenticates the socket, sets up the disconnection monitor
+  // Pass a new Connection object to overwrite the previously held one
+  // It must be safe to call this function consecutively many times
+  public async connect(cnn: Connection): Promise<void> {
+    this.debug && console.log("Connecting to websocket...");
     this.lastMsgID = 0;
     this.authenticated = false;
-    this.failed = false;
-    this.closed = false;
-    this.started = false;
-    this.debug = debug;
     this.requests = {};
     this.requests[-1] = new Request({id: -1}); // server challenge
     this.requests[-2] = new Request({id: -2}); // reply challenge
     this.requests[-3] = new Request({id: -3});
     this.requests[-4] = new Request({id: -4});
-    // this.ready = new Promise((resolve, reject)=>{
-    this.started = true;
-    this.timeoutCount = 0;
-    this.timeoutInterval = null;
-    this.callbacks = [];
-  }
-
-  // public async answerChallenge(serverChallenge: Uint8Array): Promise<{}>
-
-  // Connects and authenticates the socket, sets up the disconnection monitor
-  // Pass a new Connection object to overwrite the previously held one
-  public async connect(cnn: Connection): Promise<void> {
-    this.debug && console.log("Connecting to websocket...");
+    this.requests[-3].callback = this.io_cb;
+    this.requests[-4].callback = this.test_cb;
     // if there's an exisitng websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
     if (this.websocket) {
-      enum WSState {CONNECTING, OPEN, CLOSING, CLOSED};
-      switch (this.websocket.readyState) {
-        case WSState.CONNECTING:
-        case WSState.OPEN:
+      let websocket = this.websocket;
+      switch (websocket.readyState) {
+        case websocket.CONNECTING: {
+          this.debug && console.log("Socket is already connecting. Action ignored.");
+          return;
+        }
+        case websocket.OPEN: {
           this.debug && console.log("Socket is already connected. Action ignored.");
-          return Promise.resolve();
-        case WSState.CLOSING:
-        case WSState.CLOSED:
-          this.debug && console.log(`Closing existing websocket and opening new connection.`);
+          return;
+        }
+        case websocket.CLOSING: {
+          this.debug && console.log(`Existing websocket is closing. Wait to reopen new connection.`);
           const promise = new Promise<void>((accept, reject) => {
-            this.websocket.onclose = () => {
+            websocket.onclose = () => {
               this.connect(cnn).then(accept);
             };
           });
           return promise;
+        }
+        case websocket.CLOSED: {
+          this.debug && console.log(`Existing websocket is closed. Reopening new connection.`);
+        }
       }
     }
 
-    this.cnn = cnn;
-    this.coder = new Coder(this.cnn.key);
-    this.websocket = new WebSocket(this.cnn.wsURI);
-    this.websocket.onerror = () => {
-      this.failed = true;
-      if (!this.authenticated) {
-        throw new WebsocketError("Socket closed during authentication!");
-      }
-      return this.closes && this.closes();
-    };
+    this.connection = cnn;
+    this.coder = new Coder(this.connection.key);
 
-    this.websocket.onclose = () => {
-      this.closed = true;
-      if (!this.authenticated) {
-        throw new WebsocketError("Socket closed during authentication!");
-      }
-      return this.closes && this.closes();
-    };
+    try {
+      this.websocket = new WebSocket(this.connection.wsURI);
+    } catch (err) {
+      console.error(`Could not create WebSocket connection to ${this.connection.wsURI}:\n${err}`);
+      throw new E.LoginRequired(); // simply ask user to retry
+    }
 
-    this.websocket.onmessage = (message: MessageEvent) => {
-      try {
-        if (message.data instanceof Blob) {
-          const readerT = new FileReader();
-          readerT.onloadend = () => {
-            this.resolveRequest(readerT.result);
-          };
-          readerT.readAsText(message.data);
+    // Websocket.onclose should race against authentication
+    this.websocket.onclose = (evt: CloseEvent) => {
+      console.warn(`Websocket lost connection. Trying to reconnect...`);
+      clearInterval(this.pingLoop);
+      // automatically reconnect after 3s
+      if (this.connection) {
+        let connection = this.connection;
+        setTimeout(() => {
+          this.connect(connection);
+        }, 3000);
+      }
+      for (const i in this.requests) {
+        if (evt.code === 4000) {
+          this.requests[i].reject(new E.WebsocketError(evt.reason));
+          delete this.requests[i];
         } else {
-          const str = String.fromCharCode.apply(null, new Uint32Array(message.data));
-          this.resolveRequest(str);
+          this.requests[i].reject(new E.NoInternet());
+          delete this.requests[i];
         }
-      } catch (err) {
-        console.error("websocket.onmessage:", err);
-        console.error("websocket.onmessage received:", message);
       }
     };
 
+    this.websocket.onerror = (err) => {
+      console.error(`Websocket encountered error. Closing websocket.`);
+      if (this.websocket) {// Always reachable
+        this.websocket.close(4000, err.toString());
+      }
+    };
+
+    this.websocket.onopen = () => {
+      let timeoutCount = 0;
+      if (this.pingLoop) {
+        clearInterval(this.pingLoop);
+      }
+      this.pingLoop = setInterval(async () => {
+        timeoutCount++;
+        if (timeoutCount >= 3) {
+          console.warn("Ping timed out. Server is not responsive.");
+          if (this.websocket) // Always reachable
+            this.websocket.close(); // force reconnect
+        }
+        this.debug && console.log("ping");
+        await this.ping();
+        this.debug && console.log("pong");
+        timeoutCount = 0;
+      }, 5000);
+    };
+
+    this.websocket.onmessage = async (message: MessageEvent) => {
+      if (message.data instanceof Blob) {
+        const readerT = new FileReader();
+        readerT.onloadend = async () => {
+          await this.resolveRequest(readerT.result);
+        };
+        readerT.readAsText(message.data);
+      } else {
+        const u8arr = new Uint8Array(message.data);
+        const str: string = R.reduce((str, byte) => str + String.fromCharCode(byte), "", Array.from(u8arr));
+        await this.resolveRequest(str);
+      }
+    };
 
     this.debug && console.log("Waiting for server response...");
-    const server_challenge = await this.requests[-1].received;
-
-    const result = await this.coder.answer(server_challenge);
-    const response = [result.iv,
-                      result.encrypted,
-                      result.authTag,
-                      result.nonce];
-
-    this.requests[-2].message = {
-      id: -2,
-      type: "clientAuth",
-      response: response
-    };
-
-    this.debug && console.log("Authenticating websocket...");
-    this.sendRequest(this.requests[-2]);
+    const serverChallenge = await this.requests[-1].received;
     try {
-      const result = await this.requests[-2].received;
-      this.debug && console.log("Authentication succeeded.");
-      this.authenticated = true;
+      const result = await this.coder.answer(serverChallenge);
+      const response = [result.iv,
+                        result.encrypted,
+                        result.authTag,
+                        result.nonce];
+
+      this.requests[-2].message = {
+        id: -2,
+        type: "clientAuth",
+        response: response
+      };
+
+      this.debug && console.log("Authenticating websocket...");
+
+      // Authentication should race against websocket.onclose
+      await this.sendRequest(this.requests[-2]);
     } catch (err) {
-      throw new WebsocketError(`Authentication failure: ${err.msg}`);
+      if (err instanceof E.RequestError) {
+        throw new E.LoginRequired();
+      } else {
+        throw err;
+      }
     }
 
-    // Failure - probably want to prompt the user to attempt to reconnect or
-    //  log in again
-    this.failures = async () => {
-      clearInterval(this.timeoutInterval);
-      try {
-        await this.invoke_cb("failed");
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    // Socket closed - probably want to prompt the user to reconnect
-    this.closes = async () => {
-      clearInterval(this.timeoutInterval);
-      try {
-        await this.invoke_cb("disconnected");
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    if (!this.authenticated) {
-      await this.invoke_cb("failed");
-      throw new WebsocketError("socket is not authenticated");
-    }
-
-    this.timeoutInterval = setInterval(async () => {
-      try {
-        if (this.timeoutCount++ === 3) {
-          this.invoke_cb("timeout");
-        }
-        await this.ping();
-        if (this.timeoutCount >= 3) {
-          this.invoke_cb("timein");
-        }
-        this.timeoutCount = 0;
-      } catch (err) {
-        console.error(err);
-      }
-    }, 4000);
-    this.requests[-3].callback = this.io_cb();
-    this.requests[-4].callback = this.test_cb();
-    // Run the callbacks.
-    await this.invoke_cb("connected");
-    this.debug && console.log("Seashell is ready :)");
+    return;
   }
 
   private resolveRequest(responseText: string): void {
@@ -256,8 +183,8 @@ class SeashellWebsocket {
     // response.result will hold the result if the API call succeeded,
     //  error message otherwise.
     const request = this.requests[response.id];
+    const time = new Date();
     if (request.type !== "ping") {
-      const time = new Date();
       const diff = request.time ? time.getTime() - request.time : -1;
       if (response.success) {
         if (request.message.type !== "ping") {
@@ -267,26 +194,40 @@ class SeashellWebsocket {
         this.debug && console.warn(`Request ${response.id} failed after ${diff} ms`, request.message, response);
       }
     }
-    if (response.success) {
-      request.resolve(response.result);
-    } else {
-      request.reject(response.result);
-    }
+
     if (response.id >= 0) {
       delete this.requests[response.id];
     } else if (this.requests[response.id].callback) {
       this.requests[response.id].callback(response.result);
     }
+    if (response.success) {
+      request.resolve(response.result);
+    } else if (! this.authenticated) {
+    // test if is not authenticated
+    // better have the backend reject with "unauthenticated" error,
+    // instead of the current "invalid message"
+      request.reject(new E.LoginRequired());
+    } else {
+      const diff = request.time ? time.getTime() - request.time : -1;
+      request.reject(new E.RequestError(`Request ${request.message.id} failed with response: ${response.result}`,
+                                        request,
+                                        response));
+    }
   }
 
   public disconnect(): void {
-    this.websocket.close();
+    if (this.websocket) {
+      this.websocket.onclose = () => {};
+      this.websocket.close();
+    }
+    this.websocket = undefined;
+    this.connection = undefined;
   }
 
   public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
-    this.callbacks.push(new Callback(type, cb, now));
+    this.callbacks.push(new Callback(type, cb, now || false));
 
-    if (type === "disconnected" && !this.isConnected() && now) {
+    if (type === "disconnected" && ! this.isConnected() && now) {
       cb();
     } else if (type === "connected" && this.isConnected() && now) {
       cb();
@@ -314,23 +255,22 @@ class SeashellWebsocket {
     };
   }
 
-  /** Sends a message along the connection. Internal use only.
-   *
-   * @param {Object} message - JSON message to send (as JavaScript object).
-   * @returns {Promise} */
-  private sendRequest(request: Request<WebsocketResult>): Promise<WebsocketResult> {
-    // message.time = (new Date()).getTime();
+  private sendRequest<T>(request: Request<T>): Promise<T> {
+    if (! this.isConnected()) {
+      throw new E.NoInternet();
+    }
     const msg   = request.message;
     const msgID = msg.id;
     this.requests[msgID] = request;
-    // Stringify, write out as Array of bytes
     const blob = JSON.stringify(msg);
-
-    // log to console
     if (msg.type !== "ping") {
       this.debug && console.log(`Request ${msgID} was sent`, msg);
     }
-    this.websocket.send(blob);
+    if (this.websocket) {
+      this.websocket.send(blob);
+    } else {
+      throw new E.NoInternet();
+    }
     return request.received;
   }
 
@@ -340,142 +280,21 @@ class SeashellWebsocket {
    *  If the socket has not been properly authenticated,
    *  sends the message after the socket has been properly
    *  authenticated/set up. */
-  public sendMessage(message: Message): Promise<any> {
-    if (!this.isConnected()) {
-      throw new WebsocketError("Socket closed or failed");
-    }
+  public sendMessage<T>(message: Message): Promise<T> {
     const msgID = this.lastMsgID++;
     message.id = msgID;
     return this.sendRequest(new Request(message));
   }
 
   public isConnected() {
-    return !(this.failed || this.closed || !this.started);
+    return this.websocket &&
+           this.websocket.readyState === this.websocket.OPEN;
   }
 
-  /** The following functions are wrappers around sendMessage.
-   *  Consult dispatch.rkt for a full list of functions.
-   *  These functions take in arguments as specified in server.rkt
-   *  and return a JQuery Deferred object. */
-
-  public async ping(): Promise<WebsocketResult> {
-    return await this.sendMessage({
+  public async ping(): Promise<void> {
+    await this.sendMessage({
       type: "ping"
     });
   }
 
-  /*public async compileAndRunProject(project: string, question: string, test: Array<string>): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'compileAndRunProject',
-      project: project,
-      question: question,
-      tests: test});
-  }
-
-  public async programKill(pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'programKill',
-      pid: pid});
-  }
-
-  public async sendEOF(pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'sendEOF',
-      pid: pid});
-  }
-
-  public async newProjectFrom(name: string, src_url: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'newProjectFrom',
-      project: name,
-      source: src_url});
-  }
-
-
-  public async lockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'lockProject',
-      project: name});
-  }
-
-  public async forceLockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'forceLockProject',
-      project: name});
-  }
-
-  public async unlockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'unlockProject',
-      project: name});
-  }
-
-  public async restoreFileFrom(name: string, file: string, url: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'restoreFileFrom',
-      project: name,
-      file: file,
-      template: url});
-  }
-
-  public async programInput(pid: number, contents: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'programInput',
-      pid: pid,
-      contents: contents});
-  }
-
-  public async getExportToken(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getExportToken',
-      project: name});
-  }
-
-  public async getUploadFileToken(name: string, file: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getUploadFileToken',
-      project: name,
-      file: file});
-  }
-
-  public async getMostRecentlyUsed(name: string, question: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getMostRecentlyUsed',
-      project: name,
-      question: question});
-  }
-
-  public async updateMostRecentlyUsed(name: string, question: string, file: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'updateMostRecentlyUsed',
-      project: name,
-      question: question,
-      file: file});
-  }
-
-  public async marmosetSubmit(name: string, assn: string, subdir?: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'marmosetSubmit',
-      project: name,
-      assn: assn,
-      subdir: subdir ? subdir : false});
-  }
-
-  public async startIO(name: string, pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'startIO',
-      project: name,
-      pid: pid});
-  }
-
-  public async archiveProjects(): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'archiveProjects',
-      location: false});
-  }
-
-  public async sync(message: Message) {
-    message.type = 'sync';
-    return await this.sendMessage(message);
-  }*/
 }

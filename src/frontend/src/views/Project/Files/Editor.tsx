@@ -3,8 +3,8 @@ import {CompilerDiagnostic} from "../../../helpers/Services";
 
 const styles = require("../Project.scss");
 
-interface MonacoEditorProps {
-  dirty: boolean;
+export interface MonacoEditorProps {
+  dirty?: boolean;
   editorWillMount?: Function;
   editorDidMount?: Function;
   width?: number | string;
@@ -17,7 +17,8 @@ interface MonacoEditorProps {
   onChange?: Function;
   requireConfig?: any;
   context?: any;
-  diags: CompilerDiagnostic[];
+  diags?: CompilerDiagnostic[];
+  readOnly?: boolean;
 }
 
 export default class MonacoEditor extends React.PureComponent<MonacoEditorProps, {}> {
@@ -32,17 +33,18 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     dirty: false,
     width: "100%",
     height: "100%",
-    value: null,
+    value: undefined,
     defaultValue: "",
     language: "javascript",
     theme: "vs",
     options: {glyphMargin: true},
-    editorDidMount: null,
-    editorWillMount: null,
-    onChange: null,
+    editorDidMount: undefined,
+    editorWillMount: undefined,
+    onChange: undefined,
     requireConfig: {},
-    context: null,
-    diags: []
+    context: undefined,
+    diags: [],
+    readOnly: false
   };
 
   constructor(props: MonacoEditorProps) {
@@ -51,7 +53,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.prevent_change = false;
     this.current_value = props.value;
     this.monacoContext = this.props.context || window;
-    this.container = null;
+    this.container = undefined;
     this.decorations = [];
   }
   componentDidUpdate = (previous: MonacoEditorProps) => {
@@ -96,7 +98,8 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.editor = null;
   }
   componentDidMount = () => {
-    this.loadMonaco(this.container);
+    if (this.container) // Always reachable
+      this.loadMonaco(this.container);
   }
   loadMonaco = (container: HTMLElement) => {
     const { requireConfig } = this.props;
@@ -182,21 +185,21 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       ...options,
     });
 
-    this.setDiags(this.props.diags);
+    this.setDiags(this.props.diags || []);
 
     this.editorDidMount();
   }
 
   render() {
     const { width, height } = this.props;
-    const fixedWidth = width.toString().indexOf("%") !== -1 ? width : `${width}px`;
-    const fixedHeight = height.toString().indexOf("%") !== -1 ? height : `${height}px`;
+    const fixedWidth = (width || "100%").toString().indexOf("%") !== -1 ? width : `${width}px`;
+    const fixedHeight = (height || "100%").toString().indexOf("%") !== -1 ? height : `${height}px`;
     const style = {
       width: fixedWidth,
       height: fixedHeight,
     };
 
-    this.setDiags(this.props.diags);
+    this.setDiags(this.props.diags || []);
 
     return (<div style={style} ref={(container?: HTMLElement) => {
         this.container = container;

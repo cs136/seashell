@@ -5,7 +5,7 @@ import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "./Storage/Interface";
+        Settings} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,
@@ -34,23 +34,24 @@ type DispatchFunction = (act: Object) => Object;
 
 namespace Services {
   let connection: Connection;
-  let dispatch: DispatchFunction = null;
-  let socketClient: SeashellWebsocket = null;
-  let localStorage: LocalStorage = null;
-  let webStorage: WebStorage = null;
-  let offlineCompiler: OfflineCompiler = null;
-  let onlineCompiler: OnlineCompiler = null;
+  let dispatch: DispatchFunction | null = null;
+  let socketClient: SeashellWebsocket | null = null;
+  let localStorage: LocalStorage | null = null;
+  let webStorage: WebStorage | null = null;
+  let offlineCompiler: OfflineCompiler | null = null;
+  let onlineCompiler: OnlineCompiler | null = null;
   let debug: boolean;
 
   export function init(disp: DispatchFunction,
                        options?: { debugService?: boolean;
                                    debugWebSocket?: boolean;
-                                   debugWebStorage?: boolean; }) {
+                                   debugWebStorage?: boolean;
+                                   debugLocalStorage?: boolean; }) {
     dispatch = disp;
     options = options || {};
-    debug = options.debugService;
+    debug = options.debugService || false;
     socketClient = new SeashellWebsocket(options.debugWebSocket);
-    localStorage = new LocalStorage();
+    localStorage = new LocalStorage(options.debugLocalStorage);
     webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
@@ -72,12 +73,14 @@ namespace Services {
 
   export async function login(user: string,
                               password: string,
-                              rebootBackend?: boolean,
-                              uri?: string): Promise<void> {
-    uri = uri || "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
+                              rebootBackend: boolean = false,
+                              uri = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
+    if (!localStorage || !socketClient || !webStorage) {
+      throw new Error("Must call Services.init() before Services.login()");
+    }
     try {
       debug && console.log("Logging in...");
-      const response = await $.ajax({
+      const response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
         data: {
@@ -94,19 +97,28 @@ namespace Services {
                                   response.port,
                                   response.pingPort);
     } catch (ajax) {
+      const status     = ajax.status;
       const code       = ajax.responseJSON.error.code;
       const msg        = ajax.responseJSON.error.message;
-      const status     = ajax.status;
       const statusText = ajax.statusText;
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
     // login successful
-    await localStorage.connect(`seashell-${connection.username}`);
+    await localStorage.connect(`seashell2-${connection.username}`);
     await socketClient.connect(connection);
+    await webStorage.syncAll();
   }
 
-  export async function logout() {
+  export async function logout(deleteDB: boolean = false) {
+    if (!localStorage || !socketClient) {
+      throw new Error("Must call Services.init() before Services.logout()");
+    }
     await socketClient.disconnect();
+    if (deleteDB) {
+      await localStorage.deleteDB();
+      debug && console.log("Deleted user's indexedDB.");
+    }
+    debug && console.log("User logged out.");
   }
 }

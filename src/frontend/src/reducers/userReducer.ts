@@ -9,14 +9,14 @@ export const userActions = {
   SIGNIN: "USER_SIGNIN",
   SIGNOUT: "USER_SIGNOUT"
 };
-export default function userReducer(state: userReducerState = {questid: null}, action: userReducerAction= {type: null, payload: {}}) {
+export default function userReducer(state: userReducerState = {questid: undefined}, action: userReducerAction) {
   switch (action.type) {
     case userActions.INVALIDATE:
-      return {questid: null};
+      return {questid: undefined};
     case userActions.SIGNIN:
       return {questid: action.payload};
     case userActions.SIGNOUT:
-      return {questid: null};
+      return {questid: undefined};
     default:
       return state;
   }

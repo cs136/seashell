@@ -11,7 +11,7 @@ import App from "./App";
 import {Services} from "./helpers/Services";
 import thunk from "redux-thunk";
 
-((() => require("webcrypto-shim")).bind(window))(); //inject webcrypto polyfill into window scope
+((() => require("webcrypto-shim")).bind(window))(); // inject webcrypto polyfill into window scope
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -28,6 +28,7 @@ render(<HashRouter><Provider store={store}><App /></Provider></HashRouter>, root
 Services.init(store.dispatch, {
   debugService: true,
   debugWebSocket: true,
+  debugLocalStorage: true,
   debugWebStorage: true
 });
 

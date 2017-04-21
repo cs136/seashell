@@ -8,8 +8,7 @@ import {AbstractStorage,
         ProjectID,
         FileID,
         File,
-        FileBrief,
-        fileQuestion} from "../Storage/Interface";
+        FileBrief} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
 
@@ -65,8 +64,8 @@ class OfflineCompiler extends AbstractCompiler {
 
   // For now we will just grab all files for the question as the dependencies.
   private async getDependencies(proj: ProjectID, question: string): Promise<File[]> {
-    return Promise.all((await this.storage.getFiles(proj)).filter((f: FileBrief) => {
-      const q = fileQuestion(f);
+    return Promise.all((await this.storage.getProjectFiles(proj)).filter((f: FileBrief) => {
+      const q = f.question();
       return q === question || q === "common";
     }).map((f: FileBrief) => {
       return this.storage.readFile(f.id);
@@ -85,8 +84,8 @@ class OfflineCompiler extends AbstractCompiler {
       type: "testdata",
       pid: pid,
       test_name: test.name,
-      in: test.in.contents,
-      expect: test.expect.contents
+      in: test.in ? test.in.contents : undefined,
+      expect: test.expect ? test.expect.contents : undefined
     });
 
     return {
@@ -98,8 +97,8 @@ class OfflineCompiler extends AbstractCompiler {
   private async getFullTest(tst: TestBrief): Promise<Test> {
     return {
       name: tst.name,
-      in: await this.storage.readFile(tst.in.id),
-      expect: await this.storage.readFile(tst.expect.id)
+      in: tst.in ? await this.storage.readFile(tst.in.id) : undefined,
+      expect: tst.expect ? await this.storage.readFile(tst.expect.id) : undefined
     };
   }
 
@@ -108,7 +107,7 @@ class OfflineCompiler extends AbstractCompiler {
       let compiler = new CompilerWorker();
       compiler.onmessage = async (result: CompilerWorkerResult) => {
         if (result.data.status === "error") {
-          throw new CompilerError(result.data.err);
+          throw new CompilerError(result.data.err || "Unknown error");
         } else {
           this.buffer.outputDiagnostics(result.data.messages);
           resolve(result.data);
