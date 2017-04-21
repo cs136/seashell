@@ -375,7 +375,16 @@ describe("Testing offline mode synchronization", () => {
   });
 
   it("deleteFile: should push a change", async () => {
-    // await store.deleteFile(fileID);
+    await store.clearChangeLogs();
+    await store.deleteFile(fileID);
+    let logs = await store.getChangeLogs();
+    expect(logs.length).toEqual(1);
+    expect(logs[0]).toEqual({
+      id: logs[0].id,
+      type: "deleteFile",
+      file: {file: `${fileName}`, project: projID},
+      contents: logs[0].contents
+    });
   });
 
 });

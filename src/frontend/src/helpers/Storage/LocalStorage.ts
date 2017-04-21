@@ -87,7 +87,7 @@ class LocalStorage implements AbstractStorage {
       });
       // also remove from run files
       let dbProj = await this.getProject(file.project);
-      // when a project is deleted by both frontend abd backend,
+      // when a project is deleted by both frontend and backend,
       // in the next sync backend still asks the frontend to delete children
       // which no longer exists
       if (! dbProj) {
