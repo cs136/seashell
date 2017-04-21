@@ -22,7 +22,6 @@ abstract class AbstractStorage {
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
   public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
-  // public abstract async setOpenTabs(proj: ProjectID, question: string, files: FileBrief[]): Promise<void>;
   public abstract async addOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
   public abstract async removeOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
   public abstract async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]>;
