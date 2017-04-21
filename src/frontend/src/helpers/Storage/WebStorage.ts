@@ -3,7 +3,7 @@ import {LocalStorage, ChangeLog} from "./LocalStorage";
 import {AbstractStorage, AbstractWebStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
-        Settings, defaultSettings} from "./Interface";
+        Settings} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
 export {WebStorage, SeashellWebsocket}
@@ -85,7 +85,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getProjects();
   }
 
@@ -119,12 +119,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getProjectFiles(pid);
   };
 
   public async getAllFiles(): Promise<FileBrief[]> {
-    await this.syncAll();
+    // await this.syncAll();
     return this.storage.getAllFiles();
   };
 

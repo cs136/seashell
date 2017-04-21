@@ -2,7 +2,7 @@ import "jest";
 import {LocalStorage, ChangeLog} from "../../src/helpers/Storage/LocalStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "../../src/helpers/Services";
+        Settings} from "../../src/helpers/Services";
 import J = require("jscheck");
 import FakeIndexedDB = require("fake-indexeddb");
 import FDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
@@ -34,11 +34,11 @@ describe("Testing LocalStorage interface functions", () => {
 
   store.connect("test");
 
-  let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
+  let projs: Project[] = R.sortBy(prop("id"), map((s: string) => new Project({
     id: md5(s),
     name: s,
-    runs: {},
     last_modified: 0,
+    runs: {},
     open_tabs: {}
   }), uniqStrArr(testSize, 30)()));
 
@@ -47,14 +47,15 @@ describe("Testing LocalStorage interface functions", () => {
     const fid = md5(p.id + name);
     const text = uniqStr(5000)();
     const checksum = md5(text);
-    return {
+    return new File({
       id: fid,
       project: p.id,
       name: name,
       contents: text,
       checksum: checksum,
-      last_modified: 0
-    };
+      last_modified: 0,
+      open: false
+    });
   }, flatten(repeat(projs, testSize))));
 
   function genRunFiles(p: string): {[index: string]: FileID} {
@@ -69,14 +70,15 @@ describe("Testing LocalStorage interface functions", () => {
       Object.assign(x, file);
     }
     localFiles = R.sortBy(prop("id"), localFiles) || [];
-    return map((x) => ({
+    return map((x) => new File({
       id: x.id,
       project: x.project,
       name: x.name,
       contents: x.contents,
       checksum: x.checksum,
-      last_modified: 0
-    }), <File[]> localFiles);
+      last_modified: 0,
+      open: false
+    }), localFiles);
   }
 
   async function localProjs() {
@@ -85,7 +87,7 @@ describe("Testing LocalStorage interface functions", () => {
     for (const p of dbProjs) {
       local.push(await store.getProject(p.id));
     }
-    return R.sortBy(prop("id"), map((p) => ({
+    return R.sortBy(prop("id"), map((p) => new Project({
       // properties you want to check
       id: p.id,
       name: p.name,
@@ -222,13 +224,13 @@ describe("Testing LocalStorage interface functions", () => {
     expect(await localFiles()).toEqual(files);
   });
 
-  it("getSettings: should return defaultSettings when unset", async () => {
+  it("getSettings: should return default Settings when unset", async () => {
     const s = await store.getSettings();
-    expect(s).toEqual(defaultSettings);
+    expect(s).toEqual(new Settings());
   });
 
   it("setSettings: set random properties", async () => {
-    const s: Settings = defaultSettings;
+    const s: Settings = new Settings();
     s.font_size = 100;
     await store.setSettings(s);
     const r = await store.getSettings();
@@ -373,7 +375,16 @@ describe("Testing offline mode synchronization", () => {
   });
 
   it("deleteFile: should push a change", async () => {
-    // await store.deleteFile(fileID);
+    await store.clearChangeLogs();
+    await store.deleteFile(fileID);
+    let logs = await store.getChangeLogs();
+    expect(logs.length).toEqual(1);
+    expect(logs[0]).toEqual({
+      id: logs[0].id,
+      type: "deleteFile",
+      file: {file: `${fileName}`, project: projID},
+      contents: logs[0].contents
+    });
   });
 
 });

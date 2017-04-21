@@ -5,7 +5,7 @@ import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "./Storage/Interface";
+        Settings} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,
@@ -75,7 +75,7 @@ namespace Services {
                               password: string,
                               rebootBackend: boolean = false,
                               uri = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
-    if (!localStorage || !socketClient) {
+    if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
     try {
@@ -107,6 +107,7 @@ namespace Services {
     // login successful
     await localStorage.connect(`seashell2-${connection.username}`);
     await socketClient.connect(connection);
+    await webStorage.syncAll();
   }
 
   export async function logout(deleteDB: boolean = false) {
