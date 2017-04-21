@@ -3,13 +3,19 @@ import * as React from "react";
 import {merge} from "ramda";
 
 import * as Blueprint from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-export interface CopyWindowProps {questions: string[]; closefunc: Function; };
+import {showError} from "../../../partials/Errors";
 
-class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}> {
-  constructor(props: CopyWindowProps&actionsInterface) {
+export interface RenameProps {
+  questions: string[];
+  closefunc: Function;
+}
+
+class Rename extends React.Component<RenameProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+  constructor(props: RenameProps&actionsInterface) {
     super(props);
+    console.log(this.props.appState.fileOpTarget);
     this.state = {
       question: this.props.questions[0],
       file: this.props.appState.fileOpTarget.split("/").pop(),
@@ -17,8 +23,8 @@ class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {ques
     };
   }
   render() {
-    return(<div className="pt-dialog-body">
-      <p>Where would you like to copy this file?</p>
+    return (<div className="pt-dialog-body">
+      <p>Where would you like to rename/move this file?</p>
       <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
         {this.props.questions.map((question: string) => (<option value={question}>{question}</option>))}
         </select></div>
@@ -37,13 +43,22 @@ class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {ques
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" onClick={() => {
-          this.props.dispatch.file.copyFile(this.state.question + "/" + this.state.file);
+          this.props.dispatch.file.renameFile(this.props.appState.currentProject.name, this.props.appState.fileOpTarget, this.state.question + "/" + this.state.file).then(
+            () => this.props.dispatch.question.switchQuestion(this.props.appState.currentProject.name, this.state.question).then(() => {
+              this.props.dispatch.file.openFile(this.state.question + "/" + this.state.file);
+              this.props.dispatch.file.switchFile(this.props.appState.currentProject.name, this.state.question + "/" + this.state.file);
+              })
+          ).catch((error) => {
+            if (error !== null) {
+              showError(error.message);
+            }
+          });
           this.props.closefunc();
-          }}>Copy</button>
+          }}>Rename/Move</button>
       </div>
     </div>
     );
   }
 }
 
-export default map<CopyWindowProps>(CopyWindow);
+export default map<RenameProps>(Rename);

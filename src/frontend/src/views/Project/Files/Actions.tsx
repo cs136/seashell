@@ -1,20 +1,20 @@
 import * as React from "react";
 import {Menu, MenuItem, MenuDivider} from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
-export interface FileActionsProps {
+export interface ActionsProps {
   file: string;
   toggleDelete: Function;
   toggleCopy: Function;
   toggleRename: Function;
 }
 
-export interface FileActionsState {  }
+export interface ActionsState {  }
 
-class FileActions extends React.Component<FileActionsProps & actionsInterface, FileActionsState> {
-  constructor(props: FileActionsProps & actionsInterface) {
+class Actions extends React.Component<ActionsProps & actionsInterface, ActionsState> {
+  constructor(props: ActionsProps & actionsInterface) {
     super(props);
   }
   render() {
@@ -52,4 +52,4 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
   }
 }
 
-export default map<FileActionsProps>(FileActions);
+export default map<ActionsProps>(Actions);

@@ -1,11 +1,10 @@
 import * as React from "react";
 import {Menu, MenuItem} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
-import File from "./File";
 import QuestionList from "./QuestionList";
-import FileList from "./FileList";
+import FileList from "./Files/List";
 
-const styles = require("./project.scss");
+const styles = require("./Project.scss");
 
 export interface SplashProps { project: any; };
 export interface SplashState {  }

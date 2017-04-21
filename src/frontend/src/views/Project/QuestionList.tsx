@@ -1,9 +1,8 @@
 import * as React from "react";
 import {Menu, MenuItem} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
-import File from "./File";
 
-const styles = require("./project.scss");
+const styles = require("./Project.scss");
 
 export interface QuestionListProps { project: any; };
 export interface QuestionListState {  }

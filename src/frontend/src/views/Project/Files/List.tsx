@@ -1,15 +1,14 @@
 import * as React from "react";
 import {Menu, MenuItem} from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
-import File from "./File";
+import {map, actionsInterface} from "../../../actions";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
-export interface FileListProps { question: any; };
-export interface FileListState {  }
+export interface ListProps { question: any; };
+export interface ListState {  }
 
-class FileList extends React.Component<FileListProps & actionsInterface, FileListState> {
-    constructor(props: FileListProps & actionsInterface) {
+class List extends React.Component<ListProps & actionsInterface, ListState> {
+    constructor(props: ListProps & actionsInterface) {
         super(props);
     }
     render() {
@@ -23,4 +22,4 @@ class FileList extends React.Component<FileListProps & actionsInterface, FileLis
         </Menu>);
     }
 }
-export default map<FileListProps>(FileList);
+export default map<ListProps>(List);

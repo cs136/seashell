@@ -3,15 +3,15 @@ import * as React from "react";
 import {merge} from "ramda";
 
 import * as Blueprint from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-import {showError} from "../../partials/Errors";
+import {showError} from "../../../partials/Errors";
 
-export interface DeleteWindowProps {
+export interface DeleteProps {
   closefunc: Function;
 };
 
-class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {}> {
+class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
   render() {
     return (<div className="pt-dialog-body">
       <p>Are you sure you want to delete this file?</p>
@@ -39,4 +39,4 @@ class DeleteWindow extends React.Component<DeleteWindowProps&actionsInterface, {
   }
 }
 
-export default map<DeleteWindowProps>(DeleteWindow);
+export default map<DeleteProps>(Delete);

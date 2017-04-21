@@ -1,22 +1,21 @@
 import * as React from "react";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 import MonacoEditor from "./Editor";
-import  Xterm  from "./Console";
-import Loading from "./Loading";
-import {CompilerDiagnostic} from "../../helpers/Services";
+import Console  from "./Console";
+import {CompilerDiagnostic} from "../../../helpers/Services";
 import * as Draggable from "react-draggable"; // Both at the same time
 import { merge } from "ramda";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
-export interface FileProps { file: string; className?: string; };
-export interface FileState { editorLastUpdated: number; }
+export interface DisplayProps { file: string; className?: string; };
+export interface DisplayState { editorLastUpdated: number; }
 
-class File extends React.Component<FileProps & actionsInterface, FileState> {
+class Display extends React.Component<DisplayProps & actionsInterface, DisplayState> {
   editor: any;
   monaco: any;
 
-  constructor(props: FileProps & actionsInterface) {
+  constructor(props: DisplayProps & actionsInterface) {
     super(props);
     this.state = {
         editorLastUpdated: -1
@@ -34,10 +33,10 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     (this.refs.resizeHandle as HTMLElement).style.height = newHeightPx;
     (this.refs.editorContainer as HTMLElement).style.height = newHeightPx;
     this.editor.domElement.style.flex = this.props.settings.editorRatio;
-    (this.refs.terminal as Xterm).setFlex(1 - this.props.settings.editorRatio);
-    (this.refs.terminal as Xterm).setHeight(newHeight);
+    (this.refs.terminal as Console).setFlex(1 - this.props.settings.editorRatio);
+    (this.refs.terminal as Console).setHeight(newHeight);
     this.editor.layout();
-    (this.refs.terminal as Xterm).updateLayout();
+    (this.refs.terminal as Console).updateLayout();
   }
   updateEditorOptions() {
     const editorOptions = {
@@ -67,11 +66,11 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
     if (!this.refs.terminal)
       return;
     if (this.props.settings.theme) {
-      (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-light");
-      (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-default");
+      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-light");
+      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-default");
     } else {
-      (this.refs.terminal as Xterm).term.element.classList.remove("xterm-theme-light");
-      (this.refs.terminal as Xterm).term.element.classList.add("xterm-theme-default");
+      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-light");
+      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-default");
     }
   }
   editorDidMount(editor: any, monaco: any) {
@@ -109,7 +108,7 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.editor.domElement.style.flex = percent;
-    (this.refs.terminal as Xterm).setFlex(1 - percent);
+    (this.refs.terminal as Console).setFlex(1 - percent);
   }
   render() {
     const loaderOptions = {
@@ -140,15 +139,15 @@ class File extends React.Component<FileProps & actionsInterface, FileState> {
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
             <div ref="resizeHandle" className={styles.resizeHandle} />
           </Draggable>
-        <Xterm ref="terminal"
+        <Console ref="terminal"
           className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
           readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
       </div>
       </div>);
     }
     else
-      return <Loading/>;
+      return null;
   }
 }
 
-export default map<FileProps>(File);
+export default map<DisplayProps>(Display);
