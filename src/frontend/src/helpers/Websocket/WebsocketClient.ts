@@ -45,7 +45,6 @@ class SeashellWebsocket {
     this.requests[-4] = new Request({id: -4});
     this.requests[-3].callback = this.io_cb;
     this.requests[-4].callback = this.test_cb;
-    this.connected = false;
     // if there's an exisitng websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
@@ -87,12 +86,7 @@ class SeashellWebsocket {
 
     // Websocket.onclose should race against authentication
     this.websocket.onclose = (evt: CloseEvent) => {
-      // Presumbaly the scenario when .connect() is called and waited for is user trying to login.
-      // At this moment if we can't connect to the backend, we guess the internet is disconnected
-      if (!this.connected)
-        console.warn("Websocket couldn't connect; trying to reconnect...");
-      else
-        console.warn(`Websocket lost connection. Trying to reconnect...`);
+      console.warn(`Websocket lost connection. Trying to reconnect...`);
       clearInterval(this.pingLoop);
       // automatically reconnect after 3s
       if (this.connection) {
@@ -104,18 +98,19 @@ class SeashellWebsocket {
       for (const i in this.requests) {
         if (evt.code === 4000) {
           this.requests[i].reject(new E.WebsocketError(evt.reason));
-        } else if (!this.connected) {
-          this.requests[i].reject(new E.NoInternet());
+          delete this.requests[i];
         } else {
-          this.requests[i].reject(new E.RequestAborted());
+          this.requests[i].reject(new E.NoInternet());
+          delete this.requests[i];
         }
       }
     };
 
     this.websocket.onerror = (err) => {
-      console.error(`Websocket encountered error. Closing websocket.\n${err}`);
-      if (this.websocket) // Always reachable
+      console.error(`Websocket encountered error. Closing websocket.`);
+      if (this.websocket) {// Always reachable
         this.websocket.close(4000, err.toString());
+      }
     };
 
     this.websocket.onopen = () => {
@@ -130,9 +125,9 @@ class SeashellWebsocket {
           if (this.websocket) // Always reachable
             this.websocket.close(); // force reconnect
         }
-        // this.debug && console.log("ping");
+        this.debug && console.log("ping");
         await this.ping();
-        // this.debug && console.log("pong");
+        this.debug && console.log("pong");
         timeoutCount = 0;
       }, 5000);
     };
@@ -271,10 +266,11 @@ class SeashellWebsocket {
     if (msg.type !== "ping") {
       this.debug && console.log(`Request ${msgID} was sent`, msg);
     }
-    if (this.websocket)
+    if (this.websocket) {
       this.websocket.send(blob);
-    else
+    } else {
       throw new E.NoInternet();
+    }
     return request.received;
   }
 
@@ -291,12 +287,6 @@ class SeashellWebsocket {
   }
 
   public isConnected() {
-    if (this.mockInternet === MockInternet.Offline) {
-      return false;
-    }
-    if (this.mockInternet === MockInternet.Online) {
-      return true;
-    }
     return this.websocket &&
            this.websocket.readyState === this.websocket.OPEN;
   }
@@ -307,118 +297,4 @@ class SeashellWebsocket {
     });
   }
 
-  /*public async compileAndRunProject(project: string, question: string, test: Array<string>): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'compileAndRunProject',
-      project: project,
-      question: question,
-      tests: test});
-  }
-
-  public async programKill(pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'programKill',
-      pid: pid});
-  }
-
-  public async sendEOF(pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'sendEOF',
-      pid: pid});
-  }
-
-  public async newProjectFrom(name: string, src_url: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'newProjectFrom',
-      project: name,
-      source: src_url});
-  }
-
-
-  public async lockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'lockProject',
-      project: name});
-  }
-
-  public async forceLockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'forceLockProject',
-      project: name});
-  }
-
-  public async unlockProject(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'unlockProject',
-      project: name});
-  }
-
-  public async restoreFileFrom(name: string, file: string, url: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'restoreFileFrom',
-      project: name,
-      file: file,
-      template: url});
-  }
-
-  public async programInput(pid: number, contents: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'programInput',
-      pid: pid,
-      contents: contents});
-  }
-
-  public async getExportToken(name: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getExportToken',
-      project: name});
-  }
-
-  public async getUploadFileToken(name: string, file: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getUploadFileToken',
-      project: name,
-      file: file});
-  }
-
-  public async getMostRecentlyUsed(name: string, question: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'getMostRecentlyUsed',
-      project: name,
-      question: question});
-  }
-
-  public async updateMostRecentlyUsed(name: string, question: string, file: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'updateMostRecentlyUsed',
-      project: name,
-      question: question,
-      file: file});
-  }
-
-  public async marmosetSubmit(name: string, assn: string, subdir?: string): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'marmosetSubmit',
-      project: name,
-      assn: assn,
-      subdir: subdir ? subdir : false});
-  }
-
-  public async startIO(name: string, pid: number): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'startIO',
-      project: name,
-      pid: pid});
-  }
-
-  public async archiveProjects(): Promise<WebsocketResult> {
-    return await this.sendMessage({
-      type: 'archiveProjects',
-      location: false});
-  }
-
-  public async sync(message: Message) {
-    message.type = 'sync';
-    return await this.sendMessage(message);
-  }*/
 }

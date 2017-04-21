@@ -5,7 +5,7 @@ import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "./Storage/Interface";
+        Settings} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,

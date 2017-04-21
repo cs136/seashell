@@ -3,7 +3,7 @@ import {LocalStorage, ChangeLog} from "./LocalStorage";
 import {AbstractStorage, AbstractWebStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
-        Settings, defaultSettings} from "./Interface";
+        Settings} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
 export {WebStorage, SeashellWebsocket}
