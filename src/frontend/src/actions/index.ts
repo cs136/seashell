@@ -129,7 +129,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        updateFile: (file: S.FileBrief, newFileContent: string) => {
+        updateFile: (file: S.File, newFileContent: string) => {
           dispatch({type: appStateActions.changeFileBufferedContent,
                     payload: {
                       unwrittenContent: newFileContent,
