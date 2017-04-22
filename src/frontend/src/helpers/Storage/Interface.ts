@@ -5,7 +5,8 @@ const defaultSettings: Settings = {
   font: "Consolas",
   theme: "light",
   space_tab: true,
-  tab_width: 2
+  tab_width: 2,
+  offline_mode: 0,
 };
 
 export {AbstractStorage, AbstractWebStorage,
@@ -120,4 +121,5 @@ class Settings {
   public theme: "light"|"dark";
   public space_tab: boolean;
   public tab_width: number;
+  public offline_mode: number;
 }
