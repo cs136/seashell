@@ -78,7 +78,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: settings.offline_mode,
+                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
                 editorRatio: 0.5,
                 updated: 0,
               }});
@@ -99,10 +99,9 @@ const mapDispatchToProps = (dispatch: Function) => {
               theme: newSettings.theme ? "light" : "dark",
               space_tab: true,
               tab_width: newSettings.tabWidth,
-              offline_mode: newSettings.offlineMode,
             }));
           });
-          // localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
+          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
