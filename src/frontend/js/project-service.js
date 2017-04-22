@@ -364,7 +364,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
                     self.projectZipURL = sprintf(WL_PROJ_ZIP_URL_TEMPLATE, self.name);
                     self.skelURL = sprintf(WL_PROJ_FILE_LIST_URL_TEMPLATE, self.name);
                   }
-                  self.pullMissingSkelFiles();
+
                });
                return self;
             });
@@ -834,29 +834,6 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return $q.when(ws.sendEOF(pid));
         };
 
-        /* Returns a list of file paths in the current project skeleton.
-           This method only send requests to the server once when it's initially called.
-           The server response is remembered for future calls.
-
-           Deferred return type: [String] -- list of file paths, relative to the project directory.
-           eg. ["q1a/file.c", "q1a/tests/a.in","common/text.txt"]
-        */
-        SeashellProject.prototype.listSkelFiles = function() {
-          var self = this;
-          if (! self._listSkelFiles) {
-            self._listSkelFiles = $http({url: self.skelURL, user: USERNAME, whitelist: 'true'}).then(function(result) {
-              return result.data.result.map(function(path) {
-                // remove the project name from the start
-                return path.replace(new RegExp("^"+self.name+"/"), "");
-              }).filter(function(path) {
-                // remove paths with trailing slash (only want files, no directory)
-                return path.length > 0 && path[path.length-1] !== '/';
-              }).sort();
-            }).catch(function(err) { /* if this fails, ignore for now */ });
-          }
-          return self._listSkelFiles;
-        };
-
         /**
          * Checks if the project is listed in the skeleton on the server.
          * This function is memoized.
@@ -864,7 +841,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         SeashellProject.prototype.inSkeleton = function() {
           var self = this;
           if (! self._inSkeleton) {
-            self._inSkeleton = $q.all([listSkelProjects(), userWhitelist(), projectWhitelist()])
+            self._inSkeleton = $q.all([listSkelProjects()])
               .then(function(result) {
                 var names = result[0];
                 var users = result[1];
@@ -881,48 +858,17 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           return self._inSkeleton;
         };
 
-        /* Returns a list of files missing in the local project,
-           by comparing with the server project skeleton.
 
-           This function uses SeashellProject.prototype.listSkelFiles
-           to get a list of files on the server.
-
-           Deferred return type: [String] -- list of missing local files
-        */
-        SeashellProject.prototype.missingSkelFiles = function() {
-          var self = this;
-          return $q.all([self.list(), self.listSkelFiles()]).then(function(results) {
-            var localFileList = results[0];
-            var serverFileList = results[1];
-            return _.filter(serverFileList, function(serverFile) {
-              return ! _.find(localFileList, function(localFile) {return localFile === serverFile;});
-            });
-          });
-        };
-
-        /* Calls SeashellProject.prototype.missingSkelFiles to get a list of
-           missing files, then requests the server to create them, then reads
-           the files from the server.
+        /* Sync all assignment files with the backend
         */
         SeashellProject.prototype.pullMissingSkelFiles = function() {
           var self = this;
           if(ws.isOffline()) {
             return $q.when(true);
           }
-          return self.missingSkelFiles().then(function(missingFiles) {
-              if (missingFiles.length) {
-                return $q.all(missingFiles.map(function(fpath) {
-                    return $q.when(ws.restoreFileFrom(self.name, fpath, self.projectZipURL)).then(function() {
-                        // now soft create these files in the front end and read.
-                        var file = new SeashellFile(self, fpath, false);
-                        return file.read().then(function(contents) {
-                            return self.root._placeInTree(file, false, true, contents);
-                        });
-                    });
-                }));
-              }
-          });
+          return $q.when(ws.fetchAssignments()).then(function() {self._buildTree();});
         };
+
       return SeashellProject;})();
 
 
@@ -942,7 +888,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var listSkelProjects = function() {
         if (! self._listSkelProjects) {
            self._listSkelProjects = $http({url: PROJ_SKEL_URL}).catch(function (reason) {
-              return $q.reject("Could not fetch list of skeletons: " + reason);
+              return $q.reject("Could not fetch list of skeletons: " + JSON.stringify(reason));
            }).then(function(result) {
               return result.data;
            });
@@ -950,100 +896,12 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
         return self._listSkelProjects;
       };
       
-      /* Returns a list of user names in the whitelist. 
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-         
-         Deffered type: [String]
-      */
-      var userWhitelist = function() {
-         if (! self._userWhitelist) {
-            self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
-               return result.data;
-            }).catch(function(err) {
-               console.warn("Could not access the user whitelist. Assuming it's empty. Received:", err);
-               return [];
-            });
-         }
-         return self._userWhitelist;
-      };
-      self.userWhitelist = userWhitelist;
- 
-       /* Returns a list of projects in the whitelist. 
-         This method only send requests to the server once when it's initially called.
-         The server response is remembered for future calls.
-         
-         Deffered type: [String], eg ["A1", "A2"]
-      */     
-      var projectWhitelist = function() {
-         if (! self._projectWhitelist) {
-            self._projectWhitelist = $http.get(PROJ_WHITE_LIST_URL).then(function(result) {
-               return result.data;
-            }).catch(function(err) {
-               console.warn("Could not access the project whitelist. Assuming it's empty. Received:", err);
-               return [];
-            });
-         }
-         return self._projectWhitelist;
-      };
-      self.projectWhitelist = projectWhitelist;
-
-      /**
-       * Fetches new assignments.
-       *
-       * @returns {Angular.$q -> [projects]/[failed projects]/String} Deferred object
-       *  that will resolve
-       *  to the list of new assignments cloned, or a list of assignments that failed
-       *  to clone, or a error message.
-      */
-      self.fetch = function() {
-         return self.list().then(function (projects) {
-            return $http({url: PROJ_SKEL_URL}).catch(function () {
-               return $q.reject("Could not fetch list of skeletons!");
-            }).then(function (results) {
-               var localProjects = projects.map(function(v, k) {return v[0];}).sort();
-               // expects a list of project (assignment) names : (listof String)
-               var skels = _.map(results.data.sort(),
-                function(skel) {
-                  return [skel, sprintf(PROJ_ZIP_URL_TEMPLATE, skel)];
-                });
-               var user = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
-               return self.userWhitelist().then(function(usernames) {
-                  if (_.contains(usernames, user)) {
-                     return self.projectWhitelist().then(function(more) {
-                        skels = skels.concat(_.map(more,
-                          function(skel) {
-                            return [skel, sprintf(WL_PROJ_ZIP_URL_TEMPLATE, skel)];
-                          }));
-                     });
-                  }
-               }).finally(function() {
-                  var new_projects = _.filter(skels, function(skel) {
-                    return -1 == localProjects.indexOf(skel[0]);
-                  });
-                  var failed_projects = [];
-                  var start = $q.when();
-                  return _.foldl(new_projects, function(in_continuation, template) {
-                     function clone(failed) {
-                        return $q.when(ws.newProjectFrom(template[0], 
-                           template[1])).then(function () {
-                              if (failed) {
-                                 return $q.reject("Propagating failure...");
-                              }
-                           }).catch(function (info) {
-                             failed_projects.push(template[0]);
-                             return $q.reject("Propagating failure...");
-                           });
-                        }
-                        return in_continuation.then(function () {return clone(false);},
-                                                    function () {return clone(true);});
-                  }, start).then(function() {return new_projects;})
-                           .catch(function() {return $q.reject(failed_projects);});
-               });
-            });
-         });
-      };
-
+        /**
+         * Fetches new assignments into self.list()
+         */
+        self.fetch = function() {
+            return $q.when(ws.fetchAssignments());
+        };
       /**
        * Deletes a project.
        * @param {String} name - Name of project.

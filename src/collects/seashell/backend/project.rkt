@@ -48,6 +48,7 @@
          read-project-settings 
          write-project-settings
          write-project-settings/key
+         fetch-assignments
          )
 
 (require seashell/log
@@ -57,6 +58,7 @@
          seashell/backend/template
          seashell/backend/lock
          seashell/utils/misc
+         seashell/support-native
          net/url
          net/head
          json
@@ -793,3 +795,93 @@
                                                               (read-config 'common-subdirectory)
                                                               question)
                                                           file)))))
+
+
+
+;; copy old dir/file to a new dir/file, handles parent creation correctly
+;; after copy children of old dir becomes children of new dir
+;; better than racket's file libaray function also gives an option to overwrite existing
+(define/contract (copy* old new overwrite)
+  (path-string? path-string? boolean? . -> . void?)
+  (when (equal? old new)
+    (raise-user-error "copy* cannot copy" old "to the same location" new))
+  (make-parent-directory* new)
+  (cond [(or (link-exists? old) 
+             (file-exists? old))
+          (when (or overwrite (not (file-exists? new)))
+            (copy-file old new))]
+        [(directory-exists? old) 
+          (for-each 
+            (lambda (item) 
+              (copy* (build-path old item) (build-path new item) overwrite))
+            (directory-list old))]
+        [else (raise-user-error (format "Could not copy ~a" old))]))
+
+
+;; unzip to a dest-dir with an option to overwrite existing
+(define/contract (unzip* zip-file dest-dir overwrite)
+  (path-string? path-string? boolean? . -> . void?)
+  (define zip-port (open-input-file zip-file))
+  (call-with-unzip zip-port (lambda (tmp-dir) (copy* tmp-dir dest-dir overwrite))))
+
+
+;; (fetch-posted-assignment assignment) fetchs assignment files from the course account, 
+;; skipping files if already exist in student linux account
+(define/contract (fetch-posted-assignment name)
+  (path-string? . -> . void?)
+  (define (zip-path name)
+    (format "~a/~a-seashell.zip" (read-config 'assignment-zip-directory) name))
+  (unzip* (zip-path name) ".seashell/projects/" #f))
+  
+
+;; (fetch-draft-assignment assignment) scp assignment files from the course account, 
+;; the user's ssh key must be in the course authorized_keys in order for this to work
+(define/contract (fetch-draft-assignment name)
+  (path-string? . -> . void?)
+  (define (zip-path dir name) (format "~a/~a-seashell.zip" dir name))
+  (define tmpd (make-temporary-file "seashell_download_tmp_~a" 'directory))
+  (define cmd (format "scp -B -r ~a:~a ~a" 
+                (read-config 'course-ssh)
+                (zip-path (read-config 'assignment-zip-directory) name)
+                tmpd))
+  (define err (system/exit-code cmd))
+  (unless (= err 0) 
+    (delete-directory/files tmpd #:must-exist? #f)
+    (raise-user-error (format "fetch-draft-assignment: ~a exited with code ~a. Is your ssh public key in the course account?" cmd err)))
+  (unzip* (zip-path tmpd name) ".seashell/projects/" #f)
+  (delete-directory/files tmpd #:must-exist? #f))
+  
+;; returns a list of user ids who can see the draft assignments
+(define/contract (whitelist-users)
+  (-> (listof string?))
+  (string->jsexpr (file->string (read-config 'whitelist-users))))
+
+;; check whether the current user can see draft assignments
+(define (user-whitelisted?)
+  (member (seashell_get_username) (whitelist-users)))
+
+;; returns a list of assignment names
+(define/contract (posted-assignments)
+  (-> (listof string?))
+  (string->jsexpr (file->string (read-config 'posted-assignments))))
+  
+;; returns a list of assignment names
+(define/contract (draft-assignments)
+  (-> (listof string?))
+  (string->jsexpr (file->string (read-config 'draft-assignments))))
+
+;; (fetch-assignments) fetchs new assignment projects from the course account, 
+;; and returns a list of new project names just downloaded
+(define/contract (fetch-assignments)
+  (-> list?)
+  (define local (map first (list-projects)))
+  (define posted (posted-assignments))
+  (define drafts '())
+  (define missing-posted (remove* local posted))
+  (define missing-drafts (remove* local drafts))
+  (for-each fetch-posted-assignment posted)
+  (when (user-whitelisted?)
+    (set! drafts (draft-assignments))
+    (for-each fetch-draft-assignment drafts))
+  (list local posted missing-posted missing-drafts))
+
