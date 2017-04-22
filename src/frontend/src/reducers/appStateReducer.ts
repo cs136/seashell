@@ -218,10 +218,10 @@ export default function appStateReducer(state: appStateReducerState = {
       {currentProject:
         {currentQuestion:
           {currentFile:
-            {content: action.payload,
-              target: null,
-              flusher: null,
-              unwrittenContent: null}}}});
+            {contents: action.payload,
+              target: undefined,
+              flusher: undefined,
+              unwrittenContent: undefined}}}});
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {

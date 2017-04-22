@@ -78,7 +78,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
+                offlineMode: settings.offline_mode,
                 editorRatio: 0.5,
                 updated: 0,
               }});
@@ -98,10 +98,11 @@ const mapDispatchToProps = (dispatch: Function) => {
               font: newSettings.font,
               theme: newSettings.theme ? "light" : "dark",
               space_tab: true,
-              tab_width: newSettings.tabWidth
+              tab_width: newSettings.tabWidth,
+              offline_mode: newSettings.offlineMode,
             }));
           });
-          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
+          // localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
@@ -129,7 +130,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        updateFile: (file: S.FileBrief, newFileContent: string) => {
+        updateFile: (file: S.File, newFileContent: string) => {
           dispatch({type: appStateActions.changeFileBufferedContent,
                     payload: {
                       unwrittenContent: newFileContent,
@@ -221,18 +222,24 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (file: S.FileBrief) => dispatch({
-          type: appStateActions.openFile,
-          payload: file
-        }),
-        closeFile: (file: S.FileBrief) => dispatch({
-          type: appStateActions.closeFile,
-          payload: file
-        }),
-        setRunFile: (file: S.FileBrief) => dispatch({
+        openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+          Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
+          dispatch({
+            type: appStateActions.openFile,
+            payload: file
+          }));
+        },
+        closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+          Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+            dispatch({
+            type: appStateActions.closeFile,
+            payload: file
+         }));
+        },
+        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(() => dispatch({
           type: appStateActions.setRunFile,
           payload: file
-        })
+        })),
       },
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
@@ -246,20 +253,22 @@ const mapDispatchToProps = (dispatch: Function) => {
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              return asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) => dispatch({
+              asyncAction(Services.storage().getProjectFiles(pid))
+              .then((files: S.FileBrief[]) => asyncAction(Services.storage().getOpenTabs(pid, name)).then((openFiles) => asyncAction(Services.storage().getFileToRun(pid, name).then((runFile) =>
+              dispatch({
                 type: appStateActions.switchQuestion,
                 payload: {
                   question: {
                     name: name,
-                    runFile: undefined,
+                    runFile: runFile,
                     currentFile: undefined,
-                    openFiles: [],
+                    openFiles: openFiles,
                     diags: [],
                     files: files.filter((file) => file.name.split("/")[0] === name)
                   }
                 }
-            }));
+            }))))
+              );
           });
         }
       },
@@ -315,8 +324,8 @@ const mapDispatchToProps = (dispatch: Function) => {
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
-          return asyncAction(Services.storage().getProjectFiles(pid)
-            .then((files: S.FileBrief[]) => dispatch({
+          dispatch({type: appStateActions.switchProject, payload: {project: null}});
+          return asyncAction(Services.storage().getProjectFiles(pid)).then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
                 project: {
@@ -328,7 +337,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                   currentQuestion: undefined
                 }
               }
-            })));
+            })).catch((reason) => {
+            if (reason !== null) showError(reason.message);
+          });
         },
         getAllProjects: () => {
           return asyncAction(Services.storage().getProjects()).then((projects) => dispatch({

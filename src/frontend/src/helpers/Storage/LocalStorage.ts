@@ -3,21 +3,13 @@ import md5 = require("md5");
 import {sprintf} from "sprintf-js";
 import * as R from "ramda";
 import {AbstractStorage,
-        StoredFile, File, FileID, FileBrief,
-        Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings} from "./Interface";
+        File, FileID, FileBrief, FileStored,
+        Project, ProjectID, ProjectBrief, ProjectStored,
+        Settings, SettingsStored} from "./Interface";
 import * as E from "../Errors";
 
 export {LocalStorage, ChangeLog}
 
-// it remains the 21th centry's be biggest mistery
-// how the backend expects file.file to be the filename
-interface ChangeLog {
-  id?: number;
-  type: "newFile" | "deleteFile" | "editFile";
-  contents?: string;
-  file: {file: string, project: string};
-}
 
 interface DBOptions {
   addons?: Array<(db: Dexie) => void>;
@@ -79,7 +71,7 @@ class LocalStorage implements AbstractStorage {
       if (! file) {
         throw new LocalStorageError(`file "${fid}" does not exist`);
       }
-      return file;
+      return new File(file);
     });
   }
 
@@ -95,7 +87,7 @@ class LocalStorage implements AbstractStorage {
       });
       // also remove from run files
       let dbProj = await this.getProject(file.project);
-      // when a project is deleted by both frontend abd backend,
+      // when a project is deleted by both frontend and backend,
       // in the next sync backend still asks the frontend to delete children
       // which no longer exists
       if (! dbProj) {
@@ -145,9 +137,11 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`setFileToRun`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
-      let current = await this.getProject(pid);
+      const current: Project = await this.getProject(pid);
       current.runs[question] = filename;
-      await this.db.projects.update(pid, current);
+      await this.db.projects.update(pid, {
+        runs: current.runs
+      });
     });
   }
 
@@ -156,7 +150,7 @@ class LocalStorage implements AbstractStorage {
     return await this.db.transaction("rw", tbs, async () => {
       this.debug && console.log(`getSettings`);
       const settings = await this.db.settings.get(0);
-      return settings || defaultSettings;
+      return settings || new Settings();
     });
   }
 
@@ -164,35 +158,17 @@ class LocalStorage implements AbstractStorage {
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       this.debug && console.log(`setSettings`);
-      await this.db.settings.put(settings);
+      await this.db.settings.put({
+        id: 0,
+        editor_mode: settings.editor_mode,
+        font_size: settings.font_size,
+        font: settings.font,
+        theme: settings.theme,
+        space_tab: settings.space_tab,
+        tab_width: settings.tab_width
+      });
     });
   }
-
-  // public getMostRecentlyUsed(project: string, question: string): Promise<FileID> {
-  //   return await this.db.transaction("rw", this.db.projects, function() {
-  //     return await this.db.projects.get(project).then(function(current: Project) {
-  //       if (question) {
-  //         if (current.settings[question+"_most_recently_used"])
-  //           return current.settings[question+"_most_recently_used"];
-  //         return false;
-  //       }
-  //       return current.settings.most_recently_used ? current.settings.most_recently_used : false;
-  //     });
-  //   });
-  // }
-
-  // public updateMostRecentlyUsed(project: string, question: string, file: string): Promise<FileID> {
-  //   return await this.db.transaction("rw", this.db.projects, function() {
-  //     this.db.projects.get(project).then(function(current: Project) {
-  //       if (question) {
-  //         current.settings[question+"_most_recently_used"] = file;
-  //       } else {
-  //         current.settings.most_recently_used = file;
-  //       }
-  //       return await this.db.projects.put(current);
-  //     });
-  //   });
-  // }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     this.debug && console.log(`getProjectFiles`);
@@ -202,13 +178,11 @@ class LocalStorage implements AbstractStorage {
       const p: Project = await this.getProject(pid);
       p.last_modified = Date.now();
       await this.db.projects.put(p);
-      return await this.db.files.where("project").equals(pid).toArray((arr) => {
-        // you should remove fields that are too large here if necessary
-        for (const item of arr) {
-          delete item.contents;
-        }
-        return arr;
+      const fbs: FileBrief[] = [];
+      await this.db.files.where("project").equals(pid).each((file: File) => {
+        fbs.push(new FileBrief(file));
       });
+      return fbs;
     });
   }
 
@@ -248,21 +222,22 @@ class LocalStorage implements AbstractStorage {
       if (! project) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
       }
-      const file = {
+      await this.db.files.add({
         id: fid,
         project: pid,
         name: name,
         contents: contents,
         checksum: checksum,
-        last_modified: Date.now()
-      };
-      await this.db.files.add(file);
+        last_modified: Date.now(),
+        open: 0
+      });
       await this.pushChangeLog({
         type: "newFile",
         contents: contents,
         file: {file: name, project: pid}
       });
-      return file;
+      const result: File = await this.readFile(fid);
+      return new FileBrief(result);
     });
   }
 
@@ -271,15 +246,15 @@ class LocalStorage implements AbstractStorage {
     const pid = md5(name);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
-      const proj = {
+      await this.db.projects.add({
         id: pid,
         name: name,
         runs: {},
         last_modified: Date.now(),
         open_tabs: {}
-      };
-      await this.db.projects.add(proj);
-      return proj;
+      });
+      const proj: Project = await this.getProject(pid);
+      return new ProjectBrief(proj);
     });
   }
 
@@ -301,7 +276,7 @@ class LocalStorage implements AbstractStorage {
       if (! p) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
       }
-      return p;
+      return new Project(p);
     });
   }
 
@@ -309,7 +284,11 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`getProjects`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
-      return await this.db.projects.toCollection().toArray();
+      const projs: ProjectBrief[] = [];
+      await this.db.projects.toCollection().each((proj: Project) => {
+        projs.push(new ProjectBrief(proj));
+      });
+      return projs;
     });
   }
 
@@ -318,23 +297,40 @@ class LocalStorage implements AbstractStorage {
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       const result = await this.db.files.toArray();
-      return R.map((file) => ({
-        id: file.id,
-        name: file.name,
-        project: file.project,
-        last_modified: file.last_modified,
-        checksum: file.checksum
-      }), result);
+      return R.map((file: File) => new FileBrief(file), result);
     });
   }
 
-  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileID[]> {
+  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]> {
     this.debug && console.log(`getOpenTabs`);
-    return [];
+    const files: FileBrief[] = [];
+    await this.db.files.where({
+      project: proj,
+      open: 1,
+    }).each((file: FileStored) => {
+      files.push(new FileBrief(file));
+    });
+    return files;
   }
 
-  public async setOpenTabs(proj: ProjectID, question: string, files: FileID[]): Promise<void> {
-    this.debug && console.log(`setOpenTabs`);
+  public async addOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`addOpenTab`);
+    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
+    return await this.db.transaction("rw", tbs, async () => {
+      await this.db.files.update(fid, {
+        open: 1
+      });
+    });
+  }
+
+  public async removeOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`removeOpenTab`);
+    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
+    return await this.db.transaction("rw", tbs, async () => {
+      await this.db.files.update(fid, {
+        open: 0
+      });
+    });
   }
 
   public async getChangeLogs(): Promise<ChangeLog[]> {
@@ -436,17 +432,25 @@ class LocalStorage implements AbstractStorage {
 }
 
 
+
+interface ChangeLog {
+  id?: number;
+  type: "newFile" | "deleteFile" | "editFile";
+  contents?: string;
+  file: {file: string, project: string};
+}
+
 class StorageDB extends Dexie {
   public changeLogs: Dexie.Table<ChangeLog, number>;
-  public files: Dexie.Table<StoredFile, FileID>;
-  public projects: Dexie.Table<Project, ProjectID>;
-  public settings: Dexie.Table<Settings, number>;
+  public files: Dexie.Table<FileStored, FileID>;
+  public projects: Dexie.Table<ProjectStored, ProjectID>;
+  public settings: Dexie.Table<SettingsStored, number>;
 
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
     this.version(1).stores({
       changeLogs: "++id",
-      files: "id, [name+project], name, project",
+      files: "id, [name+project], [project+open], name, project",
       projects: "id, name",
       settings: "id"
     });
