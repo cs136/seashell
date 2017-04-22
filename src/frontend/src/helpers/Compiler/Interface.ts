@@ -79,13 +79,13 @@ abstract class AbstractCompiler {
   }
 }
 
-interface TestBrief  {
+interface TestBrief extends Test  {
   name: string;
   in?: FileBrief;
   expect?: FileBrief;
 }
 
-interface Test extends TestBrief {
+interface Test {
   name: string;
   in?: File;
   expect?: File;

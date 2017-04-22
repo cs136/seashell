@@ -130,7 +130,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        updateFile: (file: S.FileBrief, newFileContent: string) => {
+        updateFile: (file: S.File, newFileContent: string) => {
           dispatch({type: appStateActions.changeFileBufferedContent,
                     payload: {
                       unwrittenContent: newFileContent,
@@ -223,16 +223,14 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
-          files.push(file);
-          Services.storage().setOpenTabs(file.project, file.question(), files).then((questions) =>
+          Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
           dispatch({
             type: appStateActions.openFile,
             payload: file
           }));
         },
         closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
-          files.splice(files.indexOf(file), 1);
-          Services.storage().setOpenTabs(file.project, file.question(), files).then((questions) =>
+          Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
             type: appStateActions.closeFile,
             payload: file

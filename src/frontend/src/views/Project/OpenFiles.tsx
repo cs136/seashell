@@ -38,12 +38,10 @@ class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenF
           ))}
         </div>);
       } else {
-        console.log("OpenFiles view on undefined question!?");
-        return (<div/>);
+        return <div></div>;
       }
     } else {
-      console.log("OpenFiles view on undefined project!?");
-      return (<div/>);
+      return <div></div>;
     }
   }
 }

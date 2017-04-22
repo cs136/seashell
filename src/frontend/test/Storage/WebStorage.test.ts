@@ -3,7 +3,7 @@ import {WebStorage,
         SeashellWebsocket} from "../../src/helpers/Storage/WebStorage";
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings, Services} from "../../src/helpers/Services";
+        Settings, Services} from "../../src/helpers/Services";
 import {LocalStorage} from "../../src/helpers/Storage/LocalStorage";
 import * as R from "ramda";
 import FakeIndexedDB = require("fake-indexeddb");
@@ -218,7 +218,7 @@ function websocketTests() {
   });
 
   it("setSettings: set random properties", async () => {
-    const s: Settings = defaultSettings;
+    const s: Settings = new Settings();
     s.font_size = 100;
     await socket.setSettings(s);
     const r = await socket.getSettings();

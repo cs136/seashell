@@ -16,8 +16,8 @@ class Splash extends React.Component<SplashProps & actionsInterface, SplashState
     }
     render() {
         const project = this.props.appState.currentProject;
-        if (!project) {
-            throw new Error("Invoking Splash on undefined project!");
+        if (! project) {
+            return <div></div>;
         }
         const question = project.currentQuestion;
         return (<div className={styles.splashContainer}>
