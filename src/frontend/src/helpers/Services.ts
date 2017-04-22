@@ -12,7 +12,7 @@ import {AbstractCompiler,
         Test,
         CompilerResult,
         CompilerDiagnostic} from "./Compiler/Interface";
-import {LoginError} from "./Errors";
+import {LoginError, LoginRequired} from "./Errors";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
 export {Services, Connection, DispatchFunction};
@@ -80,7 +80,7 @@ namespace Services {
     }
     try {
       debug && console.log("Logging in...");
-      const response = await <PromiseLike<any>>$.ajax({
+      let response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
         data: {
@@ -91,6 +91,8 @@ namespace Services {
         dataType: "json"
       });
       debug && console.log("Login succeeded.");
+      response.user = user; // Save user so that we can log in later.
+      window.localStorage.setItem("seashell2-credentials", JSON.stringify(response));
       connection = new Connection(user,
                                   response.key,
                                   response.host,
@@ -119,5 +121,26 @@ namespace Services {
       debug && console.log("Deleted user's indexedDB.");
     }
     debug && console.log("User logged out.");
+  }
+
+  export async function autoConnect() {
+    if (!localStorage || !socketClient) {
+      throw new Error("Must call Services.init() before Services.login()");
+    }
+    const credstring = window.localStorage.getItem("seashell2-credentials");
+    if (credstring) {
+        const credentials = JSON.parse(credstring);
+        let connection = new Connection(credentials.user,
+                                    credentials.key,
+                                    credentials.host,
+                                    credentials.port,
+                                    credentials.pingPort);
+        // login successful
+        await localStorage.connect(`seashell2-${connection.username}`);
+        await socketClient.connect(connection);
+        return credentials.user;
+    } else {
+      throw new LoginRequired();
+    }
   }
 }

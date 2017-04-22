@@ -69,7 +69,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       settings: {
         initSettings: () => {
-          Services.storage().getSettings().then((settings) => {
+          asyncAction(Services.storage().getSettings()).then((settings) => {
             dispatch({
               type: settingsActions.updateSettings,
               payload: {
@@ -286,6 +286,15 @@ const mapDispatchToProps = (dispatch: Function) => {
             if (reason !== null) throw reason;
           });
         },
+        autoConnect: async () => {
+          // We don't use asyncAction here as we're suppressing
+          // any errors that happen when auto connecting --
+          // we're in the login screen, let user manually log in
+          // if we can't auto login.
+          let user = await Services.autoConnect();
+          dispatch({type: userActions.SIGNIN, payload: user});
+          return user;
+        }
       },
       project: {
         addProject: (newProjectName: string) => {

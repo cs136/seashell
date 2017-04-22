@@ -7,9 +7,12 @@ import { install } from "offline-plugin/runtime";
 import {actionsInterface} from "./actions";
 import HotKeys from "./HotKeys";
 import reducers from "./reducers";
+import {userActions} from "./reducers/userReducer";
 import App from "./App";
 import {Services} from "./helpers/Services";
 import thunk from "redux-thunk";
+import {LoginRequired} from "./helpers/Errors";
+import {getDispatch} from "./actions";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -31,3 +34,11 @@ Services.init(store.dispatch, {
 });
 
 install();
+
+// Try to autoconnect if possible.
+(async () => {
+  let dispatch = getDispatch(store.dispatch);
+  await dispatch.dispatch.user.autoConnect();
+  await dispatch.dispatch.project.getAllProjects();
+  await dispatch.dispatch.settings.initSettings();
+})();
