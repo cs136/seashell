@@ -1,31 +1,30 @@
 import * as React from "react";
 
 import {merge} from "ramda";
-import {FileBrief} from "../../helpers/Storage/Interface";
+import {FileBrief} from "../../../helpers/Storage/Interface";
 import * as Blueprint from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-import {showError} from "../../partials/Errors";
+import {showError} from "../../../partials/Errors";
 
-export interface RenameWindowProps {
+export interface RenameProps {
   questions: string[];
   closefunc: Function;
 }
 
-class RenameWindow extends React.Component<RenameWindowProps&actionsInterface,
-  {question: string; file: string, prevFile: string, target: FileBrief}> {
+class Rename extends React.Component<RenameProps&actionsInterface, {question: string; file: string, prevFile: string, target: FileBrief}> {
   openFiles: any;
-  constructor(props: RenameWindowProps&actionsInterface) {
+  constructor(props: RenameProps&actionsInterface) {
     super(props);
     console.log(this.props.appState.fileOpTarget);
-    if (this.props.appState.fileOpTarget&&this.props.appState.currentProject&&this.props.appState.currentProject.currentQuestion) {
+    if (this.props.appState.fileOpTarget && this.props.appState.currentProject && this.props.appState.currentProject.currentQuestion) {
       this.state = {
         question: this.props.questions[0],
         file: this.props.appState.fileOpTarget.name.split("/").pop() || "",
         prevFile: this.props.appState.fileOpTarget.name.split("/").pop() || "",
         target: this.props.appState.fileOpTarget
       };
-      this.openFiles=this.props.appState.currentProject.currentQuestion.openFiles;
+      this.openFiles = this.props.appState.currentProject.currentQuestion.openFiles;
     } else {
       throw new Error("Invoking RenameWindow on undefined fileOpTarget or currentProject or currentQuestion!");
     }
@@ -74,4 +73,4 @@ class RenameWindow extends React.Component<RenameWindowProps&actionsInterface,
   }
 }
 
-export default map<RenameWindowProps>(RenameWindow);
+export default map<RenameProps>(Rename);

@@ -1,24 +1,24 @@
 import * as React from "react";
 import {Menu, MenuItem, MenuDivider} from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
-import * as S from "../../helpers/Storage/Interface";
-const styles = require("./project.scss");
+import {map, actionsInterface} from "../../../actions";
+import * as S from "../../../helpers/Storage/Interface";
+const styles = require("../Project.scss");
 
-export interface FileActionsProps {
+export interface ActionsProps {
   file: S.FileBrief;
 }
 
-export interface FileActionsState {  }
+export interface ActionsState {  }
 
-class FileActions extends React.Component<FileActionsProps & actionsInterface, FileActionsState> {
+class Actions extends React.Component<ActionsProps & actionsInterface, ActionsState> {
   openFiles: any;
-  constructor(props: FileActionsProps & actionsInterface) {
+  constructor(props: ActionsProps & actionsInterface) {
     super(props);
-    if(!this.props.appState.currentProject||!this.props.appState.currentProject.currentQuestion){
+    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
       throw new Error("Invoking FileActions on undefined currentProject or currentQuestion!");
     }
-    else{
-      this.openFiles=this.props.appState.currentProject.currentQuestion.openFiles;
+    else {
+      this.openFiles = this.props.appState.currentProject.currentQuestion.openFiles;
     }
   }
   render() {
@@ -60,4 +60,4 @@ class FileActions extends React.Component<FileActionsProps & actionsInterface, F
   }
 }
 
-export default map<FileActionsProps>(FileActions);
+export default map<ActionsProps>(Actions);

@@ -1,16 +1,16 @@
 import * as React from "react";
 import {Menu, MenuItem, Popover, Position} from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
-import FileActions from "./FileActions";
+import {map, actionsInterface} from "../../../actions";
+import FileActions from "./Actions";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
-export interface OpenFilesProps {}
+export interface OpenProps {}
 
-export interface OpenFilesState { };
+export interface OpenState { };
 
-class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenFilesState> {
-  constructor(props: OpenFilesProps & actionsInterface) {
+class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
+  constructor(props: OpenProps & actionsInterface) {
     super(props);
   }
 
@@ -46,4 +46,4 @@ class OpenFiles extends React.Component<OpenFilesProps & actionsInterface, OpenF
   }
 }
 
-export default map<OpenFilesProps>(OpenFiles);
+export default map<OpenProps>(Open);

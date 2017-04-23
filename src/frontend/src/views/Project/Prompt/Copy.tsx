@@ -3,12 +3,12 @@ import * as React from "react";
 import {merge} from "ramda";
 
 import * as Blueprint from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-export interface CopyWindowProps {questions: string[]; closefunc: Function; };
+export interface CopyProps {questions: string[]; closefunc: Function; };
 
-class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {question: string; file: string, prevFile: string}> {
-  constructor(props: CopyWindowProps&actionsInterface) {
+class Copy extends React.Component<CopyProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+  constructor(props: CopyProps&actionsInterface) {
     super(props);
     let file = this.props.appState.fileOpTarget;
     if (file) {
@@ -51,4 +51,4 @@ class CopyWindow extends React.Component<CopyWindowProps&actionsInterface, {ques
   }
 }
 
-export default map<CopyWindowProps>(CopyWindow);
+export default map<CopyProps>(Copy);

@@ -1,23 +1,22 @@
 import * as React from "react";
 import {Menu, MenuItem} from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
-import File from "./File";
-import * as S from "../../helpers/Storage/Interface";
+import {map, actionsInterface} from "../../../actions";
+import * as S from "../../../helpers/Storage/Interface";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
-export interface FileListProps { question: any; };
-export interface FileListState {  }
+export interface ListProps { question: any; };
+export interface ListState {  }
 
-class FileList extends React.Component<FileListProps & actionsInterface, FileListState> {
+class List extends React.Component<ListProps & actionsInterface, ListState> {
     openFiles: any;
-    constructor(props: FileListProps & actionsInterface) {
+    constructor(props: ListProps & actionsInterface) {
         super(props);
-        if(!this.props.appState.currentProject||!this.props.appState.currentProject.currentQuestion){
+        if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
             throw new Error("FileList initiated on undefined project or question");
         }
-        else{
-            this.openFiles=this.props.appState.currentProject.currentQuestion;
+        else {
+            this.openFiles = this.props.appState.currentProject.currentQuestion;
         }
     }
     render() {
@@ -31,4 +30,4 @@ class FileList extends React.Component<FileListProps & actionsInterface, FileLis
         </Menu>);
     }
 }
-export default map<FileListProps>(FileList);
+export default map<ListProps>(List);

@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as Terminal from "xterm";
 import { merge } from "ramda";
-import { Services } from "../../helpers/Services";
+import { Services } from "../../../../helpers/Services";
 
 Terminal.loadAddon("fit");
 
@@ -18,7 +18,7 @@ export interface ConsoleState {
   currString: string;
 };
 
-const lightStyles = require("./xterm.scss");
+const customStyles = require("./Console.scss");
 const styles = require("xterm/lib/xterm.css");
 
 export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {

@@ -332,7 +332,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   termClear: null,
                   name: name,
                   id: pid,
-                  questions: files.map((file) => file.name.split("/")[0]).filter(unique).reverse(),
+                  questions: files.map((file) => file.name.split("/")[0]).filter(unique),
                   currentQuestion: undefined
                 }
               }

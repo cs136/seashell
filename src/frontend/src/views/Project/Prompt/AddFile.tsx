@@ -3,13 +3,13 @@ import * as React from "react";
 import {merge} from "ramda";
 
 import * as Blueprint from "@blueprintjs/core";
-import {map, actionsInterface} from "../../actions";
+import {map, actionsInterface} from "../../../actions";
 
-export interface AddFileWindowProps {questions: string[]; closefunc: Function; };
+export interface AddFileProps {questions: string[]; closefunc: Function; };
 
-class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+class AddFile extends React.Component<AddFileProps&actionsInterface, {question: string; file: string, prevFile: string}> {
   project: string;
-  constructor(props: AddFileWindowProps&actionsInterface) {
+  constructor(props: AddFileProps&actionsInterface) {
     super(props);
     if (this.props.appState.currentProject) {
       this.project = this.props.appState.currentProject.id;
@@ -55,4 +55,4 @@ class AddFileWindow extends React.Component<AddFileWindowProps&actionsInterface,
   }
 }
 
-export default map<AddFileWindowProps>(AddFileWindow);
+export default map<AddFileProps>(AddFile);

@@ -1,7 +1,7 @@
 import * as React from "react";
-import {CompilerDiagnostic} from "../../helpers/Services";
+import {CompilerDiagnostic} from "../../../helpers/Services";
 
-const styles = require("./project.scss");
+const styles = require("../Project.scss");
 
 export interface MonacoEditorProps {
   dirty?: boolean;
