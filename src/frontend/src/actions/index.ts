@@ -273,6 +273,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       user: {
         signin: (username: string, password: string) => {
+          dispatch({type: userActions.BUSY});
           return new Promise((resolve, reject) => {
             if (trim(username) === "" || trim(password) === "") {
               showError("Please fill in all fields!");
@@ -282,6 +283,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 dispatch({type: userActions.SIGNIN, payload: username});
                 resolve();
               }).catch((e) => {
+                dispatch({type: userActions.NOTBUSY});
                 reject(e);
               });
             }
@@ -299,9 +301,15 @@ const mapDispatchToProps = (dispatch: Function) => {
           // any errors that happen when auto connecting --
           // we're in the login screen, let user manually log in
           // if we can't auto login.
-          let user = await Services.autoConnect();
-          dispatch({type: userActions.SIGNIN, payload: user});
-          return user;
+          dispatch({type: userActions.BUSY});
+          try {
+            let user = await Services.autoConnect();
+            dispatch({type: userActions.SIGNIN, payload: user});
+            return user;
+          } catch (e) {
+            dispatch({type: userActions.NOTBUSY});
+            throw e;
+          }
         }
       },
       project: {

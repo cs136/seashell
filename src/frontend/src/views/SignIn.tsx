@@ -6,14 +6,11 @@ const styles = require("./SignIn.scss");
 const logo = require("../assets/logo.svg");
 
 export interface SignInProps { }
-export interface SignInState { loading: boolean; }
+export interface SignInState { }
 
 class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> {
     constructor(props: SignInProps&actionsInterface) {
         super(props);
-        this.state = {
-            loading: false
-        };
         this.signin = this.signin.bind(this);
     }
     signin(e: any) {
@@ -23,9 +20,7 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
         this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value, (this.refs.password as HTMLInputElement).value).then(() => {
             ctx.props.dispatch.project.getAllProjects();
             ctx.props.dispatch.settings.initSettings();
-            ctx.setState({loading: false});
         }).catch((reason) => {
-            ctx.setState({loading: false});
             if (reason !== null) throw reason;
         });
     }
@@ -36,13 +31,17 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
                 <form className="pt-control-group pt-vertical" onSubmit={this.signin}>
                     <div className="pt-input-group pt-large">
                         <span className="pt-icon pt-icon-person"></span>
-                        <input type="text" className="pt-input" disabled={this.state.loading} ref="username" placeholder="Username" />
+                        <input type="text" className="pt-input"
+                            disabled={this.props.user.busy}
+                            ref="username" placeholder="Username" />
                     </div>
                     <div className="pt-input-group pt-large">
                         <span className="pt-icon pt-icon-lock"></span>
-                        <input type="password" className="pt-input" disabled={this.state.loading} ref="password" placeholder="Password" />
+                        <input type="password" className="pt-input"
+                            disabled={this.props.user.busy} ref="password" placeholder="Password" />
                     </div>
-                    <button className="pt-button pt-large pt-intent-primary" disabled={this.state.loading}>Sign In</button>
+                    <button className="pt-button pt-large pt-intent-primary"
+                        disabled={this.props.user.busy}>Sign In</button>
                 </form>
 
             </div>);
