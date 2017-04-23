@@ -237,7 +237,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(() => dispatch({
           type: appStateActions.setRunFile,
-          payload: file
+          payload: file.name
         })),
       },
       question: {
@@ -253,20 +253,24 @@ const mapDispatchToProps = (dispatch: Function) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
               asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) => asyncAction(Services.storage().getOpenTabs(pid, name)).then((openFiles) => asyncAction(Services.storage().getFileToRun(pid, name).then((runFile) =>
-              dispatch({
-                type: appStateActions.switchQuestion,
-                payload: {
-                  question: {
-                    name: name,
-                    runFile: runFile,
-                    currentFile: undefined,
-                    openFiles: openFiles,
-                    diags: [],
-                    files: files.filter((file) => file.name.split("/")[0] === name)
+              .then((files: S.FileBrief[]) =>
+                asyncAction(Services.storage().getOpenTabs(pid, name))
+              .then((openFiles) =>
+                asyncAction(Services.storage().getFileToRun(pid, name)
+              .then((runFile) =>
+                dispatch({
+                  type: appStateActions.switchQuestion,
+                  payload: {
+                    question: {
+                      name: name,
+                      runFile: runFile,
+                      currentFile: undefined,
+                      openFiles: openFiles,
+                      diags: [],
+                      files: files.filter((file) => file.name.split("/")[0] === name)
+                    }
                   }
-                }
-            }))))
+              }))))
               );
           });
         }
@@ -325,14 +329,15 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.removeProject,
             payload: {id: pid}
         })),
-        switchProject: (pid: S.ProjectID) => {
+        switchProject: (name: string, pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(Services.storage().getProjectFiles(pid)).then((files: S.FileBrief[]) => dispatch({
+          return asyncAction(Services.storage().getProjectFiles(pid))
+            .then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
                 project: {

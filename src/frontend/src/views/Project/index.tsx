@@ -19,7 +19,8 @@ import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
 import * as S from "../../helpers/Storage/Interface";
-export interface ProjectProps extends RouteComponentProps<{}> { title: string; }
+export interface ProjectProps extends RouteComponentProps
+    <{name: string, id: S.ProjectID}> { title: string; }
 export interface ProjectState { toggleView: boolean; }
 
 
@@ -31,13 +32,14 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     };
   }
   componentWillMount() {
-    const willOpenPid: S.ProjectID = this.props.location.pathname.split("/").pop() || "";
+    const willOpenPid = this.props.match.params.id;
+    const willOpenName = this.props.match.params.name;
     let state = this.props.appState;
     if (!state.currentProject ||
         willOpenPid !== state.currentProject.id) {
         if (state.currentProject) this.props.dispatch.file.invalidateFile();
         // force wait until promise is resolved
-        this.props.dispatch.project.switchProject(willOpenPid).catch((reason) => {
+        this.props.dispatch.project.switchProject(willOpenName, willOpenPid).catch((reason) => {
           if (reason !== null) {
             showError(reason.message);
           }

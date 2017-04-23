@@ -14,7 +14,8 @@ export interface ProjectLinkState { }
 class ProjectLink extends React.Component<ProjectLinkProps&actionsInterface, ProjectLinkState> {
     render() {
         const project = this.props.project;
-        return (<Link className={styles.container} to={"/project/" + project.id}><span className={styles.linkContainer}>{project.name}</span></Link>);
+        return (<Link className={styles.container} to={"/project/" + project.id + "/" + project.name}>
+            <span className={styles.linkContainer}>{project.name}</span></Link>);
     }
 }
 
