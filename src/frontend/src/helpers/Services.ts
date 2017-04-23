@@ -107,9 +107,7 @@ namespace Services {
     }
 
     // login successful
-    await localStorage.connect(`seashell3-${connection.username}`);
-    await socketClient.connect(connection);
-    await webStorage.syncAll();
+    await connectWith(connection);
   }
 
   export async function logout(deleteDB: boolean = false) {
@@ -125,7 +123,7 @@ namespace Services {
   }
 
   export async function autoConnect() {
-    if (!localStorage || !socketClient) {
+    if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
     const credstring = window.localStorage.getItem("seashell2-credentials");
@@ -137,11 +135,20 @@ namespace Services {
                                     credentials.port,
                                     credentials.pingPort);
         // login successful
-        await localStorage.connect(`seashell2-${connection.username}`);
-        await socketClient.connect(connection);
-        return credentials.user;
+        return await connectWith(connection);
     } else {
       throw new LoginRequired();
     }
+  }
+
+  async function connectWith(connection: Connection) {
+    if (!localStorage || !socketClient || !webStorage) {
+      throw new Error("Must call Services.init() before Services.login()");
+    }
+
+    await localStorage.connect(`seashell3-${connection.username}`);
+    await socketClient.connect(connection);
+    await webStorage.syncAll();
+    return connection.username;
   }
 }
