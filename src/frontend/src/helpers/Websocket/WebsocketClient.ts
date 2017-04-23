@@ -43,8 +43,8 @@ class SeashellWebsocket {
     this.requests[-2] = new Request({id: -2}); // reply challenge
     this.requests[-3] = new Request({id: -3});
     this.requests[-4] = new Request({id: -4});
-    this.requests[-3].callback = this.io_cb;
-    this.requests[-4].callback = this.test_cb;
+    this.requests[-3].callback = this.io_cb();
+    this.requests[-4].callback = this.test_cb();
     // if there's an exisitng websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
@@ -243,13 +243,13 @@ class SeashellWebsocket {
   }
 
   // Helper function to invoke the I/O callback.
-  private io_cb() {
+  private io_cb = () => {
     return async (message: any) => {
       return this.invoke_cb("io", message);
     };
   }
 
-  private test_cb() {
+  private test_cb = () => {
     return async (message: any) => {
       return this.invoke_cb("test", message);
     };

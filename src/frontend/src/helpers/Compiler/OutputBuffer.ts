@@ -5,6 +5,7 @@ import {CompilerDiagnostic,
         ASANOutput} from "./Interface";
 import {DispatchFunction} from "../Services";
 import {groupBy} from "../utils";
+import {appStateActions} from  "../../reducers/appStateReducer";
 
 export {OutputBuffer};
 
@@ -21,7 +22,7 @@ class OutputBuffer {
 
   private output(out: string): void {
     this.dispatch({
-      type: "console_write",
+      type: appStateActions.writeConsole,
       payload: {content: out}
     });
   }

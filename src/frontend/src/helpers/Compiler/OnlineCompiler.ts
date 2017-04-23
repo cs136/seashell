@@ -10,7 +10,7 @@ import {AbstractStorage,
         ProjectID,
         FileID} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
-
+import {appStateActions} from "../../reducers/appStateReducer";
 export {OnlineCompiler};
 
 class OnlineCompiler extends AbstractCompiler {
@@ -149,7 +149,7 @@ class OnlineCompiler extends AbstractCompiler {
     // if everything has finished running, notify frontend
     if (this.activePIDs.length === 0) {
       this.dispatch({
-        type: "programDone",
+        type: appStateActions.setNotRunning,
         payload: null
       });
     }

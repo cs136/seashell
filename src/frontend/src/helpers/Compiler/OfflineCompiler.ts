@@ -11,7 +11,7 @@ import {AbstractStorage,
         FileBrief} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
-
+import {appStateActions} from "../../reducers/appStateReducer";
 export {OfflineCompiler};
 
 const CompilerWorker = (() => {
@@ -178,5 +178,11 @@ class OfflineCompiler extends AbstractCompiler {
     this.activePIDs = this.activePIDs.filter((item: PID) => {
       return item.id !== pid;
     });
+    if (this.activePIDs.length === 0) {
+      this.dispatch({
+        type: appStateActions.setNotRunning,
+        payload: null
+      });
+    }
   }
 }
