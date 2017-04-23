@@ -119,6 +119,7 @@ namespace Services {
       await localStorage.deleteDB();
       debug && console.log("Deleted user's indexedDB.");
     }
+    window.localStorage.removeItem("seashell-credentials");
     debug && console.log("User logged out.");
   }
 
@@ -126,16 +127,16 @@ namespace Services {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
-    const credstring = window.localStorage.getItem("seashell2-credentials");
+    const credstring = window.localStorage.getItem("seashell-credentials");
     if (credstring) {
-        const credentials = JSON.parse(credstring);
-        let connection = new Connection(credentials.user,
-                                    credentials.key,
-                                    credentials.host,
-                                    credentials.port,
-                                    credentials.pingPort);
-        // login successful
-        return await connectWith(connection);
+      const credentials = JSON.parse(credstring);
+      let connection = new Connection(credentials.user,
+                                      credentials.key,
+                                      credentials.host,
+                                      credentials.port,
+                                      credentials.pingPort);
+      // login successful
+      return await connectWith(connection);
     } else {
       throw new LoginRequired();
     }
