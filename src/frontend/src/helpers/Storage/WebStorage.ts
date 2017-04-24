@@ -159,15 +159,26 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   // to be replaced by dexie
   public async syncAll(): Promise<void> {
     // this.isSyncing = true;
-    const startTime = Date.now();
+    let startTime = Date.now();
+    let frontSpent = 0;
+    let backSpent = 0;
     const projectsSent = await this.storage.getProjects();
     const filesSent = await this.storage.getAllFiles();
+    // create a cache to reduce getProject calls
+    // it's a bit hacky but ideally the backend should recongize project IDs directly
+    // so we don't need to call getProject here at all to find the project name
+    const projectIDNameMap: {[index: string]: string} = {};
     for (const file of filesSent) {
       (<any>file).file = file.name;
-      (<any>file).project = (await this.storage.getProject(file.project)).name;
+      if (! projectIDNameMap[file.project]) {
+        projectIDNameMap[file.project] = (await this.storage.getProject(file.project)).name;
+      }
+      (<any>file).project = projectIDNameMap[file.project];
     }
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
+    frontSpent += Date.now() - startTime;
+    startTime = Date.now();
     const result = await this.socket.sendMessage<{
       changes: ChangeLog[],
       newProjects: string[],
@@ -183,13 +194,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
         name: "settings"
       }
     });
+    backSpent += Date.now() - startTime;
+    startTime = Date.now();
     const changesGot = result.changes;
     const newProjects: string[] = result.newProjects;
     const deletedProjects: ProjectID[] = R.map<string, string>(md5, result.deletedProjects);
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
-    // this.isSyncing = false;
-    const timeSpent = Date.now() - startTime;
-    this.debug && console.log(`Syncing took ${timeSpent} ms.`);
+    frontSpent += Date.now() - startTime;
+    this.debug && console.log(`Syncing took ${frontSpent + backSpent} ms. Frontend took ${frontSpent} ms. Backend took ${backSpent} ms.`);
   }
 
 }

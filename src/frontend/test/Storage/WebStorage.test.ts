@@ -15,7 +15,9 @@ import md5 = require("md5");
 
 // polyfills
 import WebSocket = require("ws");
+import * as LS from "localstorage-memory";
 
+(<any>window).localStorage = LS;
 (<any>window).WebSocket = WebSocket;
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;
