@@ -44,17 +44,22 @@ class LocalStorage implements AbstractStorage {
     return this.db.delete();
   }
 
-  public async writeFile(fid: FileID, contents: string|undefined): Promise<void> {
+  public async writeFile(fid: FileID,
+                         contents: string|undefined,
+                         // set pushChangeLog = false in applyChanges to make syncAll faster
+                         pushChangeLog: boolean = true): Promise<void> {
     this.debug && console.log(`writeFile`);
     const checksum = contents === undefined ? "" : md5(contents);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file: File = await this.readFile(fid);
-      await this.pushChangeLog({
-        type: "editFile",
-        file: {file: file.name, project: file.project},
-        contents: contents
-      });
+      if (pushChangeLog) {
+        await this.pushChangeLog({
+          type: "editFile",
+          file: {file: file.name, project: file.project},
+          contents: contents
+        });
+      }
       await this.db.files.update(fid, {
         contents: contents,
         checksum: checksum,
@@ -75,25 +80,29 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async deleteFile(id: FileID): Promise<void> {
+  public async deleteFile(id: FileID,
+                          // set pushChangeLog = false in applyChanges to make syncAll faster
+                          pushChangeLog: boolean = true): Promise<void> {
     this.debug && console.log(`deleteFile`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file = await this.readFile(id);
       await this.db.files.delete(id);
-      await this.pushChangeLog({
-        type: "deleteFile",
-        file: {file: file.name, project: file.project}
-      });
+      if (pushChangeLog) {
+        await this.pushChangeLog({
+          type: "deleteFile",
+          file: {file: file.name, project: file.project}
+        });
+      }
       // also remove from run files
       let dbProj = await this.getProject(file.project);
       // when a project is deleted by both frontend and backend,
       // in the next sync backend still asks the frontend to delete children
       // which no longer exists
-      if (! dbProj) {
-        console.warn(id, file);
-        return;
-      }
+      // if (! dbProj) {
+      //   console.warn(id, file);
+      //   return;
+      // }
       for (const q in dbProj.runs) {
         if (dbProj.runs[q] === id) {
           delete dbProj.runs[q];
@@ -413,9 +422,9 @@ class LocalStorage implements AbstractStorage {
         const pid = md5(change.file.project);
         const fid = md5(pid + change.file.file);
         if (change.type === "deleteFile") {
-          await this.deleteFile(fid);
+          await this.deleteFile(fid, false);
         } else if (change.type === "editFile") {
-          await this.writeFile(fid, change.contents);
+          await this.writeFile(fid, change.contents, false);
         } else if (change.type === "newFile") {
           await this.newFile(pid, change.file.file, change.contents, false);
         } else {
