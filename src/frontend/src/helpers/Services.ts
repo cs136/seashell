@@ -147,7 +147,7 @@ namespace Services {
       throw new Error("Must call Services.init() before Services.login()");
     }
 
-    await localStorage.connect(`seashell4-${connection.username}`);
+    await localStorage.connect(`seashell8-${connection.username}`);
     await socketClient.connect(connection);
     await webStorage.syncAll();
     return connection.username;

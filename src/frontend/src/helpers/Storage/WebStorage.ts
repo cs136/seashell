@@ -159,7 +159,9 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   // to be replaced by dexie
   public async syncAll(): Promise<void> {
     // this.isSyncing = true;
-    const startTime = Date.now();
+    let startTime = Date.now();
+    let frontSpent = 0;
+    let backSpent = 0;
     const projectsSent = await this.storage.getProjects();
     const filesSent = await this.storage.getAllFiles();
     // create a cache to reduce getProject calls
@@ -175,7 +177,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     }
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
-    const frontendTimeSpent = Date.now() - startTime;
+    frontSpent += Date.now() - startTime;
+    startTime = Date.now();
     const result = await this.socket.sendMessage<{
       changes: ChangeLog[],
       newProjects: string[],
@@ -191,13 +194,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
         name: "settings"
       }
     });
+    backSpent += Date.now() - startTime;
+    startTime = Date.now();
     const changesGot = result.changes;
     const newProjects: string[] = result.newProjects;
     const deletedProjects: ProjectID[] = R.map<string, string>(md5, result.deletedProjects);
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
-    // this.isSyncing = false;
-    const timeSpent = Date.now() - startTime;
-    this.debug && console.log(`Syncing took ${timeSpent} ms. Frontend took ${frontendTimeSpent} ms. Backend took ${timeSpent - frontendTimeSpent} ms.`);
+    frontSpent += Date.now() - startTime;
+    this.debug && console.log(`Syncing took ${frontSpent + backSpent} ms. Frontend took ${frontSpent} ms. Backend took ${backSpent} ms.`);
   }
 
 }

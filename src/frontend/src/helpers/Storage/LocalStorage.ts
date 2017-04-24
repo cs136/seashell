@@ -189,10 +189,11 @@ class LocalStorage implements AbstractStorage {
   public async newFile(pid: ProjectID,
                        name: string,
                        contents = "",
-                       base64 = false): Promise<FileBrief> {
+                        // set pushChangeLog = false in applyChanges to make syncAll faster
+                       pushChangeLog: boolean = true): Promise<FileBrief> {
     this.debug && console.log(`newFile`);
     const rmatch: RegExpMatchArray | null = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/);
-    if (base64 && rmatch !== null) {
+    if (rmatch !== null) {
       const mime = rmatch[1];
       const b64 = rmatch[3];
       if (b64 || mime === "base64") {
@@ -218,11 +219,7 @@ class LocalStorage implements AbstractStorage {
       if (await exist.count() > 0) {
         throw new LocalStorageError(`file "${pid}" "${name}" already exists`);
       }
-      const project = await this.getProject(pid);
-      if (! project) {
-        throw new LocalStorageError(`project "${pid}" doesn't exist`);
-      }
-      await this.db.files.add({
+      const fs: FileStored = {
         id: fid,
         project: pid,
         name: name,
@@ -230,14 +227,16 @@ class LocalStorage implements AbstractStorage {
         checksum: checksum,
         last_modified: Date.now(),
         open: 0
-      });
-      await this.pushChangeLog({
-        type: "newFile",
-        contents: contents,
-        file: {file: name, project: pid}
-      });
-      const result: File = await this.readFile(fid);
-      return new FileBrief(result);
+      };
+      await this.db.files.add(fs);
+      if (pushChangeLog) {
+        await this.pushChangeLog({
+          type: "newFile",
+          contents: contents,
+          file: {file: name, project: pid}
+        });
+      }
+      return new FileBrief(fs);
     });
   }
 
@@ -246,15 +245,15 @@ class LocalStorage implements AbstractStorage {
     const pid = md5(name);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
-      await this.db.projects.add({
+      const ps: ProjectStored = {
         id: pid,
         name: name,
         runs: {},
         last_modified: Date.now(),
         open_tabs: {}
-      });
-      const proj: Project = await this.getProject(pid);
-      return new ProjectBrief(proj);
+      };
+      await this.db.projects.add(ps);
+      return new ProjectBrief(ps);
     });
   }
 
@@ -418,7 +417,7 @@ class LocalStorage implements AbstractStorage {
         } else if (change.type === "editFile") {
           await this.writeFile(fid, change.contents);
         } else if (change.type === "newFile") {
-          await this.newFile(pid, change.file.file, change.contents);
+          await this.newFile(pid, change.file.file, change.contents, false);
         } else {
           throw sprintf("applyChanges: unknown change %s!", change);
         }
