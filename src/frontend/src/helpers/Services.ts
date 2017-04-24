@@ -92,7 +92,7 @@ namespace Services {
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
-      window.localStorage.setItem("seashell2-credentials", JSON.stringify(response));
+      window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
       connection = new Connection(user,
                                   response.key,
                                   response.host,
