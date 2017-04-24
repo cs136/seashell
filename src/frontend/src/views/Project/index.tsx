@@ -75,7 +75,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                             :
                             <button className="pt-button pt-minimal pt-icon-comparison"
                                 onClick={() =>
-                                    this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.name, question.name, question.runFile, true))}>
+                                    this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.id, question.name, question.runFile, true))}>
                             </button>}
                     </Tooltip>,
                     !question.runFile ?
