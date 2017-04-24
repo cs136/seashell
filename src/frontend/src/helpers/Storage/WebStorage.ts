@@ -162,12 +162,20 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const startTime = Date.now();
     const projectsSent = await this.storage.getProjects();
     const filesSent = await this.storage.getAllFiles();
+    // create a cache to reduce getProject calls
+    // it's a bit hacky but ideally the backend should recongize project IDs directly
+    // so we don't need to call getProject here at all to find the project name
+    const projectIDNameMap: {[index: string]: string} = {};
     for (const file of filesSent) {
       (<any>file).file = file.name;
-      (<any>file).project = (await this.storage.getProject(file.project)).name;
+      if (! projectIDNameMap[file.project]) {
+        projectIDNameMap[file.project] = (await this.storage.getProject(file.project)).name;
+      }
+      (<any>file).project = projectIDNameMap[file.project];
     }
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
+    const frontendTimeSpent = Date.now() - startTime;
     const result = await this.socket.sendMessage<{
       changes: ChangeLog[],
       newProjects: string[],
@@ -189,7 +197,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
     // this.isSyncing = false;
     const timeSpent = Date.now() - startTime;
-    this.debug && console.log(`Syncing took ${timeSpent} ms.`);
+    this.debug && console.log(`Syncing took ${timeSpent} ms. Frontend took ${frontendTimeSpent} ms. Backend took ${timeSpent - frontendTimeSpent} ms.`);
   }
 
 }
