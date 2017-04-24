@@ -1,5 +1,6 @@
 import * as React from "react";
 import {CompilerDiagnostic} from "../../../helpers/Services";
+import {Monarch} from "./Editor/Monarch";
 
 const styles = require("../Project.scss");
 
@@ -175,10 +176,17 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
   }
 
   initMonaco = (container: HTMLElement) => {
+    const monaco = this.monacoContext.monaco;
+
+    monaco.languages.register({
+      id: "racket"
+    });
+    monaco.languages.setMonarchTokensProvider("racket", Monarch.getRacketTokenizer());
+
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
 
-    this.editor = this.monacoContext.monaco.editor.create(container, {
+    this.editor = monaco.editor.create(container, {
       value,
       language,
       theme,

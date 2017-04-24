@@ -137,13 +137,14 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       const fileDiags = currentQuestion.diags.filter((d: CompilerDiagnostic) => {
         return d.file === currentFile.name;
       });
+      const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
       if (this.props.file === currentFile.name) {
         return (<div className={styles.filePanel}>
           <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
             <MonacoEditor
               dirty={!!currentFile.unwrittenContent}
               value={currentFile.contents || "Unavailable in browser!"}
-              language="cpp"
+              language={lang}
               diags={currentQuestion.diags}
               onChange={this.onChange.bind(this)}
               editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
