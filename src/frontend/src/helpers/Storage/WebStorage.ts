@@ -47,10 +47,11 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   public async renameFile(fid: FileID, newName: string): Promise<void> {
     const file = await this.storage.readFile(fid);
+    const proj = await this.storage.getProject(file.project);
     await this.storage.renameFile(fid, newName);
     await this.socket.sendMessage({
       type: "renameFile",
-      project: file.project,
+      project: proj.name,
       oldName: file.name,
       newName: newName
     });
