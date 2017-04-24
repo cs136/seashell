@@ -78,7 +78,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                                     this.props.dispatch.file.flushFileBuffer().then(this.props.dispatch.compile.compileAndRun.bind(this, project.name, question.name, question.runFile, true))}>
                             </button>}
                     </Tooltip>,
-                    question.runFile ?
+                    !question.runFile ?
                         <Tooltip key="project-run-file-set" content="Please set a run file" position={Position.BOTTOM_RIGHT}>
                         <button className="pt-button pt-minimal pt-disabled pt-icon-play"></button></Tooltip>
                     : this.props.appState.runState === 0 ?

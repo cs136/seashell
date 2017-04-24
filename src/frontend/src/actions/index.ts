@@ -235,10 +235,12 @@ const mapDispatchToProps = (dispatch: Function) => {
             payload: file
          }));
         },
-        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(() => dispatch({
-          type: appStateActions.setRunFile,
-          payload: file.name
-        })),
+        setRunFile: (file: S.FileBrief) => {
+          Services.storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
+            type: appStateActions.setRunFile,
+            payload: file.name
+          }));
+        },
       },
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
