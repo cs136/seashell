@@ -154,7 +154,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             </Draggable>
           <Console ref="terminal"
             className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
+            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch} display={this}/>
         </div>
         </div>);
       }

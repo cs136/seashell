@@ -421,6 +421,10 @@ const mapDispatchToProps = (dispatch: Function) => {
         writeConsole: (content: string) => dispatch({
           type: appStateActions.writeConsole,
           payload: {content: content}
+        }),
+        updateTerminal: (newText: string) => dispatch({
+          type: appStateActions.updateTerminal,
+          payload: newText
         })
       }
     }
