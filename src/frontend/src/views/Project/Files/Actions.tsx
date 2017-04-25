@@ -42,7 +42,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
       }}/>
       <MenuDivider />
       <MenuItem text="Close File" onClick={() => {
-        this.props.dispatch.file.closeFile(file, this.openFiles);
+        this.props.dispatch.file.closeFile(file);
         let state = this.props.appState;
 
         if (state.currentProject && state.currentProject && state.currentProject.currentQuestion) {
