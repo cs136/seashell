@@ -186,7 +186,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                 payload: file
               });
               return asyncAction(Services.storage().addOpenTab(file.project, file.question(), file.id))
-                .then(() => {
+                .then(async () => {
+                  // file needs to be read here to obtain the default contents
+                  file = await Services.storage().readFile(file.id);
                   dispatch({
                     type: appStateActions.openFile,
                     payload: file
