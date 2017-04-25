@@ -6,7 +6,7 @@ export const dialogActions ={
 }
 
 export interface dialogAction {
-  type: string
+  type: string;
   payload: string;
 }
 
