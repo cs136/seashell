@@ -59,10 +59,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                     <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
                         <button className="pt-button pt-intent-primary"><span className="pt-icon-standard pt-icon-caret-down" />{question ? question.name : "Select a Question"}</button>
                     </Popover>,
-                    question ? <span className="pt-navbar-divider" key="project-divider" /> : <span />,
+                    question ? <span className="pt-navbar-divider" key="project-divider" /> : <span key="empty-project-divider" />,
                     question ? <Popover content={<ListFiles question={question}/>} position={Position.BOTTOM} key="project-open-file">
                         <button className="pt-button"><span className="pt-icon-standard pt-icon-caret-down" />Open File</button>
-                    </Popover> : <span />]}
+                    </Popover> : <span key="empty-project-open-file"/>]}
                 navRight={question ? [
                     <OpenFiles key="project-open-files" />,
                     <Tooltip key="project-toggle-view" content="Toggle Editor/Console" position={Position.BOTTOM}>
