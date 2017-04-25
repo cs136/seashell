@@ -9,7 +9,7 @@ export interface AddFileProps {questions: string[]; closefunc: Function; };
 
 class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string}> {
   project: string;
-  question: string
+  question: string;
   constructor(props: AddFileProps&actionsInterface) {
     super(props);
     if (this.props.appState.currentProject && this.props.appState.currentProject.currentQuestion) {
@@ -45,7 +45,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
           this.props.dispatch.file.addFile(this.project, this.question + "/" + this.state.file,
           this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" :
           this.state.file.split(".").pop() === "h" ? "//put your interface here\n" :
-          this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "").then(()=>this.props.closefunc());
+          this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "").then(() => this.props.closefunc());
           }}>Add File</button>
       </div>
     </div>

@@ -269,7 +269,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                       currentFile: undefined,
                       openFiles: openFiles,
                       diags: [],
-                      files: files.filter((file)=>file.question() === name)
+                      files: files.filter((file) => file.question() === name)
                     }
                   }
               }))))
