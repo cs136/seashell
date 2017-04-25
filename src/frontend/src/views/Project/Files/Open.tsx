@@ -25,7 +25,7 @@ class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
             <div className={styles.openFilesTab} key={`file-tab-${file.id}`}>
               <div className={`pt-button-group ${styles.openFilesTab} ${(question.currentFile && file.id === question.currentFile.id) ? styles.active : ""}`}>
                 <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, file)}>
-                  {file.id === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
+                  {file.name === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
                   {file.name.substring(file.name.indexOf("/") + 1)}
                 </button>
                 <Popover content={<FileActions file={file}/>}
