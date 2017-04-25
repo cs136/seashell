@@ -221,14 +221,14 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+        openFile: (file: S.FileBrief) => {
           Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
           dispatch({
             type: appStateActions.openFile,
             payload: file
           }));
         },
-        closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+        closeFile: (file: S.FileBrief) => {
           Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
             type: appStateActions.closeFile,
