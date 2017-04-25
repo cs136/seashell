@@ -1,12 +1,12 @@
 import {mergeBetter} from "../helpers/utils";
 import {clone} from "ramda";
 
-export enum dialogActions {
-  open, close, toggle
+export const dialogActions ={
+  open: "dialog_open", close: "dialog_close", toggle: "dialog_toggle"
 }
 
 export interface dialogAction {
-  type: dialogActions;
+  type: string;
   payload: string;
 }
 

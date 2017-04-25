@@ -180,9 +180,9 @@ const mapDispatchToProps = (dispatch: Function) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(Services.storage().newFile(project, path, newFileContent))
-            .then(() => dispatch({
+            .then((file) => dispatch({
               type: appStateActions.addFile,
-              payload: path
+              payload: file
             })).catch((reason) => {
               showError(reason);
             });
@@ -269,7 +269,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                       currentFile: undefined,
                       openFiles: openFiles,
                       diags: [],
-                      files: files.filter((file) => file.name.split("/")[0] === name)
+                      files: files.filter((file)=>file.question() === name)
                     }
                   }
               }))))
@@ -347,7 +347,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   termClear: null,
                   name: name,
                   id: pid,
-                  questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  questions: files.map((file) => file.question()).filter(unique),
                   currentQuestion: undefined
                 }
               }
