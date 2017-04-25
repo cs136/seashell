@@ -134,6 +134,17 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   };
 
   public async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void> {
+    const project = await this.storage.getProject(proj);
+    let arr = filename.split("/");
+    let folder = arr.length > 2 ? "tests" : arr[0] === "common" ? "common" : "question";
+    arr = arr.slice(1);
+    await this.socket.sendMessage({
+      type: "setFileToRun",
+      project: project.name,
+      question: question,
+      folder: folder,
+      file: arr.join("/")
+    });
     return this.storage.setFileToRun(proj, question, filename);
   };
 

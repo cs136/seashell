@@ -41,11 +41,12 @@ class OnlineCompiler extends AbstractCompiler {
       tests = await this.getTestsForQuestion(proj, question);
     }
 
+    let project = await this.storage.getProject(proj);
     let result: any = null;
     try {
       result = await this.socket.sendMessage({
         type: "compileAndRunProject",
-        project: proj,
+        project: project.name,
         question: question,
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
@@ -77,7 +78,7 @@ class OnlineCompiler extends AbstractCompiler {
       pids.map((pid: number) => {
         this.socket.sendMessage({
           type: "startIO",
-          project: proj,
+          project: project.name,
           pid: pid
         });
       });
