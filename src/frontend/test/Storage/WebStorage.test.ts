@@ -44,7 +44,7 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 }
 
 if (TestAccount.user) {
-  // describe("Testing WebStorage in offline mode", () => websocketTests(true));
+  describe("Testing WebStorage in offline mode", () => websocketTests(OfflineMode.On));
   describe("Testing WebStorage in online mode", () => websocketTests(OfflineMode.Off));
 } else {
   describe.skip("Skipped websocket related tests. You need to set up account.json", () => {
@@ -52,7 +52,7 @@ if (TestAccount.user) {
   });
 }
 
-function websocketTests(offlineMode: OfflineMode = OfflineMode.On) {
+function websocketTests(offlineMode) {
 
   let store: WebStorage;
   let projs: Project[];
@@ -61,7 +61,7 @@ function websocketTests(offlineMode: OfflineMode = OfflineMode.On) {
   beforeAll(() => {
     Services.setOfflineMode(offlineMode);
     Services.init(null, {
-      debugWebSocket: true,
+      debugWebSocket: false,
       debugLocalStorage: false,
       debugWebStorage: false,
       debugService: false
@@ -93,7 +93,7 @@ function websocketTests(offlineMode: OfflineMode = OfflineMode.On) {
   });
 
   afterAll(() => {
-    Services.logout(true);
+    Services.logout();
   });
 
   async function remoteProjs() {

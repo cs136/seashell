@@ -41,11 +41,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
 
     if (this.offlineMode === OfflineMode.On) {
-        return offline;
+      await Promise.all([online, offline]);
+      return offline;
     } else {
       // hack to make it compatible with the backend
       // fid is project/question/filename
-      await online;
+      await Promise.all([online, offline]);
       return new FileBrief({
         id: `${pname}/${filename}`,
         name: filename,
@@ -78,7 +79,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       pname = split[0];
       fname = R.join("/", R.drop(1, split));
       const pid = this.storage.projID(pname);
-      id = this.storage.fileID(pid, pname);
+      id = this.storage.fileID(pid, fname);
     }
     const offline = this.storage.renameFile(id, newName);
     const online  = this.socket.sendMessage<void>({
@@ -87,7 +88,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       oldName: fname,
       newName: newName
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   };
 
   public async deleteFile(fid: FileID): Promise<void> {
@@ -109,7 +111,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       pname = split[0];
       fname = R.join("/", R.drop(1, split));
       const pid = this.storage.projID(pname);
-      id = this.storage.fileID(pid, pname);
+      id = this.storage.fileID(pid, fname);
     }
     const offline = this.storage.deleteFile(id);
     const online  = this.socket.sendMessage<void>({
@@ -117,7 +119,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       project: pname,
       file: fname
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   };
 
   public async deleteProject(pid: ProjectID): Promise<void> {
@@ -132,7 +135,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       type: "deleteProject",
       project: pname
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   };
 
   public async newProject(name: string): Promise<ProjectBrief> {
@@ -145,11 +149,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       // sitll needs to wait for the backend
       // sending multiple requests at once breaks the backend
       // await this.ignoreNoInternet(online);
+      await Promise.all([online, offline]);
       return offline;
     } else {
       // hack to make it compatible with the backend
       // pid is project name
-      await online;
+      await Promise.all([online, offline]);
       return new ProjectBrief({
         id: name,
         name: name,
@@ -235,7 +240,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       pname = split[0];
       fname = R.join("/", R.drop(1, split));
       const pid = this.storage.projID(pname);
-      id = this.storage.fileID(pid, fid);
+      id = this.storage.fileID(pid, fname);
     }
     const offline = this.storage.writeFile(id, contents);
     const online  = this.socket.sendMessage<void>({
@@ -245,7 +250,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       contents: contents,
       history: ""
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   }
 
   // public async getTestResults(marmosetProject: string): Promise<any> {
@@ -255,29 +261,29 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   //     testtype: "public"
   //   });
   // }
-  private categorizeFile(fname: string): FileCategory {
-    /* fname:
-     common
-     common/[filename]
-     [question]
-     [question]/[filename]
-     [question]/tests
-     [question]/tests/[filename]
-    */
-    const regxTest = /^[^\/]+(\/tests)(\/[^\/]+)$/;
-    const regxCommon = /^common(\/[^\/]+)$/;
-    const regxDir = /^[^\/]+(\/tests)?$/;
-    if (R.test(regxTest, fname)) {
-      return FileCategory.Test;
-    }
-    if (R.test(regxCommon, fname)) {
-      return FileCategory.Common;
-    }
-    if (R.test(regxDir, fname)) {
-      return FileCategory.Directory;
-    }
-    return FileCategory.Other;
-  }
+  // private categorizeFile(fname: string): FileCategory {
+  //   /* fname:
+  //    common
+  //    common/[filename]
+  //    [question]
+  //    [question]/[filename]
+  //    [question]/tests
+  //    [question]/tests/[filename]
+  //   */
+  //   const regxTest = /^[^\/]+(\/tests)(\/[^\/]+)$/;
+  //   const regxCommon = /^common(\/[^\/]+)$/;
+  //   const regxDir = /^[^\/]+(\/tests)?$/;
+  //   if (R.test(regxTest, fname)) {
+  //     return FileCategory.Test;
+  //   }
+  //   if (R.test(regxCommon, fname)) {
+  //     return FileCategory.Common;
+  //   }
+  //   if (R.test(regxDir, fname)) {
+  //     return FileCategory.Directory;
+  //   }
+  //   return FileCategory.Other;
+  // }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     if (this.offlineMode === OfflineMode.On) {
@@ -294,7 +300,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       return R.reduce((acc, data) => {
         // the backend return fname as [question](/(common|tests))?(/[filename])?
         const fname: string = data[0];
-        const cat = this.categorizeFile(fname);
+        // const cat = this.categorizeFile(fname);
         // data[1]: is directory?
         if (data[1]) {
           return acc;
@@ -366,7 +372,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       file: R.join("/", R.drop(1, arr)),
       folder: folder
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   };
 
   public async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]> {
@@ -396,7 +403,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       type: "saveSettings",
       settings: settings.toJSON()
     });
-    return await (this.offlineMode === OfflineMode.On ? offline : online);
+    await Promise.all([online, offline]);
+    return (this.offlineMode === OfflineMode.On ? offline : online);
   }
 
   public async getSettings(): Promise<Settings> {
