@@ -4,12 +4,13 @@ import FakeIndexedDB = require("fake-indexeddb");
 import FDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
 import {File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings, defaultSettings, Services} from "../src/helpers/Services";
+        Settings, Services} from "../src/helpers/Services";
 import * as R from "ramda";
 
 // polyfills
 import WebSocket = require("ws");
-
+import * as LS from "localstorage-memory";
+(<any>window).localStorage = LS;
 (<any>window).WebSocket = WebSocket;
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;

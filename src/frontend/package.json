@@ -6,7 +6,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node_modules/.bin/jest",
+    "test": "node_modules/.bin/jest --useStderr",
     "build": "webpack --config webpack.config.prod.js",
     "reinstall": "rm -rf node_modules && npm install && npm run build"
   },

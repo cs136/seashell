@@ -44,6 +44,16 @@ class LocalStorage implements AbstractStorage {
     return this.db.delete();
   }
 
+  // just for now make sure things are consistent
+  // you might want to change this later
+  public projID(projName: string): ProjectID {
+    return md5(projName);
+  }
+
+  public fileID(pid: ProjectID, fileName: string): ProjectID {
+    return md5(pid + fileName);
+  }
+
   public async writeFile(fid: FileID,
                          contents: string|undefined,
                          // set pushChangeLog = false in applyChanges to make syncAll faster
@@ -220,7 +230,7 @@ class LocalStorage implements AbstractStorage {
           Make sure the id is unique for each new file. For example: const id = md5(proj + name + Date.now()).
           This requires the backend to be aware of file ids
       */
-      const fid: FileID = md5(pid + name);
+      const fid: FileID = this.fileID(pid, name);
       const exist = await this.db.files.where({
         name: name,
         project: pid
@@ -251,7 +261,7 @@ class LocalStorage implements AbstractStorage {
 
   public async newProject(name: string): Promise<ProjectBrief> {
     this.debug && console.log(`newProject`);
-    const pid = md5(name);
+    const pid = this.projID(name);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       const ps: ProjectStored = {
@@ -418,8 +428,8 @@ class LocalStorage implements AbstractStorage {
         await this.newProject(proj);
       }
       for (const change of changeLogs) {
-        const pid = md5(change.file.project);
-        const fid = md5(pid + change.file.file);
+        const pid = this.projID(change.file.project);
+        const fid = this.fileID(pid, change.file.file);
         if (change.type === "deleteFile") {
           await this.deleteFile(fid, false);
         } else if (change.type === "editFile") {

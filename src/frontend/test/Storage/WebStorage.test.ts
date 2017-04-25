@@ -1,6 +1,5 @@
 import "jest";
-import {WebStorage,
-        SeashellWebsocket} from "../../src/helpers/Storage/WebStorage";
+import {WebStorage, OfflineMode} from "../../src/helpers/Storage/WebStorage";
 import {File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
         Settings, Services} from "../../src/helpers/Services";
@@ -44,15 +43,15 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 }
 
 if (TestAccount.user) {
-  describe("Testing WebStorage in offline mode", () => websocketTests(true));
-  describe("Testing WebStorage in online mode", () => websocketTests(false));
+  // describe("Testing WebStorage in offline mode", () => websocketTests(true));
+  describe("Testing WebStorage in online mode", () => websocketTests(OfflineMode.Off));
 } else {
   describe.skip("Skipped websocket related tests. You need to set up account.json", () => {
     it("skipping");
   });
 }
 
-function websocketTests(offlineMode: boolean) {
+function websocketTests(offlineMode: OfflineMode = OfflineMode.On) {
 
   let store: WebStorage;
   let projs: Project[];
@@ -61,21 +60,21 @@ function websocketTests(offlineMode: boolean) {
   beforeAll(() => {
     Services.setOfflineMode(offlineMode);
     Services.init(null, {
-      debugWebSocket: false,
+      debugWebSocket: true,
       debugLocalStorage: false,
       debugWebStorage: false,
       debugService: false
     });
     store = Services.storage();
     projs = R.sortBy(prop("id"), map((s: string) => new Project({
-      id: offlineMode ? md5(`X${s}`) : `X${s}`,
+      id: offlineMode === OfflineMode.On ? md5(`X${s}`) : `X${s}`,
       name: `X${s}`,
       runs: {},
       last_modified: 0
     }), uniqStrArr(testSize, 20)()));
     files = R.sortBy(prop("id"), map((p: Project) => {
       const name = `default/${uniqStr(20)()}.${J.one_of(["c", "h", "rkt", "txt", "test"])()}`;
-      const fid = offlineMode ? md5(p.id + name) : `${p.id}/${name}`;
+      const fid = offlineMode === OfflineMode.On ? md5(p.id + name) : `${p.id}/${name}`;
       const text = uniqStr(5000)();
       return new File({
         id: fid,
@@ -191,7 +190,9 @@ function websocketTests(offlineMode: boolean) {
     for (const f of files) {
       await store.setFileToRun(f.project, "default", f.name);
       const pj = R.find((x) => x.id === f.project, projs);
-      pj.runs.default = f.name;
+      if (offlineMode === OfflineMode.On) {
+        pj.runs.default = f.name;
+      }
       for (const o of files) {
         const check = await store.getFileToRun(o.project, "default");
         if (o.project ===  f.project) {
@@ -203,22 +204,6 @@ function websocketTests(offlineMode: boolean) {
     }
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
-  });
-
-  it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
-    const projGps = R.groupBy((x: File) => x.project, files);
-    for (const p in projGps) {
-      const pj = R.find((x) => x.id === p, projs);
-      console.assert(pj);
-      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
-        const file = projGps[p][i];
-        const newname = file.name + "_new_name";
-        await store.renameFile(file.id, newname);
-        file.name += "_new_name";
-      }
-    }
-    // expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
-    // expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
   it("set/getSettings: set font_size to 100", async () => {
@@ -262,6 +247,22 @@ function websocketTests(offlineMode: boolean) {
       await store.deleteProject(proj.id);
       projs = R.remove(i, 1, projs);
       files = R.filter((f) => f.project !== proj.id, files);
+    }
+    expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
+    expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
+  });
+
+  it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
+    const projGps = R.groupBy((x: File) => x.project, files);
+    for (const p in projGps) {
+      const pj = R.find((x) => x.id === p, projs);
+      console.assert(pj);
+      for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
+        const file = projGps[p][i];
+        const newname = file.name + "_new_name";
+        await store.renameFile(file.id, newname);
+        file.name += "_new_name";
+      }
     }
     expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));

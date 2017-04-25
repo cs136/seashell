@@ -1,6 +1,6 @@
 import * as $ from "jquery";
 import {SeashellWebsocket} from "./Websocket/WebsocketClient";
-import {WebStorage} from "./Storage/WebStorage";
+import {WebStorage, OfflineMode} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
@@ -155,12 +155,12 @@ namespace Services {
     return connection.username;
   }
 
-  export function getOfflineMode(): boolean {
+  export function getOfflineMode(): OfflineMode {
     const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : true;
+    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.On;
   }
 
-  export function setOfflineMode(enable: boolean): void {
-    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(enable));
+  export function setOfflineMode(mode: OfflineMode): void {
+    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(mode));
   }
 }
