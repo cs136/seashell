@@ -51,7 +51,7 @@ Services.init(null, {
 });
 
 if (TestAccount.user) {
-  Services.storage().setOfflineMode(true);
+  Services.storage().setOfflineMode(false);
   describe("Testing WebStorage with offline mode", websocketTests);
 } else {
   describe.skip("Skipped websocket related tests. You need to set up account.json", () => {

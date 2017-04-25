@@ -293,11 +293,18 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     } else {
       // hack to make it compatible with the backend
       // pid is project name
-      return await this.socket.sendMessage<string|false>({
-        type: "getFileToRun",
-        project: pid,
-        question: question
-      });
+      try {
+        return await this.socket.sendMessage<string|false>({
+          type: "getFileToRun",
+          project: pid,
+          question: question
+        });
+      } catch (err) {
+        if (err instanceof E.RequestError) {
+          return false;
+        }
+        throw err;
+      }
     }
   };
 
