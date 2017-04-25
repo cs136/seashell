@@ -29,8 +29,6 @@ abstract class AbstractStorage {
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;
   public abstract async getSettings(): Promise<Settings>;
-  public abstract getOfflineMode(): boolean;
-  public abstract setOfflineMode(enable: boolean): void;
   // table dump
   public abstract async getAllFiles(): Promise<FileBrief[]>;
 }

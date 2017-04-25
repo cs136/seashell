@@ -54,7 +54,7 @@ namespace Services {
 
     socketClient    = new SeashellWebsocket(options.debugWebSocket);
     localStorage    = new LocalStorage(options.debugLocalStorage);
-    webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
+    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(), options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
   }
@@ -153,5 +153,14 @@ namespace Services {
     await socketClient.connect(connection);
     await webStorage.syncAll();
     return connection.username;
+  }
+
+  export function getOfflineMode(): boolean {
+    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
+    return offlineSetting ? JSON.parse(offlineSetting) : true;
+  }
+
+  export function setOfflineMode(enable: boolean): void {
+    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(enable));
   }
 }

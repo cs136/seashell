@@ -44,15 +44,6 @@ class LocalStorage implements AbstractStorage {
     return this.db.delete();
   }
 
-  public getOfflineMode(): boolean {
-    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : true;
-  }
-
-  public setOfflineMode(enable: boolean): void {
-    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(enable));
-  }
-
   public async writeFile(fid: FileID,
                          contents: string|undefined,
                          // set pushChangeLog = false in applyChanges to make syncAll faster
