@@ -2,7 +2,7 @@ import { connect } from "react-redux";
 import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import { projectRef, fileRef } from "../types";
-import { appStateActions }  from "../reducers/appStateReducer";
+import { appStateActions } from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
 import { GenericError, LoginError } from "../helpers/Errors";
@@ -34,7 +34,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       console.error(e);
       if (e instanceof LoginError) {
         showError(e.message);
-        dispatch({type: userActions.INVALIDATE});
+        dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
         throw e;
@@ -42,29 +42,29 @@ const mapDispatchToProps = (dispatch: Function) => {
     }
   }
 
-  const actions =  {
+  const actions = {
     dispatch: {
       dialog: {
         toggleHelp: () => {
-          dispatch({type: dialogActions.toggle, payload: "help_open"});
+          dispatch({ type: dialogActions.toggle, payload: "help_open" });
         },
         toggleSettings: () => {
-          dispatch({type: dialogActions.toggle, payload: "settings_open"});
+          dispatch({ type: dialogActions.toggle, payload: "settings_open" });
         },
         toggleAddProject: () => {
-          dispatch({type: dialogActions.toggle, payload: "add_project_open"});
+          dispatch({ type: dialogActions.toggle, payload: "add_project_open" });
         },
         toggleDeleteFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "delete_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "delete_file_open" });
         },
         toggleRenameFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "rename_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "rename_file_open" });
         },
         toggleCopyFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "copy_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "copy_file_open" });
         },
         toggleAddFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "add_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "add_file_open" });
         }
       },
       settings: {
@@ -81,7 +81,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
                 editorRatio: 0.5,
                 updated: 0,
-              }});
+              }
+            });
           });
         },
         updateSettings: (newSettings: settingsReducerStateNullable) => {
@@ -124,31 +125,32 @@ const mapDispatchToProps = (dispatch: Function) => {
           dispatch({
             type: appStateActions.copyFile,
             payload: {
-              question: {name: "question", files: ["file1.txt"]},
+              question: { name: "question", files: ["file1.txt"] },
               newName: targetName.split("/").pop()
             }
           });
         },
         updateFile: (file: S.File, newFileContent: string) => {
-          dispatch({type: appStateActions.changeFileBufferedContent,
-                    payload: {
-                      unwrittenContent: newFileContent,
-                      target: file.id,
-                      flusher: () => {
-                        actions.dispatch.file.flushFileBuffer();
-                      }
-                    }
-                  });
+          dispatch({
+            type: appStateActions.changeFileBufferedContent,
+            payload: {
+              unwrittenContent: newFileContent,
+              target: file.id,
+              flusher: () => {
+                actions.dispatch.file.flushFileBuffer();
+              }
+            }
+          });
         },
-        flushFileBuffer: () => {
-          return new Promise((resolve, reject) => {
+        flushFileBuffer: () : Promise<void> => {
+          return new Promise<void>((resolve, reject) => {
             dispatch((dispatch: Function, getState: () => globalState) => {
               const state = getState();
               if (state.appState.currentProject &&
                 state.appState.currentProject &&
                 state.appState.currentProject.currentQuestion &&
                 state.appState.currentProject.currentQuestion.currentFile) {
-                const {flusher, target, unwrittenContent} = state.appState.currentProject.currentQuestion.currentFile;
+                const { flusher, target, unwrittenContent } = state.appState.currentProject.currentQuestion.currentFile;
                 if (flusher) {
                   clearTimeout(flusher);
                 }
@@ -157,7 +159,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                     .then(() => dispatch({
                       type: appStateActions.changeFileContent,
                       payload: unwrittenContent,
-                  })).then(resolve).catch(reject);
+                    })).then(resolve).catch(reject);
                 } else {
                   resolve();
                 }
@@ -168,6 +170,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         switchFile: (file: S.FileBrief) => {
+          console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
             .then(() => { return asyncAction(Services.storage().readFile(file.id)); })
             .then((file: S.File) => dispatch({
@@ -176,7 +179,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             }));
         },
         addFile: (project: string, path: string,
-                  newFileContent: string) => {
+          newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(Services.storage().newFile(project, path, newFileContent))
@@ -196,7 +199,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: file.name}
+                payload: { name: file.name }
               });
             }).catch((reason) => {
               showError(reason);
@@ -211,11 +214,11 @@ const mapDispatchToProps = (dispatch: Function) => {
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: file.name}
+                payload: { name: file.name }
               });
               dispatch({
                 type: appStateActions.addFile,
-                payload: {name: targetName}
+                payload: { name: targetName }
               });
             }).catch((reason) => {
               showError(reason);
@@ -223,17 +226,17 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         openFile: (file: S.FileBrief) => {
           Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
-          dispatch({
-            type: appStateActions.openFile,
-            payload: file
-          }));
+            dispatch({
+              type: appStateActions.openFile,
+              payload: file
+            }));
         },
         closeFile: (file: S.FileBrief) => {
           Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
-            type: appStateActions.closeFile,
-            payload: file
-         }));
+              type: appStateActions.closeFile,
+              payload: file
+            }));
         },
         setRunFile: (file: S.FileBrief) => {
           Services.storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
@@ -245,51 +248,55 @@ const mapDispatchToProps = (dispatch: Function) => {
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
           type: appStateActions.addQuestion,
-          payload: {name: newQuestionName}
+          payload: { name: newQuestionName }
         }),
         removeQuestion: (name: string) => dispatch({
           type: appStateActions.removeQuestion,
-          payload: {name: name}
+          payload: { name: name }
         }),
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) =>
-                asyncAction(Services.storage().getOpenTabs(pid, name))
-              .then((openFiles) =>
-                asyncAction(Services.storage().getFileToRun(pid, name)
-              .then((runFile) =>
-                dispatch({
-                  type: appStateActions.switchQuestion,
-                  payload: {
-                    question: {
-                      name: name,
-                      runFile: runFile,
-                      currentFile: undefined,
-                      openFiles: openFiles.filter((file) => file.question() === name),
-                      diags: [],
-                      files: files.filter((file) => file.question() === name)
-                    }
-                  }
-              }))))
-              );
-          });
+              return asyncAction(Services.storage().getProjectFiles(pid))
+                .then((files: S.FileBrief[]) => {
+                  return asyncAction(Services.storage().getOpenTabs(pid, name))
+                    .then((openFiles) => {
+                      return asyncAction(Services.storage().getFileToRun(pid, name)
+                        .then((runFile) => {
+                          const question = {
+                            name: name,
+                            runFile: runFile,
+                            currentFile: undefined,
+                            openFiles: openFiles.filter((file) => file.question() === name),
+                            diags: [],
+                            files: files.filter((file) => file.question() === name)
+                          };
+                          dispatch({
+                            type: appStateActions.switchQuestion,
+                            payload: {
+                              question: question
+                            }
+                          });
+                          return question;
+                        }));
+                    });
+                });
+            });
         }
       },
       user: {
         signin: (username: string, password: string) => {
-          dispatch({type: userActions.BUSY});
+          dispatch({ type: userActions.BUSY });
           return new Promise((resolve, reject) => {
             if (trim(username) === "" || trim(password) === "") {
               showError("Please fill in all fields!");
               reject(null);
             } else {
               asyncAction(Services.login(username, password)).then((response) => {
-                dispatch({type: userActions.SIGNIN, payload: username});
+                dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
-                dispatch({type: userActions.NOTBUSY});
+                dispatch({ type: userActions.NOTBUSY });
                 reject(e);
               });
             }
@@ -297,7 +304,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         signout: () => {
           asyncAction(Services.logout()).then((response) => {
-            dispatch({type: userActions.SIGNOUT});
+            dispatch({ type: userActions.SIGNOUT });
           }).catch((reason) => {
             if (reason !== null) throw reason;
           });
@@ -307,13 +314,13 @@ const mapDispatchToProps = (dispatch: Function) => {
           // any errors that happen when auto connecting --
           // we're in the login screen, let user manually log in
           // if we can't auto login.
-          dispatch({type: userActions.BUSY});
+          dispatch({ type: userActions.BUSY });
           try {
             let user = await Services.autoConnect();
-            dispatch({type: userActions.SIGNIN, payload: user});
+            dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
-            dispatch({type: userActions.NOTBUSY});
+            dispatch({ type: userActions.NOTBUSY });
             throw e;
           }
         }
@@ -322,22 +329,22 @@ const mapDispatchToProps = (dispatch: Function) => {
         addProject: (newProjectName: string) => {
           return asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) =>
             dispatch({
-            type: appStateActions.addProject,
-            payload: projBrief
-          }));
+              type: appStateActions.addProject,
+              payload: projBrief
+            }));
         },
         removeProject: (pid: S.ProjectID) =>
           asyncAction(Services.storage().deleteProject(pid)).then(() => dispatch({
             type: appStateActions.removeProject,
-            payload: {id: pid}
-        })),
+            payload: { id: pid }
+          })),
         switchProject: (name: string, pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
           function unique(val: any, idx: Number, arr: any) {
             return arr.indexOf(val) === idx;
           }
-          dispatch({type: appStateActions.switchProject, payload: {project: null}});
+          dispatch({ type: appStateActions.switchProject, payload: { project: null } });
           return asyncAction(Services.storage().getProjectFiles(pid))
             .then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
@@ -352,8 +359,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 }
               }
             })).catch((reason) => {
-            if (reason !== null) showError(reason.message);
-          });
+              if (reason !== null) showError(reason.message);
+            });
         },
         getAllProjects: () => {
           return asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
@@ -375,31 +382,31 @@ const mapDispatchToProps = (dispatch: Function) => {
             payload: {}
           });
           asyncAction(Services.compiler().compileAndRunProject(project,
-              question, fid, test)).then((result: C.CompilerResult) => {
-            dispatch({
-              type: appStateActions.setDiags,
-              payload: result.messages
-            });
-            if (result.status !== "running") {
+            question, fid, test)).then((result: C.CompilerResult) => {
+              dispatch({
+                type: appStateActions.setDiags,
+                payload: result.messages
+              });
+              if (result.status !== "running") {
+                dispatch({
+                  type: appStateActions.setNotRunning,
+                  payload: {}
+                });
+              } else {
+                dispatch({
+                  type: appStateActions.setRunning,
+                  payload: {}
+                });
+              }
+            }).catch((reason) => {
               dispatch({
                 type: appStateActions.setNotRunning,
                 payload: {}
               });
-            } else {
-              dispatch({
-                type: appStateActions.setRunning,
-                payload: {}
-              });
-            }
-          }).catch((reason) => {
-            dispatch({
-              type: appStateActions.setNotRunning,
-              payload: {}
+              if (reason !== null) {
+                showError(reason.message);
+              }
             });
-            if (reason !== null) {
-              showError(reason.message);
-            }
-          });
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,
@@ -420,7 +427,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         }),
         writeConsole: (content: string) => dispatch({
           type: appStateActions.writeConsole,
-          payload: {content: content}
+          payload: { content: content }
         })
       }
     }
