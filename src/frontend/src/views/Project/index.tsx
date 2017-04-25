@@ -70,7 +70,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                         </button>
                     </Tooltip>,
                     <Tooltip key="project-build-file" content="Test" position={Position.BOTTOM_RIGHT}>
-                        {this.props.appState.runState !== 0 || question.runFile === "" ?
+                        {this.props.appState.runState !== 0 || !question.runFile ?
                             <button className="pt-button pt-minimal pt-disabled pt-icon-comparison"> </button>
                             :
                             <button className="pt-button pt-minimal pt-icon-comparison"
