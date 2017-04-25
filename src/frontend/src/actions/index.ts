@@ -180,10 +180,23 @@ const mapDispatchToProps = (dispatch: Function) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(Services.storage().newFile(project, path, newFileContent))
-            .then((file) => dispatch({
-              type: appStateActions.addFile,
-              payload: file
-            })).catch((reason) => {
+            .then((file) => {
+              dispatch({
+                type: appStateActions.addFile,
+                payload: file
+              });
+              return asyncAction(Services.storage().addOpenTab(file.project, file.question(), file.id))
+                .then(() => {
+                  dispatch({
+                    type: appStateActions.openFile,
+                    payload: file
+                  });
+                  dispatch({
+                    type: appStateActions.switchFile,
+                    payload: file
+                  });
+                });
+            }).catch((reason) => {
               showError(reason);
             });
         },
@@ -223,10 +236,10 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         openFile: (file: S.FileBrief) => {
           Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
-          dispatch({
-            type: appStateActions.openFile,
-            payload: file
-          }));
+            dispatch({
+              type: appStateActions.openFile,
+              payload: file
+            }));
         },
         closeFile: (file: S.FileBrief) => {
           Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
