@@ -9,26 +9,26 @@ interface CurrentFile extends S.File {
   target?: S.FileID;
   flusher?: number;
 }
-
+export interface appStateReducerProjectState {
+  termWrite?: Function;
+  termClear?: Function;
+  name: string;
+  id: string;
+  questions: string[];
+  currentQuestion?: {
+    name: string;
+    files: S.FileBrief[];
+    runFile: string;
+    openFiles: S.FileBrief[];
+    diags: CompilerDiagnostic[];
+    currentFile?: CurrentFile;
+  };
+};
 export interface appStateReducerState {[key: string]: any;
   fileOpTarget?: S.FileBrief;
   projects: S.ProjectBrief[];
   runState?: number;
-  currentProject?: {
-    termWrite?: Function;
-    termClear?: Function;
-    name: string;
-    id: string;
-    questions: string[];
-    currentQuestion?: {
-      name: string;
-      files: S.FileBrief[];
-      runFile: string;
-      openFiles: S.FileBrief[];
-      diags: CompilerDiagnostic[];
-      currentFile?: CurrentFile;
-    };
-  };
+  currentProject?: appStateReducerProjectState;
 };
 
 export interface appStateReducerAction {

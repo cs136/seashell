@@ -13,11 +13,13 @@ import {merge} from "ramda";
 import CopyPrompt from "./Prompt/Copy";
 import RenamePrompt from "./Prompt/Rename";
 import DeletePrompt from "./Prompt/Delete";
+import MarmosetResultPrompt from "./Prompt/MarmosetResult";
 import AddFilePrompt from "./Prompt/AddFile";
 import Splash from "./Splash";
 import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
+import {appStateReducerProjectState} from "../../reducers/appStateReducer";
 import * as S from "../../helpers/Storage/Interface";
 export interface ProjectProps extends RouteComponentProps
     <{name: string, id: S.ProjectID}> { title: string; }
@@ -30,6 +32,17 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     this.state = {
         toggleView: false
     };
+  }
+  generateMarmosetButton(project: appStateReducerProjectState) {
+      const projectPattern = /A[0-9]+/, questionPattern = /[qp][0-9]+/;
+      if (project.currentQuestion && project.name.match(projectPattern) && project.currentQuestion.name.match(questionPattern)) {
+        const marmosetDispatch = this.props.dispatch.question.getMarmosetResults.bind(this, project.name + project.currentQuestion.name);
+        return (<Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
+                <button className="pt-button pt-minimal pt-icon-publish-function" onClick={marmosetDispatch}>
+                </button>
+            </Tooltip>);
+      }
+      return <span />;
   }
   componentWillMount() {
     const willOpenPid = this.props.match.params.id;
@@ -95,11 +108,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                             : <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
                                 <button className="pt-button pt-minimal pt-icon-stop" onClick={() => this.props.dispatch.compile.stopProgram()}>
                                 </button>
-                                </Tooltip>,
-                    <Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
-                        <button className="pt-button pt-minimal pt-icon-publish-function">
-                        </button>
-                    </Tooltip>] : []}/>
+                                </Tooltip>, this.generateMarmosetButton(project)] : []}/>
             {question && question.currentFile ?
                 <DisplayFiles className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}
                     file={question.currentFile.name} /> : <Splash />}
@@ -122,6 +131,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 isOpen={this.props.dialog.add_file_open}
                 onClose={this.props.dispatch.dialog.toggleAddFile}>
                     <AddFilePrompt questions={project.questions} closefunc={this.props.dispatch.dialog.toggleAddFile}/>
+            </Dialog>
+            <Dialog className={styles.dialogStyle} title="Marmoset Results"
+                isOpen={false}>
+                    <MarmosetResultPrompt />
             </Dialog>
         </div>);
     } else {

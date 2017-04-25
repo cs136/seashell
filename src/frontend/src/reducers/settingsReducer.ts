@@ -33,7 +33,7 @@ export default function settingsReducer(
     fontSize: 13,
     editorMode: 0,
     tabWidth: 1,
-    theme: 1,
+    theme: 0,
     offlineMode: 0,
     editorRatio: 0.5,
     updated: 0},

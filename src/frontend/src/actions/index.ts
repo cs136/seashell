@@ -275,6 +275,9 @@ const mapDispatchToProps = (dispatch: Function) => {
               }))))
               );
           });
+        },
+        getMarmosetResults: (project: string) => {
+          return asyncAction(Services.storage().getTestResults(project)).then(console.warn);
         }
       },
       user: {
