@@ -308,12 +308,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     // pid is project name
     const pjName = this.getOfflineMode() ? (await this.storage.getProject(proj)).name : proj;
     const offline = this.storage.setFileToRun(proj, question, filename);
+    const arr = filename.split("/");
+    const folder = arr.length > 2 ? "tests" : arr[0] === "common" ? "common" : "question";
     const online  = this.socket.sendMessage<void>({
       type: "setFileToRun",
       project: pjName,
       question: question,
       file: filename,
-      folder: "question"
+      folder: folder
     });
     return await (this.getOfflineMode() ? offline : online);
   };
@@ -407,14 +409,15 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     this.debug && console.log(`Syncing took ${frontSpent + backSpent} ms. Frontend took ${frontSpent} ms. Backend took ${backSpent} ms.`);
   }
 
-  private async ignoreNoInternet<T>(promise: Promise<T>): T {
+  private async ignoreNoInternet<T>(promise: Promise<T>): Promise<void> {
     try {
-      return await promise;
+      await promise;
     } catch (err) {
       if (err instanceof E.NoInternet) {
         throw err;
       } else {
         console.warn("No internet. Changes were written to indexedDB only.");
+        return;
       }
     }
   }

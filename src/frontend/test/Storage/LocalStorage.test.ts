@@ -38,8 +38,7 @@ describe("Testing LocalStorage interface functions", () => {
     id: md5(s),
     name: s,
     last_modified: 0,
-    runs: {},
-    open_tabs: {}
+    runs: {}
   }), uniqStrArr(testSize, 30)()));
 
   let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
@@ -92,8 +91,7 @@ describe("Testing LocalStorage interface functions", () => {
       id: p.id,
       name: p.name,
       runs: p.runs,
-      last_modified: 0,
-      open_tabs: p.open_tabs
+      last_modified: 0
     }), local)) || [];
   }
 
@@ -202,7 +200,7 @@ describe("Testing LocalStorage interface functions", () => {
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
-        await store.setFileToRun(pj.id, "default", file.id);
+        await store.setFileToRun(pj.id, "default", file.name);
         await store.deleteFile(file.id);
         files = filter((x) => x.id !== file.id, files);
         delete pj.runs.default;

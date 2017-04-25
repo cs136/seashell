@@ -181,9 +181,9 @@ const mapDispatchToProps = (dispatch: Function) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(Services.storage().newFile(project, path, newFileContent))
-            .then(() => dispatch({
+            .then((file) => dispatch({
               type: appStateActions.addFile,
-              payload: path
+              payload: file
             })).catch((reason) => {
               showError(reason);
             });
@@ -222,24 +222,26 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError(reason);
             });
         },
-        openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+        openFile: (file: S.FileBrief) => {
           Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
           dispatch({
             type: appStateActions.openFile,
             payload: file
           }));
         },
-        closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
+        closeFile: (file: S.FileBrief) => {
           Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
             type: appStateActions.closeFile,
             payload: file
          }));
         },
-        setRunFile: (file: S.FileBrief) => Services.storage().setFileToRun(file.project, file.name.split("/")[0], file.id).then(() => dispatch({
-          type: appStateActions.setRunFile,
-          payload: file.name
-        })),
+        setRunFile: (file: S.FileBrief) => {
+          Services.storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
+            type: appStateActions.setRunFile,
+            payload: file.name
+          }));
+        },
       },
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
@@ -268,7 +270,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                       currentFile: undefined,
                       openFiles: openFiles,
                       diags: [],
-                      files: files.filter((file) => file.name.split("/")[0] === name)
+                      files: files.filter((file) => file.question() === name)
                     }
                   }
               }))))
@@ -346,7 +348,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   termClear: null,
                   name: name,
                   id: pid,
-                  questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  questions: files.map((file) => file.question()).filter(unique),
                   currentQuestion: undefined
                 }
               }

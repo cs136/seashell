@@ -54,7 +54,7 @@ class Rename extends React.Component<RenameProps&actionsInterface, {question: st
           <button type="button" className="pt-button pt-intent-primary" onClick={() => {
             this.props.dispatch.file.renameFile(this.state.target, this.state.question + "/" + this.state.file).then(
               () => this.props.dispatch.question.switchQuestion(project.id, this.state.question).then(() => {
-                this.props.dispatch.file.openFile(this.state.target, this.openFiles);
+                this.props.dispatch.file.openFile(this.state.target);
                 this.props.dispatch.file.switchFile(this.state.target);
                 })
             ).catch((error) => {
