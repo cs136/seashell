@@ -42,6 +42,8 @@ const mapDispatchToProps = (dispatch: Function) => {
     }
   }
 
+  const storage = Services.storage;
+
   const actions =  {
     dispatch: {
       dialog: {
@@ -69,7 +71,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       settings: {
         initSettings: () => {
-          asyncAction(Services.storage().getSettings()).then((settings) => {
+          asyncAction(storage().getSettings()).then((settings) => {
             dispatch({
               type: settingsActions.updateSettings,
               payload: {
@@ -91,7 +93,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           dispatch((dispatch: Function, getState: () => globalState) => {
             let newSettings = getState().settings;
-            asyncAction(Services.storage().setSettings({
+            asyncAction(storage().setSettings({
               id: 0,
               editor_mode: "standard",
               font_size: newSettings.fontSize,
@@ -120,7 +122,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           payload: {}
         }),
         copyFile: (targetName: string) => {
-          // TODO: hook up to storage once we get a proper copy function
+          // TODO: hook up to storage() once we get a proper copy function
           dispatch({
             type: appStateActions.copyFile,
             payload: {
@@ -153,7 +155,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   clearTimeout(flusher);
                 }
                 if (target && unwrittenContent) {
-                  asyncAction(Services.storage().writeFile(target, unwrittenContent))
+                  asyncAction(storage().writeFile(target, unwrittenContent))
                     .then(() => dispatch({
                       type: appStateActions.changeFileContent,
                       payload: unwrittenContent,
@@ -169,7 +171,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         switchFile: (file: S.FileBrief) => {
           return actions.dispatch.file.flushFileBuffer()
-            .then(() => { return asyncAction(Services.storage().readFile(file.id)); })
+            .then(() => { return asyncAction(storage().readFile(file.id)); })
             .then((file: S.File) => dispatch({
               type: appStateActions.switchFile,
               payload: file
@@ -179,16 +181,16 @@ const mapDispatchToProps = (dispatch: Function) => {
                   newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
-          return asyncAction(Services.storage().newFile(project, path, newFileContent))
+          return asyncAction(storage().newFile(project, path, newFileContent))
             .then((file) => {
               dispatch({
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(Services.storage().addOpenTab(file.project, file.question(), file.id))
+              return asyncAction(storage().addOpenTab(file.project, file.question(), file.id))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
-                  file = await Services.storage().readFile(file.id);
+                  file = await storage().readFile(file.id);
                   dispatch({
                     type: appStateActions.openFile,
                     payload: file
@@ -203,7 +205,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         deleteFile: (file: S.FileBrief) => {
-          return asyncAction(Services.storage().deleteFile(file.id))
+          return asyncAction(storage().deleteFile(file.id))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
@@ -218,7 +220,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
-          return asyncAction(Services.storage().renameFile(file.id, targetName))
+          return asyncAction(storage().renameFile(file.id, targetName))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
@@ -237,21 +239,21 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         openFile: (file: S.FileBrief) => {
-          Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
               payload: file
             }));
         },
         closeFile: (file: S.FileBrief) => {
-          Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
             type: appStateActions.closeFile,
             payload: file
          }));
         },
         setRunFile: (file: S.FileBrief) => {
-          Services.storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
+          storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
             type: appStateActions.setRunFile,
             payload: file.name
           }));
@@ -269,11 +271,11 @@ const mapDispatchToProps = (dispatch: Function) => {
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              asyncAction(Services.storage().getProjectFiles(pid))
+              asyncAction(storage().getProjectFiles(pid))
               .then((files: S.FileBrief[]) =>
-                asyncAction(Services.storage().getOpenTabs(pid, name))
+                asyncAction(storage().getOpenTabs(pid, name))
               .then((openFiles) =>
-                asyncAction(Services.storage().getFileToRun(pid, name)
+                asyncAction(storage().getFileToRun(pid, name)
               .then((runFile) =>
                 dispatch({
                   type: appStateActions.switchQuestion,
@@ -335,14 +337,14 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       project: {
         addProject: (newProjectName: string) => {
-          return asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) =>
+          return asyncAction(storage().newProject(newProjectName)).then((projBrief) =>
             dispatch({
             type: appStateActions.addProject,
             payload: projBrief
           }));
         },
         removeProject: (pid: S.ProjectID) =>
-          asyncAction(Services.storage().deleteProject(pid)).then(() => dispatch({
+          asyncAction(storage().deleteProject(pid)).then(() => dispatch({
             type: appStateActions.removeProject,
             payload: {id: pid}
         })),
@@ -353,7 +355,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             return arr.indexOf(val) === idx;
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(Services.storage().getProjectFiles(pid))
+          return asyncAction(storage().getProjectFiles(pid))
             .then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
@@ -371,7 +373,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         getAllProjects: () => {
-          return asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
+          return asyncAction(storage().getProjects()).then((projects) => dispatch({
             type: appStateActions.getProjects,
             payload: {
               projects: projects
