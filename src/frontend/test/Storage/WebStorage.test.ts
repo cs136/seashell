@@ -18,6 +18,7 @@ import WebSocket = require("ws");
 import * as LS from "localstorage-memory";
 
 (<any>window).localStorage = LS;
+
 (<any>window).WebSocket = WebSocket;
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;
@@ -35,7 +36,6 @@ function uniqStr(len: number): () => string {
                               J.character("0", "9"),
                               J.character("A", "Z"),
                               J.character("-"),
-                              J.character(" "),
                               J.character("_")]))() + (++unique);
 }
 
@@ -51,7 +51,8 @@ Services.init(null, {
 });
 
 if (TestAccount.user) {
-  describe("Testing WebStorage interface", websocketTests);
+  Services.storage().setOfflineMode(true);
+  describe("Testing WebStorage with offline mode", websocketTests);
 } else {
   describe.skip("Skipped websocket related tests. You need to set up account.json", () => {
     it("skipping");
@@ -73,16 +74,15 @@ function websocketTests() {
   });
 
   let projs: Project[] = R.sortBy(prop("id"), map((s: string) => ({
-    id: md5(`X${s}`),
+    id: Services.storage().getOfflineMode() ? md5(`X${s}`) : `X${s}`,
     name: `X${s}`,
     runs: {},
-    open_tabs: {},
     last_modified: 0
   }), uniqStrArr(testSize, 20)()));
 
   let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
     const name = `default/${uniqStr(20)()}.${J.one_of(["c", "h", "rkt", "txt", "test"])()}`;
-    const fid = md5(p.id + name);
+    const fid = Services.storage().getOfflineMode() ? md5(p.id + name) : `${p.id}/${name}`;
     const text = uniqStr(5000)();
     return {
       id: fid,
@@ -93,7 +93,6 @@ function websocketTests() {
       last_modified: 0
     };
   }, flatten(repeat(projs, testSize))));
-
 
   async function remoteProjs() {
     let remoteProjs: ProjectBrief[] = await socket.getProjects();
@@ -107,10 +106,8 @@ function websocketTests() {
       name: p.name,
       runs: p.runs,
       last_modified: 0,
-      open_tabs: p.open_tabs
     }), remote)) || [];
   }
-
 
   async function remoteFiles() {
     let remoteFiles = await socket.getAllFiles();
@@ -138,6 +135,7 @@ function websocketTests() {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
+
   it(`getProjects: list all projects`, async () => {
     expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
@@ -148,6 +146,7 @@ function websocketTests() {
       expect(f).toEqual(false);
     }
   });
+
   it(`newFile: create ${testSize} files per project`, async () => {
     for (const f of files) {
       await socket.newFile(f.project, f.name, f.contents);
@@ -187,15 +186,15 @@ function websocketTests() {
 
   it(`setFileToRun: randomly pick a run file per project`, async () => {
     for (const f of files) {
-      await socket.setFileToRun(f.project, "default", f.id);
+      await socket.setFileToRun(f.project, "default", f.name);
       const pj = R.find((x) => x.id === f.project, projs);
-      pj.runs.default = f.id;
+      pj.runs.default = f.name;
       for (const o of files) {
         const check = await socket.getFileToRun(o.project, "default");
         if (o.project ===  f.project) {
-          expect(check).toEqual(f.id);
+          expect(check).toEqual(f.name);
         } else {
-          expect(check).not.toEqual(f.id);
+          expect(check).not.toEqual(f.name);
         }
       }
     }
@@ -219,7 +218,7 @@ function websocketTests() {
     // expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
   });
 
-  it("setSettings: set random properties", async () => {
+  it("set/getSettings: set font_size to 100", async () => {
     const s: Settings = new Settings();
     s.font_size = 100;
     await socket.setSettings(s);
@@ -236,12 +235,12 @@ function websocketTests() {
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
-        await socket.setFileToRun(pj.id, "default", file.id);
+        await socket.setFileToRun(pj.id, "default", file.name);
         await socket.deleteFile(file.id);
         removed.concat(filter((x) => x.id === file.id, files));
         files = filter((x) => x.id !== file.id, files);
         for (const d in pj.runs) {
-          if (pj.runs[d] === file.id) {
+          if (pj.runs[d] === file.name) {
             delete pj.runs[d];
           }
         }
@@ -270,5 +269,5 @@ function websocketTests() {
       await socket.syncAll();
     }
   });
-
+// */
 }

@@ -40,6 +40,7 @@ namespace Services {
   let webStorage: WebStorage | null = null;
   let offlineCompiler: OfflineCompiler | null = null;
   let onlineCompiler: OnlineCompiler | null = null;
+  let offlineMode: boolean = false;
   let debug: boolean;
 
   export function init(disp: DispatchFunction,
@@ -48,13 +49,14 @@ namespace Services {
                                    debugWebStorage?: boolean;
                                    debugLocalStorage?: boolean; }) {
     dispatch = disp;
-    options = options || {};
-    debug = options.debugService || false;
-    socketClient = new SeashellWebsocket(options.debugWebSocket);
-    localStorage = new LocalStorage(options.debugLocalStorage);
-    webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
+    options  = options || {};
+    debug    = options.debugService || false;
+
+    socketClient    = new SeashellWebsocket(options.debugWebSocket);
+    localStorage    = new LocalStorage(options.debugLocalStorage);
+    webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
-    onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
+    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
   }
 
   export function storage(): WebStorage {

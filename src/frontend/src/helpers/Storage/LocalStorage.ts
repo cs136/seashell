@@ -44,6 +44,15 @@ class LocalStorage implements AbstractStorage {
     return this.db.delete();
   }
 
+  public getOfflineMode(): boolean {
+    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
+    return offlineSetting ? JSON.parse(offlineSetting) : true;
+  }
+
+  public setOfflineMode(enable: boolean): void {
+    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(enable));
+  }
+
   public async writeFile(fid: FileID,
                          contents: string|undefined,
                          // set pushChangeLog = false in applyChanges to make syncAll faster
@@ -104,7 +113,7 @@ class LocalStorage implements AbstractStorage {
       //   return;
       // }
       for (const q in dbProj.runs) {
-        if (dbProj.runs[q] === id) {
+        if (dbProj.runs[q] === file.name) {
           delete dbProj.runs[q];
         }
       }
@@ -159,7 +168,7 @@ class LocalStorage implements AbstractStorage {
     return await this.db.transaction("rw", tbs, async () => {
       this.debug && console.log(`getSettings`);
       const settings = await this.db.settings.get(0);
-      return settings || new Settings();
+      return settings ? Settings.fromJSON(settings) : new Settings();
     });
   }
 
@@ -259,7 +268,6 @@ class LocalStorage implements AbstractStorage {
         name: name,
         runs: {},
         last_modified: Date.now(),
-        open_tabs: {}
       };
       await this.db.projects.add(ps);
       return new ProjectBrief(ps);

@@ -5,6 +5,7 @@ import { projectRef, fileRef } from "../types";
 import { appStateActions }  from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
+import * as Storage from "../helpers/Storage/Interface";
 import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
@@ -78,7 +79,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
+                offlineMode: Services.storage().getOfflineMode(),
                 editorRatio: 0.5,
                 updated: 0,
               }});
@@ -91,7 +92,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           dispatch((dispatch: Function, getState: () => globalState) => {
             let newSettings = getState().settings;
-            asyncAction(Services.storage().setSettings({
+            asyncAction(Services.storage().setSettings(Storage.Settings.fromJSON({
               id: 0,
               editor_mode: "standard",
               font_size: newSettings.fontSize,
@@ -99,9 +100,9 @@ const mapDispatchToProps = (dispatch: Function) => {
               theme: newSettings.theme ? "light" : "dark",
               space_tab: true,
               tab_width: newSettings.tabWidth,
-            }));
+            })));
           });
-          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
+          Services.storage().setOfflineMode(newSettings.offlineMode !== 0);
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
