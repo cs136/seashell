@@ -200,7 +200,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.addFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.files.push(action.payload.name);
+        state.currentProject.currentQuestion.files.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in addFile");

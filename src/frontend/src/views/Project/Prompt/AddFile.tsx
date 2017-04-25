@@ -7,14 +7,15 @@ import {map, actionsInterface} from "../../../actions";
 
 export interface AddFileProps {questions: string[]; closefunc: Function; };
 
-class AddFile extends React.Component<AddFileProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string}> {
   project: string;
+  question: string
   constructor(props: AddFileProps&actionsInterface) {
     super(props);
-    if (this.props.appState.currentProject) {
+    if (this.props.appState.currentProject && this.props.appState.currentProject.currentQuestion) {
       this.project = this.props.appState.currentProject.id;
+      this.question = this.props.appState.currentProject.currentQuestion.name;
       this.state = {
-        question: this.props.questions[0],
         file: "",
         prevFile: ""
       };
@@ -25,9 +26,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, {question: 
   render() {
     return(<div className="pt-dialog-body">
       <p>What would you like to call this file?</p>
-      <div><div className="pt-select pt-fill"><select id="question" value={this.state.question} onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
-        {this.props.questions.map((question: string) => (<option value={question}>{question}</option>))}
-        </select></div>
+      <div>
         <input className="pt-input pt-fill" required type="text" value={this.state.file}
         onBlur={() => {
           if (this.state.file === "" || this.state.file.includes("/")) {
@@ -43,11 +42,10 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, {question: 
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.file === "" || this.state.file.includes("/")} onClick={() => {
-          this.props.dispatch.file.addFile(this.project, this.state.question + "/" + this.state.file,
+          this.props.dispatch.file.addFile(this.project, this.question + "/" + this.state.file,
           this.state.file.split(".").pop() === "c" ? "int main(){\n\treturn 0;\n}" :
           this.state.file.split(".").pop() === "h" ? "//put your interface here\n" :
-          this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "");
-          this.props.closefunc();
+          this.state.file.split(".").pop() === "rkt" ? "#lang racket\n" : "").then(()=>this.props.closefunc());
           }}>Add File</button>
       </div>
     </div>
