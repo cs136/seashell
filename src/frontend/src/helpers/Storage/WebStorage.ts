@@ -3,15 +3,15 @@ import {LocalStorage, ChangeLog} from "./LocalStorage";
 import {AbstractStorage, AbstractWebStorage,
         Project, ProjectID, ProjectBrief,
         File, FileID, FileBrief,
-        SettingsStored, Settings} from "./Interface";
+        SettingsStored, Settings,
+        OfflineMode} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
-export {WebStorage, OfflineMode}
+export {WebStorage}
 import md5 = require("md5");
 import * as R from "ramda";
 
 enum FileCategory { Common, Test, Directory, Other };
-enum OfflineMode { Off, On, Forced }
 
 class WebStorage extends AbstractStorage implements AbstractWebStorage {
 

@@ -3,8 +3,10 @@ import * as R from "ramda";
 export {AbstractStorage, AbstractWebStorage,
         File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
-        Settings, SettingsStored}
+        Settings, SettingsStored,
+        OfflineMode}
 
+enum OfflineMode { Off, On, Forced }
 
 abstract class AbstractStorage {
   // projects

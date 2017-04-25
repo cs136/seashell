@@ -39,6 +39,9 @@ class OnlineCompiler extends AbstractCompiler {
     let tests: TestBrief[] = [];
     if (runTests) {
       tests = await this.getTestsForQuestion(proj, question);
+      if (tests.length < 1) {
+        throw new CompilerError("There are no tests to run for this question.");
+      }
     }
 
     let project = await this.storage.getProject(proj);

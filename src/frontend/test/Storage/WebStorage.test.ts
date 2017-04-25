@@ -1,5 +1,6 @@
 import "jest";
-import {WebStorage, OfflineMode} from "../../src/helpers/Storage/WebStorage";
+import {WebStorage} from "../../src/helpers/Storage/WebStorage";
+import {OfflineMode} from "../../src/helpers/Storage/Interface";
 import {File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
         Settings, Services} from "../../src/helpers/Services";

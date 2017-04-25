@@ -1,11 +1,12 @@
 import * as $ from "jquery";
 import {SeashellWebsocket} from "./Websocket/WebsocketClient";
-import {WebStorage, OfflineMode} from "./Storage/WebStorage";
+import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings} from "./Storage/Interface";
+        Settings,
+        OfflineMode} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,

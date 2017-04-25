@@ -22,6 +22,7 @@ Services.init(null, {
   debugWebStorage: false,
   debugService: false
 });
+
 if (TestAccount.user) {
   describe("Testing Services interface", servicesTest);
 } else {
@@ -61,4 +62,4 @@ function servicesTest() {
       await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
     }
   });
-});
+};
