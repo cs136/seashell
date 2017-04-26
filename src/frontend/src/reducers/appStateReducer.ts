@@ -61,7 +61,6 @@ export enum appStateActions {
   setCompiling,
   setNotRunning,
   setTerm,
-  updateTerminal,
   writeConsole,
   clearConsole,
   setDiags,
@@ -290,8 +289,6 @@ export default function appStateReducer(state: appStateReducerState = {
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
       }
       return state;
-    case appStateActions.updateTerminal:
-      return mergeBetter(state, {currentProject: {consoleText: action.payload}});
     default:
       return state;
   }
