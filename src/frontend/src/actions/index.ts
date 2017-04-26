@@ -418,32 +418,36 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.setCompiling,
             payload: {}
           });
-          asyncAction(Services.compiler().compileAndRunProject(project,
-            question, fid, test)).then((result: C.CompilerResult) => {
-              dispatch({
-                type: appStateActions.setDiags,
-                payload: result.messages
-              });
-              if (result.status !== "running") {
-                dispatch({
-                  type: appStateActions.setNotRunning,
-                  payload: {}
-                });
-              } else {
-                dispatch({
-                  type: appStateActions.setRunning,
-                  payload: {}
-                });
-              }
-            }).catch((reason) => {
-              dispatch({
-                type: appStateActions.setNotRunning,
-                payload: {}
-              });
-              if (reason !== null) {
-                showError(reason.message);
-              }
-            });
+          asyncAction(actions.dispatch.file.flushFileBuffer())
+            .then(() =>
+              asyncAction(storage().syncAll())
+                .then(() =>
+                  asyncAction(Services.compiler().compileAndRunProject(project,
+                    question, fid, test)).then((result: C.CompilerResult) => {
+                      dispatch({
+                        type: appStateActions.setDiags,
+                        payload: result.messages
+                      });
+                      if (result.status !== "running") {
+                        dispatch({
+                          type: appStateActions.setNotRunning,
+                          payload: {}
+                        });
+                      } else {
+                        dispatch({
+                          type: appStateActions.setRunning,
+                          payload: {}
+                        });
+                      }
+                    }).catch((reason) => {
+                      dispatch({
+                        type: appStateActions.setNotRunning,
+                        payload: {}
+                      });
+                      if (reason !== null) {
+                        showError(reason.message);
+                      }
+                    })));
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,

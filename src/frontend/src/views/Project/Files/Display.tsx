@@ -142,7 +142,9 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
             dirty={!!currentFile.unwrittenContent}
-            value={currentFile.contents || "Unavailable in browser!"}
+            value={(currentFile.contents === null ||
+                    currentFile.contents === undefined) ? "Unavailable in browser!" :
+                      currentFile.contents}
             language={lang}
             diags={currentQuestion.diags}
             onChange={this.onChange.bind(this)}
