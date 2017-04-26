@@ -19,7 +19,7 @@ abstract class AbstractStorage {
   public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
   public abstract async writeFile(file: FileID, contents: string|undefined): Promise<void>;
-  public abstract async renameFile(file: FileID, newName: string): Promise<void>;
+  public abstract async renameFile(file: FileID, newName: string): Promise<FileBrief>;
   public abstract async deleteFile(file: FileID): Promise<void>;
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;

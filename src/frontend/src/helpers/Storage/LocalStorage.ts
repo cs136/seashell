@@ -122,23 +122,14 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async renameFile(fid: FileID, newName: string): Promise<void> {
+  public async renameFile(fid: FileID, newName: string): Promise<FileBrief> {
     this.debug && console.log(`renameFile`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       const file = await this.readFile(fid);
-      await this.db.files.update(fid, {
-        name: newName
-      });
-      await this.pushChangeLog({
-        type: "newFile",
-        contents: file.contents,
-        file: {file: newName, project: file.project}
-      });
-      await this.pushChangeLog({
-        type: "deleteFile",
-        file: {file: file.name, project: file.project}
-      });
+      const newFile = await this.newFile(file.project, newName, file.contents);
+      await this.deleteFile(fid);
+      return new FileBrief(newFile);
     });
   }
 
