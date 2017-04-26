@@ -55,9 +55,11 @@ namespace Services {
 
     socketClient    = new SeashellWebsocket(options.debugWebSocket);
     localStorage    = new LocalStorage(options.debugLocalStorage);
-    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(), options.debugWebStorage);
+    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
+      options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
-    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
+    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
+      dispatch, webStorage.syncAll.bind(webStorage));
   }
 
   export function storage(): WebStorage {

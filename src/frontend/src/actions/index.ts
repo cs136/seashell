@@ -33,8 +33,10 @@ const mapDispatchToProps = (dispatch: Function) => {
       return result;
     } catch (e) {
       console.error(e);
-      if (e instanceof LoginError) {
+      if (e.message) {
         showError(e.message);
+      }
+      if (e instanceof LoginError) {
         dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
@@ -217,8 +219,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                     payload: file
                   });
                 });
-            }).catch((reason) => {
-              showError(reason);
             });
         },
         deleteFile: (file: S.FileBrief) => {
@@ -232,8 +232,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.removeFile,
                 payload: file
               });
-            }).catch((reason) => {
-              showError(reason);
             });
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
@@ -256,9 +254,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                 payload: {oldFid: file.id, newFileBrief: newFile}
               });
               return newFile;
-            }).catch((reason) => {
-              showError(reason);
-              throw reason;
             });
         },
         openFile: (file: S.FileBrief) => {
@@ -344,7 +339,10 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError("Please fill in all fields!");
               reject(null);
             } else {
-              asyncAction(Services.login(username, password)).then((response) => {
+              const path = window.location.pathname.substring(0,
+                window.location.pathname.lastIndexOf("/"));
+              asyncAction(Services.login(username, password, false,
+                  `https://${window.location.host}${path}/cgi-bin/login2.cgi`)).then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
@@ -410,9 +408,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                   currentQuestion: undefined
                 }
               }
-            })).catch((reason) => {
-              if (reason !== null) showError(reason.message);
-            });
+            }));
         },
         getAllProjects: () => {
           return asyncAction(storage().getProjects()).then((projects) => dispatch({
@@ -459,9 +455,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                         type: appStateActions.setNotRunning,
                         payload: {}
                       });
-                      if (reason !== null) {
-                        showError(reason.message);
-                      }
                     })));
         },
         setNotRunning: () => dispatch({
@@ -483,7 +476,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         }),
         writeConsole: (content: string) => dispatch({
           type: appStateActions.writeConsole,
-          payload: { content: content }
+          payload: {content: content}
         })
       }
     }
