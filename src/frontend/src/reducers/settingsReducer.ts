@@ -1,4 +1,5 @@
 import {mergeBetter} from "../helpers/utils";
+import {OfflineMode} from "../helpers/Storage/Interface";
 
 export interface settingsReducerStateNullable {[key: string]: any;
   font?: string;
@@ -7,7 +8,7 @@ export interface settingsReducerStateNullable {[key: string]: any;
   tabWidth?: number;
   theme?: number;
   editorRatio?: number;
-  offlineMode?: number;
+  offlineMode?: OfflineMode;
   updated?: number;
 };
 export interface settingsReducerState extends settingsReducerStateNullable {[key: string]: any;
@@ -17,7 +18,7 @@ export interface settingsReducerState extends settingsReducerStateNullable {[key
   tabWidth: number;
   theme: number;
   editorRatio: number;
-  offlineMode: number;
+  offlineMode: OfflineMode;
   updated: number;
 };
 export const settingsActions = {

@@ -38,8 +38,7 @@ describe("Testing LocalStorage interface functions", () => {
     id: md5(s),
     name: s,
     last_modified: 0,
-    runs: {},
-    open_tabs: {}
+    runs: {}
   }), uniqStrArr(testSize, 30)()));
 
   let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
@@ -92,8 +91,7 @@ describe("Testing LocalStorage interface functions", () => {
       id: p.id,
       name: p.name,
       runs: p.runs,
-      last_modified: 0,
-      open_tabs: p.open_tabs
+      last_modified: 0
     }), local)) || [];
   }
 
@@ -179,7 +177,7 @@ describe("Testing LocalStorage interface functions", () => {
   //   expect(await localProjs()).toEqual(projs);
   // });
 
-  it(`renameFile: rename ${halfTestSize} files per project. Should not change the file's id.`, async () => {
+  it(`renameFile: rename ${halfTestSize} files per project.`, async () => {
     const projGps = R.groupBy((x: File) => x.project, files);
     for (const p in projGps) {
       const pj = R.find((x) => x.id === p, projs);
@@ -187,8 +185,11 @@ describe("Testing LocalStorage interface functions", () => {
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
         const newname = file.name + "_new_name";
-        await store.renameFile(file.id, newname);
-        file.name += "_new_name";
+        const contents = file.contents;
+        Object.assign(file, await store.renameFile(file.id, newname));
+        file.contents = contents;
+        file.last_modified = 0;
+        files = R.sortBy(prop("id"), files);
         expect(await localFiles()).toEqual(files);
         expect(await localProjs()).toEqual(projs);
       }
@@ -202,7 +203,7 @@ describe("Testing LocalStorage interface functions", () => {
       console.assert(pj);
       for (const i of R.range(0, Math.min(halfTestSize, projGps[p].length))) {
         const file = projGps[p][i];
-        await store.setFileToRun(pj.id, "default", file.id);
+        await store.setFileToRun(pj.id, "default", file.name);
         await store.deleteFile(file.id);
         files = filter((x) => x.id !== file.id, files);
         delete pj.runs.default;
@@ -397,7 +398,7 @@ describe("Testing offline mode synchronization", () => {
 
   it("renameFile: should push two changes", async () => {
     await store.clearChangeLogs();
-    await store.renameFile(fileID, `${fileName}_newname`);
+    fileID = (await store.renameFile(fileID, `${fileName}_newname`)).id;
     let logs = await store.getChangeLogs();
     expect(logs.length).toEqual(2);
     expect(logs[0]).toEqual({
@@ -411,7 +412,7 @@ describe("Testing offline mode synchronization", () => {
       file: {file: `${fileName}_newname`, project: projID},
       contents: logs[1].contents
     });
-    await store.renameFile(fileID, fileName);
+    fileID = (await store.renameFile(fileID, fileName)).id;
   });
 
   it("deleteFile: should push a change", async () => {

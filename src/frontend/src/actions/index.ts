@@ -5,6 +5,7 @@ import { projectRef, fileRef } from "../types";
 import { appStateActions } from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
+import { Settings } from "../helpers/Storage/Interface";
 import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
@@ -80,7 +81,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
+                offlineMode: Services.getOfflineMode(),
                 editorRatio: 0.5,
                 updated: 0,
               }
@@ -88,23 +89,36 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         updateSettings: (newSettings: settingsReducerStateNullable) => {
-          dispatch({
-            type: settingsActions.updateSettings,
-            payload: newSettings
-          });
           dispatch((dispatch: Function, getState: () => globalState) => {
-            let newSettings = getState().settings;
-            asyncAction(storage().setSettings({
-              id: 0,
-              editor_mode: "standard",
-              font_size: newSettings.fontSize,
-              font: newSettings.font,
-              theme: newSettings.theme ? "light" : "dark",
-              space_tab: true,
-              tab_width: newSettings.tabWidth,
-            }));
+            let oldSettings = getState().settings;
+            dispatch({
+              type: settingsActions.updateSettings,
+              payload: newSettings
+            });
+            dispatch((dispatch: Function, getState: () => globalState) => {
+              let newSettings = getState().settings;
+              asyncAction(Services.storage().setSettings(Settings.fromJSON({
+                id: 0,
+                editor_mode: "standard",
+                font_size: newSettings.fontSize,
+                font: newSettings.font,
+                theme: newSettings.theme ? "light" : "dark",
+                space_tab: true,
+                tab_width: newSettings.tabWidth,
+              })));
+            });
+            if (newSettings.offlineMode !== undefined) {
+              Services.setOfflineMode(newSettings.offlineMode);
+              // Force reload
+              if (newSettings.offlineMode === 0 &&
+                  oldSettings.offlineMode > 0 ||
+                  newSettings.offlineMode > 0 &&
+                  oldSettings.offlineMode === 0) {
+                    window.location.hash = "";
+                    window.location.reload(true);
+                  }
+            }
           });
-          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
@@ -212,11 +226,11 @@ const mapDispatchToProps = (dispatch: Function) => {
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: { name: file.name }
+                payload: file
               });
             }).catch((reason) => {
               showError(reason);
@@ -224,21 +238,27 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
           return asyncAction(storage().renameFile(file.id, targetName))
-            .then(() => {
+            .then((newFile) => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: { name: file.name }
+                payload: file
               });
               dispatch({
                 type: appStateActions.addFile,
-                payload: { name: targetName }
+                payload: newFile
               });
+              dispatch({
+                type: appStateActions.updateCurrentFileIfIdEquals,
+                payload: {oldFid: file.id, newFileBrief: newFile}
+              });
+              return newFile;
             }).catch((reason) => {
               showError(reason);
+              throw reason;
             });
         },
         openFile: (file: S.FileBrief) => {
@@ -398,32 +418,36 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.setCompiling,
             payload: {}
           });
-          asyncAction(Services.compiler().compileAndRunProject(project,
-            question, fid, test)).then((result: C.CompilerResult) => {
-              dispatch({
-                type: appStateActions.setDiags,
-                payload: result.messages
-              });
-              if (result.status !== "running") {
-                dispatch({
-                  type: appStateActions.setNotRunning,
-                  payload: {}
-                });
-              } else {
-                dispatch({
-                  type: appStateActions.setRunning,
-                  payload: {}
-                });
-              }
-            }).catch((reason) => {
-              dispatch({
-                type: appStateActions.setNotRunning,
-                payload: {}
-              });
-              if (reason !== null) {
-                showError(reason.message);
-              }
-            });
+          asyncAction(actions.dispatch.file.flushFileBuffer())
+            .then(() =>
+              asyncAction(storage().syncAll(false))
+                .then(() =>
+                  asyncAction(Services.compiler().compileAndRunProject(project,
+                    question, fid, test)).then((result: C.CompilerResult) => {
+                      dispatch({
+                        type: appStateActions.setDiags,
+                        payload: result.messages
+                      });
+                      if (result.status !== "running") {
+                        dispatch({
+                          type: appStateActions.setNotRunning,
+                          payload: {}
+                        });
+                      } else {
+                        dispatch({
+                          type: appStateActions.setRunning,
+                          payload: {}
+                        });
+                      }
+                    }).catch((reason) => {
+                      dispatch({
+                        type: appStateActions.setNotRunning,
+                        payload: {}
+                      });
+                      if (reason !== null) {
+                        showError(reason.message);
+                      }
+                    })));
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,

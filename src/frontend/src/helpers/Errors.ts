@@ -19,7 +19,7 @@ class GenericError extends Error {
 }
 
 class LoginError extends GenericError {
-  constructor(message: string,
+  constructor(message: string = "LoginError",
               public username?: string,
               public status?: number,
               public statusText?: number) {
@@ -28,45 +28,45 @@ class LoginError extends GenericError {
 }
 
 class LoginRequired extends GenericError {
-  constructor() {
-    super();
+  constructor(message: string = "LoginRequired") {
+    super(message);
   }
 }
 
 class NoInternet extends GenericError {
-  constructor() {
-    super();
+  constructor(message: string = "NoInternet") {
+    super(message);
   }
 }
 
 class RequestAborted extends GenericError {
-  constructor() {
-    super();
+  constructor(message: string = "RequestAborted") {
+    super(message);
   }
 }
 
 class RequestError extends GenericError {
-  constructor(public message: string,
+  constructor(public message: string = "RequestError",
               public request: W.Request<any>,
               public response: W.Response) {
     super(message);
   }
 }
 class RequestTimedOut extends GenericError {
-  constructor(public message: string) {
+  constructor(public message: string = "RequestTimedOut") {
     super(message);
   }
 }
 
 class WebsocketError extends GenericError {
-  constructor(message: string,
+  constructor(message: string = "WebsocketError",
               public data?: Object) {
     super(message);
   }
 }
 
 class CompilerError extends GenericError {
-  constructor(message: string,
+  constructor(message: string = "CompilerError",
               public data?: Object) {
     super(message);
   }
