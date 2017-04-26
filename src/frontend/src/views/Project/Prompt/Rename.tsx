@@ -52,10 +52,12 @@ class Rename extends React.Component<RenameProps&actionsInterface, {question: st
                   this.props.closefunc();
                   }}>Cancel</button>
           <button type="button" className="pt-button pt-intent-primary" onClick={() => {
-            this.props.dispatch.file.renameFile(this.state.target, this.state.question + "/" + this.state.file).then(
-              () => this.props.dispatch.question.switchQuestion(project.id, this.state.question).then(() => {
-                this.props.dispatch.file.openFile(this.state.target);
-                this.props.dispatch.file.switchFile(this.state.target);
+            this.props.dispatch.file.renameFile(this.state.target, this.state.question + "/" + this.state.file)
+            .then((target) =>
+              this.props.dispatch.question.switchQuestion(project.id, this.state.question)
+              .then(() => {
+                this.props.dispatch.file.openFile(target);
+                this.props.dispatch.file.switchFile(target);
                 })
             ).catch((error) => {
               if (error !== null) {

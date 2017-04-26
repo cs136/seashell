@@ -64,6 +64,11 @@ class File implements FileStored {
     this.contents = obj.contents;
   }
 
+  public mergeIdFrom(target: FileBrief) {
+    this.id = target.id;
+    this.name = target.name;
+  }
+
   public basename() {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");

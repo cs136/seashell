@@ -215,11 +215,11 @@ const mapDispatchToProps = (dispatch: Function) => {
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: { name: file.name }
+                payload: file
               });
             }).catch((reason) => {
               showError(reason);
@@ -227,21 +227,27 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
           return asyncAction(storage().renameFile(file.id, targetName))
-            .then(() => {
+            .then((newFile) => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: { name: file.name }
+                payload: file
               });
               dispatch({
                 type: appStateActions.addFile,
-                payload: { name: targetName }
+                payload: newFile
               });
+              dispatch({
+                type: appStateActions.updateCurrentFileIfIdEquals,
+                payload: {oldFid: file.id, newFileBrief: newFile}
+              });
+              return newFile;
             }).catch((reason) => {
               showError(reason);
+              throw reason;
             });
         },
         openFile: (file: S.FileBrief) => {
