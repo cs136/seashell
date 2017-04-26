@@ -104,6 +104,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject) {
         if (state.currentProject.termWrite) {
           state.currentProject.termWrite(action.payload.content);
+          state.currentProject.consoleText += action.payload.content;
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in writeConsole");
@@ -114,6 +115,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject) {
         if (state.currentProject.termClear) {
           state.currentProject.termClear();
+          state.currentProject.consoleText = "";
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in clearConsole");

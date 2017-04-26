@@ -10,7 +10,7 @@ export interface ConsoleProps {
   style?: any;
   className?: string;
   dispatch: any;
-  display: any;
+  consoleText: string;
 }
 
 export interface ConsoleState {
@@ -46,18 +46,6 @@ export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleStat
     return document.getElementsByClassName("xterm-rows")[0].childElementCount;
   }
 
-  getText(): string {
-        let rows = document.getElementsByClassName("xterm-rows")[0].children;
-        let text = "";
-        for (let i = 0; i < rows.length; i ++) {
-          let row: any = rows[i].textContent;
-          if (row.trim().length === 0) continue;
-          text += rows[i].textContent;
-          text += "\r\n";
-        }
-        return text;
-    }
-
   setHeight(height: Number) {
     this.container && (this.container.style.height = height + "px");
   }
@@ -78,11 +66,8 @@ export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleStat
 
   componentDidMount() {
     this.term.open(this.container);
+    if (this.props.consoleText) this.term.write(this.props.consoleText + "\r\n");
     this.setState({ input: true, line: 1, currString: "" });
-    if  (this.props.display.props.appState.currentProject) {
-      let consoleText = this.props.display.props.appState.currentProject.consoleText;
-      if (consoleText) this.term.write(consoleText);
-    }
     if (this.container) { // Always reachable
       const consoleElement: HTMLElement = this.container;
       this.term.on("key", (key: string, evt: any) => {
@@ -94,7 +79,6 @@ export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleStat
   }
 
   componentWillUnmount() {
-    this.props.dispatch.app.updateTerminal(this.getText());
     this.props.dispatch.app.setTerm(null, null);
     this.term.destroy();
   }
