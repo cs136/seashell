@@ -89,25 +89,36 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         updateSettings: (newSettings: settingsReducerStateNullable) => {
-          dispatch({
-            type: settingsActions.updateSettings,
-            payload: newSettings
-          });
           dispatch((dispatch: Function, getState: () => globalState) => {
-            let newSettings = getState().settings;
-            asyncAction(Services.storage().setSettings(Settings.fromJSON({
-              id: 0,
-              editor_mode: "standard",
-              font_size: newSettings.fontSize,
-              font: newSettings.font,
-              theme: newSettings.theme ? "light" : "dark",
-              space_tab: true,
-              tab_width: newSettings.tabWidth,
-            })));
+            let oldSettings = getState().settings;
+            dispatch({
+              type: settingsActions.updateSettings,
+              payload: newSettings
+            });
+            dispatch((dispatch: Function, getState: () => globalState) => {
+              let newSettings = getState().settings;
+              asyncAction(Services.storage().setSettings(Settings.fromJSON({
+                id: 0,
+                editor_mode: "standard",
+                font_size: newSettings.fontSize,
+                font: newSettings.font,
+                theme: newSettings.theme ? "light" : "dark",
+                space_tab: true,
+                tab_width: newSettings.tabWidth,
+              })));
+            });
+            if (newSettings.offlineMode !== undefined) {
+              Services.setOfflineMode(newSettings.offlineMode);
+              // Force reload
+              if (newSettings.offlineMode === 0 &&
+                  oldSettings.offlineMode > 0 ||
+                  newSettings.offlineMode > 0 &&
+                  oldSettings.offlineMode === 0) {
+                    window.location.hash = "";
+                    window.location.reload(true);
+                  }
+            }
           });
-          if (newSettings.offlineMode) {
-            Services.setOfflineMode(newSettings.offlineMode);
-          }
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
