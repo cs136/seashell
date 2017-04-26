@@ -19,11 +19,15 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler, dispatch: DispatchFunction) {
+  private syncAll: () => Promise<void>;
+
+  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler,
+      dispatch: DispatchFunction, syncAll: () => Promise<void>) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
+    this.syncAll = syncAll;
 
     this.socket.register_callback("io", this.handleIO());
     this.socket.register_callback("test", this.handleTest());
@@ -35,6 +39,8 @@ class OnlineCompiler extends AbstractCompiler {
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
+
+    await this.syncAll();
 
     let tests: TestBrief[] = [];
     if (runTests) {
