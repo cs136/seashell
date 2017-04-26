@@ -329,7 +329,10 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError("Please fill in all fields!");
               reject(null);
             } else {
-              asyncAction(Services.login(username, password)).then((response) => {
+              const path = window.location.pathname.substring(0,
+                window.location.pathname.lastIndexOf("/"));
+              asyncAction(Services.login(username, password, false,
+                  `https://${window.location.host}${path}/cgi-bin/login2.cgi`)).then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
