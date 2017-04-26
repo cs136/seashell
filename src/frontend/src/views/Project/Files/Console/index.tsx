@@ -21,7 +21,7 @@ export interface ConsoleState {
 const customStyles = require("./Console.scss");
 const styles = require("xterm/lib/xterm.css");
 
-export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
+export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleState> {
   term: any;
   container?: HTMLElement;
 

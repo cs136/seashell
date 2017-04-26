@@ -126,8 +126,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             </Tooltip>] : []
           }/>
         {question && question.currentFile ?
-          <DisplayFiles className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}
-            file={question.currentFile.name} /> : <Splash />}
+          <DisplayFiles className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}/>
+            : <Splash />}
         <Dialog className={styles.dialogStyle} title="Delete File"
             isOpen={this.props.dialog.delete_file_open}
             onClose={this.props.dispatch.dialog.toggleDeleteFile}>
