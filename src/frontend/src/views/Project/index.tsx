@@ -36,7 +36,9 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
   generateMarmosetButton(project: appStateReducerProjectState) {
       const projectPattern = /A[0-9]+/, questionPattern = /[qp][0-9]+/;
       if (project.currentQuestion && project.name.match(projectPattern) && project.currentQuestion.name.match(questionPattern)) {
-        const marmosetDispatch = this.props.dispatch.question.getMarmosetResults.bind(this, project.name + project.currentQuestion.name);
+        const marmosetDispatch = ((marmosetId: string) => {
+            setInterval(this.props.dispatch.question.getMarmosetResults.bind(this, marmosetId), 3000);
+        }).bind(this, project.name + project.currentQuestion.name);
         return (<Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
                 <button className="pt-button pt-minimal pt-icon-publish-function" onClick={marmosetDispatch}>
                 </button>
