@@ -37,11 +37,11 @@ class Request<T> {
   [index: string]: any;
   public time: number;
   public received: Promise<T>; // resolves when the response message is received
-  public resolve: (value: T) => any | PromiseLike<any>;
-  public reject: (reason: any) => any | PromiseLike<any>;
+  public resolve: (value?: T | PromiseLike<T> | undefined) => void;
+  public reject: (reason: any) => void;
   constructor(public message: Message) {
     this.time = Date.now();
-    this.received = new Promise<any>((s, f) => {
+    this.received = new Promise<T>((s, f) => {
       this.resolve = s;
       this.reject  = f;
     });
