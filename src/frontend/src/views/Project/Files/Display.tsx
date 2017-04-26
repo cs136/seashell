@@ -9,7 +9,7 @@ import { merge } from "ramda";
 
 const styles = require("../Project.scss");
 
-export interface DisplayProps { file: string; className?: string; };
+export interface DisplayProps { className?: string; };
 export interface DisplayState { editorLastUpdated: number; }
 
 class Display extends React.Component<DisplayProps & actionsInterface, DisplayState> {
@@ -138,28 +138,26 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
         return d.file === currentFile.name;
       });
       const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
-      if (this.props.file === currentFile.name) {
-        return (<div className={styles.filePanel}>
-          <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
-            <MonacoEditor
-              dirty={!!currentFile.unwrittenContent}
-              value={currentFile.contents || "Unavailable in browser!"}
-              language={lang}
-              diags={currentQuestion.diags}
-              onChange={this.onChange.bind(this)}
-              editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
-              readOnly={!currentFile.contents}/>
-            <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-              <div ref="resizeHandle" className={styles.resizeHandle} />
-            </Draggable>
+      return (<div className={styles.filePanel}>
+        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
+          <MonacoEditor
+            dirty={!!currentFile.unwrittenContent}
+            value={(currentFile.contents === null ||
+                    currentFile.contents === undefined) ? "Unavailable in browser!" :
+                      currentFile.contents}
+            language={lang}
+            diags={currentQuestion.diags}
+            onChange={this.onChange.bind(this)}
+            editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
+            readOnly={!currentFile.contents} />
+          <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
+            <div ref="resizeHandle" className={styles.resizeHandle} />
+          </Draggable>
           <Console ref="terminal"
-            className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default" }
-            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}/>
+            className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
+            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch} />
         </div>
-        </div>);
-      }
-      else
-        return <Loading/>;
+      </div>);
     } else
       return <Loading/>;
   }

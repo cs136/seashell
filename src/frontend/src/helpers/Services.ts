@@ -5,7 +5,8 @@ import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
         File, FileID, FileBrief,
         Project, ProjectID, ProjectBrief,
-        Settings} from "./Storage/Interface";
+        Settings,
+        OfflineMode} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,
@@ -40,6 +41,7 @@ namespace Services {
   let webStorage: WebStorage | null = null;
   let offlineCompiler: OfflineCompiler | null = null;
   let onlineCompiler: OnlineCompiler | null = null;
+  let offlineMode: boolean = false;
   let debug: boolean;
 
   export function init(disp: DispatchFunction,
@@ -48,13 +50,14 @@ namespace Services {
                                    debugWebStorage?: boolean;
                                    debugLocalStorage?: boolean; }) {
     dispatch = disp;
-    options = options || {};
-    debug = options.debugService || false;
-    socketClient = new SeashellWebsocket(options.debugWebSocket);
-    localStorage = new LocalStorage(options.debugLocalStorage);
-    webStorage = new WebStorage(socketClient, localStorage, options.debugWebStorage);
+    options  = options || {};
+    debug    = options.debugService || false;
+
+    socketClient    = new SeashellWebsocket(options.debugWebSocket);
+    localStorage    = new LocalStorage(options.debugLocalStorage);
+    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(), options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
-    onlineCompiler = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
+    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler, dispatch);
   }
 
   export function storage(): WebStorage {
@@ -151,5 +154,14 @@ namespace Services {
     await socketClient.connect(connection);
     await webStorage.syncAll();
     return connection.username;
+  }
+
+  export function getOfflineMode(): OfflineMode {
+    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
+    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.On;
+  }
+
+  export function setOfflineMode(mode: OfflineMode): void {
+    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(mode));
   }
 }
