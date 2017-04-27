@@ -295,4 +295,11 @@ class SeashellWebsocket {
     });
   }
 
+  public getUsername(): string {
+    if (!this.connection) {
+      throw new E.WebsocketError("Trying to access username when the connection is not set.");
+    }
+    return this.connection.username;
+  }
+
 }
