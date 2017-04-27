@@ -1,6 +1,7 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
 import {WebStorage} from "./WebStorage";
 import {ProjectID,
+        ProjectBrief,
         FileBrief} from "./Interface";
 import * as E from "../Errors";
 import * as $ from "jquery";
@@ -37,7 +38,7 @@ class SkeletonManager {
     return this.userWhitelist || [];
   }
 
-  private async getProjectWhitelist(): Promise<string[]> {
+  private async getProjectsWithWhitelistSkeletons(): Promise<string[]> {
     if (!this.projectWhitelist) {
       try {
         this.projectWhitelist = (await <PromiseLike<any>>$.get(PROJ_WHITELIST_URL)).data;
@@ -59,15 +60,15 @@ class SkeletonManager {
     return this.projectsWithSkeletons || [];
   }
 
-  private async _inSkeleton(proj: ProjectID): Promise<SkeletonStatus> {
-    let [project, names, users, wlnames] =
-      await Promise.all([this.storage.getProject(proj), this.getProjectsWithSkeletons(),
-        this.getUserWhitelist(), this.getProjectWhitelist()]);
+  private async _inSkeleton(pname: string): Promise<SkeletonStatus> {
+    let [names, users, wlnames] =
+      await Promise.all([this.getProjectsWithSkeletons(),
+        this.getUserWhitelist(), this.getProjectsWithWhitelistSkeletons()]);
     let ans = SkeletonStatus.None;
     const user = this.socket.getUsername();
-    if (names.find((a: string) => a === project.name)) ans = SkeletonStatus.Public;
+    if (names.find((a: string) => a === pname)) ans = SkeletonStatus.Public;
     else if (users.find((a: string) => a === user)
-        && wlnames.find((a: string) => a === project.name)) {
+        && wlnames.find((a: string) => a === pname)) {
       ans = SkeletonStatus.Whitelist;
     }
     return ans;
@@ -101,13 +102,12 @@ class SkeletonManager {
     return serverFileList.filter((f: string) => localFileList.find((g: string) => f === g));
   }
 
-  private async getSkeletonZipFileURL(proj: ProjectID): Promise<string|false> {
-    const project = await this.storage.getProject(proj);
-    const stat = await this._inSkeleton(proj);
+  private async getSkeletonZipFileURL(pname: string): Promise<string|false> {
+    const stat = await this._inSkeleton(pname);
     if (stat === SkeletonStatus.Public) {
-      return `${SKEL_ROOT_URL}${project.name}-seashell.zip`;
+      return `${SKEL_ROOT_URL}${pname}-seashell.zip`;
     } else if (stat === SkeletonStatus.Whitelist) {
-      return `${WL_SKEL_ROOT_URL}${project.name}-seashell.zip`;
+      return `${WL_SKEL_ROOT_URL}${pname}-seashell.zip`;
     } else {
       return false;
     }
@@ -126,8 +126,15 @@ class SkeletonManager {
         })
       ));
       // sync afterwards to update the local storage.
-      // not ideal, but just for now.
+      // not ideal, but works for now.
       return this.storage.syncAll();
     }
+  }
+
+  public async fetchNewSkeletons(): Promise<void> {
+    const localProjects = (await this.storage.getProjects())
+      .map((p: ProjectBrief) => p.name);
+    const skels = await Promise.all((await this.getProjectsWithSkeletons())
+      .map(async (a: string) => [a, await this.getSkeletonZipFileURL(a)]));
   }
 }
