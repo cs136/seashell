@@ -342,7 +342,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               const path = window.location.pathname.substring(0,
                 window.location.pathname.lastIndexOf("/"));
               asyncAction(Services.login(username, password, false,
-                  `https://${window.location.host}${path}/cgi-bin/login2.cgi`)).then((response) => {
+                  PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined)).then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
