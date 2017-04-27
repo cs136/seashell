@@ -38,6 +38,12 @@ class SkeletonManager {
     return this.userWhitelist || [];
   }
 
+  private async currentUserIsWhitelisted(): Promise<boolean> {
+    const users = await this.getUserWhitelist();
+    const current = this.socket.getUsername();
+    return !!users.find((u: string) => u === current);
+  }
+
   private async getProjectsWithWhitelistSkeletons(): Promise<string[]> {
     if (!this.projectWhitelist) {
       try {
@@ -131,10 +137,33 @@ class SkeletonManager {
     }
   }
 
-  public async fetchNewSkeletons(): Promise<void> {
+  /* Promise resolves to a list of the new projects that were cloned
+      from skeletons. */
+  public async fetchNewSkeletons(): Promise<string[]> {
     const localProjects = (await this.storage.getProjects())
       .map((p: ProjectBrief) => p.name);
-    const skels = await Promise.all((await this.getProjectsWithSkeletons())
+    let skels: any = await Promise.all((await this.getProjectsWithSkeletons())
       .map(async (a: string) => [a, await this.getSkeletonZipFileURL(a)]));
+    if (await this.currentUserIsWhitelisted()) {
+      skels = skels.concat((await this.getProjectsWithWhitelistSkeletons())
+        .map((p: string) => [p, this.getSkeletonZipFileURL(p)]));
+    }
+    const newProjects = skels.filter((p: string) => -1 === localProjects.indexOf(p[0]));
+    let failed: string[] = [];
+    for (let i = 0; i < newProjects.length; i++) {
+      try {
+        await this.socket.sendMessage({
+          type: "newProjectFrom",
+          project: newProjects[i][0],
+          source: newProjects[i][1]
+        });
+      } catch (e) {
+        failed.push(newProjects[i][0]);
+      }
+    }
+    if (failed.length > 0) {
+      throw new E.SkeletonError("Failed to fetch new skeletons.", failed);
+    }
+    return newProjects.map((p: [string, string]) => p[0]);
   }
 }
