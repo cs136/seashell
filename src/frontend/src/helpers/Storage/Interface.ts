@@ -42,8 +42,10 @@ abstract class AbstractWebStorage {
 type FileID = string; // compound key
 type ProjectID = string; // alias of name for now
 
+// NOTE: File objects may not necessarily have a valid
+// prototype chain.  Do _NOT_ use instanceof to test
+// if something's a File object.
 class File implements FileStored {
-
   public id: FileID;
   public name: string; // a file name is (test|q*|common)/name
   public last_modified: number;
@@ -64,21 +66,21 @@ class File implements FileStored {
     this.contents = obj.contents;
   }
 
-  public mergeIdFrom(target: FileBrief) {
+  public mergeIdFrom = (target: FileBrief) => {
     this.id = target.id;
     this.name = target.name;
   }
 
-  public basename() {
+  public basename = () => {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");
     arr.pop();
     return arr.join(".");
   }
-  public extension() {
+  public extension = () => {
     return this.name.split(".").pop();
   }
-  public question() {
+  public question = () => {
     return this.name.split("/")[0];
   }
 }
