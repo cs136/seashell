@@ -550,7 +550,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
           file: f,
           template: this.getProjectSkeletonZipFile(project.name)
         })
-      );
+      ));
       // sync afterwards to update the local storage.
       // not ideal, but just for now.
       return this.syncAll();
