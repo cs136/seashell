@@ -513,8 +513,53 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     return ans;
   }
 
+  private async listSkeletonFiles(proj: ProjectID, user: string): Promise<string[]> {
+    const project = await this.getProject(proj);
+    return (await <PromiseLike<any>>$.get({
+      url: SKEL_URL,
+      data: {
+        user: user,
+        whitelist: "true"
+      }
+    })).data.result.map(
+      (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
+    ).filter(
+      (path: string) => path.length > 0 && path[path.length - 1] !== "/"
+    ).sort();
+  }
+
+  private async getMissingSkeletonFiles(proj: ProjectID, user: string): Promise<string[]> {
+    let [localFileBriefList, serverFileList] =
+      await Promise.all([this.getProjectFiles(proj), this.listSkeletonFiles(proj, user)]);
+    let localFileList = localFileBriefList.map((f: FileBrief) => f.name);
+    return serverFileList.filter((f: string) => localFileList.find((g: string) => f === g));
+  }
+
+  private getProjectSkeletonZipFile(pname: string): string {
+    return "";
+  }
+
+  public async pullMissingSkeletonFiles(proj: ProjectID, user: string): Promise<void> {
+    const project = await this.getProject(proj);
+    let missingFiles = await this.getMissingSkeletonFiles(proj, user);
+    if (missingFiles.length > 0) {
+      await Promise.all(missingFiles.map((f: string) =>
+        this.socket.sendMessage({
+          type: "restoreFileFrom",
+          project: project.name,
+          file: f,
+          template: this.getProjectSkeletonZipFile(project.name)
+        })
+      );
+      // sync afterwards to update the local storage.
+      // not ideal, but just for now.
+      return this.syncAll();
+    }
+  }
+
 }
 
 const USER_WHITELIST_URL = "";
 const PROJ_WHITELIST_URL = "";
 const PROJ_SKEL_URL = "";
+const SKEL_URL = "";
