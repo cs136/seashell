@@ -7,12 +7,16 @@ import * as $ from "jquery";
 
 export {SkeletonManager};
 
-enum SkeletonStatus { None, Public, Whitelist };
+export enum SkeletonStatus { None, Public, Whitelist };
 
+const CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
+const CGI_URL = `${CS136_URL}cgi-bin/`;
 const USER_WHITELIST_URL = "";
 const PROJ_WHITELIST_URL = "";
-const PROJ_SKEL_URL = "";
-const SKEL_URL = "";
+const PROJ_SKEL_URL = `${CGI_URL}skeleton_list.cgi`;
+const SKEL_ROOT_URL = `${CS136_URL}assignment_skeletons/`;
+const WL_SKEL_ROOT_URL = "ssh://cs136@linux.student.cs.uwaterloo.ca:/u2/cs136/seashell-support-files/whitelist-skeletons/";
+const SKEL_FILE_LIST_URL = `${CGI_URL}skeleton_file_list.rkt`;
 
 class SkeletonManager {
 
@@ -21,8 +25,6 @@ class SkeletonManager {
   private userWhitelist: string[];
   private projectWhitelist: string[];
   private projectsWithSkeletons: string[];
-
-  // The following functions implement the project skeleton feature
 
   private async getUserWhitelist(): Promise<string[]> {
     if (!this.userWhitelist) {
@@ -57,7 +59,7 @@ class SkeletonManager {
     return this.projectsWithSkeletons || [];
   }
 
-  public async inSkeleton(proj: ProjectID): Promise<SkeletonStatus> {
+  private async _inSkeleton(proj: ProjectID): Promise<SkeletonStatus> {
     let [project, names, users, wlnames] =
       await Promise.all([this.storage.getProject(proj), this.getProjectsWithSkeletons(),
         this.getUserWhitelist(), this.getProjectWhitelist()]);
@@ -71,13 +73,19 @@ class SkeletonManager {
     return ans;
   }
 
-  private async listSkeletonFiles(proj: ProjectID, user: string): Promise<string[]> {
+  public async inSkeleton(proj: ProjectID): Promise<boolean> {
+    const stat = await this._inSkeleton(proj);
+    return stat !== SkeletonStatus.None;
+  }
+
+  private async listSkeletonFiles(proj: ProjectID): Promise<string[]> {
     const project = await this.storage.getProject(proj);
     return (await <PromiseLike<any>>$.get({
-      url: SKEL_URL,
+      url: SKEL_FILE_LIST_URL,
       data: {
-        user: user,
-        whitelist: "true"
+        template: await this.getSkeletonZipFileURL(proj),
+        user: this.socket.getUsername(),
+        whitelist: (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist
       }
     })).data.result.map(
       (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
@@ -86,27 +94,35 @@ class SkeletonManager {
     ).sort();
   }
 
-  private async getMissingSkeletonFiles(proj: ProjectID, user: string): Promise<string[]> {
+  private async getMissingSkeletonFiles(proj: ProjectID): Promise<string[]> {
     let [localFileBriefList, serverFileList] =
-      await Promise.all([this.storage.getProjectFiles(proj), this.listSkeletonFiles(proj, user)]);
+      await Promise.all([this.storage.getProjectFiles(proj), this.listSkeletonFiles(proj)]);
     let localFileList = localFileBriefList.map((f: FileBrief) => f.name);
     return serverFileList.filter((f: string) => localFileList.find((g: string) => f === g));
   }
 
-  private getProjectSkeletonZipFile(pname: string): string {
-    return "";
+  private async getSkeletonZipFileURL(proj: ProjectID): Promise<string|false> {
+    const project = await this.storage.getProject(proj);
+    const stat = await this._inSkeleton(proj);
+    if (stat === SkeletonStatus.Public) {
+      return `${SKEL_ROOT_URL}${project.name}-seashell.zip`;
+    } else if (stat === SkeletonStatus.Whitelist) {
+      return `${WL_SKEL_ROOT_URL}${project.name}-seashell.zip`;
+    } else {
+      return false;
+    }
   }
 
-  public async pullMissingSkeletonFiles(proj: ProjectID, user: string): Promise<void> {
+  public async pullMissingSkeletonFiles(proj: ProjectID): Promise<void> {
     const project = await this.storage.getProject(proj);
-    let missingFiles = await this.getMissingSkeletonFiles(proj, user);
+    let missingFiles = await this.getMissingSkeletonFiles(proj);
     if (missingFiles.length > 0) {
       await Promise.all(missingFiles.map((f: string) =>
         this.socket.sendMessage({
           type: "restoreFileFrom",
           project: project.name,
           file: f,
-          template: this.getProjectSkeletonZipFile(project.name)
+          template: this.getSkeletonZipFileURL(project.name)
         })
       ));
       // sync afterwards to update the local storage.
