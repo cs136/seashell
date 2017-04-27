@@ -50,6 +50,17 @@ const mapDispatchToProps = (dispatch: Function) => {
   const actions =  {
     dispatch: {
       dialog: {
+        setReset: (val: boolean) => {
+          if (val) {
+            dispatch({ type: dialogActions.open, payload: "reset" });
+          }
+          else {
+            dispatch({ type: dialogActions.close, payload: "reset" });
+          }
+        },
+        toggleResetOpen: () => {
+          dispatch({ type: dialogActions.toggle, payload: "reset_open" });
+        },
         toggleHelp: () => {
           dispatch({ type: dialogActions.toggle, payload: "help_open" });
         },
@@ -332,7 +343,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         }
       },
       user: {
-        signin: (username: string, password: string) => {
+        signin: (username: string, password: string, reset: boolean) => {
           dispatch({ type: userActions.BUSY });
           return new Promise((resolve, reject) => {
             if (trim(username) === "" || trim(password) === "") {
@@ -342,7 +353,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             } else {
               const path = window.location.pathname.substring(0,
                 window.location.pathname.lastIndexOf("/"));
-              asyncAction(Services.login(username, password, false,
+              asyncAction(Services.login(username, password, reset,
                   PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined)).then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();

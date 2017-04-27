@@ -6,7 +6,7 @@ import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
 import AddProjectWindow from "./AddProject";
-
+import ResetWindow from "./Reset";
 
 const logo = require("../../assets/logo.svg");
 const styles = require("./index.scss");
@@ -37,7 +37,9 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
             <MenuItem iconName="refresh" text="Sync All" />
             <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
-            <MenuItem iconName="changes" text="Reset Seashell" />
+            <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
+              this.props.dispatch.dialog.setReset(true);
+              this.props.dispatch.dialog.toggleResetOpen(); }}/>
             <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
         </Menu>} position={Position.BOTTOM_RIGHT}>
             <button className="pt-button pt-icon-more pt-minimal"></button>
@@ -58,6 +60,11 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               isOpen={this.props.dialog.add_project_open}
               onClose={this.props.dispatch.dialog.toggleAddProject}>
               <AddProjectWindow closefunc={this.props.dispatch.dialog.toggleAddProject}/>
+            </Dialog>
+            <Dialog className={styles.dialogStyle} title="Log in again/Reset Seashell"
+              isOpen={this.props.dialog.reset_open}
+              onClose={this.props.dispatch.dialog.toggleResetOpen}>
+              <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} reset={this.props.dialog.reset}/>
             </Dialog>  
             </div>
         </div>
