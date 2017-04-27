@@ -11,7 +11,6 @@ import * as E from "../Errors";
 export {WebStorage}
 import md5 = require("md5");
 import * as R from "ramda";
-import * as $ from "jquery";
 
 enum FileCategory { Common, Test, Directory, Other };
 

@@ -3,6 +3,7 @@ export {LoginError,
         GenericError,
         WebsocketError,
         CompilerError,
+        SkeletonError,
         LoginRequired,
         RequestError,
         NoInternet,
@@ -67,6 +68,13 @@ class WebsocketError extends GenericError {
 
 class CompilerError extends GenericError {
   constructor(message: string = "CompilerError",
+              public data?: Object) {
+    super(message);
+  }
+}
+
+class SkeletonError extends GenericError {
+  constructor(message: string = "SkeletonError",
               public data?: Object) {
     super(message);
   }
