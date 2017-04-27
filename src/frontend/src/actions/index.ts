@@ -336,6 +336,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           dispatch({ type: userActions.BUSY });
           return new Promise((resolve, reject) => {
             if (trim(username) === "" || trim(password) === "") {
+              dispatch({ type: userActions.NOTBUSY });
               showError("Please fill in all fields!");
               reject(null);
             } else {
