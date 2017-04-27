@@ -3,8 +3,10 @@ import * as R from "ramda";
 export {AbstractStorage, AbstractWebStorage,
         File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
-        Settings, SettingsStored}
+        Settings, SettingsStored,
+        OfflineMode}
 
+enum OfflineMode { Off, On, Forced }
 
 abstract class AbstractStorage {
   // projects
@@ -17,7 +19,7 @@ abstract class AbstractStorage {
   public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
   public abstract async writeFile(file: FileID, contents: string|undefined): Promise<void>;
-  public abstract async renameFile(file: FileID, newName: string): Promise<void>;
+  public abstract async renameFile(file: FileID, newName: string): Promise<FileBrief>;
   public abstract async deleteFile(file: FileID): Promise<void>;
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
@@ -40,8 +42,10 @@ abstract class AbstractWebStorage {
 type FileID = string; // compound key
 type ProjectID = string; // alias of name for now
 
+// NOTE: File objects may not necessarily have a valid
+// prototype chain.  Do _NOT_ use instanceof to test
+// if something's a File object.
 class File implements FileStored {
-
   public id: FileID;
   public name: string; // a file name is (test|q*|common)/name
   public last_modified: number;
@@ -62,16 +66,21 @@ class File implements FileStored {
     this.contents = obj.contents;
   }
 
-  public basename() {
+  public mergeIdFrom = (target: FileBrief) => {
+    this.id = target.id;
+    this.name = target.name;
+  }
+
+  public basename = () => {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");
     arr.pop();
     return arr.join(".");
   }
-  public extension() {
+  public extension = () => {
     return this.name.split(".").pop();
   }
-  public question() {
+  public question = () => {
     return this.name.split("/")[0];
   }
 }
@@ -89,23 +98,19 @@ class Project implements ProjectStored {
   public name: string;
   public last_modified: number;
   public runs: {[index: string]: FileID};
-  public open_tabs: {[index: string]: FileID};
   constructor(obj: ProjectStored) {
     this.id = obj.id;
     this.name = obj.name;
     this.last_modified = obj.last_modified;
     this.runs = obj.runs;
-    this.open_tabs = obj.open_tabs;
   }
 }
 
 class ProjectBrief extends Project {
   public runs: {} = {};
-  public open_tabs: {} = {};
   constructor(obj: ProjectStored) {
     super(obj);
     this.runs = {};
-    this.open_tabs = {};
   }
 };
 
@@ -117,6 +122,27 @@ class Settings implements SettingsStored {
   public theme: "light"|"dark" = "light";
   public space_tab: boolean = true;
   public tab_width: number = 2;
+  public static fromJSON(obj: any): Settings {
+    const st = new Settings();
+    st.editor_mode = obj.editor_mode || st.editor_mode ;
+    st.font_size   = obj.font_size   || st.font_size   ;
+    st.font        = obj.font        || st.font        ;
+    st.theme       = obj.theme       || st.theme       ;
+    st.space_tab   = obj.space_tab   || st.space_tab   ;
+    st.tab_width   = obj.tab_width   || st.tab_width   ;
+    return st;
+  }
+  public toJSON(): SettingsStored {
+    return {
+        id          : 0
+      , editor_mode : this.editor_mode
+      , font_size   : this.font_size
+      , font        : this.font
+      , theme       : this.theme
+      , space_tab   : this.space_tab
+      , tab_width   : this.tab_width
+    };
+  }
 }
 
 interface FileStored {
@@ -136,9 +162,7 @@ interface ProjectStored {
   name: string;
   last_modified: number;
   runs: {[index: string]: FileID};
-  open_tabs: {[index: string]: FileID};
 }
-
 
 interface SettingsStored {
   id: 0;

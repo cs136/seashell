@@ -67,7 +67,8 @@ module.exports = {
     }),
     new ArchivePlugin(),
     new webpack.DefinePlugin({
-      IS_BROWSER: true
+      IS_BROWSER: true,
+      PRODUCTION: true,
     })
   ],
   resolve: {

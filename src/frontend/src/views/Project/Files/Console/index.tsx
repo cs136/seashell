@@ -10,6 +10,7 @@ export interface ConsoleProps {
   style?: any;
   className?: string;
   dispatch: any;
+  consoleText: string;
 }
 
 export interface ConsoleState {
@@ -21,7 +22,7 @@ export interface ConsoleState {
 const customStyles = require("./Console.scss");
 const styles = require("xterm/lib/xterm.css");
 
-export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
+export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleState> {
   term: any;
   container?: HTMLElement;
 
@@ -65,6 +66,7 @@ export default class Xterm extends React.Component<ConsoleProps, ConsoleState> {
 
   componentDidMount() {
     this.term.open(this.container);
+    if (this.props.consoleText) this.term.write(this.props.consoleText + "\r");
     this.setState({ input: true, line: 1, currString: "" });
     if (this.container) { // Always reachable
       const consoleElement: HTMLElement = this.container;

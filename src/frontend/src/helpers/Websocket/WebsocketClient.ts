@@ -15,7 +15,6 @@ class SeashellWebsocket {
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
   private failed: boolean; // not used?
-  private authenticated: boolean;
   private closes: () => void;
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
@@ -37,7 +36,6 @@ class SeashellWebsocket {
   public async connect(cnn: Connection): Promise<void> {
     this.debug && console.log("Connecting to websocket...");
     this.lastMsgID = 0;
-    this.authenticated = false;
     this.requests = {};
     this.requests[-1] = new Request({id: -1}); // server challenge
     this.requests[-2] = new Request({id: -2}); // reply challenge
@@ -202,10 +200,10 @@ class SeashellWebsocket {
     }
     if (response.success) {
       request.resolve(response.result);
-    } else if (! this.authenticated) {
-    // test if is not authenticated
-    // better have the backend reject with "unauthenticated" error,
-    // instead of the current "invalid message"
+    } else if (! this.isConnected()) {
+      // test if is not authenticated
+      // better have the backend reject with "unauthenticated" error,
+      // instead of the current "invalid message"
       request.reject(new E.LoginRequired());
     } else {
       const diff = request.time ? time.getTime() - request.time : -1;
@@ -283,7 +281,7 @@ class SeashellWebsocket {
   public sendMessage<T>(message: Message): Promise<T> {
     const msgID = this.lastMsgID++;
     message.id = msgID;
-    return this.sendRequest(new Request(message));
+    return this.sendRequest<T>(new Request<T>(message));
   }
 
   public isConnected() {
@@ -295,6 +293,13 @@ class SeashellWebsocket {
     await this.sendMessage({
       type: "ping"
     });
+  }
+
+  public getUsername(): string {
+    if (!this.connection) {
+      throw new E.WebsocketError("Trying to access username when the connection is not set.");
+    }
+    return this.connection.username;
   }
 
 }

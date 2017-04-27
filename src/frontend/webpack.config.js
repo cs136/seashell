@@ -26,7 +26,8 @@ module.exports = {
       template: './src/index.html'
     }),
     new webpack.DefinePlugin({
-      IS_BROWSER: true
+      IS_BROWSER: true,
+      PRODUCTION: false
     })
   ],
   devtool: "source-map",

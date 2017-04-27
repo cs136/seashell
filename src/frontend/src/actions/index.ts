@@ -2,9 +2,10 @@ import { connect } from "react-redux";
 import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
 import { projectRef, fileRef } from "../types";
-import { appStateActions }  from "../reducers/appStateReducer";
+import { appStateActions } from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
+import { Settings } from "../helpers/Storage/Interface";
 import { GenericError, LoginError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
@@ -32,9 +33,11 @@ const mapDispatchToProps = (dispatch: Function) => {
       return result;
     } catch (e) {
       console.error(e);
-      if (e instanceof LoginError) {
+      if (e.message) {
         showError(e.message);
-        dispatch({type: userActions.INVALIDATE});
+      }
+      if (e instanceof LoginError) {
+        dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
         throw e;
@@ -42,34 +45,36 @@ const mapDispatchToProps = (dispatch: Function) => {
     }
   }
 
+  const storage = Services.storage;
+
   const actions =  {
     dispatch: {
       dialog: {
         toggleHelp: () => {
-          dispatch({type: dialogActions.toggle, payload: "help_open"});
+          dispatch({ type: dialogActions.toggle, payload: "help_open" });
         },
         toggleSettings: () => {
-          dispatch({type: dialogActions.toggle, payload: "settings_open"});
+          dispatch({ type: dialogActions.toggle, payload: "settings_open" });
         },
         toggleAddProject: () => {
-          dispatch({type: dialogActions.toggle, payload: "add_project_open"});
+          dispatch({ type: dialogActions.toggle, payload: "add_project_open" });
         },
         toggleDeleteFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "delete_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "delete_file_open" });
         },
         toggleRenameFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "rename_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "rename_file_open" });
         },
         toggleCopyFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "copy_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "copy_file_open" });
         },
         toggleAddFile: () => {
-          dispatch({type: dialogActions.toggle, payload: "add_file_open"});
+          dispatch({ type: dialogActions.toggle, payload: "add_file_open" });
         }
       },
       settings: {
         initSettings: () => {
-          asyncAction(Services.storage().getSettings()).then((settings) => {
+          asyncAction(storage().getSettings()).then((settings) => {
             dispatch({
               type: settingsActions.updateSettings,
               payload: {
@@ -78,30 +83,44 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: parseInt(localStorage.getItem("offline-mode-enabled") || "0"),
+                offlineMode: Services.getOfflineMode(),
                 editorRatio: 0.5,
                 updated: 0,
-              }});
+              }
+            });
           });
         },
         updateSettings: (newSettings: settingsReducerStateNullable) => {
-          dispatch({
-            type: settingsActions.updateSettings,
-            payload: newSettings
-          });
           dispatch((dispatch: Function, getState: () => globalState) => {
-            let newSettings = getState().settings;
-            asyncAction(Services.storage().setSettings({
-              id: 0,
-              editor_mode: "standard",
-              font_size: newSettings.fontSize,
-              font: newSettings.font,
-              theme: newSettings.theme ? "light" : "dark",
-              space_tab: true,
-              tab_width: newSettings.tabWidth,
-            }));
+            let oldSettings = getState().settings;
+            dispatch({
+              type: settingsActions.updateSettings,
+              payload: newSettings
+            });
+            dispatch((dispatch: Function, getState: () => globalState) => {
+              let newSettings = getState().settings;
+              asyncAction(Services.storage().setSettings(Settings.fromJSON({
+                id: 0,
+                editor_mode: "standard",
+                font_size: newSettings.fontSize,
+                font: newSettings.font,
+                theme: newSettings.theme ? "light" : "dark",
+                space_tab: true,
+                tab_width: newSettings.tabWidth,
+              })));
+            });
+            if (newSettings.offlineMode !== undefined) {
+              Services.setOfflineMode(newSettings.offlineMode);
+              // Force reload
+              if (newSettings.offlineMode === 0 &&
+                  oldSettings.offlineMode > 0 ||
+                  newSettings.offlineMode > 0 &&
+                  oldSettings.offlineMode === 0) {
+                    window.location.hash = "";
+                    window.location.reload(true);
+                  }
+            }
           });
-          localStorage.setItem("offline-mode-enabled", String(newSettings.offlineMode));
         },
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
@@ -120,44 +139,45 @@ const mapDispatchToProps = (dispatch: Function) => {
           payload: {}
         }),
         copyFile: (targetName: string) => {
-          // TODO: hook up to storage once we get a proper copy function
+          // TODO: hook up to storage() once we get a proper copy function
           dispatch({
             type: appStateActions.copyFile,
             payload: {
-              question: {name: "question", files: ["file1.txt"]},
+              question: { name: "question", files: ["file1.txt"] },
               newName: targetName.split("/").pop()
             }
           });
         },
         updateFile: (file: S.File, newFileContent: string) => {
-          dispatch({type: appStateActions.changeFileBufferedContent,
-                    payload: {
-                      unwrittenContent: newFileContent,
-                      target: file.id,
-                      flusher: () => {
-                        actions.dispatch.file.flushFileBuffer();
-                      }
-                    }
-                  });
+          dispatch({
+            type: appStateActions.changeFileBufferedContent,
+            payload: {
+              unwrittenContent: newFileContent,
+              target: file.id,
+              flusher: () => {
+                actions.dispatch.file.flushFileBuffer();
+              }
+            }
+          });
         },
-        flushFileBuffer: () => {
-          return new Promise((resolve, reject) => {
+        flushFileBuffer: () : Promise<void> => {
+          return new Promise<void>((resolve, reject) => {
             dispatch((dispatch: Function, getState: () => globalState) => {
               const state = getState();
               if (state.appState.currentProject &&
                 state.appState.currentProject &&
                 state.appState.currentProject.currentQuestion &&
                 state.appState.currentProject.currentQuestion.currentFile) {
-                const {flusher, target, unwrittenContent} = state.appState.currentProject.currentQuestion.currentFile;
+                const { flusher, target, unwrittenContent } = state.appState.currentProject.currentQuestion.currentFile;
                 if (flusher) {
                   clearTimeout(flusher);
                 }
                 if (target && unwrittenContent) {
-                  asyncAction(Services.storage().writeFile(target, unwrittenContent))
+                  asyncAction(storage().writeFile(target, unwrittenContent))
                     .then(() => dispatch({
                       type: appStateActions.changeFileContent,
                       payload: unwrittenContent,
-                  })).then(resolve).catch(reject);
+                    })).then(resolve).catch(reject);
                 } else {
                   resolve();
                 }
@@ -168,75 +188,90 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         switchFile: (file: S.FileBrief) => {
+          console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
-            .then(() => { return asyncAction(Services.storage().readFile(file.id)); })
+            .then(() => { return asyncAction(storage().readFile(file.id)); })
             .then((file: S.File) => dispatch({
               type: appStateActions.switchFile,
               payload: file
             }));
         },
         addFile: (project: string, path: string,
-                  newFileContent: string) => {
+          newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
-          return asyncAction(Services.storage().newFile(project, path, newFileContent))
-            .then(() => dispatch({
-              type: appStateActions.addFile,
-              payload: path
-            })).catch((reason) => {
-              showError(reason);
+          return asyncAction(storage().newFile(project, path, newFileContent))
+            .then((file) => {
+              dispatch({
+                type: appStateActions.addFile,
+                payload: file
+              });
+              return asyncAction(storage().addOpenTab(file.project, file.question(), file.id))
+                .then(async () => {
+                  // file needs to be read here to obtain the default contents
+                  file = await storage().readFile(file.id);
+                  dispatch({
+                    type: appStateActions.openFile,
+                    payload: file
+                  });
+                  dispatch({
+                    type: appStateActions.switchFile,
+                    payload: file
+                  });
+                });
             });
         },
         deleteFile: (file: S.FileBrief) => {
-          return asyncAction(Services.storage().deleteFile(file.id))
+          return asyncAction(storage().deleteFile(file.id))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: file.name}
+                payload: file
               });
-            }).catch((reason) => {
-              showError(reason);
             });
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
-          return asyncAction(Services.storage().renameFile(file.id, targetName))
-            .then(() => {
+          return asyncAction(storage().renameFile(file.id, targetName))
+            .then((newFile) => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file.name
+                payload: file
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: {name: file.name}
+                payload: file
               });
               dispatch({
                 type: appStateActions.addFile,
-                payload: {name: targetName}
+                payload: newFile
               });
-            }).catch((reason) => {
-              showError(reason);
+              dispatch({
+                type: appStateActions.updateCurrentFileIfIdEquals,
+                payload: {oldFid: file.id, newFileBrief: newFile}
+              });
+              return newFile;
             });
         },
-        openFile: (file: S.FileBrief, files: S.FileBrief[]) => {
-          Services.storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
-          dispatch({
-            type: appStateActions.openFile,
-            payload: file
-          }));
-        },
-        closeFile: (file: S.FileBrief, files: S.FileBrief[]) => {
-          Services.storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+        openFile: (file: S.FileBrief) => {
+          storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
             dispatch({
-            type: appStateActions.closeFile,
-            payload: file
-         }));
+              type: appStateActions.openFile,
+              payload: file
+            }));
+        },
+        closeFile: (file: S.FileBrief) => {
+          storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+            dispatch({
+              type: appStateActions.closeFile,
+              payload: file
+            }));
         },
         setRunFile: (file: S.FileBrief) => {
-          Services.storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
+          storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
             type: appStateActions.setRunFile,
             payload: file.name
           }));
@@ -245,52 +280,74 @@ const mapDispatchToProps = (dispatch: Function) => {
       question: {
         addQuestion: (newQuestionName: string) => dispatch({
           type: appStateActions.addQuestion,
-          payload: {name: newQuestionName}
+          payload: { name: newQuestionName }
         }),
         removeQuestion: (name: string) => dispatch({
           type: appStateActions.removeQuestion,
-          payload: {name: name}
+          payload: { name: name }
         }),
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              asyncAction(Services.storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) =>
-                asyncAction(Services.storage().getOpenTabs(pid, name))
-              .then((openFiles) =>
-                asyncAction(Services.storage().getFileToRun(pid, name)
-              .then((runFile) =>
-                dispatch({
-                  type: appStateActions.switchQuestion,
-                  payload: {
-                    question: {
-                      name: name,
-                      runFile: runFile,
-                      currentFile: undefined,
-                      openFiles: openFiles,
-                      diags: [],
-                      files: files.filter((file) => file.name.split("/")[0] === name)
-                    }
-                  }
-              }))))
-              );
-          });
+              return asyncAction(storage().getProjectFiles(pid))
+                .then((files: S.FileBrief[]) => {
+                  return asyncAction(storage().getOpenTabs(pid, name))
+                    .then((openFiles) => {
+                      return asyncAction(storage().getFileToRun(pid, name)
+                        .then((runFile) => {
+                          const question = {
+                            name: name,
+                            runFile: runFile,
+                            currentFile: undefined,
+                            openFiles: openFiles.filter((file) => file.question() === name),
+                            diags: [],
+                            files: files.filter((file) => file.question() === name)
+                          };
+                          dispatch({
+                            type: appStateActions.switchQuestion,
+                            payload: {
+                              question: question
+                            }
+                          });
+                          return question;
+                        }));
+                    });
+                });
+            });
+        },
+        getMarmosetResults: async (projectName: string, questionName: string) => {
+          const oldLength = JSON.parse((await asyncAction(Services.storage().getTestResults(projectName + questionName)))).result.length;
+          await asyncAction(Services.storage().marmosetSubmit(projectName, projectName + questionName, questionName));
+          let result = [];
+          function sleep(milliseconds: Number) {
+            return new Promise(resolve => setTimeout(resolve, milliseconds));
+          }
+          while (result.length === oldLength || result.length === 0 || result[0].status !== "complete") {
+            const response = (await asyncAction(Services.storage().getTestResults(projectName + questionName)));
+            result = JSON.parse(response).result;
+            if (result.length === oldLength || result.length === 0 || result[0].status !== "complete") await sleep(1500); // let's not destroy the server
+          }
+          console.log(result[0]);
+          return result[0];
         }
       },
       user: {
         signin: (username: string, password: string) => {
-          dispatch({type: userActions.BUSY});
+          dispatch({ type: userActions.BUSY });
           return new Promise((resolve, reject) => {
             if (trim(username) === "" || trim(password) === "") {
               dispatch({ type: userActions.NOTBUSY });
               showError("Please fill in all fields!");
               reject(null);
             } else {
-              asyncAction(Services.login(username, password)).then((response) => {
-                dispatch({type: userActions.SIGNIN, payload: username});
+              const path = window.location.pathname.substring(0,
+                window.location.pathname.lastIndexOf("/"));
+              asyncAction(Services.login(username, password, false,
+                  PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined)).then((response) => {
+                dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
-                dispatch({type: userActions.NOTBUSY});
+                dispatch({ type: userActions.NOTBUSY });
                 reject(e);
               });
             }
@@ -298,7 +355,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         signout: () => {
           asyncAction(Services.logout()).then((response) => {
-            dispatch({type: userActions.SIGNOUT});
+            dispatch({ type: userActions.SIGNOUT });
           }).catch((reason) => {
             if (reason !== null) throw reason;
           });
@@ -308,30 +365,30 @@ const mapDispatchToProps = (dispatch: Function) => {
           // any errors that happen when auto connecting --
           // we're in the login screen, let user manually log in
           // if we can't auto login.
-          dispatch({type: userActions.BUSY});
+          dispatch({ type: userActions.BUSY });
           try {
             let user = await Services.autoConnect();
-            dispatch({type: userActions.SIGNIN, payload: user});
+            dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
-            dispatch({type: userActions.NOTBUSY});
+            dispatch({ type: userActions.NOTBUSY });
             throw e;
           }
         }
       },
       project: {
         addProject: (newProjectName: string) => {
-          return asyncAction(Services.storage().newProject(newProjectName)).then((projBrief) =>
+          return asyncAction(storage().newProject(newProjectName)).then((projBrief) =>
             dispatch({
-            type: appStateActions.addProject,
-            payload: projBrief
-          }));
+              type: appStateActions.addProject,
+              payload: projBrief
+            }));
         },
         removeProject: (pid: S.ProjectID) =>
-          asyncAction(Services.storage().deleteProject(pid)).then(() => dispatch({
+          asyncAction(storage().deleteProject(pid)).then(() => dispatch({
             type: appStateActions.removeProject,
-            payload: {id: pid}
-        })),
+            payload: { id: pid }
+          })),
         switchProject: (name: string, pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
@@ -339,7 +396,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             return arr.indexOf(val) === idx;
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(Services.storage().getProjectFiles(pid))
+          return asyncAction(storage().getProjectFiles(pid))
             .then((files: S.FileBrief[]) => dispatch({
               type: appStateActions.switchProject,
               payload: {
@@ -348,16 +405,14 @@ const mapDispatchToProps = (dispatch: Function) => {
                   termClear: null,
                   name: name,
                   id: pid,
-                  questions: files.map((file) => file.name.split("/")[0]).filter(unique),
+                  questions: files.map((file) => file.question()).filter(unique),
                   currentQuestion: undefined
                 }
               }
-            })).catch((reason) => {
-            if (reason !== null) showError(reason.message);
-          });
+            }));
         },
         getAllProjects: () => {
-          return asyncAction(Services.storage().getProjects()).then((projects) => dispatch({
+          return asyncAction(storage().getProjects()).then((projects) => dispatch({
             type: appStateActions.getProjects,
             payload: {
               projects: projects
@@ -375,32 +430,33 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.setCompiling,
             payload: {}
           });
-          asyncAction(Services.compiler().compileAndRunProject(project,
-              question, fid, test)).then((result: C.CompilerResult) => {
-            dispatch({
-              type: appStateActions.setDiags,
-              payload: result.messages
-            });
-            if (result.status !== "running") {
-              dispatch({
-                type: appStateActions.setNotRunning,
-                payload: {}
-              });
-            } else {
-              dispatch({
-                type: appStateActions.setRunning,
-                payload: {}
-              });
-            }
-          }).catch((reason) => {
-            dispatch({
-              type: appStateActions.setNotRunning,
-              payload: {}
-            });
-            if (reason !== null) {
-              showError(reason.message);
-            }
-          });
+          asyncAction(actions.dispatch.file.flushFileBuffer())
+            .then(() =>
+              asyncAction(storage().syncAll(false))
+                .then(() =>
+                  asyncAction(Services.compiler().compileAndRunProject(project,
+                    question, fid, test)).then((result: C.CompilerResult) => {
+                      dispatch({
+                        type: appStateActions.setDiags,
+                        payload: result.messages
+                      });
+                      if (result.status !== "running") {
+                        dispatch({
+                          type: appStateActions.setNotRunning,
+                          payload: {}
+                        });
+                      } else {
+                        dispatch({
+                          type: appStateActions.setRunning,
+                          payload: {}
+                        });
+                      }
+                    }).catch((reason) => {
+                      dispatch({
+                        type: appStateActions.setNotRunning,
+                        payload: {}
+                      });
+                    })));
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,

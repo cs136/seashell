@@ -1,6 +1,6 @@
 import {mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
-import {clone, reject, equals} from "ramda";
+import {clone, reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 
@@ -9,26 +9,27 @@ interface CurrentFile extends S.File {
   target?: S.FileID;
   flusher?: number;
 }
-
+export interface appStateReducerProjectState {
+  termWrite?: Function;
+  termClear?: Function;
+  consoleText?: string;
+  name: string;
+  id: string;
+  questions: string[];
+  currentQuestion?: {
+    name: string;
+    files: S.FileBrief[];
+    runFile: string;
+    openFiles: S.FileBrief[];
+    diags: CompilerDiagnostic[];
+    currentFile?: CurrentFile;
+  };
+};
 export interface appStateReducerState {[key: string]: any;
   fileOpTarget?: S.FileBrief;
   projects: S.ProjectBrief[];
   runState?: number;
-  currentProject?: {
-    termWrite?: Function;
-    termClear?: Function;
-    name: string;
-    id: string;
-    questions: string[];
-    currentQuestion?: {
-      name: string;
-      files: S.FileBrief[];
-      runFile: string;
-      openFiles: S.FileBrief[];
-      diags: CompilerDiagnostic[];
-      currentFile?: CurrentFile;
-    };
-  };
+  currentProject?: appStateReducerProjectState;
 };
 
 export interface appStateReducerAction {
@@ -62,7 +63,8 @@ export enum appStateActions {
   setTerm,
   writeConsole,
   clearConsole,
-  setDiags
+  setDiags,
+  updateCurrentFileIfIdEquals
 };
 
 export default function appStateReducer(state: appStateReducerState = {
@@ -72,6 +74,21 @@ export default function appStateReducer(state: appStateReducerState = {
     currentProject: undefined
   }, action: appStateReducerAction) {
   switch (action.type) {
+    // This updates the current file if we're renaming
+    // the current file or otherwise changing it's id.
+    case appStateActions.updateCurrentFileIfIdEquals:
+      let {oldFid, newFileBrief} = <{oldFid: S.FileID,
+                                     newFileBrief: S.FileBrief}>action.payload;
+      state = clone(state);
+      if (state.currentProject &&
+          state.currentProject.currentQuestion &&
+          state.currentProject.currentQuestion.currentFile &&
+          state.currentProject.currentQuestion.currentFile.id === oldFid) {
+            state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFileBrief);
+          }
+      else
+        console.warn("Inconsistent state reached -- currentFile is undefined in updateCurrentFile...");
+      return state;
     case appStateActions.setTerm:
       state = clone(state);
       if (state.currentProject) {
@@ -86,6 +103,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject) {
         if (state.currentProject.termWrite) {
           state.currentProject.termWrite(action.payload.content);
+          state.currentProject.consoleText += action.payload.content;
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in writeConsole");
@@ -96,6 +114,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject) {
         if (state.currentProject.termClear) {
           state.currentProject.termClear();
+          state.currentProject.consoleText = "";
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in clearConsole");
@@ -171,8 +190,11 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
+      let removeFile = <S.FileBrief>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.files.splice(state.currentProject.currentQuestion.files.indexOf(action.payload.name), 1);
+        let files = state.currentProject.currentQuestion.files;
+        state.currentProject.currentQuestion.files =
+          reject((file) => file.id === removeFile.id, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
         // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
@@ -200,7 +222,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.addFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.files.push(action.payload.name);
+        state.currentProject.currentQuestion.files.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in addFile");
@@ -236,8 +258,9 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1)
+        if (find(propEq("name", action.payload.name), state.currentProject.currentQuestion.openFiles) !== undefined){
           return state; // don't duplicate files
+        }
         state.currentProject.currentQuestion.openFiles.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
@@ -246,8 +269,10 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.closeFile:
       state = clone(state);
+      let oldFile = <S.FileBrief>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.openFiles = reject(equals(action.payload), state.currentProject.currentQuestion.openFiles);
+        state.currentProject.currentQuestion.openFiles =
+          reject((file) => file.id === oldFile.id, state.currentProject.currentQuestion.openFiles);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");

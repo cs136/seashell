@@ -19,11 +19,15 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler, dispatch: DispatchFunction) {
+  private syncAll: () => Promise<void>;
+
+  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler,
+      dispatch: DispatchFunction, syncAll: () => Promise<void>) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
+    this.syncAll = syncAll;
 
     this.socket.register_callback("io", this.handleIO());
     this.socket.register_callback("test", this.handleTest());
@@ -36,16 +40,22 @@ class OnlineCompiler extends AbstractCompiler {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
 
+    await this.syncAll();
+
     let tests: TestBrief[] = [];
     if (runTests) {
       tests = await this.getTestsForQuestion(proj, question);
+      if (tests.length < 1) {
+        throw new CompilerError("There are no tests to run for this question.");
+      }
     }
 
+    let project = await this.storage.getProject(proj);
     let result: any = null;
     try {
       result = await this.socket.sendMessage({
         type: "compileAndRunProject",
-        project: proj,
+        project: project.name,
         question: question,
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
@@ -77,7 +87,7 @@ class OnlineCompiler extends AbstractCompiler {
       pids.map((pid: number) => {
         this.socket.sendMessage({
           type: "startIO",
-          project: proj,
+          project: project.name,
           pid: pid
         });
       });
