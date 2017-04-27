@@ -63,4 +63,10 @@ $mobile-break: 650px;
     .pt-dark{
         background:$dark;
     }
+    .pt-dialog{
+        background: #FFF !important;
+    }
+    .pt-dark .pt-dialog{
+        background: #293742 !important
+    }
 }

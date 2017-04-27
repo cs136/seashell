@@ -22,7 +22,7 @@ class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
       if (question) {
         return (<div className={styles.openFiles}>
           {question.openFiles.map((file) => (
-            <div className={styles.openFilesTab} key={`file-tab-${file.id}`}>
+            <div className={styles.openFilesTab} key={"file-tab-" + file.id}>
               <div className={`pt-button-group ${styles.openFilesTab} ${(question.currentFile && file.id === question.currentFile.id) ? styles.active : ""}`}>
                 <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, file)}>
                   {file.name === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}

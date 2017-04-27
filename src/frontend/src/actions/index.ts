@@ -314,6 +314,21 @@ const mapDispatchToProps = (dispatch: Function) => {
                     });
                 });
             });
+        },
+        getMarmosetResults: async (projectName: string, questionName: string) => {
+          const oldLength = JSON.parse((await asyncAction(Services.storage().getTestResults(projectName + questionName)))).result.length;
+          await asyncAction(Services.storage().marmosetSubmit(projectName, projectName + questionName, questionName));
+          let result = [];
+          function sleep(milliseconds: Number) {
+            return new Promise(resolve => setTimeout(resolve, milliseconds));
+          }
+          while (result.length === oldLength || result.length === 0 || result[0].status !== "complete") {
+            const response = (await asyncAction(Services.storage().getTestResults(projectName + questionName)));
+            result = JSON.parse(response).result;
+            if (result.length === oldLength || result.length === 0 || result[0].status !== "complete") await sleep(1500); // let's not destroy the server
+          }
+          console.log(result[0]);
+          return result[0];
         }
       },
       user: {

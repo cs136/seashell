@@ -13,23 +13,50 @@ import {merge} from "ramda";
 import CopyPrompt from "./Prompt/Copy";
 import RenamePrompt from "./Prompt/Rename";
 import DeletePrompt from "./Prompt/Delete";
+import MarmosetResultPrompt from "./Prompt/MarmosetResult";
 import AddFilePrompt from "./Prompt/AddFile";
 import Splash from "./Splash";
 import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
+import {appStateReducerProjectState} from "../../reducers/appStateReducer";
 import * as S from "../../helpers/Storage/Interface";
 export interface ProjectProps extends RouteComponentProps
     <{name: string, id: S.ProjectID}> { title: string; }
-export interface ProjectState { toggleView: boolean; }
+export interface ProjectState { toggleView: boolean; marmosetResults: {open: boolean; result: any}; }
 
 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
     this.state = {
-      toggleView: false
+      toggleView: false,
+      marmosetResults: {
+        open: false,
+        result: null
+      }
     };
+  }
+  generateMarmosetButton(project: appStateReducerProjectState) {
+      const projectPattern = /A[0-9]+/, questionPattern = /[qp][0-9]+/;
+      if (project.currentQuestion && project.name.match(projectPattern) && project.currentQuestion.name.match(questionPattern)) {
+        const marmosetDispatch = (async (projectName: string, questionName: string) => {
+          this.setState({marmosetResults: {
+            open: true,
+            result: null
+          }});
+          const result = await this.props.dispatch.question.getMarmosetResults(projectName, questionName);
+          this.setState({marmosetResults: {
+            open: true,
+            result: result
+          }});
+        }).bind(this, project.name, project.currentQuestion.name);
+        return (<Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
+                <button className="pt-button pt-minimal pt-icon-publish-function" onClick={marmosetDispatch}>
+                </button>
+            </Tooltip>);
+      }
+      return <span />;
   }
   componentWillMount() {
     const willOpenPid = this.props.match.params.id;
@@ -118,11 +145,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                         onClick={() => this.props.dispatch.compile.stopProgram()}>
                     </button>
                   </Tooltip>,
-            <Tooltip key="project-submit-marmoset" content="Submit to Marmoset"
-                position={Position.BOTTOM_RIGHT}>
-              <button className="pt-button pt-minimal pt-icon-publish-function">
-              </button>
-            </Tooltip>] : []
+            this.generateMarmosetButton(project)] : []
           }/>
         {question && question.currentFile ?
           <DisplayFiles className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}/>
@@ -149,6 +172,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             onClose={this.props.dispatch.dialog.toggleAddFile}>
           <AddFilePrompt questions={project.questions}
               closefunc={this.props.dispatch.dialog.toggleAddFile}/>
+        </Dialog>
+        <Dialog className={styles.dialogStyle} title="Marmoset Results"
+            isOpen={this.state.marmosetResults.open}
+            onClose={(() => {
+              this.setState({marmosetResults: {open: false, result: this.state.marmosetResults.result}});
+            }).bind(this)}>
+                <MarmosetResultPrompt result={this.state.marmosetResults.result} />
         </Dialog>
       </div>);
     } else {
