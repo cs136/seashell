@@ -1,6 +1,6 @@
 import {mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
-import {clone, reject, equals} from "ramda";
+import {clone, reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 
@@ -258,8 +258,9 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.currentQuestion.openFiles.indexOf(action.payload) !== -1)
+        if (find(propEq("name", action.payload.name), state.currentProject.currentQuestion.openFiles) !== undefined){
           return state; // don't duplicate files
+        }
         state.currentProject.currentQuestion.openFiles.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
