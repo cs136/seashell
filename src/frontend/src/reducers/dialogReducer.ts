@@ -4,7 +4,7 @@ import {clone} from "ramda";
 export const dialogActions = {
   open: "dialog_open",
   close: "dialog_close",
-  toggle: "dialog_toggle"
+  toggle: "dialog_toggle",
 };
 
 export interface dialogAction {
@@ -21,6 +21,8 @@ export interface dialogReducerState {
   rename_file_open: boolean;
   copy_file_open: boolean;
   add_file_open: boolean;
+  reset_open: boolean;
+  reset: boolean;
 }
 
 export default function dialogReducer(
@@ -31,7 +33,9 @@ export default function dialogReducer(
     delete_file_open: false,
     rename_file_open: false,
     copy_file_open: false,
-    add_file_open: false
+    add_file_open: false,
+    reset_open: false,
+    reset: false,
   },
   action: dialogAction) {
   state = clone(state);

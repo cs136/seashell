@@ -54,7 +54,7 @@ class File implements FileStored {
   public open: boolean;
   public contents: string | undefined; // undefined ==> unavailable offline / unreadable
 
-  constructor(obj: FileStored) {
+  constructor(obj: FileStored | File) {
     this.id = obj.id;
     this.name = obj.name;
     this.last_modified = obj.last_modified;
@@ -62,26 +62,28 @@ class File implements FileStored {
     this.checksum = obj.checksum;
     // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
     // and very carefully convert it to boolean in File constructor!
-    this.open = obj.open === 1;
+    this.open = (typeof obj.open === "boolean") ? obj.open : obj.open === 1;
     this.contents = obj.contents;
   }
 
-  public mergeIdFrom = (target: FileBrief) => {
+  public mergeIdFrom(target: FileBrief) {
     this.id = target.id;
     this.name = target.name;
   }
-
-  public basename = () => {
+  public basename() {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");
     arr.pop();
     return arr.join(".");
   }
-  public extension = () => {
+  public extension() {
     return this.name.split(".").pop();
   }
-  public question = () => {
+  public question() {
     return this.name.split("/")[0];
+  }
+  public clone() {
+    return new File(this);
   }
 }
 
