@@ -243,6 +243,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.removeFile,
                 payload: file
               });
+              return asyncAction(storage().pullMissingSkeletonFiles(file.project));
             });
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
@@ -264,7 +265,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.updateCurrentFileIfIdEquals,
                 payload: {oldFid: file.id, newFileBrief: newFile}
               });
-              return newFile;
+              return asyncAction(storage().pullMissingSkeletonFiles(file.project))
+                .then(() => newFile);
             });
         },
         openFile: (file: S.FileBrief) => {
