@@ -17,7 +17,7 @@ function onInit() {
 }
 
 Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
-self.importScripts("seashell-clang-js/bin/seashell-runner.js");
+self.importScripts(require("file-loader!seashell-clang-js/bin/seashell-runner"));
 
 var stdout = "";
 var stderr = "";

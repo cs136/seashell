@@ -40,7 +40,8 @@
     "sjcl": "^1.0.6",
     "webcrypto-shim": "0.1.1",
     "ws": "^2.2.1",
-    "xterm": "^2.3.2"
+    "xterm": "^2.3.2",
+    "seashell-clang-js": "https://bintray.com/cs136/seashell-clang-js/download_file?file_path=seashell-clang-js-master.tar.gz"
   },
   "devDependencies": {
     "@blueprintjs/core": "~1.13.0",
@@ -83,6 +84,7 @@
     "redux-thunk": "^2.2.0",
     "resolve-url": "^0.2.1",
     "sass-loader": "^4.1.1",
+    "script-loader": "^0.7.0",
     "source-map-loader": "^0.1.6",
     "style-loader": "^0.13.1",
     "sw-precache-webpack-plugin": "^0.5.1",

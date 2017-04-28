@@ -8,18 +8,23 @@ module.exports = {
   ],
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.[chunkhash].js', 
+    filename: 'bundle.[chunkhash].js',
     publicPath: '/',
   },
   plugins: [
     new CopyWebpackPlugin([
+      { from: 'images/', to: 'images/' },
+      {
+        from: 'favicon.ico'
+      },
+      { from: 'manifest.json' },
       {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
       },
-      {
-        from: 'favicon.ico'
-      }
+      { from: './node_modules/seashell-clang-js/bin/*.mem' },
+      { from: './node_modules/seashell-clang-js/bin/*.data' },
+      { from: './node_modules/seashell-clang-js/bin/*.bc' }
     ]),
     new HtmlWebpackPlugin ({
       inject: true,
