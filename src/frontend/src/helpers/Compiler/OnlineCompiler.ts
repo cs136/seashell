@@ -153,10 +153,11 @@ class OnlineCompiler extends AbstractCompiler {
     });
   }
 
-  protected programDone(pid: number) {
+  public programDone(pid: number) {
     const ind = this.activePIDs.indexOf(pid);
     if (ind === -1) {
-      throw new CompilerError("Program that was not running has ended.");
+      // Try offline compiler
+      this.offlineCompiler.programDone(pid);
     } else {
       this.activePIDs.splice(ind, 1);
     }

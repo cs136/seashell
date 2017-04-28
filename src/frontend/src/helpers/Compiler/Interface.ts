@@ -30,9 +30,9 @@ abstract class AbstractCompiler {
   public abstract async programKill(): Promise<void>;
   public abstract async sendEOF(): Promise<void>;
   public abstract async programInput(contents: string): Promise<void>;
+  public abstract programDone(pid: number): void;
   // End public interface
 
-  protected abstract programDone(pid: number): void;
 
   protected buffer: OutputBuffer;
 
