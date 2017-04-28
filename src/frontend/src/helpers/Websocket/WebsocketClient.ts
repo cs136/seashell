@@ -1,8 +1,9 @@
 import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
-import {Connection} from "../Services";
+import {Connection, DispatchFunction} from "../Services";
 import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, Callback} from "./Interface";
+import {appStateActions} from "../../reducers/appStateReducer";
 
 export {SeashellWebsocket, MockInternet}
 
@@ -25,7 +26,7 @@ class SeashellWebsocket {
   // this allows WebsocketService to access member functions by string key
   // [key: string]: any;
 
-  constructor(debug?: boolean) {
+  constructor(private dispatch: DispatchFunction, debug?: boolean) {
     this.debug = debug || false;
     this.callbacks = [];
   }
@@ -93,6 +94,10 @@ class SeashellWebsocket {
           this.connect(connection);
         }, 3000);
       }
+      this.dispatch({
+        type: appStateActions.disconnected,
+        payload: null
+      });
       for (const i in this.requests) {
         if (evt.code === 4000) {
           this.requests[i].reject(new E.WebsocketError(evt.reason));
@@ -163,6 +168,11 @@ class SeashellWebsocket {
 
       // Authentication should race against websocket.onclose
       await this.sendRequest(this.requests[-2]);
+
+      this.dispatch({
+        type: appStateActions.connected,
+        payload: null
+      });
     } catch (err) {
       if (err instanceof E.RequestError) {
         throw new E.LoginRequired();

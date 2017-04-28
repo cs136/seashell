@@ -4,6 +4,7 @@ import {withRouter, Switch, Route, RouteComponentProps} from "react-router";
 import Navigation from "./partials/Navigation";
 import {map, actionsInterface} from "./actions";
 import Project from "./views/Project";
+import {Tooltip} from "@blueprintjs/core";
 
 import Home from "./views/Home";
 
@@ -22,7 +23,11 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
   render() {
     return (
       <div className={styles.app + " " + (this.props.settings.theme === 0 ? "pt-dark" : "")}>
-        <div className={styles.gradientBar} />
+        {this.props.appState.connected ?
+          <div className={styles.gradientBar} /> :
+          <div className={styles.disconnectedGradientBar}>
+            The websocket is currently disconnected.
+          </div>}
         <div className={styles.mainContent}>
           <Route exact path="/" component={Home} />
           <Route path="/project/:id/:name" component={Project} />

@@ -20,53 +20,60 @@ $darkBorder: #333;
 $mobile-break: 650px;
 
 .app {
-    font-family: Overpass, sans-serif;
-    height:100%;
+  font-family: Overpass, sans-serif;
+  height:100%;
 }
 
 .gradientBar {
-    @include linear-gradient(90deg, $theme, #14E3C7);
-    height: 2px;
+  @include linear-gradient(90deg, $theme, #14E3C7);
+  height: 2px;
+}
+
+.disconnectedGradientBar {
+  @include linear-gradient(90deg, #FE9C87, #FF4F29);
+  height: 14px;
+  font-size: 12px;
+  text-align: center;
 }
 
 .container {
-    max-width: 768px;
-    box-sizing: border-box;
-    padding: 0 1.5em;
-    margin: 0 auto;
+  max-width: 768px;
+  box-sizing: border-box;
+  padding: 0 1.5em;
+  margin: 0 auto;
 }
 
 .mainContent {
-    flex: 1;
+  flex: 1;
 }
 
 
 :global {
-    /* -- Global Style Overrides -- */
-    .pt-overlay .pt-dialog {
-        margin-top: 2em;
-    }
-    .pt-navbar.pt-dark, .pt-dark .pt-navbar{
-        background: $dark;
-    }   
-    .pt-dark .pt-button:not([class*="pt-intent-"]){
-        background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
-    }
-    .pt-dark .pt-button:not([class*="pt-intent-"]):hover{
-        background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
-    }
-    .pt-dark .pt-button.pt-minimal, .pt-dark .pt-button.pt-minimal:hover {
-        box-shadow: none;
-        background: none;
-        color: inherit;
-    }
-    .pt-dark{
-        background:$dark;
-    }
-    .pt-dialog{
-        background: #FFF !important;
-    }
-    .pt-dark .pt-dialog{
-        background: #293742 !important
-    }
+  /* -- Global Style Overrides -- */
+  .pt-overlay .pt-dialog {
+      margin-top: 2em;
+  }
+  .pt-navbar.pt-dark, .pt-dark .pt-navbar{
+      background: $dark;
+  }   
+  .pt-dark .pt-button:not([class*="pt-intent-"]){
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
+  }
+  .pt-dark .pt-button:not([class*="pt-intent-"]):hover{
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
+  }
+  .pt-dark .pt-button.pt-minimal, .pt-dark .pt-button.pt-minimal:hover {
+      box-shadow: none;
+      background: none;
+      color: inherit;
+  }
+  .pt-dark{
+      background:$dark;
+  }
+  .pt-dialog{
+      background: #FFF !important;
+  }
+  .pt-dark .pt-dialog{
+      background: #293742 !important
+  }
 }
