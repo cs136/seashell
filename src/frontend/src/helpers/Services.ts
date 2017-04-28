@@ -53,7 +53,7 @@ namespace Services {
     options  = options || {};
     debug    = options.debugService || false;
 
-    socketClient    = new SeashellWebsocket(options.debugWebSocket);
+    socketClient    = new SeashellWebsocket(disp, options.debugWebSocket);
     localStorage    = new LocalStorage(options.debugLocalStorage);
     webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
       options.debugWebStorage);

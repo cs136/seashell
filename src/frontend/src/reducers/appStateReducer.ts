@@ -30,6 +30,7 @@ export interface appStateReducerState {[key: string]: any;
   projects: S.ProjectBrief[];
   runState?: number;
   currentProject?: appStateReducerProjectState;
+  connected: boolean;
 };
 
 export interface appStateReducerAction {
@@ -64,14 +65,17 @@ export enum appStateActions {
   writeConsole,
   clearConsole,
   setDiags,
-  updateCurrentFileIfIdEquals
+  updateCurrentFileIfIdEquals,
+  connected,
+  disconnected
 };
 
 export default function appStateReducer(state: appStateReducerState = {
     fileOpTarget: undefined,
     projects: [],
     runState: 0,
-    currentProject: undefined
+    currentProject: undefined,
+    connected: false
   }, action: appStateReducerAction) {
   switch (action.type) {
     // This updates the current file if we're renaming
@@ -290,6 +294,12 @@ export default function appStateReducer(state: appStateReducerState = {
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
       }
       return state;
+    case appStateActions.connected:
+      state = clone(state);
+      return mergeBetter(state, {connected: true});
+    case appStateActions.disconnected:
+      state = clone(state);
+      return mergeBetter(state, {connected: false});
     default:
       return state;
   }
