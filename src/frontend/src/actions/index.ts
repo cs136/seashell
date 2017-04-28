@@ -384,11 +384,18 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: projBrief
             }));
         },
-        removeProject: (pid: S.ProjectID) =>
-          asyncAction(storage().deleteProject(pid)).then(() => dispatch({
-            type: appStateActions.removeProject,
-            payload: { id: pid }
-          })),
+        removeProject: (pid: S.ProjectID) => {
+          return asyncAction(storage().inSkeleton(pid)).then((inSkel) => {
+            if (inSkel) {
+              showError("This project was provided by the course staff and cannot be deleted.");
+            } else {
+              return asyncAction(storage().deleteProject(pid)).then(() => dispatch({
+                type: appStateActions.removeProject,
+                payload: { id: pid }
+              }));
+            }
+          });
+        },
         switchProject: (name: string, pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
@@ -396,28 +403,32 @@ const mapDispatchToProps = (dispatch: Function) => {
             return arr.indexOf(val) === idx;
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(storage().getProjectFiles(pid))
-            .then((files: S.FileBrief[]) => dispatch({
-              type: appStateActions.switchProject,
-              payload: {
-                project: {
-                  termWrite: null,
-                  termClear: null,
-                  name: name,
-                  id: pid,
-                  questions: files.map((file) => file.question()).filter(unique),
-                  currentQuestion: undefined
+          return asyncAction(storage().pullMissingSkeletonFiles(pid)).then(() => {
+            return asyncAction(storage().getProjectFiles(pid))
+              .then((files: S.FileBrief[]) => dispatch({
+                type: appStateActions.switchProject,
+                payload: {
+                  project: {
+                    termWrite: null,
+                    termClear: null,
+                    name: name,
+                    id: pid,
+                    questions: files.map((file) => file.question()).filter(unique),
+                    currentQuestion: undefined
+                  }
                 }
-              }
-            }));
+              }));
+          });
         },
         getAllProjects: () => {
-          return asyncAction(storage().getProjects()).then((projects) => dispatch({
-            type: appStateActions.getProjects,
-            payload: {
-              projects: projects
-            }
-          }));
+          return asyncAction(storage().fetchNewSkeletons()).then(() => {
+            return asyncAction(storage().getProjects()).then((projects) => dispatch({
+              type: appStateActions.getProjects,
+              payload: {
+                projects: projects
+              }
+            }));
+          });
         }
       },
       compile: {

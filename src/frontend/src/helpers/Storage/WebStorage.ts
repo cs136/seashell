@@ -462,4 +462,16 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       }
     }
   }
+
+  public async inSkeleton(proj: ProjectID): Promise<boolean> {
+    return this.skeletons.inSkeleton(proj);
+  }
+
+  public async pullMissingSkeletonFiles(proj: ProjectID): Promise<void> {
+    return this.skeletons.pullMissingSkeletonFiles(proj);
+  }
+
+  public async fetchNewSkeletons(): Promise<string[]> {
+    return this.skeletons.fetchNewSkeletons();
+  }
 }

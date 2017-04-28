@@ -12,8 +12,8 @@ export enum SkeletonStatus { None, Public, Whitelist };
 
 const CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
 const CGI_URL = `${CS136_URL}cgi-bin/`;
-const USER_WHITELIST_URL = "";
-const PROJ_WHITELIST_URL = "";
+const USER_WHITELIST_URL = `${CGI_URL}user_whitelist.cgi`;
+const PROJ_WHITELIST_URL = `${CGI_URL}project_whitelist.cgi`;
 const PROJ_SKEL_URL = `${CGI_URL}skeleton_list.cgi`;
 const SKEL_ROOT_URL = `${CS136_URL}assignment_skeletons/`;
 const WL_SKEL_ROOT_URL = "ssh://cs136@linux.student.cs.uwaterloo.ca:/u2/cs136/seashell-support-files/whitelist-skeletons/";
@@ -87,18 +87,27 @@ class SkeletonManager {
 
   private async listSkeletonFiles(proj: ProjectID): Promise<string[]> {
     const project = await this.storage.getProject(proj);
-    return (await <PromiseLike<any>>$.get({
-      url: SKEL_FILE_LIST_URL,
-      data: {
-        template: await this.getSkeletonZipFileURL(proj),
-        user: this.socket.getUsername(),
-        whitelist: (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist
+    try {
+      const zipURL = await this.getSkeletonZipFileURL(proj);
+      if (zipURL) {
+        const req = await <PromiseLike<any>>$.get({
+          url: SKEL_FILE_LIST_URL,
+          data: {
+            template: zipURL,
+            user: this.socket.getUsername(),
+            whitelist: (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist
+          }
+        });
+        return req.data.result.map(
+          (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
+        ).filter(
+          (path: string) => path.length > 0 && path[path.length - 1] !== "/"
+        ).sort();
       }
-    })).data.result.map(
-      (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
-    ).filter(
-      (path: string) => path.length > 0 && path[path.length - 1] !== "/"
-    ).sort();
+      return [];
+    } catch (e) {
+      throw new E.SkeletonError("Failed to list project skeleton files.", e);
+    }
   }
 
   private async getMissingSkeletonFiles(proj: ProjectID): Promise<string[]> {
