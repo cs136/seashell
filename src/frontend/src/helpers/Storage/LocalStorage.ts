@@ -56,18 +56,21 @@ class LocalStorage implements AbstractStorage {
 
   public async writeFile(fid: FileID,
                          contents: string|undefined,
+                         checksum?: string,
                          // set pushChangeLog = false in applyChanges to make syncAll faster
                          pushChangeLog: boolean = true): Promise<void> {
     this.debug && console.log(`writeFile`);
-    const checksum = contents === undefined ? "" : md5(contents);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file: File = await this.readFile(fid);
+      // use the last syncAll checksum
+      checksum = checksum || file.checksum;
       if (pushChangeLog) {
         await this.pushChangeLog({
           type: "editFile",
           file: {file: file.name, project: file.project},
-          contents: contents
+          contents: contents,
+          checksum: checksum
         });
       }
       await this.db.files.update(fid, {
@@ -101,7 +104,8 @@ class LocalStorage implements AbstractStorage {
       if (pushChangeLog) {
         await this.pushChangeLog({
           type: "deleteFile",
-          file: {file: file.name, project: file.project}
+          file: {file: file.name, project: file.project},
+          checksum: file.checksum
         });
       }
       // also remove from run files
@@ -243,7 +247,8 @@ class LocalStorage implements AbstractStorage {
         await this.pushChangeLog({
           type: "newFile",
           contents: contents,
-          file: {file: name, project: pid}
+          file: {file: name, project: pid},
+          checksum: checksum
         });
       }
       return new FileBrief(fs);
@@ -424,7 +429,7 @@ class LocalStorage implements AbstractStorage {
         if (change.type === "deleteFile") {
           await this.deleteFile(fid, false);
         } else if (change.type === "editFile") {
-          await this.writeFile(fid, change.contents, false);
+          await this.writeFile(fid, change.contents, undefined, false);
         } else if (change.type === "newFile") {
           await this.newFile(pid, change.file.file, change.contents, false);
         } else {
@@ -446,6 +451,7 @@ interface ChangeLog {
   type: "newFile" | "deleteFile" | "editFile";
   contents?: string;
   file: {file: string, project: string};
+  checksum: string;
 }
 
 class StorageDB extends Dexie {
