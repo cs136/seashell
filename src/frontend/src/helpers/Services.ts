@@ -59,7 +59,7 @@ namespace Services {
       options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
-      dispatch, webStorage.syncAll.bind(webStorage));
+      dispatch, () => { webStorage.syncAll(false); });
   }
 
   export function storage(): WebStorage {
