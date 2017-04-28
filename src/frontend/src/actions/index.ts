@@ -456,8 +456,6 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           asyncAction(actions.dispatch.file.flushFileBuffer())
             .then(() =>
-              asyncAction(storage().syncAll(false))
-                .then(() =>
                   asyncAction(Services.compiler().compileAndRunProject(project,
                     question, fid, test)).then((result: C.CompilerResult) => {
                       dispatch({
@@ -480,7 +478,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                         type: appStateActions.setNotRunning,
                         payload: {}
                       });
-                    })));
+                    }));
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,
