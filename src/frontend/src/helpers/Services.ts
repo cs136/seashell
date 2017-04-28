@@ -14,6 +14,7 @@ import {AbstractCompiler,
         CompilerResult,
         CompilerDiagnostic} from "./Compiler/Interface";
 import {LoginError, LoginRequired} from "./Errors";
+import {appStateActions} from "../reducers/appStateReducer";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
 export {Services, Connection, DispatchFunction};
@@ -53,13 +54,22 @@ namespace Services {
     options  = options || {};
     debug    = options.debugService || false;
 
-    socketClient    = new SeashellWebsocket(disp, options.debugWebSocket);
+    socketClient    = new SeashellWebsocket(options.debugWebSocket);
     localStorage    = new LocalStorage(options.debugLocalStorage);
     webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
       options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
       dispatch, webStorage.syncAll.bind(webStorage, false));
+
+    socketClient.register_callback("connected", () => disp({
+      type: appStateActions.connected,
+      payload: null
+    }));
+    socketClient.register_callback("disconnected", () => disp({
+      type: appStateActions.disconnected,
+      payload: null
+    }));
   }
 
   export function storage(): WebStorage {
