@@ -444,6 +444,11 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         }
       },
+      storage: {
+        syncAll: () => {
+          asyncAction(storage().syncAll());
+        },
+      },
       compile: {
         compileAndRun: (project: string, question: string, fid: S.FileID, test: boolean) => {
           dispatch({
