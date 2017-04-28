@@ -1,6 +1,6 @@
-import {mergeBetter} from "../helpers/utils";
+import {cloneBetter as clone, mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
-import {clone, reject, equals, find, propEq} from "ramda";
+import {reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 

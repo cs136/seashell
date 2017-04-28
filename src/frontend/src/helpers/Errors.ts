@@ -11,11 +11,10 @@ export {LoginError,
         RequestTimedOut};
 
 class GenericError extends Error {
-  __proto__: Error;
     constructor(message?: string) {
         const trueProto = new.target.prototype;
         super(message);
-        this.__proto__ = new.target.prototype;
+        Object.setPrototypeOf(this, trueProto);
     }
 }
 
