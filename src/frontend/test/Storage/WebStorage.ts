@@ -71,21 +71,21 @@ function websocketTests(offlineMode: OfflineMode) {
       });
       store = Services.storage();
       projs = R.sortBy(prop("id"), map((s: string) => new Project({
-        id: offlineMode === OfflineMode.On ? md5(`X${s}`) : `X${s}`,
+        id: offlineMode === OfflineMode.On ? md5(`X${s}`) as string : `X${s}`,
         name: `X${s}`,
         runs: {},
         last_modified: 0
       }), uniqStrArr(testSize, 20)()));
       files = R.sortBy(prop("id"), map((p: Project) => {
         const name = `default/${uniqStr(20)()}.${J.one_of(["c", "h", "rkt", "txt", "test"])()}`;
-        const fid = offlineMode === OfflineMode.On ? md5(p.id + name) : `${p.id}/${name}`;
+        const fid = offlineMode === OfflineMode.On ? md5(p.id + name) as string : `${p.id}/${name}`;
         const text = uniqStr(5000)();
         return new File({
           id: fid,
           project: p.id,
           name: name,
           contents: text,
-          checksum: md5(text),
+          checksum: md5(text) as string,
           last_modified: 0,
           open: false
         });
@@ -179,7 +179,6 @@ function websocketTests(offlineMode: OfflineMode) {
       const fs = R.take(halfTestSize, files);
       for (const f of fs) {
         f.contents = uniqStr(5000)();
-        f.checksum = md5(f.contents);
         await store.writeFile(f.id, f.contents);
       }
       expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
