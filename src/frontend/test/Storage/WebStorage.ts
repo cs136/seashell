@@ -48,6 +48,8 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 function websocketTests(offlineMode: OfflineMode) {
 
+  Services.setOfflineMode(offlineMode);
+
   let store: WebStorage;
   let projs: Project[];
   let files: File[];
@@ -62,7 +64,6 @@ function websocketTests(offlineMode: OfflineMode) {
   describe(`Testing WebStorage in offlineMode == ${Services.getOfflineMode()}`, () => {
 
     beforeAll(() => {
-      Services.setOfflineMode(offlineMode);
       Services.init(null, {
         debugWebSocket: false,
         debugLocalStorage: false,
@@ -85,7 +86,7 @@ function websocketTests(offlineMode: OfflineMode) {
           project: p.id,
           name: name,
           contents: text,
-          checksum: md5(text) as string,
+          checksum: undefined,
           last_modified: 0,
           open: false
         });
@@ -126,7 +127,7 @@ function websocketTests(offlineMode: OfflineMode) {
         project: x.project,
         name: x.name,
         contents: x.contents,
-        checksum: x.checksum,
+        checksum: undefined,
         last_modified: 0,
         open: x.open
       }), <File[]> remoteFiles);
@@ -267,6 +268,7 @@ function websocketTests(offlineMode: OfflineMode) {
           Object.assign(file, await store.renameFile(file.id, newname));
           file.contents = contents;
           file.last_modified = 0;
+          file.checksum = undefined;
           files = R.sortBy(prop("id"), files);
         }
       }
@@ -280,6 +282,8 @@ function websocketTests(offlineMode: OfflineMode) {
           await store.syncAll();
         }
       }
+      expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
+      expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
     });
 // */
   });

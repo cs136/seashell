@@ -8,7 +8,8 @@ export {LoginError,
         RequestError,
         NoInternet,
         RequestAborted,
-        RequestTimedOut};
+        RequestTimedOut,
+        NotSupported};
 
 class GenericError extends Error {
     constructor(message?: string) {

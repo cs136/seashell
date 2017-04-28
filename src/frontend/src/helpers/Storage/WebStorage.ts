@@ -395,7 +395,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   // to be replaced by dexie
   public async syncAll(fetchServerChanges: boolean = true): Promise<void> {
     if (this.offlineMode === OfflineMode.Off) {
-      console.log("Ignoring sync request --- offline mode disabled.");
+      console.log("Ignored sync request --- offline mode disabled.");
       return;
     }
     // this.isSyncing = true;
@@ -417,7 +417,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     }
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
-    if (!fetchServerChanges) {
+    if (! fetchServerChanges) {
       if (changesSent.length === 0) {
         console.log("Ignoring sync request --- no local file changes made.");
         return;
@@ -448,19 +448,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     await this.storage.applyChanges(changesGot, newProjects, deletedProjects);
     frontSpent += Date.now() - startTime;
     this.debug && console.log(`Syncing took ${frontSpent + backSpent} ms. Frontend took ${frontSpent} ms. Backend took ${backSpent} ms.`);
-  }
-
-  private async ignoreNoInternet<T>(promise: Promise<T>): Promise<void> {
-    try {
-      await promise;
-    } catch (err) {
-      if (err instanceof E.NoInternet) {
-        throw err;
-      } else {
-        console.warn("No internet. Changes were written to indexedDB only.");
-        return;
-      }
-    }
   }
 
   public async inSkeleton(proj: ProjectID): Promise<boolean> {
