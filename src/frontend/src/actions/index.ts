@@ -446,7 +446,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       storage: {
         syncAll: () => {
-          asyncAction(storage().syncAll());
+          return asyncAction(storage().syncAll());
         },
       },
       compile: {
