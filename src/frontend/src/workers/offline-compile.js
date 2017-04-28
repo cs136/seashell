@@ -43,8 +43,8 @@ Module = {
   onExit: function(s) { console.log(s); }
 };
 
-self.importScripts('seashell-clang-js/bin/crt-headers.js');
-self.importScripts('seashell-clang-js/bin/seashell-clang.js');
+self.importScripts(require("file-loader!seashell-clang-js/bin/crt-headers"));
+self.importScripts(require("file-loader!seashell-clang-js/bin/seashell-clang"));
 
 self.onmessage = function(msg) {
   var data = msg.data;
