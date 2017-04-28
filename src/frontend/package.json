@@ -87,7 +87,6 @@
     "script-loader": "^0.7.0",
     "source-map-loader": "^0.1.6",
     "style-loader": "^0.13.1",
-    "sw-precache-webpack-plugin": "^0.5.1",
     "ts-jest": "^19.0.0",
     "tslint": "^4.4.2",
     "tslint-loader": "^3.4.2",

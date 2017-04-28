@@ -22,9 +22,10 @@ module.exports = {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
       },
-      { from: './node_modules/seashell-clang-js/bin/*.mem' },
-      { from: './node_modules/seashell-clang-js/bin/*.data' },
-      { from: './node_modules/seashell-clang-js/bin/*.bc' }
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.mem', to: './' },
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.data', to: './' },
     ]),
     new HtmlWebpackPlugin ({
       inject: true,

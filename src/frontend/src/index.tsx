@@ -16,10 +16,8 @@ import {getDispatch} from "./actions";
 
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function() {
-    navigator.serviceWorker.register("sw.js");
-  });
+if (PRODUCTION && "serviceWorker" in navigator) {
+  require("offline-plugin/runtime").install();
 }
 
 const createStoreWithMiddleware = applyMiddleware(thunk)(createStore);

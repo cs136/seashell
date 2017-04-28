@@ -60,7 +60,7 @@ namespace Services {
       options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
-      dispatch, webStorage.syncAll.bind(webStorage, false));
+      dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
 
     socketClient.register_callback("connected", () => disp({
       type: appStateActions.connected,
