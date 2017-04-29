@@ -28,10 +28,25 @@ class LocalStorage implements AbstractStorage {
   // [index: string]: any; // supress type errors
 
   private db: StorageDB;
+  private dbName: string;
 
   public constructor(public debug = false) {}
 
+  private setDirty() {
+    localStorage.setItem(`${this.dbName}-offline-store-dirty?`, "true");
+  }
+
+  private clearDirty() {
+    localStorage.setItem(`${this.dbName}-offline-store-dirty?`, "false");
+  }
+
+  public async getDirty() {
+    return localStorage.getItem(`${this.dbName}-offline-store-dirty?`) === "true"
+      || await this.countChangeLogs() > 0;
+  }
+
   public async connect(dbName: string): Promise<void> {
+    this.dbName = dbName;
     this.db = new StorageDB(dbName, {
       IDBKeyRange: (<any>window).IDBKeyRange,
       indexedDB: (<any>window).indexedDB
@@ -148,6 +163,7 @@ class LocalStorage implements AbstractStorage {
   }
 
   private async setProjectSetting(pid: ProjectID, key: string, value: string): Promise<void> {
+    this.setDirty();
     return this.db.transaction("rw", this.db.projects, async () => {
       const project = await this.getProject(pid);
       project.settings = project.settings || {};
@@ -440,7 +456,7 @@ class LocalStorage implements AbstractStorage {
                             deletedProjects: ProjectID[]): Promise<void> {
     this.debug && console.log(`applyChanges`);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    let result = await this.db.transaction("rw", tbs, async () => {
       Dexie.currentTransaction.on("abort", () => {
         console.warn("applyChanges transaction aborted");
       });
@@ -465,6 +481,8 @@ class LocalStorage implements AbstractStorage {
       };
       await this.clearChangeLogs();
     });
+    this.clearDirty();
+    return result;
   }
 }
 

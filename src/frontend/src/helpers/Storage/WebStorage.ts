@@ -449,7 +449,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
     if (! fetchServerChanges) {
-      if (changesSent.length === 0) {
+      if (! await this.storage.getDirty()) {
         console.log("Ignoring sync request --- no local file changes made.");
         return;
       }
