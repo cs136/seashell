@@ -28,7 +28,7 @@ class AddProjectWindow extends React.Component<AddProjectWindowProps&actionsInte
             this.setState(merge(this.state, {prevFile: this.state.proj}));
           }
         }}
-        onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/></div>
+        onChange={(e => this.setState(merge(this.state, {proj: e.currentTarget.value})))}/></div>
       <div className="pt-button-group">
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();

@@ -112,20 +112,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async newProject(name: string): Promise<ProjectBrief> {
-    // if (this.offlineMode === OfflineMode.On ||
-        // this.offlineMode === OfflineMode.Forced) {
-    const off = this.storage.newProject(name);
-    // }
-    // hack to make it compatible with the backend
-    // pid is project name
-    // creating new project is not supported by syncAll !!
+  public async newProjectForTests(name: string): Promise<ProjectBrief> {
     const on = this.socket.sendMessage({
       type: "newProject",
       project: name
     });
     if (this.offlineMode === OfflineMode.On ||
       this.offlineMode === OfflineMode.Forced) {
+      const off = this.storage.newProject(name);
       return off;
     }
     await on;
@@ -133,8 +127,35 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: name,
       name: name,
       last_modified: Date.now(),
-      settings: {}
+      settings: {} // ignored in online mode.
     });
+  }
+  public async newProject(name: string): Promise<ProjectBrief> {
+    if (this.offlineMode === OfflineMode.On ||
+      this.offlineMode === OfflineMode.Forced) {
+      // This is a terrible hack but it'll work for now.
+      // We first create it in the store (to get an ID)
+      // then we create it on the backend
+      // then we sync to get files.
+      const off = await this.storage.newProject(name);
+      const on = await this.socket.sendMessage({
+        type: "newProject",
+        project: name
+      });
+      await this.syncAll();
+      return off;
+    } else {
+      const on = await this.socket.sendMessage({
+        type: "newProject",
+        project: name
+      });
+      return new ProjectBrief({
+        id: name,
+        name: name,
+        last_modified: Date.now(),
+        settings: {} // ignored in online mode.
+      });
+    }
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {

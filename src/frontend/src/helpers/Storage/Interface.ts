@@ -96,7 +96,7 @@ class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
   public last_modified: number;
-  public settings?: {[index: string]: string};
+  public settings?: {[index: string]: string}; // Read-only copy of settings
   constructor(obj: ProjectStored) {
     this.id = obj.id;
     this.name = obj.name;

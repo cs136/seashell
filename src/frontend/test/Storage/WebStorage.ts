@@ -136,7 +136,7 @@ function websocketTests(offlineMode: OfflineMode) {
     it(`newProject: create ${testSize} projects`, async () => {
       let ids: ProjectID[] = [];
       for (const p of projs) {
-        ids.push((await store.newProject(p.name)).id);
+        ids.push((await store.newProjectForTests(p.name)).id);
       }
       expect(ids).toEqual(R.map(prop("id"), projs));
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
