@@ -142,7 +142,6 @@ function websocketTests(offlineMode: OfflineMode) {
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
     });
 
-
     it(`getProjects: list all projects`, async () => {
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
     });

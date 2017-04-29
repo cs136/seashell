@@ -91,9 +91,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const split = R.split("/", fid);
     const pname = split[0];
     const fname = R.join("/", R.drop(1, split));
-    const pid = this.storage.projID(pname);
-    const id = this.storage.fileID(pid, fname);
-    const offline = this.storage.deleteFile(id);
     return this.socket.sendMessage<void>({
       type: "deleteFile",
       project: pname,
