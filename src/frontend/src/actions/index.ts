@@ -381,10 +381,12 @@ const mapDispatchToProps = (dispatch: Function) => {
           // dispatch({ type: userActions.BUSY });
           try {
             let user = await Services.autoConnect();
+            dispatch({type: userActions.BUSY});
+            await storage().syncAll();
             dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
-            // dispatch({ type: userActions.NOTBUSY });
+            dispatch({ type: userActions.NOTBUSY });
             throw e;
           }
         }

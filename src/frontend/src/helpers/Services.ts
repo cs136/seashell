@@ -150,21 +150,22 @@ namespace Services {
                                       credentials.host,
                                       credentials.port,
                                       credentials.pingPort);
-      // login successful
-      return await connectWith(connection);
+      // login successful --- we sync after we connect so the UI is still responsive
+      return await connectWith(connection, false);
     } else {
       throw new LoginRequired();
     }
   }
 
-  async function connectWith(connection: Connection) {
+  async function connectWith(connection: Connection, sync: boolean = true) {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
 
     await localStorage.connect(`seashell8-${connection.username}`);
     await socketClient.connect(connection);
-    await webStorage.syncAll();
+    if (sync)
+      await webStorage.syncAll();
     return connection.username;
   }
 
