@@ -280,6 +280,27 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      ;; Open files
+      [(hash-table
+         ('id id)
+         ('type "addOpenFile")
+         ('project project)
+         ('file file))
+       (add-open-file project file)
+       `#(hash((id. ,id) (success . #t) (result . #t)))]
+      [(hash-table
+         ('id id)
+         ('type "removeOpenFile")
+         ('project project)
+         ('file file))
+       (remove-open-file project file)
+       `#(hash((id. ,id) (success . #t) (result . #t)))]
+      [(hash-table
+         ('id id)
+         ('type "getOpenFiles")
+         ('project project))
+       `#(hash((id. ,id) (success . #t) (result . ,(get-open-files project))))]
+      ;;
       [(hash-table
         ('id id)
         ('type "sync")
