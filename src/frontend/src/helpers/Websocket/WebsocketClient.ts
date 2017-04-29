@@ -50,18 +50,30 @@ class SeashellWebsocket {
       let websocket = this.websocket;
       switch (websocket.readyState) {
         case websocket.CONNECTING: {
-          this.debug && console.log("Socket is already connecting. Action ignored.");
-          return;
+          this.debug && console.log("Socket is already connecting. Closing and reconnecting.");
+          const promise = new Promise<void>((accept, reject) => {
+            websocket.onclose = () => {
+              this.connect(cnn).then(accept).catch(reject);
+            };
+          });
+          websocket.close();
+          return promise;
         }
         case websocket.OPEN: {
-          this.debug && console.log("Socket is already connected. Action ignored.");
+          this.debug && console.log("Socket is already connected. Closing and reconnecting.");
+          const promise = new Promise<void>((accept, reject) => {
+            websocket.onclose = () => {
+              this.connect(cnn).then(accept).catch(reject);
+            };
+          });
+          websocket.close();
           return;
         }
         case websocket.CLOSING: {
           this.debug && console.log(`Existing websocket is closing. Wait to reopen new connection.`);
           const promise = new Promise<void>((accept, reject) => {
             websocket.onclose = () => {
-              this.connect(cnn).then(accept);
+              this.connect(cnn).then(accept).catch(reject);
             };
           });
           return promise;
