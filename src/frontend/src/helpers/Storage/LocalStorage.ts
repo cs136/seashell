@@ -157,7 +157,7 @@ class LocalStorage implements AbstractStorage {
   }
 
   private runnerFileKey(question: string): string {
-    return `${question}-runner-file`;
+    return `${question}_runner_file`;
   }
 
   public async getFileToRun(pid: ProjectID, question: string): Promise<string|false> {
@@ -252,7 +252,6 @@ class LocalStorage implements AbstractStorage {
         contents: contents,
         checksum: checksum,
         last_modified: Date.now(),
-        open: 0
       };
       await this.db.files.add(fs);
       const proj: ProjectBrief = await this.getProject(pid);
@@ -298,7 +297,7 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`getProject`);
     return await this.db.transaction("r", this.db.projects, async () => {
       const p = await this.db.projects.get(pid);
-      if (! p) {
+      if (!p) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
       }
       return new Project(p);
@@ -327,7 +326,7 @@ class LocalStorage implements AbstractStorage {
   }
 
   private openFilesKey(question: string): string {
-    return `${question}-open-files`;
+    return `${question}_open_files`;
   }
 
   public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {

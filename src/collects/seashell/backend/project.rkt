@@ -795,18 +795,22 @@
                                                               (read-config 'common-subdirectory)
                                                               question)
                                                           file)))))
-(define/contract (add-open-file project path)
-  (-> (and/c project-name? is-project?) path-string? void)
-  (write-project-settings/key project 'open-tabs
-                              (jsexpr->string `(,path ,@(get-open-files project)))))
-(define/contract (get-open-files project)
-  (-> (and/c project-name? is-project?) (listof path-string?))
+
+(define/contract (add-open-file project question path)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project (string->symbol (string-append question "_open_files"))
+                              (jsexpr->string `(,path ,@(get-open-files project question)))))
+
+(define/contract (get-open-files project question)
+  (-> (and/c project-name? is-project?) path-string? (or/c #f (listof path-string?)))
   (filter
     (lambda (file)
       (file-exists? (build-path (build-project-path project) file)))
-    (remove-duplicates (string->jsexpr (or (read-project-settings/key project 'open-tabs) "[]")))))
-(define/contract (remove-open-file project path)
-  (-> (and/c project-name? is-project?) path-string? void)
-  (write-project-settings/key project 'open-tabs
+    (remove-duplicates (string->jsexpr (or
+      (read-project-settings/key project (string->symbol (string-append question "_open_files"))) "[]")))))
+
+(define/contract (remove-open-file project question path)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project (string->symbol (string-append question "_open_files"))
                               (jsexpr->string (remove* `(,path) (string->jsexpr
-                                                                  (get-open-files project))))))
+                                                                  (get-open-files project question))))))

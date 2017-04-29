@@ -285,21 +285,24 @@
          ('id id)
          ('type "addOpenFile")
          ('project project)
+         ('question question)
          ('file file))
-       (add-open-file project file)
-       `#(hash((id. ,id) (success . #t) (result . #t)))]
+       (add-open-file project question file)
+       `#hash((id . ,id) (success . #t) (result . #t))]
       [(hash-table
          ('id id)
          ('type "removeOpenFile")
          ('project project)
+         ('question question)
          ('file file))
-       (remove-open-file project file)
-       `#(hash((id. ,id) (success . #t) (result . #t)))]
+       (remove-open-file project question file)
+       `#hash((id . ,id) (success . #t) (result . #t))]
       [(hash-table
          ('id id)
          ('type "getOpenFiles")
-         ('project project))
-       `#(hash((id. ,id) (success . #t) (result . ,(get-open-files project))))]
+         ('project project)
+         ('question question))
+       `#hash((id . ,id) (success . #t) (result . ,(get-open-files project question)))]
       ;;
       [(hash-table
         ('id id)

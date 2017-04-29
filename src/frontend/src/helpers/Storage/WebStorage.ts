@@ -49,7 +49,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       name: filename,
       last_modified: Date.now(),
       project: pid,
-      open: false,
       checksum: md5(contents || ""),
       contents: undefined
     });
@@ -288,7 +287,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
           last_modified: data[2],
           checksum: data[3],
           project: pid,
-          open: false,
           contents: undefined
         }), acc);
       }
@@ -352,25 +350,57 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
+  private offlineEnabled(): boolean {
+    return this.offlineMode === OfflineMode.On
+        || this.offlineMode === OfflineMode.Forced;
+  }
+
   public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
-    // if (this.offlineMode === OfflineMode.On) {
+    if (this.offlineEnabled()) {
       return this.storage.getOpenFiles(pid, question);
-    // }
-    // not done
+    }
+    let result = await this.socket.sendMessage<string[]|false>({
+      type: "getOpenFiles",
+      project: pid,
+      question: question
+    });
+    if (!result) {
+      return [];
+    } else {
+      return result.map((f: string) =>
+        new FileBrief({
+          id: f,
+          name: f,
+          last_modified: Date.now(),
+          project: pid,
+          checksum: "",
+          contents: undefined
+        }));
+    }
   }
 
   public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
-    // if (this.offlineMode === OfflineMode.On) {
+    if (this.offlineEnabled()) {
       return this.storage.addOpenFile(pid, question, fid);
-    // }
-    // not done
+    }
+    return this.socket.sendMessage<void>({
+      type: "addOpenFile",
+      project: pid,
+      question: question,
+      file: fid
+    });
   }
 
   public async removeOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
-    // if (this.offlineMode === OfflineMode.On) {
+    if (this.offlineEnabled()) {
       return this.storage.removeOpenFile(pid, question, fid);
-    // }
-    // not done
+    }
+    return this.socket.sendMessage<void>({
+      type: "removeOpenFile",
+      project: pid,
+      question: question,
+      file: fid
+    });
   }
 
   public async setSettings(settings: Settings): Promise<void> {

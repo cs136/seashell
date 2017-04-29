@@ -60,9 +60,6 @@ class File implements FileStored {
     this.last_modified = obj.last_modified;
     this.project = obj.project;
     this.checksum = obj.checksum;
-    // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
-    // and very carefully convert it to boolean in File constructor!
-    this.open = (typeof obj.open === "boolean") ? obj.open : obj.open === 1;
     this.contents = obj.contents;
   }
 
@@ -154,7 +151,6 @@ interface FileStored {
   checksum: string;
   // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
   // and very carefully convert it to boolean in File constructor!
-  open: 0 | 1 | boolean;
   contents: string | undefined; // undefined ==> unavailable offline / unreadable
 }
 
