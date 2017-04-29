@@ -96,7 +96,7 @@ class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
   public last_modified: number;
-  public settings: {[index: string]: string};
+  public settings?: {[index: string]: string};
   constructor(obj: ProjectStored) {
     this.id = obj.id;
     this.name = obj.name;
@@ -158,7 +158,7 @@ interface ProjectStored {
   id: ProjectID;
   name: string;
   last_modified: number;
-  settings: {[index: string]: string};
+  settings?: {[index: string]: string};
 }
 
 interface SettingsStored {

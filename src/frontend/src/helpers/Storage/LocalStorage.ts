@@ -119,11 +119,12 @@ class LocalStorage implements AbstractStorage {
       //   console.warn(id, file);
       //   return;
       // }
-      for (const q in dbProj.settings) {
-        if (dbProj.settings[q] === file.name) {
-          delete dbProj.settings[q];
+      if (dbProj.settings)
+        for (const q in dbProj.settings) {
+          if (dbProj.settings[q] === file.name) {
+            delete dbProj.settings[q];
+          }
         }
-      }
       await this.db.projects.update(file.project, dbProj);
     });
   }
@@ -142,13 +143,14 @@ class LocalStorage implements AbstractStorage {
   private async getProjectSetting(pid: ProjectID, key: string): Promise<string|undefined> {
     return this.db.transaction("r", this.db.projects, async () => {
       const project = await this.getProject(pid);
-      return project.settings[key];
+      return project.settings ? project.settings[key] : undefined;
     });
   }
 
   private async setProjectSetting(pid: ProjectID, key: string, value: string): Promise<void> {
     return this.db.transaction("rw", this.db.projects, async () => {
       const project = await this.getProject(pid);
+      project.settings = project.settings || {};
       project.settings[key] = value;
       await this.db.projects.update(pid, {
         settings: project.settings
@@ -329,10 +331,16 @@ class LocalStorage implements AbstractStorage {
     return `${question}_open_files`;
   }
 
+  private async getFileByName(pid: ProjectID, fname: string): Promise<FileBrief|undefined> {
+    let result = await this.db.files.where("name").equals(fname).first();
+    return result ? new FileBrief(result) : result;
+  }
   public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
     this.debug && console.log(`getOpenFiles`);
-    return R.map((x) => new FileBrief(<any>x),
-      JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]"));
+    let openFilesNames = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
+    let openFiles = await
+      Promise.all(R.map(async (name: string) => await this.getFileByName(pid, name), openFilesNames));
+    return <FileBrief[]>R.filter((x) => !!x, openFiles);
   }
 
   public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
@@ -343,19 +351,20 @@ class LocalStorage implements AbstractStorage {
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
-        JSON.stringify(open.concat([file])));
+        JSON.stringify(open.concat([file.name])));
     });
   }
 
   public async removeOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
     this.debug && console.log(`removeOpenFile`);
-    return this.db.transaction("rw", this.db.projects, async () => {
-      const open = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
+    return this.db.transaction("rw", this.db.projects, this.db.files, async () => {
+      const openNames = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
+      const removedFile = await this.readFile(fid);
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
-        JSON.stringify(open.filter((f: FileBrief) =>
-          f.id !== fid
+        JSON.stringify(openNames.filter((f: string) =>
+          f !== removedFile.name
         )));
     });
   }

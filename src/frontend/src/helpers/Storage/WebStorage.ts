@@ -366,7 +366,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
     return result.map((f: string) =>
       new FileBrief({
-        id: f,
+        id: `${pid}/${f}`,
         name: f,
         last_modified: Date.now(),
         project: pid,
@@ -462,7 +462,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       deletedProjects: string[]
     }>({
       type: "sync",
-      projects: projectsSent,
+      projects: R.map((project) => R.evolve({settings: JSON.stringify}, project), projectsSent),
       files: filesSent,
       changes: changesSent,
       settings: {
