@@ -145,7 +145,6 @@ describe("Testing LocalStorage interface functions", () => {
     for (const f of fs) {
       const text = uniqStr(5000)();
       f.contents = text;
-      f.checksum = md5(text);
       await store.writeFile(f.id, f.contents);
       expect(await localFiles()).toEqual(files);
     }
@@ -364,13 +363,15 @@ describe("Testing offline mode synchronization", () => {
 
   it("newFile: should push a change", async () => {
     projID = (await store.newProject(projName)).id;
-    fileID = (await store.newFile(projID, fileName, fileContents)).id;
+    const fb = await store.newFile(projID, fileName, fileContents);
+    fileID = fb.id;
     const log = <ChangeLog> await store.topChangeLog();
     expect(log).toEqual({
       id: log.id,
       type: "newFile",
       contents: fileContents,
-      file: {file: fileName, project: projID}
+      file: {file: fileName, project: projName},
+      checksum: md5(fileContents)
     });
   });
 
@@ -383,15 +384,17 @@ describe("Testing offline mode synchronization", () => {
     expect(top).toEqual({
       id: top.id,
       type: "editFile",
-      file: {file: fileName, project: projID},
-      contents: `${fileContents}_3`
+      file: {file: fileName, project: projName},
+      contents: `${fileContents}_3`,
+      checksum: md5(fileContents)
     });
     top = await store.topChangeLog();
     expect(top).toEqual({
       id: top.id,
       type: "newFile",
-      file: {file: fileName, project: projID},
-      contents: `${fileContents}`
+      file: {file: fileName, project: projName},
+      contents: `${fileContents}`,
+      checksum: md5(fileContents)
     });
     await store.writeFile(fileID, fileContents);
   });
@@ -404,13 +407,15 @@ describe("Testing offline mode synchronization", () => {
     expect(logs[0]).toEqual({
       id: logs[0].id,
       type: "deleteFile",
-      file: {file: `${fileName}`, project: projID}
+      file: {file: `${fileName}`, project: projName},
+      checksum: md5(fileContents)
     });
     expect(logs[1]).toEqual({
       id: logs[1].id,
       type: "newFile",
-      file: {file: `${fileName}_newname`, project: projID},
-      contents: logs[1].contents
+      file: {file: `${fileName}_newname`, project: projName},
+      contents: logs[1].contents,
+      checksum: md5(fileContents)
     });
     fileID = (await store.renameFile(fileID, fileName)).id;
   });
@@ -423,8 +428,9 @@ describe("Testing offline mode synchronization", () => {
     expect(logs[0]).toEqual({
       id: logs[0].id,
       type: "deleteFile",
-      file: {file: `${fileName}`, project: projID},
-      contents: logs[0].contents
+      file: {file: `${fileName}`, project: projName},
+      contents: logs[0].contents,
+      checksum: md5(fileContents)
     });
   });
 
