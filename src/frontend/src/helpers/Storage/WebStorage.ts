@@ -359,35 +359,33 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     if (this.offlineEnabled()) {
       return this.storage.getOpenFiles(pid, question);
     }
-    let result = await this.socket.sendMessage<string[]|false>({
+    let result = await this.socket.sendMessage<string[]>({
       type: "getOpenFiles",
       project: pid,
       question: question
     });
-    if (!result) {
-      return [];
-    } else {
-      return result.map((f: string) =>
-        new FileBrief({
-          id: f,
-          name: f,
-          last_modified: Date.now(),
-          project: pid,
-          checksum: "",
-          contents: undefined
-        }));
-    }
+    return result.map((f: string) =>
+      new FileBrief({
+        id: f,
+        name: f,
+        last_modified: Date.now(),
+        project: pid,
+        checksum: "",
+        contents: undefined
+      }));
   }
 
   public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
     if (this.offlineEnabled()) {
       return this.storage.addOpenFile(pid, question, fid);
     }
+    const split = R.split("/", fid);
+    const fname = R.join("/", R.drop(1, split));
     return this.socket.sendMessage<void>({
       type: "addOpenFile",
       project: pid,
       question: question,
-      file: fid
+      file: fname
     });
   }
 
