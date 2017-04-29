@@ -56,18 +56,22 @@ class LocalStorage implements AbstractStorage {
 
   public async writeFile(fid: FileID,
                          contents: string|undefined,
+                         checksum?: string,
                          // set pushChangeLog = false in applyChanges to make syncAll faster
                          pushChangeLog: boolean = true): Promise<void> {
     this.debug && console.log(`writeFile`);
-    const checksum = contents === undefined ? "" : md5(contents);
     const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
     return await this.db.transaction("rw", tbs, async () => {
       let file: File = await this.readFile(fid);
+      const proj: ProjectBrief = await this.getProject(file.project);
+      // use the last syncAll checksum
+      checksum = checksum || file.checksum;
       if (pushChangeLog) {
         await this.pushChangeLog({
           type: "editFile",
-          file: {file: file.name, project: file.project},
-          contents: contents
+          file: {file: file.name, project: proj.name},
+          contents: contents,
+          checksum: checksum
         });
       }
       await this.db.files.update(fid, {
@@ -98,10 +102,12 @@ class LocalStorage implements AbstractStorage {
     return await this.db.transaction("rw", tbs, async () => {
       let file = await this.readFile(id);
       await this.db.files.delete(id);
+      const proj: ProjectBrief = await this.getProject(file.project);
       if (pushChangeLog) {
         await this.pushChangeLog({
           type: "deleteFile",
-          file: {file: file.name, project: file.project}
+          file: {file: file.name, project: proj.name},
+          checksum: file.checksum
         });
       }
       // also remove from run files
@@ -239,11 +245,13 @@ class LocalStorage implements AbstractStorage {
         open: 0
       };
       await this.db.files.add(fs);
+      const proj: ProjectBrief = await this.getProject(pid);
       if (pushChangeLog) {
         await this.pushChangeLog({
           type: "newFile",
           contents: contents,
-          file: {file: name, project: pid}
+          file: {file: name, project: proj.name},
+          checksum: checksum
         });
       }
       return new FileBrief(fs);
@@ -424,7 +432,7 @@ class LocalStorage implements AbstractStorage {
         if (change.type === "deleteFile") {
           await this.deleteFile(fid, false);
         } else if (change.type === "editFile") {
-          await this.writeFile(fid, change.contents, false);
+          await this.writeFile(fid, change.contents, change.checksum, false);
         } else if (change.type === "newFile") {
           await this.newFile(pid, change.file.file, change.contents, false);
         } else {
@@ -446,6 +454,7 @@ interface ChangeLog {
   type: "newFile" | "deleteFile" | "editFile";
   contents?: string;
   file: {file: string, project: string};
+  checksum: string;
 }
 
 class StorageDB extends Dexie {
