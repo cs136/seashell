@@ -170,7 +170,7 @@ namespace Services {
 
   export function getOfflineMode(): OfflineMode {
     const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.On;
+    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.Off;
   }
 
   export function setOfflineMode(mode: OfflineMode): void {
