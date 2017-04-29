@@ -24,9 +24,9 @@ abstract class AbstractStorage {
   // questions
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
   public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
-  public abstract async addOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async removeOpenTab(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]>;
+  public abstract async addOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
+  public abstract async removeOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
+  public abstract async getOpenFiles(proj: ProjectID, question: string): Promise<FileBrief[]>;
 
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;
@@ -99,20 +99,19 @@ class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
   public last_modified: number;
-  public runs: {[index: string]: FileID};
+  public settings: {[index: string]: string};
   constructor(obj: ProjectStored) {
     this.id = obj.id;
     this.name = obj.name;
     this.last_modified = obj.last_modified;
-    this.runs = obj.runs;
+    this.settings = obj.settings;
   }
 }
 
 class ProjectBrief extends Project {
-  public runs: {} = {};
   constructor(obj: ProjectStored) {
     super(obj);
-    this.runs = {};
+    this.settings = {};
   }
 };
 
@@ -163,7 +162,7 @@ interface ProjectStored {
   id: ProjectID;
   name: string;
   last_modified: number;
-  runs: {[index: string]: FileID};
+  settings: {[index: string]: string};
 }
 
 interface SettingsStored {

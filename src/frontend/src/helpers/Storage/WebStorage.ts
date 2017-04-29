@@ -131,7 +131,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: name,
       name: name,
       last_modified: Date.now(),
-      runs: {}
+      settings: {}
     });
   }
 
@@ -149,7 +149,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: data[0],
       name: data[0],
       last_modified: data[1],
-      runs: {}
+      settings: {}
     })), result);
   }
 
@@ -164,7 +164,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: pid,
       name: pid,
       last_modified: Date.now(),
-      runs: {}
+      settings: {}
     });
   }
 
@@ -349,23 +349,23 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]> {
+  public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
     // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.getOpenTabs(proj, question);
+      return this.storage.getOpenFiles(pid, question);
     // }
     // not done
   }
 
-  public async addOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+  public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
     // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.addOpenTab(proj, question, fid);
+      return this.storage.addOpenFile(pid, question, fid);
     // }
     // not done
   }
 
-  public async removeOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
+  public async removeOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
     // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.removeOpenTab(proj, question, fid);
+      return this.storage.removeOpenFile(pid, question, fid);
     // }
     // not done
   }

@@ -113,9 +113,9 @@ class LocalStorage implements AbstractStorage {
       //   console.warn(id, file);
       //   return;
       // }
-      for (const q in dbProj.runs) {
-        if (dbProj.runs[q] === file.name) {
-          delete dbProj.runs[q];
+      for (const q in dbProj.settings) {
+        if (dbProj.settings[q] === file.name) {
+          delete dbProj.settings[q];
         }
       }
       await this.db.projects.update(file.project, dbProj);
@@ -133,26 +133,36 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async getFileToRun(proj: ProjectID, question: string): Promise<string|false> {
-    this.debug && console.log(`getFileToRun`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      let p = await this.getProject(proj);
-      return p.runs[question] || false;
+  private async getProjectSetting(pid: ProjectID, key: string): Promise<string> {
+    return this.db.transaction("r", this.db.projects, async () => {
+      const project = await this.getProject(pid);
+      return project.settings[key];
     });
   }
 
-  // a file name is (test|q*|common)/name
-  public async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void> {
-    this.debug && console.log(`setFileToRun`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      const current: Project = await this.getProject(pid);
-      current.runs[question] = filename;
+  private async setProjectSetting(pid: ProjectID, key: string, value: string): Promise<void> {
+    return this.db.transaction("rw", this.db.projects, async () => {
+      const project = await this.getProject(pid);
+      project.settings[key] = value;
       await this.db.projects.update(pid, {
-        runs: current.runs
+        settings: project.settings
       });
     });
+  }
+
+  private runnerFileKey(question: string): string {
+    return `${question}-runner-file`;
+  }
+
+  public async getFileToRun(pid: ProjectID, question: string): Promise<string|false> {
+    this.debug && console.log(`getFileToRun`);
+    return (await this.getProjectSetting(pid, this.runnerFileKey(question))) || false;
+  }
+
+  // a file name is (q*/tests|q*|common)/name
+  public async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void> {
+    this.debug && console.log(`setFileToRun`);
+    return this.setProjectSetting(pid, this.runnerFileKey(question), filename);
   }
 
   public async getSettings(): Promise<Settings> {
@@ -258,7 +268,7 @@ class LocalStorage implements AbstractStorage {
       const ps: ProjectStored = {
         id: pid,
         name: name,
-        runs: {},
+        settings: {},
         last_modified: Date.now(),
       };
       await this.db.projects.add(ps);
@@ -278,8 +288,7 @@ class LocalStorage implements AbstractStorage {
 
   public async getProject(pid: ProjectID): Promise<Project> {
     this.debug && console.log(`getProject`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("r", this.db.projects, async () => {
       const p = await this.db.projects.get(pid);
       if (! p) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
@@ -309,35 +318,37 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]> {
-    this.debug && console.log(`getOpenTabs`);
-    const files: FileBrief[] = [];
-    await this.db.files.where({
-      project: proj,
-      open: 1,
-    }).each((file: FileStored) => {
-      files.push(new FileBrief(file));
-    });
-    return files;
+  private openFilesKey(question: string): string {
+    return `${question}-open-files`;
   }
 
-  public async addOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
-    this.debug && console.log(`addOpenTab`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      await this.db.files.update(fid, {
-        open: 1
-      });
+  public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
+    this.debug && console.log(`getOpenFiles`);
+    return JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)));
+  }
+
+  public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`addOpenFile`);
+    return this.db.transaction("rw", this.db.projects, async () => {
+      const open = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)));
+      const file = new FileBrief(await this.readFile(fid));
+      return this.setProjectSetting(
+        pid,
+        this.openFilesKey(question),
+        JSON.stringify(open.concat([file])));
     });
   }
 
-  public async removeOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
-    this.debug && console.log(`removeOpenTab`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      await this.db.files.update(fid, {
-        open: 0
-      });
+  public async removeOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
+    this.debug && console.log(`removeOpenFile`);
+    return this.db.transaction("rw", this.db.projects, async () => {
+      const open = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)));
+      return this.setProjectSettings(
+        pid,
+        this.openFilesKey(question),
+        JSON.stringify(open.filter((f: FileBrief) =>
+          f.id !== fid
+        )));
     });
   }
 

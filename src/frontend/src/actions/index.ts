@@ -217,7 +217,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(storage().addOpenTab(file.project, file.question(), file.id))
+              return asyncAction(storage().addOpenFile(file.project, file.question(), file.id))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
                   file = await storage().readFile(file.id);
@@ -270,14 +270,14 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         openFile: (file: S.FileBrief) => {
-          storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().addOpenFile(file.project, file.question(), file.id).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
               payload: file
             }));
         },
         closeFile: (file: S.FileBrief) => {
-          storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().removeOpenFile(file.project, file.question(), file.id).then((questions) =>
             dispatch({
               type: appStateActions.closeFile,
               payload: file
@@ -304,7 +304,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             .then(() => {
               return asyncAction(storage().getProjectFiles(pid))
                 .then((files: S.FileBrief[]) => {
-                  return asyncAction(storage().getOpenTabs(pid, name))
+                  return asyncAction(storage().getOpenFiles(pid, name))
                     .then((openFiles) => {
                       return asyncAction(storage().getFileToRun(pid, name)
                         .then((runFile) => {
