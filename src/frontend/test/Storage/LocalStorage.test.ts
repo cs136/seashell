@@ -10,8 +10,10 @@ import Dexie from "dexie";
 import {map, filter, flatten, repeat, head, prop} from "ramda";
 import R = require("ramda");
 import md5 = require("md5");
+import * as LS from "localstorage-memory";
 
 (<any>jasmine).DEFAULT_TIMEOUT_INTERVAL = 10 * 1000;
+(<any>window).localStorage = LS;
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;
 
