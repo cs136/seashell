@@ -153,7 +153,8 @@ class LocalStorage implements AbstractStorage {
       project.settings = project.settings || {};
       project.settings[key] = value;
       await this.db.projects.update(pid, {
-        settings: project.settings
+        settings: project.settings,
+        last_modified: Date.now()
       });
     });
   }
