@@ -13,6 +13,7 @@ import {AbstractStorage,
 import {DispatchFunction} from "../Services";
 import {appStateActions} from "../../reducers/appStateReducer";
 export {OnlineCompiler};
+import {RequestError} from "../Errors";
 
 class OnlineCompiler extends AbstractCompiler {
 
@@ -64,10 +65,15 @@ class OnlineCompiler extends AbstractCompiler {
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
     } catch (res) {
-      if (!res.status || res.status !== "compile-failed") {
-        throw result;
+      if (res instanceof RequestError) {
+        result = res.response.result;
+        if (!result || !result["status"] || result["status"] !== "compile-failed") {
+          throw res;
+        }
+        result = res;
+      } else {
+        throw res;
       }
-      result = res;
     }
 
     // Handle compiler diagnostics
