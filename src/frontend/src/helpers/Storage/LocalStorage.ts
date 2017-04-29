@@ -337,8 +337,7 @@ class LocalStorage implements AbstractStorage {
 
   public async getAllFiles(): Promise<FileBrief[]> {
     this.debug && console.log(`getAllFiles`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("r", this.db.files, async () => {
       const result = await this.db.files.toArray();
       return R.map((file: File) => new FileBrief(file), result);
     });
@@ -352,6 +351,7 @@ class LocalStorage implements AbstractStorage {
     let result = await this.db.files.where("name").equals(fname).first();
     return result ? new FileBrief(result) : result;
   }
+
   public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
     this.debug && console.log(`getOpenFiles`);
     let openFilesNames = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
