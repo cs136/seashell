@@ -4,10 +4,22 @@ import {reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 
-interface CurrentFile extends S.File {
-  unwrittenContent?: string;
-  target?: S.FileID;
-  flusher?: number;
+class CurrentFile extends S.File {
+  public unwrittenContent?: string;
+  public target?: S.FileID;
+  public flusher?: number;
+
+  constructor(other: CurrentFile) {
+    super(other);
+    this.unwrittenContent = other.unwrittenContent;
+    this.target = other.target;
+    this.flusher = other.flusher;
+  }
+
+  public clone() {
+    let result = new CurrentFile(this);
+    return result;
+  }
 }
 export interface appStateReducerProjectState {
   termWrite?: Function;
