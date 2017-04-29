@@ -48,6 +48,8 @@ function uniqStrArr(arrLen: number, strLen: number): () => string[] {
 
 function websocketTests(offlineMode: OfflineMode) {
 
+  Services.setOfflineMode(offlineMode);
+
   let store: WebStorage;
   let projs: Project[];
   let files: File[];
@@ -62,7 +64,6 @@ function websocketTests(offlineMode: OfflineMode) {
   describe(`Testing WebStorage in offlineMode == ${Services.getOfflineMode()}`, () => {
 
     beforeAll(() => {
-      Services.setOfflineMode(offlineMode);
       Services.init(null, {
         debugWebSocket: false,
         debugLocalStorage: false,
@@ -71,21 +72,21 @@ function websocketTests(offlineMode: OfflineMode) {
       });
       store = Services.storage();
       projs = R.sortBy(prop("id"), map((s: string) => new Project({
-        id: offlineMode === OfflineMode.On ? md5(`X${s}`) : `X${s}`,
+        id: offlineMode === OfflineMode.On ? md5(`X${s}`) as string : `X${s}`,
         name: `X${s}`,
         runs: {},
         last_modified: 0
       }), uniqStrArr(testSize, 20)()));
       files = R.sortBy(prop("id"), map((p: Project) => {
         const name = `default/${uniqStr(20)()}.${J.one_of(["c", "h", "rkt", "txt", "test"])()}`;
-        const fid = offlineMode === OfflineMode.On ? md5(p.id + name) : `${p.id}/${name}`;
+        const fid = offlineMode === OfflineMode.On ? md5(p.id + name) as string : `${p.id}/${name}`;
         const text = uniqStr(5000)();
         return new File({
           id: fid,
           project: p.id,
           name: name,
           contents: text,
-          checksum: md5(text),
+          checksum: undefined,
           last_modified: 0,
           open: false
         });
@@ -126,7 +127,7 @@ function websocketTests(offlineMode: OfflineMode) {
         project: x.project,
         name: x.name,
         contents: x.contents,
-        checksum: x.checksum,
+        checksum: undefined,
         last_modified: 0,
         open: x.open
       }), <File[]> remoteFiles);
@@ -140,7 +141,6 @@ function websocketTests(offlineMode: OfflineMode) {
       expect(ids).toEqual(R.map(prop("id"), projs));
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
     });
-
 
     it(`getProjects: list all projects`, async () => {
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
@@ -179,7 +179,6 @@ function websocketTests(offlineMode: OfflineMode) {
       const fs = R.take(halfTestSize, files);
       for (const f of fs) {
         f.contents = uniqStr(5000)();
-        f.checksum = md5(f.contents);
         await store.writeFile(f.id, f.contents);
       }
       expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
@@ -268,6 +267,7 @@ function websocketTests(offlineMode: OfflineMode) {
           Object.assign(file, await store.renameFile(file.id, newname));
           file.contents = contents;
           file.last_modified = 0;
+          file.checksum = undefined;
           files = R.sortBy(prop("id"), files);
         }
       }
@@ -281,6 +281,8 @@ function websocketTests(offlineMode: OfflineMode) {
           await store.syncAll();
         }
       }
+      expect(await remoteFiles()).toEqual(expect.arrayContaining(files));
+      expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));
     });
 // */
   });
