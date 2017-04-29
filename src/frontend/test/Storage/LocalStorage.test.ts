@@ -370,7 +370,7 @@ describe("Testing offline mode synchronization", () => {
       id: log.id,
       type: "newFile",
       contents: fileContents,
-      file: {file: fileName, project: projID},
+      file: {file: fileName, project: projName},
       checksum: md5(fileContents)
     });
   });
@@ -384,7 +384,7 @@ describe("Testing offline mode synchronization", () => {
     expect(top).toEqual({
       id: top.id,
       type: "editFile",
-      file: {file: fileName, project: projID},
+      file: {file: fileName, project: projName},
       contents: `${fileContents}_3`,
       checksum: md5(fileContents)
     });
@@ -392,7 +392,7 @@ describe("Testing offline mode synchronization", () => {
     expect(top).toEqual({
       id: top.id,
       type: "newFile",
-      file: {file: fileName, project: projID},
+      file: {file: fileName, project: projName},
       contents: `${fileContents}`,
       checksum: md5(fileContents)
     });
@@ -407,13 +407,13 @@ describe("Testing offline mode synchronization", () => {
     expect(logs[0]).toEqual({
       id: logs[0].id,
       type: "deleteFile",
-      file: {file: `${fileName}`, project: projID},
+      file: {file: `${fileName}`, project: projName},
       checksum: md5(fileContents)
     });
     expect(logs[1]).toEqual({
       id: logs[1].id,
       type: "newFile",
-      file: {file: `${fileName}_newname`, project: projID},
+      file: {file: `${fileName}_newname`, project: projName},
       contents: logs[1].contents,
       checksum: md5(fileContents)
     });
@@ -428,7 +428,7 @@ describe("Testing offline mode synchronization", () => {
     expect(logs[0]).toEqual({
       id: logs[0].id,
       type: "deleteFile",
-      file: {file: `${fileName}`, project: projID},
+      file: {file: `${fileName}`, project: projName},
       contents: logs[0].contents,
       checksum: md5(fileContents)
     });

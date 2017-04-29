@@ -114,16 +114,22 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   };
 
   public async newProject(name: string): Promise<ProjectBrief> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
-      return this.storage.newProject(name);
-    }
+    // if (this.offlineMode === OfflineMode.On ||
+        // this.offlineMode === OfflineMode.Forced) {
+    const off = this.storage.newProject(name);
+    // }
     // hack to make it compatible with the backend
     // pid is project name
-    await this.socket.sendMessage({
+    // creating new project is not supported by syncAll !!
+    const on = this.socket.sendMessage({
       type: "newProject",
       project: name
     });
+    if (this.offlineMode === OfflineMode.On ||
+      this.offlineMode === OfflineMode.Forced) {
+      return off;
+    }
+    await on;
     return new ProjectBrief({
       id: name,
       name: name,
