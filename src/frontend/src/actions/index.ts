@@ -378,13 +378,13 @@ const mapDispatchToProps = (dispatch: Function) => {
           // any errors that happen when auto connecting --
           // we're in the login screen, let user manually log in
           // if we can't auto login.
-          dispatch({ type: userActions.BUSY });
+          // dispatch({ type: userActions.BUSY });
           try {
             let user = await Services.autoConnect();
             dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
-            dispatch({ type: userActions.NOTBUSY });
+            // dispatch({ type: userActions.NOTBUSY });
             throw e;
           }
         }
