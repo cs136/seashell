@@ -15,6 +15,9 @@ export interface AddFileProps {questions: string[]; closefunc: Function; };
 class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string, uploadFiles: File[]}> {
   project: string;
   question: string;
+
+  private fieldsDisabled: boolean = false;
+
   constructor(props: AddFileProps&actionsInterface) {
     super(props);
     if (this.props.appState.currentProject && this.props.appState.currentProject.currentQuestion) {
@@ -60,7 +63,8 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
       <p>What would you like to call this file?</p>
       <div>
         <label>New File:
-          <input className="pt-input pt-fill" required type="text" value={this.state.file}
+          <input className="pt-input pt-fill" required
+            disabled={this.fieldsDisabled} type="text" value={this.state.file}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
               this.setState(merge(this.state, {file: this.state.prevFile}));
@@ -72,7 +76,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
           onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
         </label><br />
         <label>Upload Files:
-          <input type="file" multiple onChange={
+          <input type="file" multiple disabled={this.fieldsDisabled} onChange={
             (e => this.setState(merge(this.state, {uploadFiles: this.filesToArray(e.currentTarget.files)})))
           } />
         </label>
@@ -84,6 +88,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
         <button type="button" className="pt-button pt-intent-primary" disabled={
           (this.state.file === "" || this.state.file.includes("/")) && this.state.uploadFiles === []
         } onClick={() => {
+          this.fieldsDisabled = true;
           let proms: Promise<any>[] = [];
           if (this.state.file) {
             proms.push(this.props.dispatch.file.addFile(
@@ -107,7 +112,8 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
             })));
           }
           Promise.all(proms).then(() => this.props.closefunc())
-            .catch(cause => showError(`Failed to upload file ${cause}.`));
+            .catch(cause => showError(`Failed to upload file ${cause}.`))
+            .then(() => this.fieldsDisabled = false);
           }}>Add File</button>
       </div>
     </div>
