@@ -94,7 +94,7 @@ namespace Services {
       throw new Error("Must call Services.init() before Services.login()");
     }
     try {
-      debug && console.log("Logging in...");
+      debug && console.log(`Logging in at ${uri} ...`);
       let response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
@@ -104,7 +104,7 @@ namespace Services {
           "reset": !! rebootBackend
         },
         dataType: "json",
-        timeout: 5000
+        timeout: 10000
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
@@ -116,6 +116,7 @@ namespace Services {
                                   response.pingPort);
     } catch (ajax) {
       if (! ajax.status) {
+        console.error(ajax);
         throw new LoginError("Something bad happened - The Internet might be down :(");
       }
       const status     = ajax.status;

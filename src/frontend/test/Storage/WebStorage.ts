@@ -30,6 +30,7 @@ const halfTestSize = Math.ceil(testSize / 2);
 
 // helpers
 let unique = 0;
+const LOGIN_URL = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
 
 // should return a thunk, see jscheck documentation
 function uniqStr(len: number): () => string {
@@ -74,7 +75,6 @@ function websocketTests(offlineMode: OfflineMode) {
       projs = R.sortBy(prop("id"), map((s: string) => new Project({
         id: offlineMode === OfflineMode.On ? md5(`X${s}`) as string : `X${s}`,
         name: `X${s}`,
-        runs: {},
         last_modified: 0
       }), uniqStrArr(testSize, 20)()));
       files = R.sortBy(prop("id"), map((p: Project) => {
@@ -113,7 +113,6 @@ function websocketTests(offlineMode: OfflineMode) {
         // properties you want to check
         id: p.id,
         name: p.name,
-        runs: p.runs,
         last_modified: 0,
       }), remote)) || [];
     }
@@ -196,9 +195,6 @@ function websocketTests(offlineMode: OfflineMode) {
       for (const f of files) {
         await store.setFileToRun(f.project, "default", f.name);
         const pj = R.find((x) => x.id === f.project, projs);
-        if (offlineMode === OfflineMode.On) {
-          pj.runs.default = f.name;
-        }
         for (const o of files) {
           const check = await store.getFileToRun(o.project, "default");
           if (o.project ===  f.project) {
@@ -233,12 +229,6 @@ function websocketTests(offlineMode: OfflineMode) {
           await store.deleteFile(file.id);
           removed.concat(filter((x) => x.id === file.id, files));
           files = filter((x) => x.id !== file.id, files);
-          for (const d in pj.runs) {
-            if (pj.runs[d] === file.name) {
-              delete pj.runs[d];
-            }
-          }
-          delete pj.runs.default;
         }
       }
       const remote: File[] = await remoteFiles();

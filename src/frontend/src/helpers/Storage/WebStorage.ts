@@ -432,7 +432,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   // to be replaced by dexie
   public async syncAll(fetchServerChanges: boolean = true): Promise<void> {
     if (!this.offlineEnabled()) {
-      console.log("Ignored sync request --- offline mode disabled.");
+      this.debug && console.log("Ignored sync request - offline mode disabled.");
       return;
     }
     // this.isSyncing = true;
