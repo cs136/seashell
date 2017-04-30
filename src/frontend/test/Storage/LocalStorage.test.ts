@@ -208,7 +208,6 @@ describe("Testing LocalStorage interface functions", () => {
         delete pj.settings["default_runner_file"];
         for (let k in pj.settings) {
           if (pj.settings[k] === file.name) {
-            console.warn(`Removing ${k}`);
             delete pj.settings[k];
           }
         }
