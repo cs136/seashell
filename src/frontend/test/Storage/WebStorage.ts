@@ -193,9 +193,6 @@ function websocketTests(offlineMode: OfflineMode) {
       for (const f of files) {
         await store.setFileToRun(f.project, "default", f.name);
         const pj = R.find((x) => x.id === f.project, projs);
-        // if (offlineMode === OfflineMode.On) {
-          // pj.runs.default = f.name;
-        // }
         for (const o of files) {
           const check = await store.getFileToRun(o.project, "default");
           if (o.project ===  f.project) {
@@ -230,12 +227,6 @@ function websocketTests(offlineMode: OfflineMode) {
           await store.deleteFile(file.id);
           removed.concat(filter((x) => x.id === file.id, files));
           files = filter((x) => x.id !== file.id, files);
-          // for (const d in pj.runs) {
-          //   if (pj.runs[d] === file.name) {
-          //     delete pj.runs[d];
-          //   }
-          // }
-          // delete pj.runs.default;
         }
       }
       const remote: File[] = await remoteFiles();
