@@ -17,7 +17,7 @@ function onInit() {
 }
 
 Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
-self.importScripts("seashell-clang-js/bin/seashell-runner.js");
+self.importScripts(require("file-loader!seashell-clang-js/bin/seashell-runner"));
 
 var stdout = "";
 var stderr = "";
@@ -32,7 +32,7 @@ Module._RT_stderr_write = function(str) {
 
 var req = new XMLHttpRequest();
 var runtime = "";
-req.open("GET", "seashell-clang-js/bin/seashell-crt.bc", false);
+req.open("GET", require("file-loader!seashell-clang-js/bin/seashell-crt.bc"), false);
 req.responseType = "arraybuffer";
 req.send();
 var view = new Uint8Array(req.response);

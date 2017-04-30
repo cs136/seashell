@@ -14,6 +14,7 @@ import {AbstractCompiler,
         CompilerResult,
         CompilerDiagnostic} from "./Compiler/Interface";
 import {LoginError, LoginRequired} from "./Errors";
+import {appStateActions} from "../reducers/appStateReducer";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
 export {Services, Connection, DispatchFunction};
@@ -59,7 +60,16 @@ namespace Services {
       options.debugWebStorage);
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
-      dispatch, webStorage.syncAll.bind(webStorage));
+      dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
+
+    socketClient.register_callback("connected", () => disp({
+      type: appStateActions.connected,
+      payload: null
+    }));
+    socketClient.register_callback("disconnected", () => disp({
+      type: appStateActions.disconnected,
+      payload: null
+    }));
   }
 
   export function storage(): WebStorage {
@@ -147,27 +157,29 @@ namespace Services {
                                       credentials.host,
                                       credentials.port,
                                       credentials.pingPort);
-      // login successful
-      return await connectWith(connection);
+      // login successful --- we sync after we connect so the UI is still responsive
+      return await connectWith(connection, false);
     } else {
       throw new LoginRequired();
     }
   }
 
-  async function connectWith(connection: Connection) {
+  async function connectWith(connection: Connection, sync: boolean = true) {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
 
     await localStorage.connect(`seashell8-${connection.username}`);
     await socketClient.connect(connection);
-    await webStorage.syncAll();
+    if (sync) {
+      await webStorage.syncAll();
+    }
     return connection.username;
   }
 
   export function getOfflineMode(): OfflineMode {
     const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.On;
+    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.Off;
   }
 
   export function setOfflineMode(mode: OfflineMode): void {

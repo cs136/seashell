@@ -35,7 +35,10 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
           {this.props.navRight}
           <Popover className={styles.options} content={<Menu>
             <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
-            <MenuItem iconName="refresh" text="Sync All" />
+            <MenuItem iconName="refresh" text="Sync All" onClick={() => this.props.dispatch.storage.syncAll().then(() => {
+              this.props.dispatch.project.getAllProjects();
+              this.props.dispatch.settings.initSettings();
+            })}/>
             <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
             <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
               this.props.dispatch.dialog.setReset(true);

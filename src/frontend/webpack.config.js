@@ -13,13 +13,19 @@ module.exports = {
   },
   plugins: [
     new CopyWebpackPlugin([
+      { from: 'images/', to: 'images/' },
+      {
+        from: 'favicon.ico'
+      },
+      { from: 'manifest.json' },
       {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
       },
-      {
-        from: 'favicon.ico'
-      }
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.mem', to: './' },
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.data', to: './' },
     ]),
     new HtmlWebpackPlugin ({
       inject: true,

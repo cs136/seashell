@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
-const SWPrecacheWebpackPlugin = require('sw-precache-webpack-plugin');
 const OfflinePlugin = require('offline-plugin');
 const ArchivePlugin = require('webpack-archive-plugin');
 
@@ -22,10 +21,16 @@ module.exports = {
       {
         from: 'favicon.ico'
       },
-      { from: 'manifest.json' },{
+      { from: 'manifest.json' },
+      {
         from: './node_modules/monaco-editor/min/vs',
         to: 'vs',
-    }]),
+      },
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.mem', to: './' },
+      { context: './node_modules/seashell-clang-js/bin/',
+        from: '*.data', to: './' },
+  ]),
 /*
     new webpack.optimize.UglifyJsPlugin({
       compress: {
@@ -43,34 +48,16 @@ module.exports = {
       inject: true,
       template: './src/index.html'
     }),
-    new SWPrecacheWebpackPlugin(
-      {
-        cacheId: 'uwseashell-pwa',
-        filename: 'uwseashell-service-worker.js',
-        stripPrefix: './dist',
-        staticFileGlobs: [
-          './dist/vs/**.*'
-        ],
-        runtimeCaching: [{
-          handler: 'cacheFirst',
-          urlPattern: /cardstack_search$/,
-        },
-        {
-          handler: 'cacheFirst',
-          urlPattern: /[.]jpg$/,
-        }],
-      }
-    ),
+    new ArchivePlugin(),
+    new webpack.DefinePlugin({
+      IS_BROWSER: true,
+      PRODUCTION: true,
+    }),
     new OfflinePlugin({
       ServiceWorker:{
         navigateFallbackURL: '/'
       }
     }),
-    new ArchivePlugin(),
-    new webpack.DefinePlugin({
-      IS_BROWSER: true,
-      PRODUCTION: true,
-    })
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.

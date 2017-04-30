@@ -124,6 +124,7 @@ class OfflineCompiler extends AbstractCompiler {
               id: pid,
               runner: runner
             });
+            runner.postMessage(result.data.obj);
           } else {
             // run all the tests
             let tests: Test[] = await Promise.all(
@@ -171,12 +172,12 @@ class OfflineCompiler extends AbstractCompiler {
     this.activePIDs[0].runner.postMessage(null);
   }
 
-  protected programDone(pid: number): void {
+  public programDone(pid: number): void {
     const found = this.activePIDs.filter((item: PID) => {
       return item.id === pid;
     });
     if (found.length !== 1) {
-      throw new CompilerError("Program that is not running has stopped running.");
+      console.warn("Program that is not running (online) has stopped running.");
     }
     this.activePIDs = this.activePIDs.filter((item: PID) => {
       return item.id !== pid;

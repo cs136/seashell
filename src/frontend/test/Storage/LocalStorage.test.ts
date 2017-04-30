@@ -10,8 +10,10 @@ import Dexie from "dexie";
 import {map, filter, flatten, repeat, head, prop} from "ramda";
 import R = require("ramda");
 import md5 = require("md5");
+import * as LS from "localstorage-memory";
 
 (<any>jasmine).DEFAULT_TIMEOUT_INTERVAL = 10 * 1000;
+(<any>window).localStorage = LS;
 (<any>window).indexedDB = FakeIndexedDB;
 (<any>window).IDBKeyRange = FDBKeyRange;
 
@@ -38,7 +40,7 @@ describe("Testing LocalStorage interface functions", () => {
     id: md5(s),
     name: s,
     last_modified: 0,
-    runs: {}
+    settings: {}
   }), uniqStrArr(testSize, 30)()));
 
   let files: File[] = R.sortBy(prop("id"), map((p: Project) => {
@@ -58,7 +60,7 @@ describe("Testing LocalStorage interface functions", () => {
   }, flatten(repeat(projs, testSize))));
 
   function genRunFiles(p: string): {[index: string]: FileID} {
-    return R.zipObj(uniqStrArr(testSize, 1)(),
+    return R.zipObj<string>(uniqStrArr(testSize, 1)(),
                     J.array(testSize, J.one_of(map((file) => [p, file.name], files)))());
   }
 
@@ -90,7 +92,7 @@ describe("Testing LocalStorage interface functions", () => {
       // properties you want to check
       id: p.id,
       name: p.name,
-      runs: p.runs,
+      settings: p.settings,
       last_modified: 0
     }), local)) || [];
   }
@@ -111,10 +113,8 @@ describe("Testing LocalStorage interface functions", () => {
 
   it(`getFileToRun: should return undefined when no run files`, async () => {
     for (const p of projs) {
-      for (const d in p.runs) {
-        const f = await store.getFileToRun(p.name, d);
-        expect(f).toEqual(false);
-      }
+      const f = await store.getFileToRun(p.id, "__this_is_not_a_question");
+      expect(f).toEqual(false);
     }
   });
 
@@ -157,12 +157,12 @@ describe("Testing LocalStorage interface functions", () => {
       const proj = R.find((x) => x.id === pid, projs); // project object
       const pfiles = projGps[pid]; // files for current project
       for (const f of pfiles) {
-        await store.setFileToRun(pid, "default", f.id);
-        await store.setFileToRun(pid, `dummy`, f.id);
+        await store.setFileToRun(pid, "default", f.name);
+        await store.setFileToRun(pid, `dummy`, f.name);
         await store.setFileToRun(pid, "dummy2", "dummy2");
-        proj.runs.default = f.id;
-        proj.runs.dummy = f.id;
-        proj.runs.dummy2 = "dummy2";
+        proj.settings["default_runner_file"] = f.name;
+        proj.settings["dummy_runner_file"] = f.name;
+        proj.settings["dummy2_runner_file"] = "dummy2";
         expect(await localProjs()).toEqual(projs);
       }
     }
@@ -205,7 +205,13 @@ describe("Testing LocalStorage interface functions", () => {
         await store.setFileToRun(pj.id, "default", file.name);
         await store.deleteFile(file.id);
         files = filter((x) => x.id !== file.id, files);
-        delete pj.runs.default;
+        delete pj.settings["default_runner_file"];
+        for (let k in pj.settings) {
+          if (pj.settings[k] === file.name) {
+            console.warn(`Removing ${k}`);
+            delete pj.settings[k];
+          }
+        }
       }
     }
     expect(await localProjs()).toEqual(projs);
@@ -239,7 +245,7 @@ describe("Testing LocalStorage interface functions", () => {
 
   it("getOpenTabs: should return empty initially", async () => {
     for (const pj of projs) {
-      const ls: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+      const ls: FileBrief[] = await store.getOpenFiles(pj.id, "default");
       expect(ls).toEqual([]);
     }
   });
@@ -253,10 +259,10 @@ describe("Testing LocalStorage interface functions", () => {
                                 R.filter((f: File) => f.project === pj.id,
                                          files))));
       for (const f of pjfs) {
-        await store.addOpenTab(pj.id, "default", f.id);
-        f.open = true;
+        await store.addOpenFile(pj.id, "default", f.id);
       }
-      const result: FileBrief[] = R.sortBy(prop("id"), await store.getOpenTabs(pj.id, "default"));
+      const result: FileBrief[] = R.sortBy<FileBrief>(prop("id"),
+        await store.getOpenFiles(pj.id, "default"));
       result.forEach((fb: FileBrief) => {
         fb.last_modified = 0;
       });
@@ -266,18 +272,22 @@ describe("Testing LocalStorage interface functions", () => {
 
   it(`removeOpenTab: close all files per project`, async () => {
     for (const pj of projs) {
-      let openFiles: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+      let openFiles: FileBrief[] = await store.getOpenFiles(pj.id, "default");
       for (const f of openFiles) {
-        await store.removeOpenTab(pj.id, "default", f.id);
-        const result: FileBrief[] = await store.getOpenTabs(pj.id, "default");
+        await store.removeOpenFile(pj.id, "default", f.id);
+        const result: FileBrief[] = await store.getOpenFiles(pj.id, "default");
         const target: FileBrief = R.find((fb: FileBrief) => fb.id === f.id, openFiles);
         openFiles = R.without([target], openFiles);
         expect(result).toEqual(openFiles);
         const testFile = R.find((fb: FileBrief) => fb.id === f.id, files);
-        testFile.open = false;
       }
+      // Sync settings
+      let storedProj = await store.getProject(pj.id);
+      pj.settings = storedProj.settings;
     }
   });
+
+
 
   it("checking final state" , async () => {
     expect(await localProjs()).toEqual(projs);

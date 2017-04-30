@@ -29,8 +29,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileBrief> {
     // the right way to do it
     // fid pid are md5 strings
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.newFile(pid, filename, contents);
     }
     // hack to make it compatible with the backend
@@ -49,7 +48,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       name: filename,
       last_modified: Date.now(),
       project: pid,
-      open: false,
       checksum: md5(contents || ""),
       contents: undefined
     });
@@ -58,8 +56,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async renameFile(fid: FileID, newName: string): Promise<FileBrief> {
     // the right way to do it
     // fid pid are md5 strings
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.renameFile(fid, newName);
     }
     // hack to make it compatible with the backend
@@ -81,8 +78,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async deleteFile(fid: FileID): Promise<void> {
     // the right way to do it
     // fid pid are md5 strings
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.deleteFile(fid);
     }
     // hack to make it compatible with the backend
@@ -101,8 +97,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async deleteProject(pid: ProjectID): Promise<void> {
     // the right way to do it
     // pid is md5 string
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.deleteProject(pid);
     }
     // hack to make it compatible with the backend
@@ -113,20 +108,13 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async newProject(name: string): Promise<ProjectBrief> {
-    // if (this.offlineMode === OfflineMode.On ||
-        // this.offlineMode === OfflineMode.Forced) {
-    const off = this.storage.newProject(name);
-    // }
-    // hack to make it compatible with the backend
-    // pid is project name
-    // creating new project is not supported by syncAll !!
+  public async newProjectForTests(name: string): Promise<ProjectBrief> {
     const on = this.socket.sendMessage({
       type: "newProject",
       project: name
     });
-    if (this.offlineMode === OfflineMode.On ||
-      this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
+      const off = this.storage.newProject(name);
       return off;
     }
     await on;
@@ -134,13 +122,39 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: name,
       name: name,
       last_modified: Date.now(),
-      runs: {}
+      settings: {} // ignored in online mode.
     });
   }
 
+  public async newProject(name: string): Promise<ProjectBrief> {
+    if (this.offlineEnabled()) {
+      // This is a terrible hack but it'll work for now.
+      // We first create it in the store (to get an ID)
+      // then we create it on the backend
+      // then we sync to get files.
+      const off = await this.storage.newProject(name);
+      const on = await this.socket.sendMessage({
+        type: "newProject",
+        project: name
+      });
+      await this.syncAll();
+      return off;
+    } else {
+      const on = await this.socket.sendMessage({
+        type: "newProject",
+        project: name
+      });
+      return new ProjectBrief({
+        id: name,
+        name: name,
+        last_modified: Date.now(),
+        settings: {} // ignored in online mode.
+      });
+    }
+  }
+
   public async getProjects(): Promise<ProjectBrief[]> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.getProjects();
     }
     // hack to make it compatible with the backend
@@ -152,13 +166,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: data[0],
       name: data[0],
       last_modified: data[1],
-      runs: {}
+      settings: {}
     })), result);
   }
 
   public async getProject(pid: ProjectID): Promise<Project> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.getProject(pid);
     }
     // hack to make it compatible with the backend
@@ -167,13 +180,12 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       id: pid,
       name: pid,
       last_modified: Date.now(),
-      runs: {}
+      settings: {}
     });
   }
 
   public async readFile(fid: FileID): Promise<File> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       // the right way to do it
       // fid is md5 string
       return this.storage.readFile(fid);
@@ -202,8 +214,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async writeFile(fid: FileID, contents: string): Promise<void> {
     // the right way to do it
     // fid is md5 string
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.writeFile(fid, contents);
     }
     // hack to make it compatible with the backend
@@ -262,8 +273,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   // }
 
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       // the right way to do it
       // pid is md5 string
       return this.storage.getProjectFiles(pid);
@@ -288,7 +298,6 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
           last_modified: data[2],
           checksum: data[3],
           project: pid,
-          open: false,
           contents: undefined
         }), acc);
       }
@@ -298,8 +307,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async getAllFiles(): Promise<FileBrief[]> {
     // getAllFiles is designed to be used in syncAll
     // offline mode must be enabled
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.getAllFiles();
     }
     // the backend should support getAllFiles it current doesn't
@@ -310,8 +318,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   };
 
   public async getFileToRun(pid: ProjectID, question: string): Promise<string|false> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       // the right way to do it
       // pid is md5 string
       return this.storage.getFileToRun(pid, question);
@@ -335,8 +342,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   public async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void> {
     // the right way to do it
     // pid is md5 string
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.setFileToRun(pid, question, filename);
     }
     // hack to make it compatible with the backend
@@ -352,30 +358,59 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     });
   };
 
-  public async getOpenTabs(proj: ProjectID, question: string): Promise<FileBrief[]> {
-    // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.getOpenTabs(proj, question);
-    // }
-    // not done
+  private offlineEnabled(): boolean {
+    return this.offlineMode === OfflineMode.On
+        || this.offlineMode === OfflineMode.Forced;
   }
 
-  public async addOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
-    // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.addOpenTab(proj, question, fid);
-    // }
-    // not done
+  public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
+    if (this.offlineEnabled()) {
+      return this.storage.getOpenFiles(pid, question);
+    }
+    let result = await this.socket.sendMessage<string[]>({
+      type: "getOpenFiles",
+      project: pid,
+      question: question
+    });
+    return result.map((f: string) =>
+      new FileBrief({
+        id: `${pid}/${f}`,
+        name: f,
+        last_modified: Date.now(),
+        project: pid,
+        checksum: "",
+        contents: undefined
+      }));
   }
 
-  public async removeOpenTab(proj: ProjectID, question: string, fid: FileID): Promise<void> {
-    // if (this.offlineMode === OfflineMode.On) {
-      return this.storage.removeOpenTab(proj, question, fid);
-    // }
-    // not done
+  public async addOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
+    if (this.offlineEnabled()) {
+      return this.storage.addOpenFile(pid, question, fid);
+    }
+    const split = R.split("/", fid);
+    const fname = R.join("/", R.drop(1, split));
+    return this.socket.sendMessage<void>({
+      type: "addOpenFile",
+      project: pid,
+      question: question,
+      file: fname
+    });
+  }
+
+  public async removeOpenFile(pid: ProjectID, question: string, fid: FileID): Promise<void> {
+    if (this.offlineEnabled()) {
+      return this.storage.removeOpenFile(pid, question, fid);
+    }
+    return this.socket.sendMessage<void>({
+      type: "removeOpenFile",
+      project: pid,
+      question: question,
+      file: fid
+    });
   }
 
   public async setSettings(settings: Settings): Promise<void> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.setSettings(settings);
     }
     return this.socket.sendMessage<void>({
@@ -385,8 +420,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
   }
 
   public async getSettings(): Promise<Settings> {
-    if (this.offlineMode === OfflineMode.On ||
-        this.offlineMode === OfflineMode.Forced) {
+    if (this.offlineEnabled()) {
       return this.storage.getSettings();
     }
     const json = await this.socket.sendMessage({
@@ -397,7 +431,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   // to be replaced by dexie
   public async syncAll(fetchServerChanges: boolean = true): Promise<void> {
-    if (this.offlineMode === OfflineMode.Off) {
+    if (!this.offlineEnabled()) {
       console.log("Ignored sync request --- offline mode disabled.");
       return;
     }
@@ -421,7 +455,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     const changesSent = await this.storage.getChangeLogs();
     const settingsSent = await this.storage.getSettings();
     if (! fetchServerChanges) {
-      if (changesSent.length === 0) {
+      if (! await this.storage.getDirty()) {
         console.log("Ignoring sync request --- no local file changes made.");
         return;
       }
@@ -434,7 +468,7 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
       deletedProjects: string[]
     }>({
       type: "sync",
-      projects: projectsSent,
+      projects: R.map((project) => R.evolve({settings: JSON.stringify}, project), projectsSent),
       files: filesSent,
       changes: changesSent,
       settings: {

@@ -91,7 +91,10 @@ function websocketTests(offlineMode: OfflineMode) {
           open: false
         });
       }, flatten(repeat(projs, testSize))));
-      return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend).catch((err) => {
+      return Services.login(TestAccount.user,
+                            TestAccount.password,
+                            false,
+                            "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi").catch((err) => {
         console.error(err);
       });
     });
@@ -136,7 +139,7 @@ function websocketTests(offlineMode: OfflineMode) {
     it(`newProject: create ${testSize} projects`, async () => {
       let ids: ProjectID[] = [];
       for (const p of projs) {
-        ids.push((await store.newProject(p.name)).id);
+        ids.push((await store.newProjectForTests(p.name)).id);
       }
       expect(ids).toEqual(R.map(prop("id"), projs));
       expect(await remoteProjs()).toEqual(expect.arrayContaining(projs));

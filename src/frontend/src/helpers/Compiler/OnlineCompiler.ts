@@ -8,10 +8,12 @@ import {AbstractCompiler,
 import {OfflineCompiler} from "./OfflineCompiler";
 import {AbstractStorage,
         ProjectID,
-        FileID} from "../Storage/Interface";
+        FileID,
+        OfflineMode} from "../Storage/Interface";
 import {DispatchFunction} from "../Services";
 import {appStateActions} from "../../reducers/appStateReducer";
 export {OnlineCompiler};
+import {RequestError} from "../Errors";
 
 class OnlineCompiler extends AbstractCompiler {
 
@@ -20,21 +22,24 @@ class OnlineCompiler extends AbstractCompiler {
   private activePIDs: number[];
 
   private syncAll: () => Promise<void>;
+  private getOfflineMode: () => OfflineMode;
 
   constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler,
-      dispatch: DispatchFunction, syncAll: () => Promise<void>) {
+      dispatch: DispatchFunction, syncAll: () => Promise<void>, getOfflineMode: () => OfflineMode) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
     this.syncAll = syncAll;
+    this.getOfflineMode = getOfflineMode;
 
     this.socket.register_callback("io", this.handleIO());
     this.socket.register_callback("test", this.handleTest());
   }
 
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
-    if (!this.socket.isConnected()) {
+    const mode = this.getOfflineMode();
+    if (!this.socket.isConnected() && mode === OfflineMode.On || mode === OfflineMode.Forced) {
       return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
@@ -60,10 +65,15 @@ class OnlineCompiler extends AbstractCompiler {
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
     } catch (res) {
-      if (!res.status || res.status !== "compile-failed") {
-        throw result;
+      if (res instanceof RequestError) {
+        result = res.response.result;
+        if (!result || !result["status"] || result["status"] !== "compile-failed") {
+          throw res;
+        }
+        result = res;
+      } else {
+        throw res;
       }
-      result = res;
     }
 
     // Handle compiler diagnostics
@@ -149,10 +159,11 @@ class OnlineCompiler extends AbstractCompiler {
     });
   }
 
-  protected programDone(pid: number) {
+  public programDone(pid: number) {
     const ind = this.activePIDs.indexOf(pid);
     if (ind === -1) {
-      throw new CompilerError("Program that was not running has ended.");
+      // Try offline compiler
+      this.offlineCompiler.programDone(pid);
     } else {
       this.activePIDs.splice(ind, 1);
     }

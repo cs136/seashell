@@ -217,7 +217,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(storage().addOpenTab(file.project, file.question(), file.id))
+              return asyncAction(storage().addOpenFile(file.project, file.question(), file.id))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
                   file = await storage().readFile(file.id);
@@ -270,14 +270,14 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         openFile: (file: S.FileBrief) => {
-          storage().addOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().addOpenFile(file.project, file.question(), file.id).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
               payload: file
             }));
         },
         closeFile: (file: S.FileBrief) => {
-          storage().removeOpenTab(file.project, file.question(), file.id).then((questions) =>
+          storage().removeOpenFile(file.project, file.question(), file.id).then((questions) =>
             dispatch({
               type: appStateActions.closeFile,
               payload: file
@@ -304,7 +304,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             .then(() => {
               return asyncAction(storage().getProjectFiles(pid))
                 .then((files: S.FileBrief[]) => {
-                  return asyncAction(storage().getOpenTabs(pid, name))
+                  return asyncAction(storage().getOpenFiles(pid, name))
                     .then((openFiles) => {
                       return asyncAction(storage().getFileToRun(pid, name)
                         .then((runFile) => {
@@ -377,9 +377,11 @@ const mapDispatchToProps = (dispatch: Function) => {
           // any errors that happen when auto connecting --
           // we're in the login screen, let user manually log in
           // if we can't auto login.
-          dispatch({ type: userActions.BUSY });
+          // dispatch({ type: userActions.BUSY });
           try {
             let user = await Services.autoConnect();
+            dispatch({type: userActions.BUSY});
+            await storage().syncAll();
             dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
@@ -443,6 +445,11 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         }
       },
+      storage: {
+        syncAll: () => {
+          return asyncAction(storage().syncAll());
+        },
+      },
       compile: {
         compileAndRun: (project: string, question: string, fid: S.FileID, test: boolean) => {
           dispatch({
@@ -455,8 +462,6 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           asyncAction(actions.dispatch.file.flushFileBuffer())
             .then(() =>
-              asyncAction(storage().syncAll(false))
-                .then(() =>
                   asyncAction(Services.compiler().compileAndRunProject(project,
                     question, fid, test)).then((result: C.CompilerResult) => {
                       dispatch({
@@ -479,7 +484,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                         type: appStateActions.setNotRunning,
                         payload: {}
                       });
-                    })));
+                    }));
         },
         setNotRunning: () => dispatch({
           type: appStateActions.setNotRunning,

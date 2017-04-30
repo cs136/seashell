@@ -3,6 +3,7 @@ import {Connection} from "../Services";
 import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, Callback} from "./Interface";
+import {appStateActions} from "../../reducers/appStateReducer";
 
 export {SeashellWebsocket}
 
@@ -54,11 +55,23 @@ class SeashellWebsocket {
       const websocket = this.websocket;
       switch (websocket.readyState) {
         case websocket.CONNECTING: {
-          this.debug && console.log("Socket is already connecting. Action ignored.");
-          return;
+          this.debug && console.log("Socket is already connecting. Closing and reconnecting.");
+          const promise = new Promise<void>((accept, reject) => {
+            websocket.onclose = () => {
+              this.connect(cnn).then(accept).catch(reject);
+            };
+          });
+          websocket.close();
+          return promise;
         }
         case websocket.OPEN: {
-          this.debug && console.log("Socket is already connected. Action ignored.");
+          this.debug && console.log("Socket is already connected. Closing and reconnecting.");
+          const promise = new Promise<void>((accept, reject) => {
+            websocket.onclose = () => {
+              this.connect(cnn).then(accept).catch(reject);
+            };
+          });
+          websocket.close();
           return;
         }
         case websocket.CLOSING: {
@@ -66,7 +79,7 @@ class SeashellWebsocket {
           const promise = new Promise<void>((accept, reject) => {
             // wait for a graceful shotdown then reconnect
             websocket.onclose = () => {
-              this.connect(cnn).then(accept);
+              this.connect(cnn).then(accept).catch(reject);
             };
           });
           return promise;
@@ -96,6 +109,7 @@ class SeashellWebsocket {
 
     // Websocket.onclose should race against authentication
     this.websocket.onclose = (evt: CloseEvent) => {
+      this.invoke_cb("disconnected");
       console.warn("Websocket lost connection.");
       clearInterval(this.pingLoop);
       for (const i in this.requests) {
@@ -191,6 +205,8 @@ class SeashellWebsocket {
 
       // Authentication should race against websocket.onclose
       await this.sendRequest(this.requests[-2]);
+
+      this.invoke_cb("connected");
     } catch (err) {
       if (err instanceof E.RequestError) {
         throw new E.LoginRequired();

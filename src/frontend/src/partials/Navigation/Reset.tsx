@@ -20,17 +20,18 @@ class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {
         return (<div className="pt-dialog-body">
             <p>Please type in your credentials to log in again. Please make sure "Reset Seashell" is checked if you also want to reset Seashell.</p>
             <div>
-                <p>Username:</p>
+                <div>Username:</div>
                 <div>
                     <input className="pt-input pt-fill" required type="text" value={this.state.username}
                         onChange={(e => this.setState(merge(this.state, { username: e.currentTarget.value })))} /></div></div>
             <div>
-                <p>Password:</p>
+                <div>Password:</div>
                 <div>
                     <input className="pt-input pt-fill" required type="password" value={this.state.password}
                         onChange={(e => this.setState(merge(this.state, { password: e.currentTarget.value })))} />
                 </div>
             </div>
+            <p/>
             <div>
                 <Blueprint.Checkbox checked={this.state.reset} label="Reset Seashell" onChange={() => this.setState(merge(this.state, {reset: !this.state.reset}))}/>
             </div>
@@ -39,7 +40,10 @@ class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {
                     this.props.closefunc();
                 }}>Cancel</button>
                 <button type="button" className="pt-button pt-intent-primary" disabled={this.state.username === "" || this.state.password === ""} onClick={() => {
-                    this.props.dispatch.user.signin(this.state.username, this.state.password, this.state.reset);
+                    this.props.dispatch.user.signin(this.state.username, this.state.password, this.state.reset).then(() => {
+                        this.props.dispatch.project.getAllProjects();
+                        this.props.dispatch.settings.initSettings();
+                    });
                     this.props.closefunc();
                 }}>Log in again</button>
             </div>
