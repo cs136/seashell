@@ -355,8 +355,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             } else {
               const path = window.location.pathname.substring(0,
                 window.location.pathname.lastIndexOf("/"));
-              asyncAction(Services.login(username, password, reset,
-                  PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined)).then((response) => {
+              asyncAction(Services.login(username, password, false)).then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {

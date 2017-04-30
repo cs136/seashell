@@ -8,7 +8,7 @@ module.exports = {
   ],
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.[chunkhash].js', 
+    filename: 'bundle.[chunkhash].js',
     publicPath: '/',
   },
   plugins: [
@@ -27,7 +27,8 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       IS_BROWSER: true,
-      PRODUCTION: false
+      PRODUCTION: false,
+      LOGIN_URL: JSON.stringify("https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi")
     })
   ],
   devtool: "source-map",
@@ -39,17 +40,17 @@ module.exports = {
     rules: [
       { enforce: 'pre', test: /\.js$/, loader: "source-map-loader" },
       { enforce: 'pre', test: /\.tsx?$/, loader: "tslint-loader" },
-      { test: /\.tsx?$/, loader: "awesome-typescript-loader" }, 
+      { test: /\.tsx?$/, loader: "awesome-typescript-loader" },
       { test: /\.scss$/,
         use: [
           'style-loader?sourceMap',
           'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
           'sass-loader?sourceMap'
-        ] 
-      }, { 
+        ]
+      }, {
         test: /\.css$/,
-        loader: "style-loader!css-loader" 
-      }, { 
+        loader: "style-loader!css-loader"
+      }, {
         test: /\.(woff|woff2|ttf|eot)$/,
         loader: 'file-loader'
       }, {

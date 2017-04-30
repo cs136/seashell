@@ -79,7 +79,7 @@ namespace Services {
   export async function login(user: string,
                               password: string,
                               rebootBackend: boolean = false,
-                              uri = "https://www.student.cs.uwaterloo.ca/~cs136/seashell-react/cgi-bin/login2.cgi"): Promise<void> {
+                              uri: string = LOGIN_URL): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
@@ -93,7 +93,8 @@ namespace Services {
           "p": password,
           "reset": !! rebootBackend
         },
-        dataType: "json"
+        dataType: "json",
+        timeout: 5000
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
@@ -104,10 +105,16 @@ namespace Services {
                                   response.port,
                                   response.pingPort);
     } catch (ajax) {
+      if (! ajax.status) {
+        throw new LoginError("Something bad happened - The Internet might be down :(");
+      }
       const status     = ajax.status;
       const code       = ajax.responseJSON.error.code;
       const msg        = ajax.responseJSON.error.message;
       const statusText = ajax.statusText;
+      if (code === 5) {
+        throw new LoginError("We couldn't match your username with password :(");
+      }
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
