@@ -41,8 +41,7 @@ module.exports = {
     }),
 */
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-      'LOGIN_URL': JSON.stringify('https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi')
+      'process.env.NODE_ENV': JSON.stringify('production')
     }),
     new HtmlWebpackPlugin ({
       inject: true,

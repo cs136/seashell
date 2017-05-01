@@ -89,7 +89,8 @@ namespace Services {
   export async function login(user: string,
                               password: string,
                               rebootBackend: boolean = false,
-                              uri: string = LOGIN_URL): Promise<void> {
+                              uri: string = PRODUCTION ? `https://${window.location.host}/~cs136/cgi-bin/login2.cgi`
+                                : "https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
@@ -104,7 +105,7 @@ namespace Services {
           "reset": !! rebootBackend
         },
         dataType: "json",
-        timeout: 10000
+        timeout: 7000
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
@@ -115,8 +116,11 @@ namespace Services {
                                   response.port,
                                   response.pingPort);
     } catch (ajax) {
-      if (! ajax.status) {
+      if (ajax.status === 0) {
         console.error(ajax);
+        if (ajax.statusText === "timeout") {
+          throw new LoginError("Something bad happened - Login timed out :(");
+        }
         throw new LoginError("Something bad happened - The Internet might be down :(");
       }
       const status     = ajax.status;

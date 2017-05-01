@@ -33,8 +33,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       IS_BROWSER: true,
-      PRODUCTION: false,
-      LOGIN_URL: JSON.stringify("https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi")
+      PRODUCTION: false
     })
   ],
   devtool: "source-map",
