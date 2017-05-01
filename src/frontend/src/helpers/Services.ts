@@ -62,14 +62,16 @@ namespace Services {
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
       dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
 
-    socketClient.register_callback("connected", () => disp({
-      type: appStateActions.connected,
-      payload: null
-    }));
-    socketClient.register_callback("disconnected", () => disp({
-      type: appStateActions.disconnected,
-      payload: null
-    }));
+    if (disp !== null) {
+      socketClient.register_callback("connected", () => disp({
+        type: appStateActions.connected,
+        payload: null
+      }));
+      socketClient.register_callback("disconnected", () => disp({
+        type: appStateActions.disconnected,
+        payload: null
+      }));
+    }
   }
 
   export function storage(): WebStorage {
@@ -89,8 +91,7 @@ namespace Services {
   export async function login(user: string,
                               password: string,
                               rebootBackend: boolean = false,
-                              uri: string = PRODUCTION ? `https://${window.location.host}/~cs136/seashell/cgi-bin/login2.cgi`
-                                : "https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
+                              uri: string = "https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
@@ -105,7 +106,7 @@ namespace Services {
           "reset": !! rebootBackend
         },
         dataType: "json",
-        timeout: 7000
+        timeout: 10000
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
@@ -117,7 +118,6 @@ namespace Services {
                                   response.pingPort);
     } catch (ajax) {
       if (ajax.status === 0) {
-        console.error(ajax);
         if (ajax.statusText === "timeout") {
           throw new LoginError("Something bad happened - Login timed out :(");
         }
