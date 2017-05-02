@@ -30,6 +30,7 @@ const halfTestSize = Math.ceil(testSize / 2);
 
 // helpers
 let unique = 0;
+const LOGIN_URL = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
 
 // should return a thunk, see jscheck documentation
 function uniqStr(len: number): () => string {
@@ -74,7 +75,6 @@ function websocketTests(offlineMode: OfflineMode) {
       projs = R.sortBy(prop("id"), map((s: string) => new Project({
         id: offlineMode === OfflineMode.On ? md5(`X${s}`) as string : `X${s}`,
         name: `X${s}`,
-        runs: {},
         last_modified: 0
       }), uniqStrArr(testSize, 20)()));
       files = R.sortBy(prop("id"), map((p: Project) => {
@@ -91,7 +91,10 @@ function websocketTests(offlineMode: OfflineMode) {
           open: false
         });
       }, flatten(repeat(projs, testSize))));
-      return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend).catch((err) => {
+      return Services.login(TestAccount.user,
+                            TestAccount.password,
+                            false,
+                            "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi").catch((err) => {
         console.error(err);
       });
     });
@@ -110,7 +113,6 @@ function websocketTests(offlineMode: OfflineMode) {
         // properties you want to check
         id: p.id,
         name: p.name,
-        runs: p.runs,
         last_modified: 0,
       }), remote)) || [];
     }

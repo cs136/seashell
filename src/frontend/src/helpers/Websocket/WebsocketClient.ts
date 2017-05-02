@@ -1,13 +1,19 @@
-import {AbstractCoder, Coder, ShittyCoder} from "./Crypto";
+import {AbstractCoder, Coder} from "./Crypto";
 import {Connection} from "../Services";
 import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, Callback} from "./Interface";
 import {appStateActions} from "../../reducers/appStateReducer";
 
-export {SeashellWebsocket, MockInternet}
+export {SeashellWebsocket}
 
-enum MockInternet {Online, Offline, Real};
+
+enum OnCloseCode {
+  Normal = 1000,
+  Abnormal = 1006,
+  Unknown = 4000,
+  PingTimedOut = 4001
+};
 
 class SeashellWebsocket {
   private connection?: Connection;
@@ -21,9 +27,7 @@ class SeashellWebsocket {
   public debug: boolean; // toggle console.log for tests
   private pingLoop: any;
   private callbacks: Callback[];
-  public mockInternet: MockInternet;
-  // this allows WebsocketService to access member functions by string key
-  // [key: string]: any;
+  private lastPong: number = 0;
 
   constructor(debug?: boolean) {
     this.debug = debug || false;
@@ -34,6 +38,7 @@ class SeashellWebsocket {
   // Pass a new Connection object to overwrite the previously held one
   // It must be safe to call this function consecutively many times
   public async connect(cnn: Connection): Promise<void> {
+    const firstTime: () => boolean = () => ! this.connection;
     this.debug && console.log("Connecting to websocket...");
     this.lastMsgID = 0;
     this.requests = {};
@@ -47,7 +52,7 @@ class SeashellWebsocket {
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
     if (this.websocket) {
-      let websocket = this.websocket;
+      const websocket = this.websocket;
       switch (websocket.readyState) {
         case websocket.CONNECTING: {
           this.debug && console.log("Socket is already connecting. Closing and reconnecting.");
@@ -72,6 +77,7 @@ class SeashellWebsocket {
         case websocket.CLOSING: {
           this.debug && console.log(`Existing websocket is closing. Wait to reopen new connection.`);
           const promise = new Promise<void>((accept, reject) => {
+            // wait for a graceful shotdown then reconnect
             websocket.onclose = () => {
               this.connect(cnn).then(accept).catch(reject);
             };
@@ -80,48 +86,58 @@ class SeashellWebsocket {
         }
         case websocket.CLOSED: {
           this.debug && console.log(`Existing websocket is closed. Reopening new connection.`);
+          // pass through to continue connection
         }
       }
     }
 
-    this.connection = cnn;
-    this.coder = new Coder(this.connection.key);
+    // continue connection
+    let connected: any;
+    let failed: any;
+    const rtv = new Promise<void>((resolve, reject) => {
+      connected = resolve;
+      failed = reject;
+    });
 
+    this.coder = new Coder(cnn.key);
     try {
-      this.websocket = new WebSocket(this.connection.wsURI);
+      this.websocket = new WebSocket(cnn.wsURI);
     } catch (err) {
-      console.error(`Could not create WebSocket connection to ${this.connection.wsURI}:\n${err}`);
+      console.error(`Could not create WebSocket connection to ${cnn.wsURI}:\n${err}`);
       throw new E.LoginRequired(); // simply ask user to retry
     }
 
     // Websocket.onclose should race against authentication
     this.websocket.onclose = (evt: CloseEvent) => {
-      console.warn(`Websocket lost connection. Trying to reconnect...`);
-      clearInterval(this.pingLoop);
-      // automatically reconnect after 3s
-      if (this.connection) {
-        let connection = this.connection;
-        setTimeout(() => {
-          this.connect(connection);
-        }, 3000);
-      }
       this.invoke_cb("disconnected");
+      console.warn("Websocket lost connection.");
+      clearInterval(this.pingLoop);
       for (const i in this.requests) {
-        if (evt.code === 4000) {
+        if (evt.code === OnCloseCode.Unknown) {
           this.requests[i].reject(new E.WebsocketError(evt.reason));
-          delete this.requests[i];
         } else {
-          this.requests[i].reject(new E.NoInternet());
-          delete this.requests[i];
+          this.requests[i].reject(new E.RequestAborted("RequestAborted: Websocket disconnected."));
         }
+        delete this.requests[i];
       }
-    };
-
-    this.websocket.onerror = (err) => {
-      console.error(`Websocket encountered error. Closing websocket.`);
-      if (this.websocket) {// Always reachable
-        this.websocket.close(4000, err.toString());
+      // exited abnormally,
+      // coule be internet disruption, handshake timeout, connection refused
+      // if this.connection exists, then we have succefully connected automatically reconnect after 3s
+      if (evt.code === OnCloseCode.Abnormal && firstTime()) {
+        failed(new E.LoginRequired());
+        return;
       }
+      // all other onclose codes:
+      console.warn("Reconnect in 5 seconds...");
+      setTimeout(() => {
+        // when user logs out,
+        // this.disconnect must clear this.connection
+        if (this.connection) {
+          this.connect(cnn);
+        } else {
+          console.warn("Gave up reconnection. User probably logged out.");
+        }
+      }, 5000);
     };
 
     this.websocket.onopen = () => {
@@ -132,9 +148,11 @@ class SeashellWebsocket {
       this.pingLoop = setInterval(async () => {
         timeoutCount++;
         if (timeoutCount >= 3) {
-          console.warn("Ping timed out. Server is not responsive.");
-          if (this.websocket) // Always reachable
-            this.websocket.close(); // force reconnect
+          console.warn(`Ping timed out. Server is not responsive. [${timeoutCount - 2}]`);
+          if (this.websocket) {// Always reachable
+            console.warn("Closing connection to restart...");
+            this.websocket.close(OnCloseCode.PingTimedOut); // force reconnect
+          }
         }
         this.debug && console.log("ping");
         await this.ping();
@@ -158,7 +176,18 @@ class SeashellWebsocket {
     };
 
     this.debug && console.log("Waiting for server response...");
+    // if the server doesn't response in 5s
+    // the default chrome's handshake timeout is too long
+    const responseTimeout = setTimeout(() => {
+      if (this.websocket) {
+        this.websocket.close();
+        // will close with 1006
+        // fall back to websocket.onclose()
+      }
+    }, 5000);
     const serverChallenge = await this.requests[-1].received;
+    clearTimeout(responseTimeout);
+
     try {
       const result = await this.coder.answer(serverChallenge);
       const response = [result.iv,
@@ -186,7 +215,10 @@ class SeashellWebsocket {
       }
     }
 
-    return;
+    // connection done
+    this.connection = cnn;
+    connected();
+    return rtv;
   }
 
   private resolveRequest(responseText: string): void {
@@ -197,17 +229,16 @@ class SeashellWebsocket {
     //  error message otherwise.
     const request = this.requests[response.id];
     const time = new Date();
-    if (request.type !== "ping") {
       const diff = request.time ? time.getTime() - request.time : -1;
       if (response.success) {
-        if (request.message.type !== "ping") {
+        if (request.message.type === "ping") {
+          this.lastPong = Date.now();
+        } else {
           this.debug && console.log(`Request ${response.id} succeeded after ${diff} ms`, response);
         }
       } else {
         this.debug && console.warn(`Request ${response.id} failed after ${diff} ms`, request.message, response);
       }
-    }
-
     if (response.id >= 0) {
       delete this.requests[response.id];
     } else if (this.requests[response.id].callback) {
@@ -229,12 +260,12 @@ class SeashellWebsocket {
   }
 
   public disconnect(): void {
+    this.connection = undefined;
     if (this.websocket) {
-      this.websocket.onclose = () => {};
-      this.websocket.close();
+      this.websocket.close(OnCloseCode.Normal);
+      clearInterval(this.pingLoop);
     }
     this.websocket = undefined;
-    this.connection = undefined;
   }
 
   public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
@@ -269,6 +300,13 @@ class SeashellWebsocket {
   }
 
   private sendRequest<T>(request: Request<T>): Promise<T> {
+    // If user's computer goes to sleep the server doesn't receive response for 5 minutes,
+    // the next request should throw LoginRequired since the server will die of inactivity.
+    // This timeout should be <= the timeout on the server side.
+    // if (! R.contains(request.message.type, ["clientAuth", "authenticate", "ping"]) &&
+    //     Date.now() - this.lastPong >= 10 * 1000) {
+    //   throw new E.LoginRequired("You've been offline for a while. We'd like to confirm who you are.");
+    // }
     if (! this.isConnected()) {
       throw new E.NoInternet();
     }
@@ -282,7 +320,7 @@ class SeashellWebsocket {
     if (this.websocket) {
       this.websocket.send(blob);
     } else {
-      throw new E.NoInternet();
+      throw new E.LoginRequired();
     }
     return request.received;
   }
@@ -299,8 +337,8 @@ class SeashellWebsocket {
     return this.sendRequest<T>(new Request<T>(message));
   }
 
-  public isConnected() {
-    return this.websocket &&
+  public isConnected(): boolean {
+    return this.websocket !== undefined &&
            this.websocket.readyState === this.websocket.OPEN;
   }
 

@@ -45,17 +45,17 @@ module.exports = {
     rules: [
       { enforce: 'pre', test: /\.js$/, loader: "source-map-loader" },
       { enforce: 'pre', test: /\.tsx?$/, loader: "tslint-loader" },
-      { test: /\.tsx?$/, loader: "awesome-typescript-loader" }, 
+      { test: /\.tsx?$/, loader: "awesome-typescript-loader" },
       { test: /\.scss$/,
         use: [
           'style-loader?sourceMap',
           'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
           'sass-loader?sourceMap'
-        ] 
-      }, { 
+        ]
+      }, {
         test: /\.css$/,
-        loader: "style-loader!css-loader" 
-      }, { 
+        loader: "style-loader!css-loader"
+      }, {
         test: /\.(woff|woff2|ttf|eot)$/,
         loader: 'file-loader'
       }, {

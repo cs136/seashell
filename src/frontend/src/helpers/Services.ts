@@ -62,14 +62,16 @@ namespace Services {
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
       dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
 
-    socketClient.register_callback("connected", () => disp({
-      type: appStateActions.connected,
-      payload: null
-    }));
-    socketClient.register_callback("disconnected", () => disp({
-      type: appStateActions.disconnected,
-      payload: null
-    }));
+    if (disp !== null) {
+      socketClient.register_callback("connected", () => disp({
+        type: appStateActions.connected,
+        payload: null
+      }));
+      socketClient.register_callback("disconnected", () => disp({
+        type: appStateActions.disconnected,
+        payload: null
+      }));
+    }
   }
 
   export function storage(): WebStorage {
@@ -89,12 +91,12 @@ namespace Services {
   export async function login(user: string,
                               password: string,
                               rebootBackend: boolean = false,
-                              uri = "https://www.student.cs.uwaterloo.ca/~cs136/seashell-react/cgi-bin/login2.cgi"): Promise<void> {
+                              uri: string = "https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
     try {
-      debug && console.log("Logging in...");
+      debug && console.log(`Logging in at ${uri} ...`);
       let response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
@@ -103,7 +105,8 @@ namespace Services {
           "p": password,
           "reset": !! rebootBackend
         },
-        dataType: "json"
+        dataType: "json",
+        timeout: 10000
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
@@ -114,10 +117,19 @@ namespace Services {
                                   response.port,
                                   response.pingPort);
     } catch (ajax) {
+      if (ajax.status === 0) {
+        if (ajax.statusText === "timeout") {
+          throw new LoginError("Something bad happened - Login timed out :(");
+        }
+        throw new LoginError("Something bad happened - The Internet might be down :(");
+      }
       const status     = ajax.status;
       const code       = ajax.responseJSON.error.code;
       const msg        = ajax.responseJSON.error.message;
       const statusText = ajax.statusText;
+      if (code === 5) {
+        throw new LoginError("We couldn't match your username with password :(");
+      }
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
@@ -164,8 +176,9 @@ namespace Services {
 
     await localStorage.connect(`seashell8-${connection.username}`);
     await socketClient.connect(connection);
-    if (sync)
+    if (sync) {
       await webStorage.syncAll();
+    }
     return connection.username;
   }
 

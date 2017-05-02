@@ -17,6 +17,8 @@ import * as LS from "localstorage-memory";
 
 (<any>jasmine).DEFAULT_TIMEOUT_INTERVAL = 80 * 1000;
 
+const LOGIN_URL = "https://www.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi";
+
 Services.init(null, {
   debugWebSocket: false,
   debugWebStorage: false,
@@ -34,7 +36,7 @@ if (TestAccount.user) {
 function servicesTest() {
 
   beforeAll(() => {
-    return Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
+    return Services.login(TestAccount.user, TestAccount.password, false, LOGIN_URL);
   });
 
   afterAll(() => {
@@ -44,7 +46,7 @@ function servicesTest() {
   it("Login multiple times. Should not crash.", async () => {
       // expect(socket.isConnected()).toEqual(true);
       for (const i of R.range(0, 3)) {
-        await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
+        await Services.login(TestAccount.user, TestAccount.password, false, LOGIN_URL);
       }
     });
 
@@ -59,7 +61,7 @@ function servicesTest() {
     // expect(socket.isConnected()).toEqual(true);
     for (const i of R.range(0, 3)) {
       await Services.logout();
-      await Services.login(TestAccount.user, TestAccount.password, false, TestAccount.backend);
+      await Services.login(TestAccount.user, TestAccount.password, false, LOGIN_URL);
     }
   });
 };

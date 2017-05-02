@@ -353,10 +353,12 @@ const mapDispatchToProps = (dispatch: Function) => {
               showError("Please fill in all fields!");
               reject(null);
             } else {
-              const path = window.location.pathname.substring(0,
-                window.location.pathname.lastIndexOf("/"));
-              asyncAction(Services.login(username, password, reset,
-                  PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined)).then((response) => {
+              const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/"));
+              asyncAction(Services.login(username,
+                                         password,
+                                         false,
+                                         PRODUCTION ? `https://${window.location.host}${path}/cgi-bin/login2.cgi` : undefined))
+              .then((response) => {
                 dispatch({ type: userActions.SIGNIN, payload: username });
                 resolve();
               }).catch((e) => {
