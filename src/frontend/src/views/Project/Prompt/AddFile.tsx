@@ -12,11 +12,9 @@ export interface AddFileProps {questions: string[]; closefunc: Function; };
     so be careful if Seashell's File class needs to be used
     here in the future. */
 
-class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string, uploadFiles: File[]}> {
+class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string, uploadFiles: File[], fieldsDisabled: boolean}> {
   project: string;
   question: string;
-
-  private fieldsDisabled: boolean = false;
 
   constructor(props: AddFileProps&actionsInterface) {
     super(props);
@@ -26,7 +24,8 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
       this.state = {
         file: "",
         prevFile: "",
-        uploadFiles: []
+        uploadFiles: [],
+        fieldsDisabled: false
       };
     } else {
       throw new Error("AddFile invoke on undefined project!");
@@ -58,13 +57,42 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
     return result;
   }
 
+  private submitForm() {
+    this.setState(merge(this.state, {fieldsDisabled: true}));
+    let proms: Promise<any>[] = [];
+    if (this.state.file) {
+      proms.push(this.props.dispatch.file.addFile(
+        this.project,
+        `${this.question}/${this.state.file}`,
+        this.getDefaultContents(this.state.file)));
+    }
+    if (this.state.uploadFiles) {
+      proms.concat(this.state.uploadFiles.map((file: File) => new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onload = () => {
+          this.props.dispatch.file.addFile(
+              this.project, `${this.question}/${file.name}`, reader.result)
+            .then(() => resolve())
+            .catch(() => reject(file.name));
+        };
+        reader.onerror = () => {
+          reject(file.name);
+        };
+        reader.readAsDataURL(file);
+      })));
+    }
+    Promise.all(proms).then(() => this.props.closefunc())
+      .catch(cause => showError(`Failed to upload file ${cause}.`))
+      .then(() => this.setState(merge(this.state, {fieldsDisabled: false})));
+  }
+
   render() {
     return(<div className="pt-dialog-body">
       <p>What would you like to call this file?</p>
       <div>
         <label>New File:
           <input className="pt-input pt-fill" required
-            disabled={this.fieldsDisabled} type="text" value={this.state.file}
+            disabled={this.state.fieldsDisabled} type="text" value={this.state.file}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
               this.setState(merge(this.state, {file: this.state.prevFile}));
@@ -73,11 +101,18 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
               this.setState(merge(this.state, {prevFile: this.state.file}));
             }
           }}
+          onKeyPress={(e: any) => {
+            if (e.key === "Enter") {
+              this.submitForm();
+            }
+          }}
           onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
         </label><br />
         <label>Upload Files:
-          <input type="file" multiple disabled={this.fieldsDisabled} onChange={
-            (e => this.setState(merge(this.state, {uploadFiles: this.filesToArray(e.currentTarget.files)})))
+          <input type="file" multiple disabled={this.state.fieldsDisabled} onChange={
+            (e => this.setState(merge(this.state, {
+              uploadFiles: this.filesToArray(e.currentTarget.files)
+            })))
           } />
         </label>
       </div>
@@ -87,34 +122,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
         }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" disabled={
           (this.state.file === "" || this.state.file.includes("/")) && this.state.uploadFiles === []
-        } onClick={() => {
-          this.fieldsDisabled = true;
-          let proms: Promise<any>[] = [];
-          if (this.state.file) {
-            proms.push(this.props.dispatch.file.addFile(
-              this.project,
-              `${this.question}/${this.state.file}`,
-              this.getDefaultContents(this.state.file)));
-          }
-          if (this.state.uploadFiles) {
-            proms.concat(this.state.uploadFiles.map((file: File) => new Promise((resolve, reject) => {
-              let reader = new FileReader();
-              reader.onload = () => {
-                this.props.dispatch.file.addFile(
-                    this.project, `${this.question}/${file.name}`, reader.result)
-                  .then(() => resolve())
-                  .catch(() => reject(file.name));
-              };
-              reader.onerror = () => {
-                reject(file.name);
-              };
-              reader.readAsDataURL(file);
-            })));
-          }
-          Promise.all(proms).then(() => this.props.closefunc())
-            .catch(cause => showError(`Failed to upload file ${cause}.`))
-            .then(() => this.fieldsDisabled = false);
-          }}>Add File</button>
+        } onClick={() => this.submitForm()}>Add File</button>
       </div>
     </div>
     );
