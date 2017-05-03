@@ -48,7 +48,9 @@
          read-project-settings 
          write-project-settings
          write-project-settings/key
-         )
+         add-open-file
+         remove-open-file
+         get-open-files)
 
 (require seashell/log
          seashell/seashell-config
@@ -793,3 +795,22 @@
                                                               (read-config 'common-subdirectory)
                                                               question)
                                                           file)))))
+
+(define/contract (add-open-file project question path)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project (string->symbol (string-append question "_open_files"))
+                              (jsexpr->string `(,path ,@(get-open-files project question)))))
+
+(define/contract (get-open-files project question)
+  (-> (and/c project-name? is-project?) path-string? (or/c #f (listof path-string?)))
+  (filter
+    (lambda (file)
+      (file-exists? (build-path (build-project-path project) file)))
+    (remove-duplicates (string->jsexpr (or
+      (read-project-settings/key project (string->symbol (string-append question "_open_files"))) "[]")))))
+
+(define/contract (remove-open-file project question path)
+  (-> (and/c project-name? is-project?) path-string? path-string? void)
+  (write-project-settings/key project (string->symbol (string-append question "_open_files"))
+                              (jsexpr->string (remove* `(,path) (string->jsexpr
+                                                                  (get-open-files project question))))))
