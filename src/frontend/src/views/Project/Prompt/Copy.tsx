@@ -7,7 +7,8 @@ import {map, actionsInterface} from "../../../actions";
 
 export interface CopyProps {questions: string[]; closefunc: Function; };
 
-class Copy extends React.Component<CopyProps&actionsInterface, {question: string; file: string, prevFile: string}> {
+class Copy extends React.Component<CopyProps&actionsInterface, {question: string; file: string, prevFile: string, fieldsDisabled: boolean}> {
+
   constructor(props: CopyProps&actionsInterface) {
     super(props);
     let file = this.props.appState.fileOpTarget;
@@ -15,12 +16,19 @@ class Copy extends React.Component<CopyProps&actionsInterface, {question: string
       this.state = {
         question: this.props.questions[0],
         file: file.name.split("/").pop() || "", // Both of these are unreachable
-        prevFile: file.name.split("/").pop() || "" // As above ^ ^
+        prevFile: file.name.split("/").pop() || "", // As above ^ ^
+        fieldsDisabled: false
       };
     } else {
       throw new Error("CopyWindow invoked on undefined file!");
     }
   }
+
+  private submitForm() {
+    this.props.dispatch.file.copyFile(this.state.question + "/" + this.state.file);
+    this.props.closefunc();
+  }
+
   render() {
     return(<div className="pt-dialog-body">
       <p>Where would you like to copy this file?</p>
@@ -41,10 +49,8 @@ class Copy extends React.Component<CopyProps&actionsInterface, {question: string
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
                 }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-primary" onClick={() => {
-          this.props.dispatch.file.copyFile(this.state.question + "/" + this.state.file);
-          this.props.closefunc();
-          }}>Copy</button>
+        <button type="button" className="pt-button pt-intent-primary"
+          onClick={() => this.submitForm()}>Copy</button>
       </div>
     </div>
     );
