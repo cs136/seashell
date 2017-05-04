@@ -2,14 +2,14 @@ import * as React from "react";
 import {merge} from "ramda";
 import {map, actionsInterface} from "../../../actions";
 
-export interface PromptProps {
+interface PromptProps {
   closefunc: Function;
   submitfunc: () => Promise<any>;
   disable: (val: boolean) => void;
   submitMessage: string;
 }
 
-export interface PromptState {
+interface PromptState {
   fieldsDisabled: boolean;
 }
 

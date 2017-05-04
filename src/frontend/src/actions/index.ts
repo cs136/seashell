@@ -158,6 +158,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               newName: targetName.split("/").pop()
             }
           });
+          return Promise.resolve();
         },
         updateFile: (file: S.File, newFileContent: string) => {
           dispatch({
@@ -207,8 +208,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: file
             }));
         },
-        addFile: (project: string, path: string,
-          newFileContent: string) => {
+        addFile: (project: string, path: string, newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(storage().newFile(project, path, newFileContent))
