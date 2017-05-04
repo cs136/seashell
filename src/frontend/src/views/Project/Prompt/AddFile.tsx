@@ -88,7 +88,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
         reader.readAsDataURL(file);
       })));
     }
-    return Promise.all(proms).then(() => this.props.closefunc())
+    return Promise.all(proms)
       .catch(cause => showError(`Failed to upload file ${cause}.`));
   }
 
