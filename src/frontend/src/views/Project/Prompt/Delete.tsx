@@ -9,18 +9,7 @@ interface DeleteProps {
   closefunc: Function;
 };
 
-interface DeleteState {
-  disabled: boolean;
-}
-
-class Delete extends React.Component<DeleteProps&actionsInterface, DeleteState> {
-
-  constructor(props: DeleteProps&actionsInterface) {
-    super(props);
-    this.state = {
-      disabled: false
-    };
-  }
+class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
 
   private submitForm(): Promise<void> {
     if (this.props.appState.fileOpTarget &&
@@ -44,8 +33,7 @@ class Delete extends React.Component<DeleteProps&actionsInterface, DeleteState> 
 
   render() {
     return (<Prompt submitMessage="Delete" submitfunc={() => this.submitForm()}
-        closefunc={this.props.closefunc} disable={(val: boolean) =>
-          this.setState(merge(this.state, {disabled: val}))}>
+        closefunc={this.props.closefunc}>
       <p>Are you sure you want to delete this file?</p>
     </Prompt>
     );

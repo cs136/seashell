@@ -5,7 +5,7 @@ import {map, actionsInterface} from "../../../actions";
 interface PromptProps {
   closefunc: Function;
   submitfunc: () => Promise<any>;
-  disable: (val: boolean) => void;
+  disable?: (val: boolean) => void;
   submitMessage: string;
 }
 
@@ -22,8 +22,11 @@ class Prompt extends React.Component<PromptProps&actionsInterface, PromptState> 
   }
 
   private submitForm() {
-    this.props.disable(true);
-    this.props.submitfunc().then(() => this.props.disable(false));
+    if (this.props.disable) this.props.disable(true);
+    this.props.submitfunc().then(() => {
+      if (this.props.disable) this.props.disable(false);
+      this.props.closefunc();
+    });
   }
 
   render() {
