@@ -9,11 +9,18 @@ export interface AddFileProps {
   closefunc: Function;
 }
 
+interface AddFileState {
+  file: string;
+  prevFile: string;
+  uploadFiles: File[];
+  disabled: boolean;
+}
+
 /* Note that this class makes use of the built-in File class,
     so be careful if Seashell's File class needs to be used
     here in the future. */
 
-class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string, uploadFiles: File[]}> {
+class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileState> {
   project: string;
   question: string;
 
@@ -25,7 +32,8 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
       this.state = {
         file: "",
         prevFile: "",
-        uploadFiles: []
+        uploadFiles: [],
+        disabled: false
       };
     } else {
       throw new Error("AddFile invoke on undefined project!");
@@ -86,11 +94,12 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
 
   render() {
     return(<Prompt submitMessage="Add File" closefunc={this.props.closefunc}
-        submitfunc={() => this.submitForm()}>
+        submitfunc={() => this.submitForm()} disable={(val: boolean) =>
+          this.setState(merge(this.state, {disabled: val}))}>
       <p>What would you like to call this file?</p>
       <div>
         <label>New File:
-          <input className="pt-input pt-fill" required
+          <input className="pt-input pt-fill" required disabled={this.state.disabled}
             type="text" value={this.state.file}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
@@ -103,7 +112,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
           onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
         </label><br />
         <label>Upload Files:
-          <input type="file" multiple onChange={
+          <input type="file" multiple disabled={this.state.disabled} onChange={
             (e => this.setState(merge(this.state, {
               uploadFiles: this.filesToArray(e.currentTarget.files)
             })))
