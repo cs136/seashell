@@ -26,7 +26,8 @@ class List extends React.Component<ListProps & actionsInterface, ListState> {
             {question.files.map((file: S.FileBrief) => (<MenuItem key={"file-list-item-" + file.name} onClick={() => {
                 this.props.dispatch.file.openFile(file);
                 this.props.dispatch.file.switchFile(file);
-            }} iconName="document" text={file.name.substring(file.name.indexOf("/") + 1)} />))}
+            }} iconName="document" text={
+                file.question() === "common" ? file.name : file.name.substring(file.name.indexOf("/") + 1)} />))}
         </Menu>);
     }
 }

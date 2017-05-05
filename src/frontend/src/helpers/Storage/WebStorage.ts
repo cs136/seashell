@@ -439,8 +439,8 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     let startTime = Date.now();
     let frontSpent = 0;
     let backSpent = 0;
-    const projectsSent = await this.storage.getProjects();
-    const filesSent = await this.storage.getAllFiles();
+    const projectsSent: Project[] = await this.storage.getProjectsForSync();
+    const filesSent: File[] = await this.storage.getAllFiles();
     // create a cache to reduce getProject calls
     // it's a bit hacky but ideally the backend should recongize project IDs directly
     // so we don't need to call getProject here at all to find the project name
