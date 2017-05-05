@@ -51,7 +51,7 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
           </select>
         </div>
         <input className="pt-input pt-fill" required type="text" value={this.state.file}
-          disabled={this.state.disabled} onBlur={() => {
+          disabled={this.state.disabled} ref={input => input && input.focus()} onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
               this.setState(merge(this.state, {file: this.state.prevFile}));
             }

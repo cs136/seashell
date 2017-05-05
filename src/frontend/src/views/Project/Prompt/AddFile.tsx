@@ -100,7 +100,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
       <div>
         <label>New File:
           <input className="pt-input pt-fill" required disabled={this.state.disabled}
-            type="text" value={this.state.file}
+            type="text" value={this.state.file} ref={input => input && input.focus()}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
               this.setState(merge(this.state, {file: this.state.prevFile}));
@@ -113,9 +113,9 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
         </label><br />
         <label>Upload Files:
           <input type="file" multiple disabled={this.state.disabled} onChange={
-            (e => this.setState(merge(this.state, {
+            e => this.setState(merge(this.state, {
               uploadFiles: this.filesToArray(e.currentTarget.files)
-            })))
+            }))
           } />
         </label>
       </div>

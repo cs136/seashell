@@ -33,6 +33,8 @@ class Prompt extends React.Component<PromptProps&actionsInterface, PromptState> 
     return(<div className="pt-dialog-body" onKeyPress={(e: any) => {
         if (e.key === "Enter") {
           this.submitForm();
+          e.stopPropagation();
+          e.preventDefault();
         }}}>
       {React.Children.map(this.props.children, c =>
         React.isValidElement(c) ?
@@ -43,7 +45,11 @@ class Prompt extends React.Component<PromptProps&actionsInterface, PromptState> 
           Cancel
         </button>
         <button type="button" className="pt-button pt-intent-primary"
-            onClick={() => this.submitForm()}>
+            onClick={(e: any) => {
+              this.submitForm();
+              e.stopPropagation();
+              e.preventDefault();
+            }} autoFocus>
           {this.props.submitMessage}
         </button>
       </div>
