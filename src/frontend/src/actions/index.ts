@@ -312,9 +312,11 @@ const mapDispatchToProps = (dispatch: Function) => {
                             name: name,
                             runFile: runFile,
                             currentFile: undefined,
-                            openFiles: openFiles.filter((file) => file.question() === name),
+                            openFiles: openFiles.filter((file) => file.question() === name ||
+                              file.question() === "common"),
                             diags: [],
-                            files: files.filter((file) => file.question() === name)
+                            files: files.filter((file) => file.question() === name ||
+                              file.question() === "common")
                           };
                           dispatch({
                             type: appStateActions.switchQuestion,
