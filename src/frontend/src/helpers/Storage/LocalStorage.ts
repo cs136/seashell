@@ -335,6 +335,18 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
+  public async getProjectsForSync(): Promise<Project[]> {
+    this.debug && console.log(`getProjects`);
+    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
+    return await this.db.transaction("rw", tbs, async () => {
+      const projs: ProjectBrief[] = [];
+      await this.db.projects.toCollection().each((proj: Project) => {
+        projs.push(new Project(proj));
+      });
+      return projs;
+    });
+  }
+
   public async getAllFiles(): Promise<FileBrief[]> {
     this.debug && console.log(`getAllFiles`);
     return await this.db.transaction("r", this.db.files, async () => {
