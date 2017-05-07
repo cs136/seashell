@@ -1,16 +1,14 @@
 import * as React from "react";
-
 import {merge} from "ramda";
-
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 
-export interface MarmosetResultProps { result: any; };
+interface MarmosetResultProps {
+  result: any;
+};
 
 class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterface, {}> {
-  constructor(props: MarmosetResultProps&actionsInterface) {
-    super(props);
-  }
+
   render() {
     const {result} = this.props;
     let message = (<div className="pt-callout">

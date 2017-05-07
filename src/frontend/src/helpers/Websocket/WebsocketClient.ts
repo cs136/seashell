@@ -154,9 +154,7 @@ class SeashellWebsocket {
             this.websocket.close(OnCloseCode.PingTimedOut); // force reconnect
           }
         }
-        this.debug && console.log("ping");
         await this.ping();
-        this.debug && console.log("pong");
         timeoutCount = 0;
       }, 5000);
     };

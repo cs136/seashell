@@ -1,18 +1,26 @@
 import * as React from "react";
-
 import {merge} from "ramda";
-
-import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 import {showError} from "../../../partials/Errors";
+import Prompt from "./Prompt";
 
-export interface AddFileProps {questions: string[]; closefunc: Function; };
+export interface AddFileProps {
+  questions: string[];
+  closefunc: Function;
+}
+
+interface AddFileState {
+  file: string;
+  prevFile: string;
+  uploadFiles: File[];
+  disabled: boolean;
+}
 
 /* Note that this class makes use of the built-in File class,
     so be careful if Seashell's File class needs to be used
     here in the future. */
 
-class AddFile extends React.Component<AddFileProps&actionsInterface, { file: string, prevFile: string, uploadFiles: File[], fieldsDisabled: boolean}> {
+class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileState> {
   project: string;
   question: string;
 
@@ -25,7 +33,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
         file: "",
         prevFile: "",
         uploadFiles: [],
-        fieldsDisabled: false
+        disabled: false
       };
     } else {
       throw new Error("AddFile invoke on undefined project!");
@@ -58,7 +66,6 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
   }
 
   private submitForm() {
-    this.setState(merge(this.state, {fieldsDisabled: true}));
     let proms: Promise<any>[] = [];
     if (this.state.file) {
       proms.push(this.props.dispatch.file.addFile(
@@ -81,18 +88,19 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
         reader.readAsDataURL(file);
       })));
     }
-    Promise.all(proms).then(() => this.props.closefunc())
-      .catch(cause => showError(`Failed to upload file ${cause}.`))
-      .then(() => this.setState(merge(this.state, {fieldsDisabled: false})));
+    return Promise.all(proms)
+      .catch(cause => showError(`Failed to upload file ${cause}.`));
   }
 
   render() {
-    return(<div className="pt-dialog-body">
+    return(<Prompt submitMessage="Add File" closefunc={this.props.closefunc}
+        submitfunc={() => this.submitForm()} disable={(val: boolean) =>
+          this.setState(merge(this.state, {disabled: val}))}>
       <p>What would you like to call this file?</p>
       <div>
         <label>New File:
-          <input className="pt-input pt-fill" required
-            disabled={this.state.fieldsDisabled} type="text" value={this.state.file}
+          <input className="pt-input pt-fill" required disabled={this.state.disabled}
+            type="text" value={this.state.file} ref={input => input && input.focus()}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {
               this.setState(merge(this.state, {file: this.state.prevFile}));
@@ -101,30 +109,17 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, { file: str
               this.setState(merge(this.state, {prevFile: this.state.file}));
             }
           }}
-          onKeyPress={(e: any) => {
-            if (e.key === "Enter") {
-              this.submitForm();
-            }
-          }}
           onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
         </label><br />
         <label>Upload Files:
-          <input type="file" multiple disabled={this.state.fieldsDisabled} onChange={
-            (e => this.setState(merge(this.state, {
+          <input type="file" multiple disabled={this.state.disabled} onChange={
+            e => this.setState(merge(this.state, {
               uploadFiles: this.filesToArray(e.currentTarget.files)
-            })))
+            }))
           } />
         </label>
       </div>
-      <div className="pt-button-group">
-        <button type="button" className="pt-button" onClick={() => {
-          this.props.closefunc();
-        }}>Cancel</button>
-        <button type="button" className="pt-button pt-intent-primary" disabled={
-          (this.state.file === "" || this.state.file.includes("/")) && this.state.uploadFiles === []
-        } onClick={() => this.submitForm()}>Add File</button>
-      </div>
-    </div>
+    </Prompt>
     );
   }
 }
