@@ -175,6 +175,8 @@
       (cons 'project-settings-filename     (string->path ".project-settings.txt"))
 
       ;; These flags can be overridden by the configuration file.
+      ;; Listen IP (default ::0)
+      (cons 'listen-ip                     "::0")
       ;; Default compiler flags.
       (cons 'compiler-flags               '(;; Warning flags.
                                             "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic" "-Werror=incompatible-pointer-types"
