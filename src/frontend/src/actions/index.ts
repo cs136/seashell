@@ -81,6 +81,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         toggleAddFile: () => {
           dispatch({ type: dialogActions.toggle, payload: "add_file_open" });
+        },
+        toggleAddTest: () => {
+          dispatch({ type: dialogActions.toggle, payload: "add_test_open" });
         }
       },
       settings: {

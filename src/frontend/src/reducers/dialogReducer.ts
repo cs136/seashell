@@ -21,6 +21,7 @@ export interface dialogReducerState {
   rename_file_open: boolean;
   copy_file_open: boolean;
   add_file_open: boolean;
+  add_test_open: boolean;
   reset_open: boolean;
   reset: boolean;
 }
@@ -34,6 +35,7 @@ export default function dialogReducer(
     rename_file_open: false,
     copy_file_open: false,
     add_file_open: false,
+    add_test_open: false,
     reset_open: false,
     reset: false,
   },

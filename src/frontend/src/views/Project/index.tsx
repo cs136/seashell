@@ -15,12 +15,14 @@ import RenamePrompt from "./Prompt/Rename";
 import DeletePrompt from "./Prompt/Delete";
 import MarmosetResultPrompt from "./Prompt/MarmosetResult";
 import AddFilePrompt from "./Prompt/AddFile";
+import AddTestPrompt from "./Prompt/AddTest";
 import Splash from "./Splash";
 import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
 import {appStateReducerProjectState} from "../../reducers/appStateReducer";
 import * as S from "../../helpers/Storage/Interface";
+
 export interface ProjectProps extends RouteComponentProps
     <{name: string, id: S.ProjectID}> { title: string; }
 export interface ProjectState { toggleView: boolean; marmosetResults: {open: boolean; result: any}; }
@@ -172,6 +174,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             onClose={this.props.dispatch.dialog.toggleAddFile}>
           <AddFilePrompt questions={project.questions}
               closefunc={this.props.dispatch.dialog.toggleAddFile}/>
+        </Dialog>
+        <Dialog className={styles.dialogStyle} title="Add Test"
+            isOpen={this.props.dialog.add_test_open}
+            onClose={this.props.dispatch.dialog.toggleAddTest}>
+          <AddTestPrompt questions={project.questions}
+              closefunc={this.props.dispatch.dialog.toggleAddTest}/>
         </Dialog>
         <Dialog className={styles.dialogStyle} title="Marmoset Results"
             isOpen={this.state.marmosetResults.open}
