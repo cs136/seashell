@@ -91,7 +91,7 @@ namespace Services {
   export async function login(user: string,
                               password: string,
                               rebootBackend: boolean = false,
-                              uri: string = "https://seashell-dev.student.cs.uwaterloo.ca/~cs136/seashell/cgi-bin/login2.cgi"): Promise<void> {
+                              uri: string = "https://www.student.cs.uwaterloo.ca/~cs136/seashell-unstable/cgi-bin/login2.cgi"): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
