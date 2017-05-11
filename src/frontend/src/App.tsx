@@ -16,4 +16,4 @@ class App extends React.Component<AppProps&actionsInterface, AppState> {
   }
 }
 
-export default map<{}>(withRouter(App));
+export default withRouter<{}>(map<AppProps>(App));
