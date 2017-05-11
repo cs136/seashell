@@ -12,6 +12,8 @@ export interface ActionsState {  }
 
 class Actions extends React.Component<ActionsProps & actionsInterface, ActionsState> {
   openFiles: any;
+  question: string;
+
   constructor(props: ActionsProps & actionsInterface) {
     super(props);
     if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
@@ -19,13 +21,14 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
     }
     else {
       this.openFiles = this.props.appState.currentProject.currentQuestion.openFiles;
+      this.question = this.props.appState.currentProject.currentQuestion.name;
     }
   }
   render() {
     const file = this.props.file;
     return (<Menu>
       <MenuItem text="Set as Run File" onClick={
-        this.props.dispatch.file.setRunFile.bind(null, file)
+        this.props.dispatch.file.setRunFile.bind(null, this.question, file)
       }/>
       <MenuDivider />
       <MenuItem text="Rename/Move" onClick={() => {

@@ -12,6 +12,7 @@ export interface AddFileProps {
 interface AddFileState {
   file: string;
   prevFile: string;
+  folder: string;
   uploadFiles: File[];
   disabled: boolean;
 }
@@ -32,6 +33,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
       this.state = {
         file: "",
         prevFile: "",
+        folder: this.question,
         uploadFiles: [],
         disabled: false
       };
@@ -70,7 +72,8 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
     if (this.state.file) {
       proms.push(this.props.dispatch.file.addFile(
         this.project,
-        `${this.question}/${this.state.file}`,
+        this.question,
+        `${this.state.folder}/${this.state.file}`,
         this.getDefaultContents(this.state.file)));
     }
     if (this.state.uploadFiles) {
@@ -78,7 +81,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
         let reader = new FileReader();
         reader.onload = () => {
           this.props.dispatch.file.addFile(
-              this.project, `${this.question}/${file.name}`, reader.result)
+              this.project, this.question, `${this.state.folder}/${file.name}`, reader.result)
             .then(() => resolve())
             .catch(() => reject(file.name));
         };
@@ -99,7 +102,13 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
       <p>What would you like to call this file?</p>
       <div>
         <label>New File:
-          <input className="pt-input pt-fill" required disabled={this.state.disabled}
+          <select className="pt-select" value={this.state.folder}
+              onChange={(e) => this.setState(merge(this.state, {folder: e.currentTarget.value}))}>
+            <option value={this.question}>{this.question}</option>
+            <option value={`${this.question}/tests`}>{this.question}/tests</option>
+            <option value="common">common</option>
+          </select> / 
+          <input className="pt-input" required disabled={this.state.disabled}
             type="text" value={this.state.file} ref={input => input && input.focus()}
           onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {

@@ -812,5 +812,4 @@
 (define/contract (remove-open-file project question path)
   (-> (and/c project-name? is-project?) path-string? path-string? void)
   (write-project-settings/key project (string->symbol (string-append question "_open_files"))
-                              (jsexpr->string (remove* `(,path) (string->jsexpr
-                                                                  (get-open-files project question))))))
+                              (jsexpr->string (remove* `(,path) (get-open-files project question)))))

@@ -211,7 +211,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: file
             }));
         },
-        addFile: (project: string, path: string, newFileContent: string) => {
+        addFile: (project: string, question: string, path: string, newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
           return asyncAction(storage().newFile(project, path, newFileContent))
@@ -220,7 +220,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(storage().addOpenFile(file.project, file.question(), file.id))
+              return asyncAction(storage().addOpenFile(file.project, question, file.id))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
                   file = await storage().readFile(file.id);
@@ -272,8 +272,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 .then(() => newFile);
             });
         },
-        openFile: (file: S.FileBrief) => {
-          storage().addOpenFile(file.project, file.question(), file.id).then((questions) =>
+        openFile: (question: string, file: S.FileBrief) => {
+          storage().addOpenFile(file.project, question, file.id).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
               payload: file
@@ -286,8 +286,8 @@ const mapDispatchToProps = (dispatch: Function) => {
               payload: file
             }));
         },
-        setRunFile: (file: S.FileBrief) => {
-          storage().setFileToRun(file.project, file.question(), file.name).then(() => dispatch({
+        setRunFile: (question: string, file: S.FileBrief) => {
+          storage().setFileToRun(file.project, question, file.name).then(() => dispatch({
             type: appStateActions.setRunFile,
             payload: file.name
           }));
@@ -421,8 +421,8 @@ const mapDispatchToProps = (dispatch: Function) => {
         switchProject: (name: string, pid: S.ProjectID) => {
           // we will leave switching question and file to the UI
           // efficiency is for noobs
-          function unique(val: any, idx: Number, arr: any) {
-            return arr.indexOf(val) === idx;
+          function uniqueNotCommon(val: string, idx: Number, arr: any) {
+            return arr.indexOf(val) === idx && val !== "common";
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
           return asyncAction(storage().pullMissingSkeletonFiles(pid)).then(() => {
@@ -435,7 +435,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                     termClear: null,
                     name: name,
                     id: pid,
-                    questions: files.map((file) => file.question()).filter(unique),
+                    questions: files.map((file) => file.question()).filter(uniqueNotCommon),
                     currentQuestion: undefined
                   }
                 }

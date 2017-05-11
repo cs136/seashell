@@ -38,10 +38,12 @@ class AddTest extends React.Component<AddTestProps&actionsInterface, AddTestStat
     return Promise.all([
       this.props.dispatch.file.addFile(
         this.project,
+        this.question,
         `${this.question}/tests/${this.state.test}.in`,
         ""),
       this.props.dispatch.file.addFile(
         this.project,
+        this.question,
         `${this.question}/tests/${this.state.test}.expect`,
         "")
     ]);
