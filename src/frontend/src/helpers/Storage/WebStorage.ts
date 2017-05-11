@@ -34,7 +34,18 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
     }
     // hack to make it compatible with the backend
     // pid is project name
-    const id = this.storage.projID(pid);
+    const split = filename.split("/");
+    let dir = "";
+    // Backend needs to have directories explicitly created beforehand
+    for (let i = 0; i < split.length - 1; i++) {
+      dir += split[i];
+      await this.socket.sendMessage({
+        type: "newDirectory",
+        project: pid,
+        dir: dir
+      });
+      dir += "/";
+    }
     await this.socket.sendMessage<any>({
       type: "newFile",
       project: pid,
