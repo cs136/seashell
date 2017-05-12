@@ -115,7 +115,7 @@
            [(list pid test-name "error" exit-code stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
-                                                                        (exit_code . ,exit-code)
+                                                                        (status . ,exit-code)
                                                                         (stderr . ,(bytes->string/utf-8 stderr #\?))
                                                                         (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                                         (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]

@@ -318,7 +318,7 @@
                  #:dispatch seashell-dispatch
                  #:port 0
                  #:dispatch-server-connect@ ssl-unit
-                 #:listen-ip #f
+                 #:listen-ip (read-config 'listen-ip)
                  #:confirmation-channel conf-chan))
           (define start-result (async-channel-get conf-chan))
           (when (exn? start-result)
