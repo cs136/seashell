@@ -69,6 +69,10 @@ angular.module('frontend-app')
       // frame: column, file, frame#, function, function_offset, line, module, offset
       // raw message
       maybe_log(err);
+      if(!err) {
+        self.write("AddressSanitizer output is not available.\n");
+        return;
+      }
       if(err.error_type == "unknown" && err.raw_message === "") { return; }
       var to_print = [];
       to_print.push("Memory error occurred! Type of error: " + err.error_type);
@@ -201,7 +205,11 @@ angular.module('frontend-app')
         self.write(res.stdout);
         self.write('---\n');
         self.write('Expected output (stdout):\n');
-        printExpectedFromDiff(res);
+        if('diff' in res) {
+            printExpectedFromDiff(res);
+        } else if('expect' in res) {
+            self.write(res.expect);
+        }
         self.write('---\n');
         self.write('Produced errors (stderr):\n');
         self.write(res.stderr);
@@ -211,7 +219,7 @@ angular.module('frontend-app')
         }
       } else if(res.result==="error") {
         self.write('----------------------------------\n');
-        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.exit_code));
+        self.write(sprintf("Test \"%s\" caused an error (with return code %d)!\n", res.test_name, res.status));
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('---\n');
