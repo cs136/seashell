@@ -39,7 +39,7 @@ class SeashellWebsocket {
   // It must be safe to call this function consecutively many times
   public async connect(cnn: Connection): Promise<void> {
     const firstTime: () => boolean = () => ! this.connection;
-    this.debug && console.log("Connecting to websocket...");
+    console.log("Connecting to websocket...");
     this.lastMsgID = 0;
     this.requests = {};
     this.requests[-1] = new Request({id: -1}); // server challenge
@@ -182,7 +182,7 @@ class SeashellWebsocket {
         // will close with 1006
         // fall back to websocket.onclose()
       }
-    }, 5000);
+    }, 10000);
     const serverChallenge = await this.requests[-1].received;
     clearTimeout(responseTimeout);
 
