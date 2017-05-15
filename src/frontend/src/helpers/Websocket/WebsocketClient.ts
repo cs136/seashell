@@ -55,7 +55,7 @@ class SeashellWebsocket {
       const websocket = this.websocket;
       switch (websocket.readyState) {
         case websocket.CONNECTING: {
-          this.debug && console.log("Socket is already connecting. Closing and reconnecting.");
+          console.log("Socket is already connecting. Closing and reconnecting.");
           const promise = new Promise<void>((accept, reject) => {
             websocket.onclose = () => {
               this.connect(cnn).then(accept).catch(reject);
@@ -65,17 +65,17 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.OPEN: {
-          this.debug && console.log("Socket is already connected. Closing and reconnecting.");
+          console.log("Socket is already connected. Closing and reconnecting.");
           const promise = new Promise<void>((accept, reject) => {
             websocket.onclose = () => {
               this.connect(cnn).then(accept).catch(reject);
             };
           });
           websocket.close();
-          return;
+          return promise;
         }
         case websocket.CLOSING: {
-          this.debug && console.log(`Existing websocket is closing. Wait to reopen new connection.`);
+          console.log(`Existing websocket is closing. Wait to reopen new connection.`);
           const promise = new Promise<void>((accept, reject) => {
             // wait for a graceful shotdown then reconnect
             websocket.onclose = () => {
@@ -85,7 +85,7 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.CLOSED: {
-          this.debug && console.log(`Existing websocket is closed. Reopening new connection.`);
+          console.log(`Existing websocket is closed. Reopening new connection.`);
           // pass through to continue connection
         }
       }
