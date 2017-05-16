@@ -18,6 +18,12 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
 
   render() {
     const projects = this.props.appState.projects;
+    const assns = projects.filter((project) => project.name.toUpperCase().match(/^A[0-9]+$/));
+    const tuts = projects.filter((project) => project.name.toUpperCase().match(/^TUT[0-9]+/));
+    const lecs = projects.filter((project) => project.name.toUpperCase().match(/^[LS]EC[0-9]+/));
+    const pers = projects.filter((project) => assns.indexOf(project) === -1
+                                           && tuts.indexOf(project) === -1
+                                           && lecs.indexOf(project) === -1);
     return (<div>
       <Navigation
           navLeft={[
@@ -37,40 +43,28 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
         <div className={styles.mainRow}>
           <div className={styles.column}>
             <h5>Assignments</h5>{
-              projects.filter((project) => {
-                return project.name.toUpperCase().startsWith("A");
-              }).map((project) => (
+              assns.map((project) => (
                 <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Tutorials</h5>{
-              projects.filter((project) => {
-                return project.name.toUpperCase().startsWith("TUT");
-              }).map((project) => (
+              tuts.map((project) => (
                 <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Lectures</h5>{
-              projects.filter((project) => {
-                return project.name.toUpperCase().startsWith("LEC")
-                  || project.name.toUpperCase().startsWith("SEC");
-              }).map((project) => (
+              lecs.map((project) => (
                 <ProjectLink key={project.id} project={project} />
               ))
             }
           </div>
           <div className={styles.column}>
             <h5>Personal</h5>{
-              projects.filter((project) => {
-                return !project.name.toUpperCase().startsWith("A")
-                  && !project.name.toUpperCase().startsWith("TUT")
-                  && !project.name.toUpperCase().startsWith("LEC")
-                  && !project.name.toUpperCase().startsWith("SEC");
-              }).map((project) => (
+              pers.map((project) => (
                 <ProjectLink key={project.id} project={project} />
               ))
             }
