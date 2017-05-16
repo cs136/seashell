@@ -30,7 +30,7 @@ class SkeletonManager {
   private async getUserWhitelist(): Promise<string[]> {
     if (!this.userWhitelist) {
       try {
-        this.userWhitelist = (await <PromiseLike<any>>$.get(USER_WHITELIST_URL)).data;
+        this.userWhitelist = await <PromiseLike<any>>$.get(USER_WHITELIST_URL);
       } catch (e) {
         throw new E.WebsocketError("Could not load user whitelist file.", e);
       }
@@ -47,7 +47,7 @@ class SkeletonManager {
   private async getProjectsWithWhitelistSkeletons(): Promise<string[]> {
     if (!this.projectWhitelist) {
       try {
-        this.projectWhitelist = (await <PromiseLike<any>>$.get(PROJ_WHITELIST_URL)).data;
+        this.projectWhitelist = await <PromiseLike<any>>$.get(PROJ_WHITELIST_URL);
       } catch (e) {
         throw new E.WebsocketError("Could not load project whitelist file.", e);
       }
@@ -58,7 +58,7 @@ class SkeletonManager {
   private async getProjectsWithSkeletons(): Promise<string[]> {
     if (!this.projectsWithSkeletons) {
       try {
-        this.projectsWithSkeletons = (await <PromiseLike<any>>$.get(PROJ_SKEL_URL)).data;
+        this.projectsWithSkeletons = await <PromiseLike<any>>$.get(PROJ_SKEL_URL);
       } catch (e) {
         throw new E.WebsocketError("Could not load project skeleton list.", e);
       }
@@ -93,12 +93,12 @@ class SkeletonManager {
         const req = await <PromiseLike<any>>$.get({
           url: SKEL_FILE_LIST_URL,
           data: {
-            template: zipURL,
+            template: project.name,
             user: this.socket.getUsername(),
             whitelist: (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist
           }
         });
-        return req.data.result.map(
+        return req.result.map(
           (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
         ).filter(
           (path: string) => path.length > 0 && path[path.length - 1] !== "/"
@@ -106,6 +106,7 @@ class SkeletonManager {
       }
       return [];
     } catch (e) {
+      console.error(e);
       throw new E.SkeletonError("Failed to list project skeleton files.", e);
     }
   }
@@ -132,12 +133,12 @@ class SkeletonManager {
     const project = await this.storage.getProject(proj);
     let missingFiles = await this.getMissingSkeletonFiles(proj);
     if (missingFiles.length > 0) {
-      await Promise.all(missingFiles.map((f: string) =>
+      await Promise.all(missingFiles.map(async (f: string) =>
         this.socket.sendMessage({
           type: "restoreFileFrom",
           project: project.name,
           file: f,
-          template: this.getSkeletonZipFileURL(project.name)
+          template: await this.getSkeletonZipFileURL(project.name)
         })
       ));
       // sync afterwards to update the local storage.
@@ -154,11 +155,12 @@ class SkeletonManager {
     let skels: any = await Promise.all((await this.getProjectsWithSkeletons())
       .map(async (a: string) => [a, await this.getSkeletonZipFileURL(a)]));
     if (await this.currentUserIsWhitelisted()) {
-      skels = skels.concat((await this.getProjectsWithWhitelistSkeletons())
-        .map((p: string) => [p, this.getSkeletonZipFileURL(p)]));
+      skels = skels.concat(await Promise.all((await this.getProjectsWithWhitelistSkeletons())
+        .map(async (p: string) => [p, await this.getSkeletonZipFileURL(p)])));
     }
     const newProjects = skels.filter((p: string) => -1 === localProjects.indexOf(p[0]));
     let failed: string[] = [];
+    console.log("newProjects", newProjects);
     for (let i = 0; i < newProjects.length; i++) {
       try {
         await this.socket.sendMessage({
@@ -167,6 +169,7 @@ class SkeletonManager {
           source: newProjects[i][1]
         });
       } catch (e) {
+        console.error(e);
         failed.push(newProjects[i][0]);
       }
     }
