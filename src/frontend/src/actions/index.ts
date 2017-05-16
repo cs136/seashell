@@ -400,11 +400,13 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       project: {
         addProject: (newProjectName: string) => {
-          return asyncAction(storage().newProject(newProjectName)).then((projBrief) =>
+          return asyncAction(storage().newProject(newProjectName)).then((proj: S.ProjectBrief) => {
             dispatch({
               type: appStateActions.addProject,
-              payload: projBrief
-            }));
+              payload: proj
+            });
+            return proj;
+          });
         },
         removeProject: (pid: S.ProjectID) => {
           return asyncAction(storage().inSkeleton(pid)).then((inSkel) => {
