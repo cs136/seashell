@@ -22,6 +22,7 @@ import {RouteComponentProps} from "react-router";
 import { showError } from "../../partials/Errors";
 import {appStateReducerProjectState} from "../../reducers/appStateReducer";
 import * as S from "../../helpers/Storage/Interface";
+import ProjectMenu from "./ProjectMenu";
 
 export interface ProjectProps extends RouteComponentProps
     <{name: string, id: S.ProjectID}> { title: string; }
@@ -85,7 +86,9 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       const question = project.currentQuestion;
       return (<div>
         <Navigation navLeft={[
-            <div className="pt-navbar-heading" key="project-name">{project.name}</div>,
+            <Popover content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
+              <div className="pt-navbar-heading pt-button" key="project-name">{project.name}</div>
+            </Popover>,
             <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
               <button className="pt-button pt-intent-primary">
                 <span className="pt-icon-standard pt-icon-caret-down" />
