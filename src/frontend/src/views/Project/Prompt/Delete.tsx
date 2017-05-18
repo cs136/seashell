@@ -1,9 +1,8 @@
 import * as React from "react";
-import {merge} from "ramda";
-import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 import {showError} from "../../../partials/Errors";
 import Prompt from "./Prompt";
+import Confirm from "./Confirm";
 
 interface DeleteProps {
   closefunc: Function;
@@ -32,11 +31,8 @@ class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
   }
 
   render() {
-    return (<Prompt submitMessage="Delete" submitfunc={() => this.submitForm()}
-        closefunc={this.props.closefunc}>
-      <p>Are you sure you want to delete this file?</p>
-    </Prompt>
-    );
+    return (<Confirm submitText="Delete" bodyText="Are you sure you want to delete this file?"
+        submitfunc={() => this.submitForm()} closefunc={this.props.closefunc} />);
   }
 }
 
