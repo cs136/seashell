@@ -18,8 +18,15 @@ class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
       const project = this.props.appState.currentProject;
       const question = this.props.appState.currentProject.currentQuestion;
       return this.props.dispatch.file.deleteFile(target).then(() => {
-        if (question.openFiles.length > 0) {
-          this.props.dispatch.file.switchFile(question.openFiles[0]);
+        if (this.props.appState.currentProject
+            && this.props.appState.currentProject.currentQuestion
+            && this.props.appState.currentProject.currentQuestion.openFiles.length > 0) {
+          this.props.dispatch.file.switchFile(
+            this.props.appState.currentProject.currentQuestion.openFiles[0]);
+        }
+        else {
+          // If no open files, let's re-open the question to get file list screen
+          this.props.dispatch.question.switchQuestion(project.id, question.name);
         }
       }).catch((error: any) => {
         if (error !== null) {
