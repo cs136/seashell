@@ -30,14 +30,14 @@
 (define (new-project name)
   (define proj-id (get-uuid))
   (send db apply-create "projects" proj-id
-    `#hasheq((name . ,name)
-             (settings . #hasheq())
-             (last_used . ,(current-milliseconds))))
+    #{`#hasheq((name . ,name)
+               (settings . ,#{(hash) :: JSExpr})
+               (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)})
   proj-id)
 
 (: delete-project (-> String Void))
 (define (delete-project id)
-  (send db apply-delete "projects" id))
+  (void (send db apply-delete "projects" id)))
 
 (: new-file (-> String String (U String False) Integer String))
 (define (new-file pid name contents flags)
@@ -45,13 +45,13 @@
   (define contents-id (get-uuid))
   (send db write-transaction (thunk
     (send db apply-create "contents" contents-id
-      `#hasheq((project_id . ,pid)
-               (file_id . ,file-id)
-               (contents . ,contents)
-               (time . ,(current-milliseconds))))
+      #{`#hasheq((project_id . ,pid)
+                 (file_id . ,file-id)
+                 (contents . ,contents)
+                 (time . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)})
     (send db apply-create "files" file-id
-      `#hasheq((project_id . ,pid)
-               (name . ,name)
-               (contents_id . ,contents-id)
-               (flags . ,flags)))))
+      #{`#hasheq((project_id . ,pid)
+                 (name . ,name)
+                 (contents_id . ,contents-id)
+                 (flags . ,flags)) :: (HashTable Symbol JSExpr)})))
   contents-id)
