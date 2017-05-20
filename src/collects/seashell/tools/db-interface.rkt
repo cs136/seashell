@@ -39,7 +39,8 @@
 (define (delete-project id)
   (void (send db apply-delete "projects" id)))
 
-(: new-file (-> String String (U String False) Integer String))
+;; TODO: new-file should fail if the file name already exists
+(: new-file (-> String String (U String False) Integer (Values String String)))
 (define (new-file pid name contents flags)
   (define file-id (get-uuid))
   (define contents-id (get-uuid))
@@ -54,4 +55,14 @@
                  (name . ,name)
                  (contents_id . ,contents-id)
                  (flags . ,flags)) :: (HashTable Symbol JSExpr)})))
-  contents-id)
+  (values file-id contents-id))
+
+(: new-directory (-> String String String))
+(define (new-directory pid name)
+  (define file-id  (get-uuid))
+  (send db apply-create "files" file-id
+    #{`#hasheq((project_id . ,pid)
+               (name . ,name)
+               (contents_id . #f)
+               (flags . 0)) :: (HashTable Symbol JSExpr)})
+  file-id)
