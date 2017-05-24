@@ -2,6 +2,8 @@
 
 (require/typed racket/random
   [crypto-random-bytes (-> Integer Bytes)])
+(require/typed file/zip
+  [zip (-> (U String Path) (U String Path) Void)])
 (require typed/json)
 (require typed/db)
 (require typed/db/sqlite3)
@@ -20,10 +22,12 @@
 ;; files: id, project_id, name, contents_id, flags
 ;; projects: id, name, settings, last_used
 
+;; TODO: put the database rows into structures so we don't need to do as much type casting
+
 (: get-uuid (-> String))
 (define (get-uuid)
   ;; TODO change this to actual UUIDs
-  (bytes->string/utf-8 (crypto-random-bytes 16)))
+  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 55296))))
 
 ;; TODO support adding project from template
 (: new-project (-> String String))
@@ -40,16 +44,16 @@
   (void (send db apply-delete "projects" id)))
 
 ;; TODO: new-file should fail if the file name already exists
-(: new-file (-> String String (U String False) Integer (Values String String)))
+(: new-file (-> String String (U String False) Integer (Values String (U String False))))
 (define (new-file pid name contents flags)
   (define file-id (get-uuid))
-  (define contents-id (get-uuid))
+  (define contents-id (if contents (get-uuid) #f))
   (send db write-transaction (thunk
-    (send db apply-create "contents" contents-id
+    (when contents (send db apply-create "contents" contents-id
       #{`#hasheq((project_id . ,pid)
                  (file_id . ,file-id)
                  (contents . ,contents)
-                 (time . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)})
+                 (time . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
     (send db apply-create "files" file-id
       #{`#hasheq((project_id . ,pid)
                  (name . ,name)
@@ -59,10 +63,48 @@
 
 (: new-directory (-> String String String))
 (define (new-directory pid name)
-  (define file-id  (get-uuid))
-  (send db apply-create "files" file-id
-    #{`#hasheq((project_id . ,pid)
-               (name . ,name)
-               (contents_id . #f)
-               (flags . 0)) :: (HashTable Symbol JSExpr)})
-  file-id)
+  (define-values (fid cid) (new-file pid name #f 0))
+  fid)
+
+(: export-file (-> JSExpr (U String Path) Void))
+(define (export-file file proj-dir)
+  (define contents (send db fetch "contents" (hash-ref (cast file (HashTable Symbol String)) 'contents_id)))
+  (with-output-to-file (build-path proj-dir (hash-ref (cast file (HashTable Symbol String)) 'name))
+    (thunk (printf "~a" (hash-ref (cast contents (HashTable Symbol String)) 'contents)))))
+
+(: export-directory (-> JSExpr (U String Path) Void))
+(define (export-directory dir proj-dir)
+  (make-directory (build-path proj-dir (hash-ref (cast dir (HashTable Symbol String)) 'name))))
+
+(: zip-from-dir (-> String (U String Path) Void))
+(define (zip-from-dir target dir)
+  (define cur (current-directory))
+  (current-directory dir)
+  (zip (if (relative-path? target) (build-path cur target) target)
+       ".")
+  (current-directory cur))
+
+(: export-project (-> String Boolean String Void))
+(define (export-project pid zip? target)
+  (send db read-transaction (thunk
+    (define files (send db fetch-files-for-project pid))
+    (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
+    (map (lambda ([d : JSExpr]) (export-directory d tmpdir))
+         (sort (filter (lambda ([x : JSExpr]) (not (hash-ref (cast x (HashTable Symbol (U String False))) 'contents_id)))
+                       files)
+               (lambda ([a : JSExpr] [b : JSExpr]) (string<? (hash-ref (cast a (HashTable Symbol String)) 'name)
+                                                             (hash-ref (cast b (HashTable Symbol String)) 'name)))))
+    (map (lambda ([f : JSExpr]) (export-file f tmpdir))
+         (filter (lambda ([x : JSExpr]) (hash-ref (cast x (HashTable Symbol (U String False))) 'contents_id))
+                 files))
+    (printf "~s\n" files)
+    (cond
+      [zip? (zip-from-dir target tmpdir)]
+      [else (copy-directory/files tmpdir target)])
+    (delete-directory/files tmpdir))))
+
+;; Tests
+(define pid (new-project "A1"))
+(define did (new-directory pid "q1"))
+(define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\nreturn 0;\n}\n" 0))
+(export-project pid #f "export")

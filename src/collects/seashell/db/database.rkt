@@ -74,6 +74,11 @@
           (string->jsexpr result)
           #f))
 
+    (: fetch-files-for-project (-> String (Listof JSExpr)))
+    (define/public (fetch-files-for-project pid)
+      (define result (query-rows database "SELECT json(data) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
+      (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
+
     (: apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string object))
