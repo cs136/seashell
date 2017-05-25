@@ -73,6 +73,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         toggleDeleteFile: () => {
           dispatch({ type: dialogActions.toggle, payload: "delete_file_open" });
         },
+        toggleDeleteProject: () => {
+          dispatch({ type: dialogActions.toggle, payload: "delete_project_open" });
+        },
         toggleRenameFile: () => {
           dispatch({ type: dialogActions.toggle, payload: "rename_file_open" });
         },

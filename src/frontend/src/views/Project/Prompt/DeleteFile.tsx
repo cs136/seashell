@@ -8,7 +8,7 @@ interface DeleteProps {
   closefunc: Function;
 };
 
-class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
+class DeleteFile extends React.Component<DeleteProps&actionsInterface, {}> {
 
   private submitForm(): Promise<void> {
     if (this.props.appState.fileOpTarget &&
@@ -43,4 +43,5 @@ class Delete extends React.Component<DeleteProps&actionsInterface, {}> {
   }
 }
 
-export default map<DeleteProps>(Delete);
+export default map<DeleteProps>(DeleteFile);
+
