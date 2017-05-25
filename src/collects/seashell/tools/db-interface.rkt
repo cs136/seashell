@@ -9,6 +9,12 @@
 (require typed/db/sqlite3)
 (require "../db/database.rkt")
 
+(provide new-project
+         delete-project
+         new-file
+         new-directory
+         export-project)
+
 ;; just setting something up so I can test for now
 ;(unless (file-exists? "test.db")
 ;  (disconnect (sqlite3-connect #:database "test.db" #:mode 'create)))
