@@ -10,8 +10,8 @@
 (require "../db/database.rkt")
 
 ;; just setting something up so I can test for now
-(unless (file-exists? "test.db")
-  (disconnect (sqlite3-connect #:database "test.db" #:mode 'create)))
+;(unless (file-exists? "test.db")
+;  (disconnect (sqlite3-connect #:database "test.db" #:mode 'create)))
 
 (define db (make-object sync-database% 'memory))
 
@@ -27,7 +27,7 @@
 (: get-uuid (-> String))
 (define (get-uuid)
   ;; TODO change this to actual UUIDs
-  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 55296))))
+  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 256))))
 
 ;; TODO support adding project from template
 (: new-project (-> String String))
@@ -68,13 +68,13 @@
 
 (: export-file (-> JSExpr (U String Path) Void))
 (define (export-file file proj-dir)
-  (define contents (send db fetch "contents" (hash-ref (cast file (HashTable Symbol String)) 'contents_id)))
-  (with-output-to-file (build-path proj-dir (hash-ref (cast file (HashTable Symbol String)) 'name))
-    (thunk (printf "~a" (hash-ref (cast contents (HashTable Symbol String)) 'contents)))))
+  (define contents (send db fetch "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
+  (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
+    (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String)))))
 
 (: export-directory (-> JSExpr (U String Path) Void))
 (define (export-directory dir proj-dir)
-  (make-directory (build-path proj-dir (hash-ref (cast dir (HashTable Symbol String)) 'name))))
+  (make-directory (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String))))
 
 (: zip-from-dir (-> String (U String Path) Void))
 (define (zip-from-dir target dir)
@@ -90,12 +90,12 @@
     (define files (send db fetch-files-for-project pid))
     (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
     (map (lambda ([d : JSExpr]) (export-directory d tmpdir))
-         (sort (filter (lambda ([x : JSExpr]) (not (hash-ref (cast x (HashTable Symbol (U String False))) 'contents_id)))
+         (sort (filter (lambda ([x : JSExpr]) (not (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False))))
                        files)
-               (lambda ([a : JSExpr] [b : JSExpr]) (string<? (hash-ref (cast a (HashTable Symbol String)) 'name)
-                                                             (hash-ref (cast b (HashTable Symbol String)) 'name)))))
+               (lambda ([a : JSExpr] [b : JSExpr]) (string<? (cast (hash-ref (cast a (HashTable Symbol JSExpr)) 'name) String)
+                                                             (cast (hash-ref (cast b (HashTable Symbol JSExpr)) 'name) String)))))
     (map (lambda ([f : JSExpr]) (export-file f tmpdir))
-         (filter (lambda ([x : JSExpr]) (hash-ref (cast x (HashTable Symbol (U String False))) 'contents_id))
+         (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
                  files))
     (printf "~s\n" files)
     (cond
@@ -108,3 +108,4 @@
 (define did (new-directory pid "q1"))
 (define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\nreturn 0;\n}\n" 0))
 (export-project pid #f "export")
+(export-project pid #t "proj.zip")
