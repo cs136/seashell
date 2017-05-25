@@ -79,6 +79,14 @@
       (define result (query-rows database "SELECT json(data) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
       (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
 
+    (: delete-files-for-project (-> String Void))
+    (define/public (delete-files-for-project pid)
+      (write-transaction (thunk
+        (define files (fetch-files-for-project pid))
+        (void (map (lambda ([x : JSExpr])
+          (apply-delete "files" (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'id) String)))
+          files)))))
+
     (: apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string object))

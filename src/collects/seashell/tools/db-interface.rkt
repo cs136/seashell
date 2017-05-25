@@ -47,7 +47,9 @@
 
 (: delete-project (-> String Void))
 (define (delete-project id)
-  (void (send db apply-delete "projects" id)))
+  (send db write-transaction (thunk
+    (send db apply-delete "projects" id)
+    (send db delete-files-for-project id))))
 
 ;; TODO: new-file should fail if the file name already exists
 (: new-file (-> String String (U String False) Integer (Values String (U String False))))
@@ -105,13 +107,23 @@
                  files))
     (printf "~s\n" files)
     (cond
-      [zip? (zip-from-dir target tmpdir)]
-      [else (copy-directory/files tmpdir target)])
+      [zip?
+        (when (file-exists? target) (delete-file target))
+        (zip-from-dir target tmpdir)]
+      [else
+        (when (directory-exists? target) (delete-directory/files target))
+        (copy-directory/files tmpdir target)])
     (delete-directory/files tmpdir))))
 
 ;; Tests
 (define pid (new-project "A1"))
 (define did (new-directory pid "q1"))
-(define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\nreturn 0;\n}\n" 0))
+(define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\n  return 0;\n}\n" 0))
 (export-project pid #f "export")
 (export-project pid #t "proj.zip")
+
+(define pid2 (new-project "Tut00"))
+(define did2 (new-directory pid2 "example"))
+(define-values (fid2 cid2) (new-file pid2 "example/main.c" "int main() {\n  return 0;\n}\n" 0))
+(delete-project pid2)
+(export-project pid2 #f "export2")
