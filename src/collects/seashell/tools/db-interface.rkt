@@ -7,7 +7,7 @@
 (require typed/json)
 (require typed/db)
 (require typed/db/sqlite3)
-(require "../db/database.rkt")
+(require "../db/seashell.rkt")
 
 (provide new-project
          delete-project
@@ -18,8 +18,6 @@
 ;; just setting something up so I can test for now
 ;(unless (file-exists? "test.db")
 ;  (disconnect (sqlite3-connect #:database "test.db" #:mode 'create)))
-
-(define db (make-object sync-database% 'memory))
 
 ;; What I'm thinking:
 ;;
@@ -52,12 +50,17 @@
     (send db delete-files-for-project id))))
 
 ;; TODO: new-file should fail if the file name already exists
-(: new-file (-> String String (U String False) Integer (Values String (U String False))))
+(: new-file (-> String String (U String False) Integer (values String (U String False))))
 (define (new-file pid name contents flags)
-  (define file-id (get-uuid))
-  (define contents-id (if contents (get-uuid) #f))
-  (send db write-transaction (thunk
-    (when contents (send db apply-create "contents" contents-id
+  (define contents-id #{#f :: (U String False)})
+  (define file-id (send db write-transaction (thunk
+    (when (send db filename-exists? pid name)
+      (error (format "A file with the name '~a' already exists." name)))
+    (define file-id (get-uuid))
+    ;; Unfortunately have to use mutation because Typed Racket can't seem to
+    ;;  express a thunk that returns multiple values
+    (set! contents-id (if contents (get-uuid) #f))
+    (when contents (send db apply-create "contents" (cast contents-id String)
       #{`#hasheq((project_id . ,pid)
                  (file_id . ,file-id)
                  (contents . ,contents)
@@ -66,8 +69,9 @@
       #{`#hasheq((project_id . ,pid)
                  (name . ,name)
                  (contents_id . ,contents-id)
-                 (flags . ,flags)) :: (HashTable Symbol JSExpr)})))
-  (values file-id contents-id))
+                 (flags . ,flags)) :: (HashTable Symbol JSExpr)})
+    file-id)))
+    (values file-id contents-id))
 
 (: new-directory (-> String String String))
 (define (new-directory pid name)

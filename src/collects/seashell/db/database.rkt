@@ -23,11 +23,28 @@
 (require "changes.rkt")
 (require "updates.rkt")
 
-(provide sync-database%)
+(provide Sync-Database%
+         sync-database%)
 
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
 
+(define-type Sync-Database% (Class
+  (init [path SQLite3-Database-Storage])
+  [get-conn (-> Connection)]
+  [write-transaction (All (A) (-> (-> A) A))]
+  [read-transaction (All (A) (-> (-> A) A))]
+  [current-revision (-> Integer)]
+  [fetch (-> String String (Option JSExpr))]
+  [apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any)]
+  [apply-partial-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String)) Any)]
+  [apply-update (->* (String String (HashTable Symbol JSExpr)) ((Option String) Boolean) Any)]
+  [apply-partial-update (->* (String String (HashTable Symbol JSExpr)) ((Option String)) Any)]
+  [apply-delete (->* (String String) ((Option String) Boolean) Any)]
+  [apply-partial-delete (->* (String String) ((Option String)) Any)]
+  [apply-partials (->* () (Integer (Option String)) Any)]))
+
+(: sync-database% : Sync-Database%)
 (define sync-database%
   (class object%
     (init [path : SQLite3-Database-Storage])
@@ -50,6 +67,11 @@
                                                                 target_key text,
                                                                 data TEXT DEFAULT 'false',
                                                                 FOREIGN KEY(client) REFERENCES _clients(id))")
+
+    (: get-conn (-> Connection))
+    (define/public (get-conn)
+      database)
+
     (: write-transaction (All (A) (-> (-> A) A)))
     (define/public (write-transaction thunk)
       (define option (if (db-in-transaction?) #f 'immediate))
@@ -73,19 +95,6 @@
       (if (string? result)
           (string->jsexpr result)
           #f))
-
-    (: fetch-files-for-project (-> String (Listof JSExpr)))
-    (define/public (fetch-files-for-project pid)
-      (define result (query-rows database "SELECT json(data) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
-      (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
-
-    (: delete-files-for-project (-> String Void))
-    (define/public (delete-files-for-project pid)
-      (write-transaction (thunk
-        (define files (fetch-files-for-project pid))
-        (void (map (lambda ([x : JSExpr])
-          (apply-delete "files" (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'id) String)))
-          files)))))
 
     (: apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
