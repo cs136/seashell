@@ -57,7 +57,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.container = undefined;
     this.decorations = [];
   }
-  componentDidUpdate = (previous: MonacoEditorProps) => {
+  public componentDidUpdate(previous: MonacoEditorProps) {
     // Update value if and only if it changed from previous prop OR
     // if dirty goes from true => false.
     if (this.props.value !== previous.value ||
@@ -81,10 +81,10 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       this.monacoContext.monaco.editor.setModelLanguage(this.editor.getModel(), this.props.language);
     }
   }
-  editorWillMount = () => {
+  public editorWillMount() {
     this.props.editorWillMount && this.props.editorWillMount(this.monacoContext.monaco);
   }
-  editorDidMount = () => {
+  public editorDidMount() {
     this.props.editorDidMount && this.props.editorDidMount(this.editor, this.monacoContext.monaco);
     this.editor.onDidChangeModelContent((event: Event) => {
       const value = this.editor.getValue();
@@ -94,15 +94,15 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
       }
     });
   }
-  componentWillUnmount = () => {
+  public componentWillUnmount() {
     this.editor && this.editor.dispose();
     this.editor = null;
   }
-  componentDidMount = () => {
+  public componentDidMount() {
     if (this.container) // Always reachable
       this.loadMonaco(this.container);
   }
-  loadMonaco = (container: HTMLElement) => {
+  public loadMonaco(container: HTMLElement) {
     const { requireConfig } = this.props;
     const loaderUrl = requireConfig.url || "vs/loader.js";
     const context = this.monacoContext;
@@ -156,7 +156,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     }
   }
 
-  setDiags(diags: CompilerDiagnostic[]) {
+  public setDiags(diags: CompilerDiagnostic[]) {
     if (this.editor) {
       this.decorations = this.editor.deltaDecorations(this.decorations,
         diags.map((d: CompilerDiagnostic) => {
@@ -175,7 +175,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     }
   }
 
-  initMonaco = (container: HTMLElement) => {
+  public initMonaco(container: HTMLElement) {
     const monaco = this.monacoContext.monaco;
 
     monaco.languages.register({
@@ -198,7 +198,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.editorDidMount();
   }
 
-  render() {
+  public render() {
     const { width, height } = this.props;
     const fixedWidth = (width || "100%").toString().indexOf("%") !== -1 ? width : `${width}px`;
     const fixedHeight = (height || "100%").toString().indexOf("%") !== -1 ? height : `${height}px`;
