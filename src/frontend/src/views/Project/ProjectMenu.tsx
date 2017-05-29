@@ -16,12 +16,12 @@ class ProjectMenu extends React.Component<actionsInterface, {}> {
       return (<Menu>
         <MenuItem onClick={() => null} text="Download Project" />
         <MenuItem onClick={() => null} text="New Question" />
-        <MenuItem onClick={() => this.props.dispatch.project.removeProject(project.id)}
-            text="Delete Project" />
+        <MenuItem onClick={() => {this.props.dispatch.dialog.toggleDeleteProject();}}
+                  text="Delete Project" />
       </Menu>);
-    }
-    else
+    } else {
       throw new Error("Invoking ProjectMenu on undefined project!");
+    }
   }
 }
 

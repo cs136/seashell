@@ -12,7 +12,8 @@ const layoutStyles = require("../../Layout.scss");
 import {merge} from "ramda";
 import CopyPrompt from "./Prompt/Copy";
 import RenamePrompt from "./Prompt/Rename";
-import DeletePrompt from "./Prompt/Delete";
+import DeleteFilePrompt from "./Prompt/DeleteFile";
+import DeleteProjectPrompt from "./Prompt/DeleteProject";
 import MarmosetResultPrompt from "./Prompt/MarmosetResult";
 import AddFilePrompt from "./Prompt/AddFile";
 import AddTestPrompt from "./Prompt/AddTest";
@@ -87,7 +88,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       return (<div>
         <Navigation navLeft={[
             <Popover content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
-              <div className="pt-navbar-heading pt-button" key="project-name">{project.name}</div>
+              <button className="pt-navbar-heading pt-button" key="project-name">
+                <span className="pt-icon-standard pt-icon-caret-down" />
+                {project.name}
+              </button>
             </Popover>,
             <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
               <button className="pt-button pt-intent-primary">
@@ -158,7 +162,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         <Dialog className={styles.dialogStyle} title="Delete File"
             isOpen={this.props.dialog.delete_file_open}
             onClose={this.props.dispatch.dialog.toggleDeleteFile}>
-          <DeletePrompt closefunc={this.props.dispatch.dialog.toggleDeleteFile}/>
+          <DeleteFilePrompt closefunc={this.props.dispatch.dialog.toggleDeleteFile}/>
+        </Dialog>
+        <Dialog className={styles.dialogStyle} title="Delete Project"
+            isOpen={this.props.dialog.delete_project_open}
+            onClose={this.props.dispatch.dialog.toggleDeleteProject}>
+          <DeleteProjectPrompt closefunc={this.props.dispatch.dialog.toggleDeleteProject}/>
         </Dialog>
         <Dialog className={styles.dialogStyle} title="Rename/Move File"
             isOpen={this.props.dialog.rename_file_open}

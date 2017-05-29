@@ -32,6 +32,7 @@ export default function dialogReducer(
     settings_open: false,
     add_project_open: false,
     delete_file_open: false,
+    delete_project_open: false,
     rename_file_open: false,
     copy_file_open: false,
     add_file_open: false,

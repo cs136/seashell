@@ -68,7 +68,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               isOpen={this.props.dialog.reset_open}
               onClose={this.props.dispatch.dialog.toggleResetOpen}>
               <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} reset={this.props.dialog.reset}/>
-            </Dialog>  
+            </Dialog>
             </div>
         </div>
       </nav>
