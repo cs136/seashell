@@ -20,12 +20,21 @@
 (require typed/json)
 (require typed/db)
 
+(require/typed racket/random
+  [crypto-random-bytes (-> Integer Bytes)])
+
 (require "database.rkt")
 
-(provide init-tables
+(provide get-uuid
+         init-tables
+         insert-new
+         select-id
+         delete-id
          select-files-for-project
          delete-files-for-project
-         filename-exists?)
+         filename-exists?
+         call-with-read-transaction
+         call-with-write-transaction)
 
 ;; This file contains various Seashell-specific database queries beyond the basic
 ;; Dexie syncable interface. These will be used by the backend support tools as well as the
@@ -40,7 +49,12 @@
     (set! seashell-database (make-object sync-database% 'memory)))
   (cast seashell-database (Instance Sync-Database%)))
 
-;; Probably will only use this in the tests
+(: get-uuid (-> String))
+(define (get-uuid)
+  ;; TODO change this to actual UUIDs
+  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 256))))
+
+;; Probably will only use this in the tests and the first time Seashell is run for a user
 (: init-tables (-> Void))
 (define (init-tables)
   (define db (get-database))
@@ -48,6 +62,21 @@
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT)")
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, data TEXT)")
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS contents (id TEXT PRIMARY KEY, data TEXT)"))))
+
+;; Inserts the given object, generating a new UUID for it
+(: insert-new (->* (String DBExpr) (String) String))
+(define (insert-new table object [id #f])
+  (define new-id (if id id (get-uuid)))
+  (send (get-database) apply-create table new-id object)
+  new-id)
+
+(: select-id (-> String String (Option JSExpr)))
+(define (select-id table id)
+  (send (get-database) fetch table id))
+
+(: delete-id (-> String String Void))
+(define (delete-id table id)
+  (void (send (get-database) apply-delete table id)))
 
 (: select-files-for-project (-> String (Listof JSExpr)))
 (define (select-files-for-project pid)
@@ -73,3 +102,11 @@
     (query-maybe-value (send db get-conn)
       "SELECT json(data) FROM files WHERE json_extract(data, '$.project_id')=$1 AND json_extract(data, '$.name')=$2"
       pid name))))
+
+(: call-with-read-transaction (All (A) (-> (-> A) A)))
+(define (call-with-read-transaction tnk)
+  (send (get-database) read-transaction tnk))
+
+(: call-with-write-transaction (All (A) (-> (-> A) A)))
+(define (call-with-write-transaction tnk)
+  (send (get-database) write-transaction tnk))

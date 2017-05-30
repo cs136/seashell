@@ -1,12 +1,11 @@
 #lang typed/racket
 
-(require/typed racket/random
-  [crypto-random-bytes (-> Integer Bytes)])
 (require/typed file/zip
   [zip (-> (U String Path) (U String Path) Void)])
 (require typed/json)
 (require typed/db)
 (require typed/db/sqlite3)
+(require "../db/database.rkt")
 (require "../db/seashell.rkt")
 
 (provide new-project
@@ -28,50 +27,40 @@
 
 ;; TODO: put the database rows into structures so we don't need to do as much type casting
 
-(: get-uuid (-> String))
-(define (get-uuid)
-  ;; TODO change this to actual UUIDs
-  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 256))))
-
 ;; TODO support adding project from template
+;; Returns new project ID
 (: new-project (-> String String))
 (define (new-project name)
-  (define proj-id (get-uuid))
-  (send db apply-create "projects" proj-id
+  (insert-new "projects"
     #{`#hasheq((name . ,name)
                (settings . ,#{(hash) :: JSExpr})
-               (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)})
-  proj-id)
+               (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
 
 (: delete-project (-> String Void))
 (define (delete-project id)
-  (send db write-transaction (thunk
-    (send db apply-delete "projects" id)
-    (send db delete-files-for-project id))))
+  (call-with-write-transaction (thunk
+    (delete-id "projects" id)
+    (delete-files-for-project id))))
 
 ;; TODO: new-file should fail if the file name already exists
-(: new-file (-> String String (U String False) Integer (values String (U String False))))
+(: new-file (-> String String (U String False) Integer (Values String (U String False))))
 (define (new-file pid name contents flags)
-  (define contents-id #{#f :: (U String False)})
-  (define file-id (send db write-transaction (thunk
-    (when (send db filename-exists? pid name)
+  (define result (call-with-write-transaction (thunk
+    (when (filename-exists? pid name)
       (error (format "A file with the name '~a' already exists." name)))
-    (define file-id (get-uuid))
-    ;; Unfortunately have to use mutation because Typed Racket can't seem to
-    ;;  express a thunk that returns multiple values
-    (set! contents-id (if contents (get-uuid) #f))
-    (when contents (send db apply-create "contents" (cast contents-id String)
-      #{`#hasheq((project_id . ,pid)
-                 (file_id . ,file-id)
-                 (contents . ,contents)
-                 (time . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
-    (send db apply-create "files" file-id
-      #{`#hasheq((project_id . ,pid)
-                 (name . ,name)
-                 (contents_id . ,contents-id)
-                 (flags . ,flags)) :: (HashTable Symbol JSExpr)})
-    file-id)))
-    (values file-id contents-id))
+    (define contents-id (if contents (get-uuid) #f))
+    (define file-id (insert-new "files"
+      `#hasheq((project_id . ,pid)
+               (name . ,name)
+               (contents_id . ,contents-id)
+               (flags . ,flags))))
+    (when contents (insert-new "contents"
+      `#hasheq((project_id . ,pid)
+               (file_id . ,file-id)
+               (contents . ,contents)
+               (time . ,(current-milliseconds))) contents-id))
+    (cons file-id contents-id))))
+  (values (car result) (cdr result)))
 
 (: new-directory (-> String String String))
 (define (new-directory pid name)
@@ -80,9 +69,10 @@
 
 (: export-file (-> JSExpr (U String Path) Void))
 (define (export-file file proj-dir)
-  (define contents (send db fetch "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
-  (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
-    (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String)))))
+  (define contents (select-id "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
+  (when contents
+    (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
+      (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))))))
 
 (: export-directory (-> JSExpr (U String Path) Void))
 (define (export-directory dir proj-dir)
@@ -98,8 +88,8 @@
 
 (: export-project (-> String Boolean String Void))
 (define (export-project pid zip? target)
-  (send db read-transaction (thunk
-    (define files (send db fetch-files-for-project pid))
+  (call-with-read-transaction (thunk
+    (define files (select-files-for-project pid))
     (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
     (map (lambda ([d : JSExpr]) (export-directory d tmpdir))
          (sort (filter (lambda ([x : JSExpr]) (not (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False))))
@@ -120,6 +110,8 @@
     (delete-directory/files tmpdir))))
 
 ;; Tests
+(init-tables)
+
 (define pid (new-project "A1"))
 (define did (new-directory pid "q1"))
 (define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\n  return 0;\n}\n" 0))

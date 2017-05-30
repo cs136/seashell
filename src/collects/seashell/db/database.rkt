@@ -23,11 +23,14 @@
 (require "changes.rkt")
 (require "updates.rkt")
 
-(provide Sync-Database%
+(provide DBExpr
+         Sync-Database%
          sync-database%)
 
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
+
+(define-type DBExpr (HashTable Symbol JSExpr))
 
 (define-type Sync-Database% (Class
   (init [path SQLite3-Database-Storage])
@@ -36,10 +39,10 @@
   [read-transaction (All (A) (-> (-> A) A))]
   [current-revision (-> Integer)]
   [fetch (-> String String (Option JSExpr))]
-  [apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any)]
-  [apply-partial-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String)) Any)]
-  [apply-update (->* (String String (HashTable Symbol JSExpr)) ((Option String) Boolean) Any)]
-  [apply-partial-update (->* (String String (HashTable Symbol JSExpr)) ((Option String)) Any)]
+  [apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any)]
+  [apply-partial-create (->* (String String (U String DBExpr)) ((Option String)) Any)]
+  [apply-update (->* (String String DBExpr) ((Option String) Boolean) Any)]
+  [apply-partial-update (->* (String String DBExpr) ((Option String)) Any)]
   [apply-delete (->* (String String) ((Option String) Boolean) Any)]
   [apply-partial-delete (->* (String String) ((Option String)) Any)]
   [apply-partials (->* () (Integer (Option String)) Any)]))
@@ -96,7 +99,7 @@
           (string->jsexpr result)
           #f))
 
-    (: apply-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String) Boolean) Any))
+    (: apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string object))
       (define todo (thunk
@@ -109,7 +112,7 @@
                                 key
                                 data)))
       (if _transaction (write-transaction todo) (todo)))
-    (: apply-partial-create (->* (String String (U String (HashTable Symbol JSExpr))) ((Option String)) Any))
+    (: apply-partial-create (->* (String String (U String DBExpr)) ((Option String)) Any))
     (define/public (apply-partial-create table key object [_client #f])
       (define data (string-or-jsexpr->string object))
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
@@ -119,7 +122,7 @@
                   key
                   data))
 
-    (: apply-update (->* (String String (HashTable Symbol JSExpr)) ((Option String) Boolean) Any))
+    (: apply-update (->* (String String DBExpr) ((Option String) Boolean) Any))
     (define/public (apply-update table key updates [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string updates))
       (define todo (thunk
@@ -137,7 +140,7 @@
                                   key
                                   data))))
       (if _transaction (write-transaction todo) (todo)))
-    (: apply-partial-update (->* (String String (HashTable Symbol JSExpr)) ((Option String)) Any))
+    (: apply-partial-update (->* (String String DBExpr) ((Option String)) Any))
     (define/public (apply-partial-update table key updates [_client #f])
       (define data (string-or-jsexpr->string updates))
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
