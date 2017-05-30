@@ -11,7 +11,8 @@
          "tests/asan-error-parse.rkt"
          "tests/config.rkt"
          "tests/cli.rkt"
-         "tests/offline.rkt")
+         "tests/offline.rkt"
+         "tests/db.rkt")
 
 (setup-test-environment)
 ;; Run tests
@@ -28,6 +29,7 @@
         asan-parser-suite
         seashell-cli-suite
         offline-suite
+        database-suite
         ))))
 (teardown-test-environment)
 
