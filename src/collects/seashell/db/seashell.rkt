@@ -23,10 +23,10 @@
 (require/typed racket/random
   [crypto-random-bytes (-> Integer Bytes)])
 
-(require "database.rkt")
+(require seashell/db/database)
 
 (provide get-uuid
-         init-tables
+         init-database
          insert-new
          select-id
          delete-id
@@ -46,13 +46,19 @@
 (: get-database (-> (Instance Sync-Database%)))
 (define (get-database)
   (unless seashell-database
-    (set! seashell-database (make-object sync-database% 'memory)))
+    (error "Must call init-database before accessing the database."))
   (cast seashell-database (Instance Sync-Database%)))
 
 (: get-uuid (-> String))
 (define (get-uuid)
   ;; TODO change this to actual UUIDs
   (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 256))))
+
+;; Must be called before accessing the database
+(: init-database (->* () (SQLite3-Database-Storage) Void))
+(define (init-database [storage 'memory])
+  (set! seashell-database (make-object sync-database% storage))
+  (init-tables))
 
 ;; Probably will only use this in the tests and the first time Seashell is run for a user
 (: init-tables (-> Void))

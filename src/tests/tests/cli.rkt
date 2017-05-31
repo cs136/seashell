@@ -33,11 +33,14 @@
     (thunk
       (delete-file src))))
 
+(define old-dir #f)
 
 (define/provide-test-suite seashell-cli-suite
   #:before (thunk (make-directory (build-path (read-config 'seashell) "cli-files"))
+                  (set! old-dir (current-directory))
                   (current-directory (build-path (read-config 'seashell) "cli-files")))
-  #:after (thunk (delete-directory/files (build-path (read-config 'seashell) "cli-files")))
+  #:after (thunk (delete-directory/files (build-path (read-config 'seashell) "cli-files"))
+                 (current-directory old-dir))
   (test-suite "seashell-cli test suite"
     (test-case "A program fails to compile"
       (check-equal?

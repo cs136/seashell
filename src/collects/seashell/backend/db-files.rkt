@@ -1,12 +1,14 @@
 #lang typed/racket
 
-(require/typed file/zip
-  [zip (-> (U String Path) (U String Path) Void)])
 (require typed/json)
 (require typed/db)
 (require typed/db/sqlite3)
-(require "../db/database.rkt")
-(require "../db/seashell.rkt")
+
+(require/typed file/zip
+  [zip (-> (U String Path) (U String Path) Void)])
+
+(require seashell/backend/template)
+(require seashell/db/seashell)
 
 (provide new-project
          delete-project
@@ -76,7 +78,8 @@
 
 (: export-directory (-> JSExpr (U String Path) Void))
 (define (export-directory dir proj-dir)
-  (make-directory (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String))))
+  (define path (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String)))
+  (unless (directory-exists? path) (make-directory path)))
 
 (: zip-from-dir (-> String (U String Path) Void))
 (define (zip-from-dir target dir)
@@ -108,18 +111,3 @@
         (when (directory-exists? target) (delete-directory/files target))
         (copy-directory/files tmpdir target)])
     (delete-directory/files tmpdir))))
-
-;; Tests
-(init-tables)
-
-(define pid (new-project "A1"))
-(define did (new-directory pid "q1"))
-(define-values (fid cid) (new-file pid "q1/main.c" "int main(void) {\n  return 0;\n}\n" 0))
-(export-project pid #f "export")
-(export-project pid #t "proj.zip")
-
-(define pid2 (new-project "Tut00"))
-(define did2 (new-directory pid2 "example"))
-(define-values (fid2 cid2) (new-file pid2 "example/main.c" "int main() {\n  return 0;\n}\n" 0))
-(delete-project pid2)
-(export-project pid2 #f "export2")
