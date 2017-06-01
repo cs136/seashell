@@ -30,6 +30,7 @@
          insert-new
          select-id
          delete-id
+         select-projects
          select-files-for-project
          delete-files-for-project
          filename-exists?
@@ -83,6 +84,14 @@
 (: delete-id (-> String String Void))
 (define (delete-id table id)
   (void (send (get-database) apply-delete table id)))
+
+(: select-projects (-> (Listof JSExpr)))
+(define (select-projects)
+  (define db (get-database))
+  (define result
+    (query-rows (send db get-conn)
+      "SELECT json_insert(data, '$.id', id) FROM projects"))
+  (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
 
 (: select-files-for-project (-> String (Listof JSExpr)))
 (define (select-files-for-project pid)

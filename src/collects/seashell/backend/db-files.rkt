@@ -18,7 +18,8 @@
          delete-project
          new-file
          new-directory
-         export-project)
+         export-project
+         export-all)
 
 ;; just setting something up so I can test for now
 ;(unless (file-exists? "test.db")
@@ -130,3 +131,14 @@
         (when (directory-exists? target) (delete-directory/files target))
         (copy-directory/files tmpdir target)])
     (delete-directory/files tmpdir))))
+
+(: export-all (-> String Void))
+(define (export-all target)
+  (unless (directory-exists? target)
+    (make-directory target))
+  (define projects (select-projects))
+  (map (lambda ([p : JSExpr])
+    (export-project (cast (hash-ref (cast p (HashTable Symbol JSExpr)) 'id) String)
+      #f (path->string (build-path target (cast (hash-ref (cast p (HashTable Symbol JSExpr)) 'name) String)))))
+    projects)
+  (void))

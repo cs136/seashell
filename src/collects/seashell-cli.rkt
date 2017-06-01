@@ -2,6 +2,7 @@
 
 (require seashell/backend/project
          seashell/backend/runner
+         seashell/backend/db-files
          seashell/log
          seashell/compiler
          seashell/seashell-config
@@ -119,8 +120,12 @@
           (thunk (display result)) #:exists 'replace))
       (write errs))) args)))
 
+(define (export-main)
+  (export-all "export"))
+
 (define tools `#hash(("marmtest" . (,marmtest-main "Marmoset test runner."))
-                     ("object" . (,object-main "Generate object files for Seashell."))))
+                     ("object" . (,object-main "Generate object files for Seashell."))
+                     ("export" . (,export-main "Export projects from a user's Seashell database."))))
 
 ;; main program execution begins here
 (define flags (vector->list (current-command-line-arguments)))
