@@ -2,11 +2,12 @@
 
 (require seashell/db/seashell
          seashell/backend/db-files
+         seashell/seashell-config
          rackunit)
 
 (define/provide-test-suite db-files-suite
   (test-suite "Files suite with SQLite backend"
-    #:before (thunk (init-database))
+    #:before init-database
     (test-case "Create simple project"
       (define pid (new-project "A1"))
       (define did (new-directory pid "q1"))
@@ -25,5 +26,18 @@
       (delete-project pid)
       (export-project pid #f "export")
       (check-true (not (file-exists? "export/example/main.c")))
+      (delete-directory/files "export"))
+
+    (test-case "Fetch template (HTTP)"
+      (define pid (new-project "template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip"))
+      (export-project pid #f "export")
+      (check-pred file-exists? "export/default/main.c")
+      (delete-directory/files "export"))
+
+    (test-case "Fetch template (file URL)"
+      (define pid (new-project "template-file-url"
+        (format "file://~a/src/tests/template.zip" SEASHELL_SOURCE_PATH)))
+      (export-project pid #f "export")
+      (check-pred file-exists? "export/default/main.c")
       (delete-directory/files "export"))
     ))
