@@ -12,7 +12,7 @@
          "tests/config.rkt"
          "tests/cli.rkt"
          "tests/offline.rkt"
-         "tests/database.rkt"
+         "tests/db.rkt"
          "tests/db-files.rkt")
 
 (setup-test-environment)
