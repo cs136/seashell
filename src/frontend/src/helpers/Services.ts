@@ -116,7 +116,7 @@ namespace Services {
       const msg        = ajax.responseJSON.error.message;
       const statusText = ajax.statusText;
       if (code === 5) {
-        throw new LoginError("We couldn't match your username with password :(");
+        throw new LoginError("Username and password don't match.");
       }
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
