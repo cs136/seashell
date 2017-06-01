@@ -89,7 +89,7 @@
   (define db (get-database))
   (define result
     (query-rows (send db get-conn)
-      "SELECT json(data) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
+      "SELECT json_insert(data, '$.id', id) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
   (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
 
 (: delete-files-for-project (-> String Void))

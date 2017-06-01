@@ -6,9 +6,13 @@
 
 (require/typed file/zip
   [zip (-> (U String Path) (U String Path) Void)])
+(require/typed file/unzip
+  [call-with-unzip (All (A) (-> Input-Port (-> Path A) A))])
 
-(require seashell/backend/template)
+(require/typed seashell/backend/template
+  [call-with-template (All (A) (-> String (-> Input-Port A) A))])
 (require seashell/db/seashell)
+(require (submod seashell/seashell-config typed))
 
 (provide new-project
          delete-project
@@ -27,16 +31,31 @@
 ;; files: id, project_id, name, contents_id, flags
 ;; projects: id, name, settings, last_used
 
-;; TODO: put the database rows into structures so we don't need to do as much type casting
+;; TODO: put the database rows into structures so we don't need to do as much casting
 
-;; TODO support adding project from template
 ;; Returns new project ID
-(: new-project (-> String String))
-(define (new-project name)
-  (insert-new "projects"
-    #{`#hasheq((name . ,name)
-               (settings . ,#{(hash) :: JSExpr})
-               (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
+(: new-project (->* (String) (String) String))
+(define (new-project name [template #f])
+  (call-with-write-transaction (thunk
+    (define pid (insert-new "projects"
+      #{`#hasheq((name . ,name)
+                 (settings . ,#{(hash) :: JSExpr})
+                 (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
+    (printf "hnng\n")
+    (call-with-template (if template template (read-config-string 'default-project-template))
+      (lambda ([port : Input-Port])
+        (printf "hnng2\n")
+        (call-with-unzip port
+          (lambda ([dir : Path])
+            (printf "hnng3\n")
+            (parameterize ([current-directory (build-path dir (first (directory-list dir)))])
+              (map (lambda ([p : Path])
+                  (printf "~a\n" p)
+                  (if (directory-exists? p)
+                    (new-directory pid (path->string p))
+                    (new-file pid (path->string p) (file->string p) 0)) (void))
+                (sequence->list (in-directory))))))))
+    pid)))
 
 (: delete-project (-> String Void))
 (define (delete-project id)
