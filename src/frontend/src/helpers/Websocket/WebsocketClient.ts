@@ -1,5 +1,5 @@
 import {AbstractCoder, Coder} from "./Crypto";
-import {Connection} from "../Services";
+import {Connection} from "./Interface";
 import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, Callback} from "./Interface";
@@ -16,7 +16,7 @@ enum OnCloseCode {
 };
 
 class SeashellWebsocket {
-  private connection?: Connection;
+  public connection?: Connection;
   private coder: AbstractCoder;
   private websocket?: WebSocket;
   private lastMsgID: number;

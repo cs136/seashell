@@ -1,4 +1,17 @@
-export {Message, Request, Response, WebsocketResult, Callback}
+export {Message, Request, Response, WebsocketResult, Callback, Connection}
+
+class Connection {
+  public wsURI: string;
+
+  constructor(public username: string,
+              public key: number[],
+              public host: string,
+              public port: number,
+              public pingPort: number) {
+    this.wsURI = `wss://${this.host}:${this.port}`;
+  };
+}
+
 interface Message {
   [index: string]: any;
   // type: string;

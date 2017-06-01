@@ -88,7 +88,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       return (<div>
         <Navigation navLeft={[
             <Popover content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
-              <button className="pt-navbar-heading pt-button" key="project-name">
+              <button className="pt-button" key="project-name">
                 <span className="pt-icon-standard pt-icon-caret-down" />
                 {project.name}
               </button>

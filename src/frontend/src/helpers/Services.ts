@@ -9,6 +9,7 @@ import {AbstractStorage,
         OfflineMode} from "./Storage/Interface";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
+import {Connection} from "./Websocket/Interface";
 import {AbstractCompiler,
         Test,
         CompilerResult,
@@ -17,20 +18,7 @@ import {LoginError, LoginRequired} from "./Errors";
 import {appStateActions} from "../reducers/appStateReducer";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
-export {Services, Connection, DispatchFunction};
-
-
-class Connection {
-  public wsURI: string;
-
-  constructor(public username: string,
-              public key: number[],
-              public host: string,
-              public port: number,
-              public pingPort: number) {
-    this.wsURI = `wss://${this.host}:${this.port}`;
-  };
-}
+export {Services, DispatchFunction};
 
 type DispatchFunction = (act: Object) => Object;
 
@@ -137,7 +125,7 @@ namespace Services {
     await connectWith(connection);
   }
 
-  export async function logout(deleteDB: boolean = false) {
+  export async function logout(deleteDB: boolean = false): Promise<void> {
     if (!localStorage || !socketClient) {
       throw new Error("Must call Services.init() before Services.logout()");
     }

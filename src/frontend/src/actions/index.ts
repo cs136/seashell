@@ -402,6 +402,11 @@ const mapDispatchToProps = (dispatch: Function) => {
         }
       },
       project: {
+        downloadProject: (name: string) => {
+          return asyncAction(storage().projectDownloadURL(name).then((url: string) => {
+            window.open(url, "_blank");
+          }));
+        },
         addProject: (newProjectName: string) => {
           return asyncAction(storage().newProject(newProjectName)).then((proj: S.ProjectBrief) => {
             dispatch({
