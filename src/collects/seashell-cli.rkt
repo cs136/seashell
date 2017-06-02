@@ -1,8 +1,8 @@
 #lang racket
 
-(require seashell/backend/project
+(require (except-in seashell/backend/project export-project)
          seashell/backend/runner
-         seashell/backend/db-files
+         (only-in seashell/backend/db-files export-project export-all)
          seashell/log
          seashell/compiler
          seashell/seashell-config
