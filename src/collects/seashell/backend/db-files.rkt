@@ -19,6 +19,7 @@
          new-file
          new-directory
          export-project
+         export-project-name
          export-all)
 
 ;; just setting something up so I can test for now
@@ -131,6 +132,12 @@
         (when (directory-exists? target) (delete-directory/files target))
         (copy-directory/files tmpdir target)])
     (delete-directory/files tmpdir))))
+
+(: export-project-name (-> String Boolean String Void))
+(define (export-project-name name zip? target)
+  (call-with-read-transaction (thunk
+    (define proj (select-project-name name))
+    (export-project (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'id) String) zip? target))))
 
 (: export-all (-> String Void))
 (define (export-all target)

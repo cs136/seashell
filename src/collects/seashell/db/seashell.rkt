@@ -31,6 +31,7 @@
          select-id
          delete-id
          select-projects
+         select-project-name
          select-files-for-project
          delete-files-for-project
          filename-exists?
@@ -92,6 +93,13 @@
     (query-rows (send db get-conn)
       "SELECT json_insert(data, '$.id', id) FROM projects"))
   (map (lambda ([x : (Vectorof SQL-Datum)]) (string->jsexpr (cast (vector-ref x 0) String))) result))
+
+;; TODO: handle the case where a project with that name does not exist
+(: select-project-name (-> String JSExpr))
+(define (select-project-name name)
+  (define db (get-database))
+  (string->jsexpr (cast (vector-ref (first (query-rows (send db get-conn)
+    "SELECT json_insert(data, '$.id', id) FROM projects WHERE json_extract(data, '$.name')=$1" name)) 0) String)))
 
 (: select-files-for-project (-> String (Listof JSExpr)))
 (define (select-files-for-project pid)
