@@ -66,7 +66,7 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
                                      seashell-racket-compile)
   add_custom_command(OUTPUT seashell-cli
                      COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli"
-                             ++lib seashell/compiler/place-main ++lib seashell/backend/server "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli.rkt"
+                             ++lib seashell/compiler/place-main ++lib seashell/backend/server "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
@@ -93,7 +93,7 @@ else ()
                              COMMAND ${SEASHELL_RACKET} -l- raco/main exe -l -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli"
                              --exf-clear ++exf -l ++exf errortrace ++exf -S ++exf "${CMAKE_CURRENT_BINARY_DIR}" ++exf -U ++exf --
                              "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
-                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli.rkt
+                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
   add_custom_target(seashell-binary ALL DEPENDS seashell-racket-test seashell-cli)

@@ -161,10 +161,15 @@
 (: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
 (define (compile-and-run-project/db pid question tests)
   (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
-  (define run-file (call-with-read-transaction (thunk
-    (define proj (select-id "projects" pid))
-    (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
-    (export-project pid #f (build-path tmpdir name))
-    (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
+  (match-define (cons res hsh) (dynamic-wind
+    void
+    (thunk (define run-file (call-with-read-transaction (thunk
+        (define proj (select-id "projects" pid))
+        (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
+        (export-project pid #f (build-path tmpdir name))
+        (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
               (string->symbol (string-append question "_runner_file"))))))
-  (compile-and-run-project tmpdir run-file question tests #t))
+      (define-values (res hsh) (compile-and-run-project tmpdir run-file question tests #t))
+      (cons res hsh))
+    (thunk (delete-directory/files tmpdir))))
+  (values res hsh))
