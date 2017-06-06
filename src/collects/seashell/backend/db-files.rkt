@@ -22,7 +22,8 @@
          new-directory
          export-project
          export-project-name
-         export-all)
+         export-all
+         compile-and-run-project/db)
 
 ;; just setting something up so I can test for now
 ;(unless (file-exists? "test.db")
@@ -38,12 +39,12 @@
 ;; TODO: put the database rows into structures so we don't need to do as much casting
 
 ;; Returns new project ID
-(: new-project (->* (String) (String) String))
-(define (new-project name [template #f])
+(: new-project (->* (String) ((U String False) (HashTable Symbol String)) String))
+(define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol String)}])
   (call-with-write-transaction (thunk
     (define pid (insert-new "projects"
       #{`#hasheq((name . ,name)
-                 (settings . ,#{(hash) :: JSExpr})
+                 (settings . ,(cast settings JSExpr))
                  (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
     (call-with-template (if template template (read-config-string 'default-project-template))
       (lambda ([port : Input-Port])
@@ -166,9 +167,12 @@
     (thunk (define run-file (call-with-read-transaction (thunk
         (define proj (select-id "projects" pid))
         (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
-        (export-project pid #f (build-path tmpdir name))
+        (export-project pid #f tmpdir)
         (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
               (string->symbol (string-append question "_runner_file"))))))
+      (printf "run file: ~a\n" run-file)
+      (define path (build-path tmpdir run-file))
+      (printf "path: ~a\nexists: ~a\n" path (file-exists? path))
       (define-values (res hsh) (compile-and-run-project tmpdir run-file question tests #t))
       (cons res hsh))
     (thunk (delete-directory/files tmpdir))))

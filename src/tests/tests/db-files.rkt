@@ -40,4 +40,11 @@
       (export-project pid #f "export")
       (check-pred file-exists? "export/default/main.c")
       (delete-directory/files "export"))
+
+    (test-case "Run a project"
+      (define pid (new-project "run-project" #f `#hasheq((q1_runner_file . "q1/run.c"))))
+      (define did (new-directory pid "q1"))
+      (define-values (fid cid) (new-file pid "q1/run.c" "int main(void) {\n  return 0;\n}\n" 0))
+      (define-values (res hsh) (compile-and-run-project/db pid "q1" '()))
+      (check-true res))
     ))
