@@ -11,6 +11,8 @@
 
 (require/typed seashell/backend/template
   [call-with-template (All (A) (-> String (-> Input-Port A) A))])
+(require/typed seashell/backend/project
+  [compile-and-run-project (->* (Path-String Path-String String (Listof String)) (Boolean) (Values Boolean (HashTable Symbol JSExpr)))])
 (require seashell/db/seashell)
 (require (submod seashell/seashell-config typed))
 
@@ -43,16 +45,12 @@
       #{`#hasheq((name . ,name)
                  (settings . ,#{(hash) :: JSExpr})
                  (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
-    (printf "hnng\n")
     (call-with-template (if template template (read-config-string 'default-project-template))
       (lambda ([port : Input-Port])
-        (printf "hnng2\n")
         (call-with-unzip port
           (lambda ([dir : Path])
-            (printf "hnng3\n")
             (parameterize ([current-directory (build-path dir (first (directory-list dir)))])
               (map (lambda ([p : Path])
-                  (printf "~a\n" p)
                   (if (directory-exists? p)
                     (new-directory pid (path->string p))
                     (new-file pid (path->string p) (file->string p) 0)) (void))
@@ -102,7 +100,7 @@
   (define path (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String)))
   (unless (directory-exists? path) (make-directory path)))
 
-(: zip-from-dir (-> String (U String Path) Void))
+(: zip-from-dir (-> Path-String Path-String Void))
 (define (zip-from-dir target dir)
   (define cur (current-directory))
   (current-directory dir)
@@ -110,16 +108,18 @@
        ".")
   (current-directory cur))
 
-(: export-project (-> String Boolean String Void))
+(: export-project (-> String Boolean Path-String Void))
 (define (export-project pid zip? target)
   (call-with-read-transaction (thunk
     (define files (select-files-for-project pid))
     (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
+    ;; filter out only directories, sort them lexicographically, then create them all.
     (map (lambda ([d : JSExpr]) (export-directory d tmpdir))
          (sort (filter (lambda ([x : JSExpr]) (not (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False))))
                        files)
                (lambda ([a : JSExpr] [b : JSExpr]) (string<? (cast (hash-ref (cast a (HashTable Symbol JSExpr)) 'name) String)
                                                              (cast (hash-ref (cast b (HashTable Symbol JSExpr)) 'name) String)))))
+    ;; then create all the regular files
     (map (lambda ([f : JSExpr]) (export-file f tmpdir))
          (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
                  files))
@@ -149,3 +149,22 @@
       #f (path->string (build-path target (cast (hash-ref (cast p (HashTable Symbol JSExpr)) 'name) String)))))
     projects)
   (void))
+
+;; (compile-and-run-project/db pid question tests)
+;;
+;; pid: project id we are running
+;; question: question name we are running
+;; tests: list of the names of tests to run (not suffixed with .in/.expect)
+;;
+;; Runner file is determined by the project settings. This function access the database
+;;  then calls compile-and-run-project with the appropriate parameters.
+(: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
+(define (compile-and-run-project/db pid question tests)
+  (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
+  (define run-file (call-with-read-transaction (thunk
+    (define proj (select-id "projects" pid))
+    (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
+    (export-project pid #f (build-path tmpdir name))
+    (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
+              (string->symbol (string-append question "_runner_file"))))))
+  (compile-and-run-project tmpdir run-file question tests #t))
