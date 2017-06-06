@@ -47,4 +47,21 @@
       (define-values (fid cid) (new-file pid "q1/run.c" "int main(void) {\n  return 0;\n}\n" 0))
       (define-values (res hsh) (compile-and-run-project/db pid "q1" '()))
       (check-true res))
+
+    (test-case "Run a project with common run file"
+      (define pid (new-project "run-project-common" #f `#hasheq((q1_runner_file . "common/prog.c"))))
+      (define did (new-directory pid "common"))
+      (define-values (fid cid) (new-file pid "common/prog.c" "int main(void) {\n  return 0;\n}\n" 0))
+      (define-values (res hsh) (compile-and-run-project/db pid "q1" '()))
+      (check-true res))
+
+    (test-case "Run a project with tests"
+      (define pid (new-project "run-project-tests" #f `#hasheq((q1_runner_file . "q1/main.c"))))
+      (define did (new-directory pid "q1"))
+      (new-file pid "q1/main.c" "#include <stdio.h>\nint main(void) {\n  printf(\"Hello world!\\n\");\n}\n" 0)
+      (new-directory pid "q1/tests")
+      (new-file pid "q1/tests/simple.in" "" 0)
+      (new-file pid "q1/tests/simple.expect" "Hello world!\n" 0)
+      (define-values (res hsh) (compile-and-run-project/db pid "q1" '("simple")))
+      (check-true res))
     ))
