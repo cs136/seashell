@@ -213,6 +213,8 @@
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Location of the runtime-files directory.
       (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      ;; Location of SQLite database file relative to the 'seashell directory
+      (cons 'database-file                 "seashell.db")
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
