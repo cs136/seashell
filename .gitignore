@@ -8,3 +8,4 @@ _install/
 install.log
 build.log
 build_tools/cmake
+.vscode

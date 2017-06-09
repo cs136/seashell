@@ -1,0 +1,79 @@
+/// Mixin printing a linear-gradient
+/// as well as a plain color fallback
+/// and the `-webkit-` prefixed declaration
+/// @access public
+/// @param {Keyword | Angle} $direction - Linear gradient direction
+/// @param {Arglist} $color-stops - List of color-stops composing the gradient
+//from https://www.sitepoint.com/building-linear-gradient-mixin-sass/
+@mixin linear-gradient($direction, $color-stops...) {
+    background: nth(nth($color-stops, 1), 1);
+    background: -webkit-linear-gradient(legacy-direction($direction), $color-stops);
+    background: linear-gradient($direction, $color-stops);
+}
+
+$theme: #149BE3;
+
+$dark: #222;
+$darkTerminal: #191919;
+$darkBorder: #333;
+
+$mobile-break: 650px;
+
+.app {
+  font-family: Overpass, sans-serif;
+  height:100%;
+}
+
+.gradientBar {
+  @include linear-gradient(90deg, $theme, #14E3C7);
+  height: 2px;
+}
+
+.disconnectedGradientBar {
+  @include linear-gradient(90deg, #FE9C87, #FF4F29);
+  height: 14px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.container {
+  max-width: 768px;
+  box-sizing: border-box;
+  padding: 0 1.5em;
+  margin: 0 auto;
+}
+
+.mainContent {
+  flex: 1;
+}
+
+
+:global {
+  /* -- Global Style Overrides -- */
+  .pt-overlay .pt-dialog {
+      margin-top: 2em;
+  }
+  .pt-navbar.pt-dark, .pt-dark .pt-navbar{
+      background: $dark;
+  }   
+  .pt-dark .pt-button:not([class*="pt-intent-"]){
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
+  }
+  .pt-dark .pt-button:not([class*="pt-intent-"]):hover{
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)) left no-repeat, center no-repeat $dark;
+  }
+  .pt-dark .pt-button.pt-minimal, .pt-dark .pt-button.pt-minimal:hover {
+      box-shadow: none;
+      background: none;
+      color: inherit;
+  }
+  .pt-dark{
+      background:$dark;
+  }
+  .pt-dialog{
+      background: #FFF !important;
+  }
+  .pt-dark .pt-dialog{
+      background: #293742 !important
+  }
+}
