@@ -1,8 +1,10 @@
 #lang typed/racket
 
-(require typed/json)
-(require typed/db)
-(require typed/db/sqlite3)
+(require typed/json
+         seashell/db/tools
+         seashell/utils/uuid)
+
+(require (submod seashell/seashell-config typed))
 
 (require/typed file/zip
   [zip (-> (U String Path) (U String Path) Void)])
@@ -13,8 +15,6 @@
   [call-with-template (All (A) (-> String (-> Input-Port A) A))])
 (require/typed seashell/backend/project
   [compile-and-run-project (->* (Path-String Path-String String (Listof String)) (Boolean) (Values Boolean (HashTable Symbol JSExpr)))])
-(require seashell/db/seashell)
-(require (submod seashell/seashell-config typed))
 
 (provide new-project
          delete-project
@@ -23,12 +23,7 @@
          export-project
          export-project-name
          export-all
-         compile-and-run-project/db
-         sync)
-
-;; just setting something up so I can test for now
-;(unless (file-exists? "test.db")
-;  (disconnect (sqlite3-connect #:database "test.db" #:mode 'create)))
+         compile-and-run-project/db)
 
 ;; What I'm thinking:
 ;;
@@ -71,7 +66,7 @@
   (define result (call-with-write-transaction (thunk
     (when (filename-exists? pid name)
       (error (format "A file with the name '~a' already exists." name)))
-    (define contents-id (if contents (get-uuid) #f))
+    (define contents-id (if contents (bytes->string/utf-8 (uuid-generate)) #f))
     (define file-id (insert-new "files"
       `#hasheq((project_id . ,pid)
                (name . ,name)
@@ -129,11 +124,11 @@
     (cond
       [zip?
         (when (file-exists? target) (delete-file target))
-        (zip-from-dir target tmpdir)]
+        (zip-from-dir target tmpdir)
+        (delete-directory/files tmpdir)]
       [else
         (when (directory-exists? target) (delete-directory/files target))
-        (copy-directory/files tmpdir target)])
-    (delete-directory/files tmpdir))))
+        (rename-file-or-directory tmpdir target)]))))
 
 (: export-project-name (-> String Boolean String Void))
 (define (export-project-name name zip? target)

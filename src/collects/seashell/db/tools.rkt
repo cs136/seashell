@@ -17,16 +17,12 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(require typed/json)
-(require typed/db)
+(require typed/json
+         typed/db
+         seashell/utils/uuid
+         seashell/db/database)
 
-(require/typed racket/random
-  [crypto-random-bytes (-> Integer Bytes)])
-
-(require seashell/db/database)
-
-(provide get-uuid
-         init-database
+(provide init-database
          insert-new
          select-id
          delete-id
@@ -51,11 +47,6 @@
     (error "Must call init-database before accessing the database."))
   (cast seashell-database (Instance Sync-Database%)))
 
-(: get-uuid (-> String))
-(define (get-uuid)
-  ;; TODO change this to actual UUIDs
-  (bytes->string/utf-8 (crypto-random-bytes 16) (integer->char (random 256))))
-
 ;; Must be called before accessing the database
 (: init-database (->* () (SQLite3-Database-Storage) Void))
 (define (init-database [storage 'memory])
@@ -74,7 +65,7 @@
 ;; Inserts the given object, generating a new UUID for it
 (: insert-new (->* (String DBExpr) (String) String))
 (define (insert-new table object [id #f])
-  (define new-id (if id id (get-uuid)))
+  (define new-id (if id id (bytes->string/utf-8 (uuid-generate))))
   (send (get-database) apply-create table new-id object)
   new-id)
 

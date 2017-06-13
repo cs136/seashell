@@ -1,6 +1,6 @@
 #lang typed/racket
 ;; Seashell's SQLite3 + Dexie bindings.
-;; Copyright (C) 2013-2015 The Seashell Maintainers.
+;; Copyright (C) 2013-2017 The Seashell Maintainers.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -16,12 +16,14 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require typed/json)
-(require typed/db)
-(require typed/db/sqlite3)
-(require "support.rkt")
-(require "changes.rkt")
-(require "updates.rkt")
+
+(require typed/json
+         typed/db
+         typed/db/sqlite3
+         seashell/db/support
+         seashell/db/changes
+         seashell/db/updates
+         seashell/utils/uuid)
 
 (provide DBExpr
          Sync-Database%
@@ -37,6 +39,7 @@
   [get-conn (-> Connection)]
   [subscribe (-> (-> Void) Void)]
   [unsubscribe (-> (-> Void) Void)]
+  [create-client (->* () (String) String)]
   [write-transaction (All (A) (-> (-> A) A))]
   [read-transaction (All (A) (-> (-> A) A))]
   [current-revision (-> Integer)]
@@ -95,6 +98,12 @@
     (define/private (update-subscribers)
       (map (lambda ([sub : (-> Void)]) (sub)) subscribers)
       (void))
+
+    (: create-client (->* () (String) String))
+    (define/public (create-client [desc ""])
+      (define client-id (bytes->string/utf-8 (uuid-generate)))
+      (query-exec database "INSERT INTO _clients VALUES ($1, $2)" client-id desc)
+      client-id)
 
     (: write-transaction (All (A) (-> (-> A) A)))
     (define/public (write-transaction thunk)

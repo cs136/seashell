@@ -3,12 +3,19 @@
 (require seashell/db/changes
          seashell/db/database
          seashell/websocket
-         seashell/utils/uuid
          seashell/config
          typed/json)
 
-(provide sync-server%)
+(provide sync-server%
+         Sync-Server%)
 
+(define-type Sync-Server% (Class
+  (init [conn : Websocket-Connection])
+  [client-identity (-> (U String False) String)]
+  [subscribe (-> (U Integer False) Void)]
+  [sync-changes (-> (Listof database-change) Integer Boolean Void)]))
+
+(: sync-server% : Sync-Server%)
 (define sync-server%
   (class object%
     (init [conn : Websocket-Connection])
@@ -40,7 +47,7 @@
           (set! current-client identity)
           identity]
         [else
-          (set! current-client (get-uuid))
+          (set! current-client (send database create-client))
           current-client]))
 
     (: send-changes (-> Void))
