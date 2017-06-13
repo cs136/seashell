@@ -87,6 +87,7 @@
 
 (: export-file (-> JSExpr (U String Path) Void))
 (define (export-file file proj-dir)
+  (printf "file: ~a\n" file)
   (define contents (select-id "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
   (when contents
     (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
@@ -157,7 +158,7 @@
 ;;  then calls compile-and-run-project with the appropriate parameters.
 (: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
 (define (compile-and-run-project/db pid question tests)
-  (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
+  (define tmpdir (make-temporary-file "seashell-compile-tmp-~a" 'directory))
   (match-define (cons res hsh) (dynamic-wind
     void
     (thunk (define run-file (call-with-read-transaction (thunk

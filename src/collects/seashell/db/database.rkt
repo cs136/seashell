@@ -128,7 +128,7 @@
 
     (: fetch (-> String String (Option JSExpr)))
     (define/public (fetch table key)
-      (define result (query-maybe-value database (format "SELECT json(data) FROM ~a WHERE id=$1" table) key))
+      (define result (query-maybe-value database (format "SELECT json(data) FROM '~a' WHERE id=$1" table) key))
       (if (string? result)
           (string->jsexpr result)
           #f))

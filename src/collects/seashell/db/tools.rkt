@@ -19,10 +19,12 @@
 
 (require typed/json
          typed/db
+         typed/db/sqlite3
          seashell/utils/uuid
          seashell/db/database)
 
 (provide init-database
+         clear-database
          insert-new
          select-id
          delete-id
@@ -53,7 +55,6 @@
   (set! seashell-database (make-object sync-database% storage))
   (init-tables))
 
-;; Probably will only use this in the tests and the first time Seashell is run for a user
 (: init-tables (-> Void))
 (define (init-tables)
   (define db (get-database))
@@ -61,6 +62,11 @@
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT)")
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, data TEXT)")
     (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS contents (id TEXT PRIMARY KEY, data TEXT)"))))
+
+(: clear-database (-> Void))
+(define (clear-database)
+  (when seashell-database
+    (set! seashell-database #f)))
 
 ;; Inserts the given object, generating a new UUID for it
 (: insert-new (->* (String DBExpr) (String) String))

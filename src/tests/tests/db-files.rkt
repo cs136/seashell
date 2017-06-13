@@ -8,6 +8,7 @@
 (define/provide-test-suite db-files-suite
   (test-suite "Files suite with SQLite backend"
     #:before init-database
+    #:after clear-database
     (test-case "Create simple project"
       (define pid (new-project "A1"))
       (define did (new-directory pid "q1"))
