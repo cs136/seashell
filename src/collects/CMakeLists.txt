@@ -67,7 +67,7 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
   add_custom_command(OUTPUT seashell-cli
                      COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli"
                              ++lib seashell/compiler/place-main ++lib seashell/backend/server "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
-                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli
+                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
   add_custom_command(OUTPUT seashell-racket-test
@@ -78,7 +78,7 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
                                      seashell-test-racket-compile)
   # Install step: copy over real programs.  NOTE:  Make sure that the destination of raco distribute agrees with the configuration.
   install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-main\")")
-  install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-cli\")")
+  install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli\")")
   add_custom_target(seashell-binary ALL DEPENDS seashell-main seashell-cli seashell-racket-test)
 else ()
   set(SEASHELL_COLLECTS share/collects)
@@ -93,7 +93,7 @@ else ()
                              COMMAND ${SEASHELL_RACKET} -l- raco/main exe -l -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli"
                              --exf-clear ++exf -l ++exf errortrace ++exf -S ++exf "${CMAKE_CURRENT_BINARY_DIR}" ++exf -U ++exf --
                              "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
-                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-cli
+                             DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
   add_custom_target(seashell-binary ALL DEPENDS seashell-racket-test seashell-cli)

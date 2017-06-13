@@ -65,7 +65,7 @@
 ;; Inserts the given object, generating a new UUID for it
 (: insert-new (->* (String DBExpr) (String) String))
 (define (insert-new table object [id #f])
-  (define new-id (if id id (bytes->string/utf-8 (uuid-generate))))
+  (define new-id (if id id (uuid-generate)))
   (send (get-database) apply-create table new-id object)
   new-id)
 

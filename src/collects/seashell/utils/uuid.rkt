@@ -81,6 +81,6 @@
                      --> (cast out _bytes _string/utf-8))
                #:c-id uuid_unparse))
 (require/typed/provide (submod "." ffi)
-  [uuid-generate (-> Bytes)])
+  [uuid-generate (-> String)])
 
 ; vim:set ts=2 sw=2 et:

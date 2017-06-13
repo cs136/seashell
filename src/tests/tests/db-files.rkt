@@ -1,6 +1,6 @@
 #lang racket
 
-(require seashell/db/seashell
+(require seashell/db/tools
          seashell/backend/db-files
          seashell/seashell-config
          rackunit)

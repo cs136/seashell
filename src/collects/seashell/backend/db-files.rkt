@@ -66,7 +66,7 @@
   (define result (call-with-write-transaction (thunk
     (when (filename-exists? pid name)
       (error (format "A file with the name '~a' already exists." name)))
-    (define contents-id (if contents (bytes->string/utf-8 (uuid-generate)) #f))
+    (define contents-id (if contents (uuid-generate) #f))
     (define file-id (insert-new "files"
       `#hasheq((project_id . ,pid)
                (name . ,name)

@@ -101,7 +101,7 @@
 
     (: create-client (->* () (String) String))
     (define/public (create-client [desc ""])
-      (define client-id (bytes->string/utf-8 (uuid-generate)))
+      (define client-id (uuid-generate))
       (query-exec database "INSERT INTO _clients VALUES ($1, $2)" client-id desc)
       client-id)
 
