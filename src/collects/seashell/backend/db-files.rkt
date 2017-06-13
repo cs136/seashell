@@ -23,7 +23,8 @@
          export-project
          export-project-name
          export-all
-         compile-and-run-project/db)
+         compile-and-run-project/db
+         sync)
 
 ;; just setting something up so I can test for now
 ;(unless (file-exists? "test.db")

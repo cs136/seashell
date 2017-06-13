@@ -35,10 +35,13 @@
 (define-type Sync-Database% (Class
   (init [path SQLite3-Database-Storage])
   [get-conn (-> Connection)]
+  [subscribe (-> (-> Void) Void)]
+  [unsubscribe (-> (-> Void) Void)]
   [write-transaction (All (A) (-> (-> A) A))]
   [read-transaction (All (A) (-> (-> A) A))]
   [current-revision (-> Integer)]
   [fetch (-> String String (Option JSExpr))]
+  [fetch-changes (-> Integer String (Listof (Vectorof SQL-Datum)))]
   [apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any)]
   [apply-partial-create (->* (String String (U String DBExpr)) ((Option String)) Any)]
   [apply-update (->* (String String DBExpr) ((Option String) Boolean) Any)]
@@ -51,8 +54,13 @@
 (define sync-database%
   (class object%
     (init [path : SQLite3-Database-Storage])
+
     (: database Connection)
     (define database (sqlite-connection path))
+
+    (: subscribers (Listof (-> Void)))
+    (define subscribers '())
+
     (super-new)
 
     (query-exec database "CREATE TABLE IF NOT EXISTS _clients (id TEXT PRIMARY KEY, description TEXT)")
@@ -75,11 +83,28 @@
     (define/public (get-conn)
       database)
 
+    (: subscribe (-> (-> Void) Void))
+    (define/public (subscribe cb)
+      (set! subscribers (cons cb (remove cb subscribers))))
+
+    (: unsubscribe (-> (-> Void) Void))
+    (define/public (unsubscribe cb)
+      (set! subscribers (remove cb subscribers)))
+
+    (: update-subscribers (-> Void))
+    (define/private (update-subscribers)
+      (map (lambda ([sub : (-> Void)]) (sub)) subscribers)
+      (void))
+
     (: write-transaction (All (A) (-> (-> A) A)))
     (define/public (write-transaction thunk)
       (define option (if (db-in-transaction?) #f 'immediate))
-      (parameterize ([db-in-transaction? #t])
-        (call-with-transaction database thunk #:option option)))
+      (dynamic-wind
+        void
+        (lambda () (parameterize ([db-in-transaction? #t])
+          (call-with-transaction database thunk #:option option)))
+        (lambda () (unless (db-in-transaction?)
+          (update-subscribers)))))
 
     (: read-transaction (All (A) (-> (-> A) A)))
     (define/public (read-transaction thunk)
@@ -99,6 +124,10 @@
           (string->jsexpr result)
           #f))
 
+    (: fetch-changes (-> Integer String (Listof (Vectorof SQL-Datum))))
+    (define/public (fetch-changes revision client)
+      (query-rows database "SELECT * FROM _changes WHERE revision >= $1 AND client != $2" revision client))
+
     (: apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string object))
@@ -112,6 +141,7 @@
                                 key
                                 data)))
       (if _transaction (write-transaction todo) (todo)))
+
     (: apply-partial-create (->* (String String (U String DBExpr)) ((Option String)) Any))
     (define/public (apply-partial-create table key object [_client #f])
       (define data (string-or-jsexpr->string object))
@@ -140,6 +170,7 @@
                                   key
                                   data))))
       (if _transaction (write-transaction todo) (todo)))
+
     (: apply-partial-update (->* (String String DBExpr) ((Option String)) Any))
     (define/public (apply-partial-update table key updates [_client #f])
       (define data (string-or-jsexpr->string updates))
@@ -162,6 +193,7 @@
                                   table
                                   key))))
       (if _transaction (write-transaction todo) (todo)))
+
     (: apply-partial-delete (->* (String String) ((Option String)) Any))
     (define/public (apply-partial-delete table key [_client #f])
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key) VALUES ($1, $2, $3, $4)"

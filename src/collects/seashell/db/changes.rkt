@@ -32,7 +32,7 @@
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
 
-;; (row-change SQLRow) -> database-change
+;; (row->change SQLRow) -> database-change
 ;; Converts a row in the SQLite3 database to a database-change struct.
 ;; Arguments:
 ;;  row - Row as given by query-row.
