@@ -4,7 +4,7 @@
          seashell/backend/project
          rackunit)
 
-(define seashell-cli-exe (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli/seashell-cli"))
+(define seashell-cli-exe (read-config 'seashell-cli))
 
 (define/contract (seashell-cli . params)
   (->* () #:rest (listof string?) integer?)

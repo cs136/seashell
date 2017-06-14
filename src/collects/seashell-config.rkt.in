@@ -171,6 +171,13 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Location of the seashell-cli binary
+      (cons 'seashell-cli                  (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-cli")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli/seashell-cli")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
       ;; Project settings filename.
       (cons 'project-settings-filename     (string->path ".project-settings.txt"))
 
