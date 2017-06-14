@@ -44,11 +44,6 @@
                  (current-directory old-dir))
   (test-suite "seashell-cli test suite"
     (test-case "A program fails to compile"
-      (printf "seashell-cli: ~a\n" seashell-cli-exe)
-      (printf "collects: ~a\n" (directory-list (build-path SEASHELL_BUILD_PATH "src/collects")))
-      (printf "collects/seashell-cli: ~a\n" (directory-list (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli")))
-      (printf "install: ~a\n" (directory-list SEASHELL_INSTALL_PATH))
-      (printf "collects/seashell-cli/compiled: ~a\n" (directory-list (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli/compiled")))
       (check-equal?
         (cli-marmtest "good code;\n" "" "")
         10))

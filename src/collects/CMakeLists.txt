@@ -65,7 +65,7 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_CURRENT_SOURCE_DIR}/seashell-main.rkt
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
-  add_custom_command(OUTPUT seashell-cli
+  add_custom_command(OUTPUT seashell-cli/seashell-cli
                      COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli"
                              ++lib seashell/compiler/place-main ++lib seashell/backend/server "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${seashell_collects_cli}
@@ -76,11 +76,11 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
                              ++lib seashell/compiler/place-main ++lib errortrace "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src/run-tests.rkt"
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_SOURCE_DIR}/src/tests/run-tests.rkt
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt ${seashell_racket_tests}
-                                     seashell-test-racket-compile seashell-cli)
+                                     seashell-test-racket-compile seashell-cli/seashell-cli)
   # Install step: copy over real programs.  NOTE:  Make sure that the destination of raco distribute agrees with the configuration.
   install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-main\")")
   install(CODE "execute_process(COMMAND ${SEASHELL_RACKET} -l- raco/main distribute \"${CMAKE_INSTALL_PREFIX}\" \"${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli\")")
-  add_custom_target(seashell-binary ALL DEPENDS seashell-main seashell-cli seashell-racket-test)
+  add_custom_target(seashell-binary ALL DEPENDS seashell-main seashell-cli/seashell-cli seashell-racket-test)
 else ()
   set(SEASHELL_COLLECTS share/collects)
   add_custom_command(OUTPUT seashell-racket-test
@@ -90,14 +90,14 @@ else ()
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_SOURCE_DIR}/src/tests/run-tests.rkt
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt ${seashell_racket_tests}
                                      seashell-test-racket-compile)
-  add_custom_command(OUTPUT seashell-cli
+  add_custom_command(OUTPUT seashell-cli/seashell-cli
                              COMMAND ${SEASHELL_RACKET} -l- raco/main exe -l -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli"
                              --exf-clear ++exf -l ++exf errortrace ++exf -S ++exf "${CMAKE_CURRENT_BINARY_DIR}" ++exf -U ++exf --
                              "${CMAKE_CURRENT_BINARY_DIR}/seashell-cli/seashell-cli.rkt"
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${seashell_collects_cli}
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
-  add_custom_target(seashell-binary ALL DEPENDS seashell-racket-test seashell-cli)
+  add_custom_target(seashell-binary ALL DEPENDS seashell-racket-test seashell-cli/seashell-cli)
   # Install step: copy over real programs.  NOTE:  Make sure that the destination of raco distribute agrees with the configuration.
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ DESTINATION ${SEASHELL_COLLECTS}
     FILES_MATCHING
