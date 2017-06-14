@@ -9,8 +9,8 @@ before_install:
 - sudo apt-add-repository -y ppa:plt/racket
 - sudo apt-get update
 - cd /usr/lib/x86_64-linux-gnu
-- wget http://launchpadlibrarian.net/241463272/libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
-- dpkg -i libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
+- sudo wget http://launchpadlibrarian.net/241463272/libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
+- sudo dpkg -i libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
 - cd -
 - sudo apt-get install racket -y
 - nvm install node
