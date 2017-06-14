@@ -22,7 +22,7 @@ before_install:
 - mv cmake-3.6.2-Linux-x86_64 cmake
 script:
 - ./build_tools/cmake -s "../cmake/bin/cmake" -i "$HOME/install" -a "-Wno-dev -DCMAKE_C_FLAGS='-Qunused-arguments
-  -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics'
+  -fcolor-diagnostics' -DCMAKE_CXX_FLAGS='-Qunused-arguments -fcolor-diagnostics' -DCMAKE_INSTALL_PREFIX=$HOME/install
   -DPROCESSOR_COUNT=1 -DTRAVIS_BUILD=1" -l ""
 - ./build_tools/install -a "-j2" -l "" -t
 notifications:
