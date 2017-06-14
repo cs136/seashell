@@ -46,6 +46,7 @@
       (printf "seashell-cli: ~a\n" seashell-cli-exe)
       (printf "collects: ~a\n" (directory-list (build-path SEASHELL_BUILD_PATH "src/collects")))
       (printf "collects/seashell-cli: ~a\n" (directory-list (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli")))
+      (printf "install/bin: ~a\n" (directory-list (build-path SEASHELL_INSTALL_PATH "bin")))
       (check-equal?
         (cli-marmtest "good code;\n" "" "")
         10))
