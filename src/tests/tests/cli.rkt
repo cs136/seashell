@@ -43,6 +43,7 @@
                  (current-directory old-dir))
   (test-suite "seashell-cli test suite"
     (test-case "A program fails to compile"
+      (printf "seashell-cli: ~a\nexists: ~a\n" seashell-cli-exe (file-exists? seashell-cli-exe))
       (check-equal?
         (cli-marmtest "good code;\n" "" "")
         10))
