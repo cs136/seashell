@@ -72,7 +72,27 @@
       (send database write-transaction (thunk
         (cond
           [partial
-            (error "TODO")]
+            (map (lambda ([chg : database-change])
+              (cond
+                [(= (database-change-type chg) CREATE)
+                  (send database apply-partial-create
+                    (database-change-table chg)
+                    (database-change-key chg)
+                    (database-change-data chg)
+                    (database-change-client chg))]
+                [(= (database-change-type chg) UPDATE)
+                  (send database apply-partial-update
+                    (database-change-table chg)
+                    (database-change-key chg)
+                    (database-change-data chg)
+                    (database-change-client chg))]
+                [(= (database-change-type chg) DELETE)
+                  (send database apply-partial-delete
+                    (database-change-table chg)
+                    (database-change-key chg)
+                    (database-change-client chg))]))
+              changes)
+            (void)]
           [else
             (define base (if revision revision 0))
             (define srv-changes (reduce-changes (map row->change (send database fetch-changes base current-client))))
