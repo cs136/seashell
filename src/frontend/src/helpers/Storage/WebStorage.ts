@@ -26,6 +26,29 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   private skeletons: SkeletonManager;
 
+  public async sendChanges(changes: any, baseRevision: number, partial: boolean) {
+    return this.socket.sendMessage({
+      type: "changes",
+      changes: changes,
+      baseRevision: baseRevision,
+      partial: partial
+    });
+  }
+
+  public async clientIdentity(clientIdentity: string) {
+    return this.socket.sendMessage({
+      type: "clientIdentity",
+      clientIdentity: clientIdentity
+    });
+  }
+
+  public async subscribe(syncedRevision: number) {
+    return this.socket.sendMessage({
+      type: "subscribe",
+      syncedRevision: syncedRevision
+    });
+  }
+
   public async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileBrief> {
     // the right way to do it
     // fid pid are md5 strings

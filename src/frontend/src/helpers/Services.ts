@@ -7,6 +7,7 @@ import {AbstractStorage,
         Project, ProjectID, ProjectBrief,
         Settings,
         OfflineMode} from "./Storage/Interface";
+import {SyncProtocol} from "./Storage/SyncProtocol";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {AbstractCompiler,
@@ -15,6 +16,7 @@ import {AbstractCompiler,
         CompilerDiagnostic} from "./Compiler/Interface";
 import {LoginError, LoginRequired} from "./Errors";
 import {appStateActions} from "../reducers/appStateReducer";
+import Dexie from "dexie";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
 export {Services, Connection, DispatchFunction};
@@ -58,6 +60,9 @@ namespace Services {
     localStorage    = new LocalStorage(options.debugLocalStorage);
     webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
       options.debugWebStorage);
+
+    (<any>Dexie).Syncable.registerSyncProtocol("seashell", new SyncProtocol(socketClient));
+
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
       dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);

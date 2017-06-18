@@ -55,7 +55,8 @@
       (define changes (reduce-changes (map row->change (get-changes synced-revision current-client))))
       (define rev (send database current-revision))
       (send-message
-        `#hasheq((type . "changes")
+        `#hasheq((id . -5)
+                 (type . "changes")
                  (changes . ,changes)
                  (currentRevision . ,rev)
                  (partial . #f)))

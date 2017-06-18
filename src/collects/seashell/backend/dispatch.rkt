@@ -24,6 +24,7 @@
          seashell/backend/files
          seashell/backend/runner
          seashell/backend/offline
+         seashell/backend/sync
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -44,6 +45,7 @@
   (define authenticated? #f)
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
+  (define sync-server (make-object sync-server% connection))
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -280,6 +282,30 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
+      ;; Sync protocol methods
+      [(hash-table
+        ('id id)
+        ('type "clientIdentity")
+        ('clientIdentity cid))
+       `#hash((id . ,id)
+              (success . #t)
+              (clientIdentity . ,(send sync-server client-identity cid)))]
+      [(hash-table
+        ('id id)
+        ('type "subscribe")
+        ('syncedRevision rev))
+       (send sync-server subscribe rev)
+       `#hash((id . ,id)
+              (success . #t))]
+      [(hash-table
+        ('id id)
+        ('type "changes")
+        ('baseRevision rev)
+        ('changes changes)
+        ('partial partial))
+       (send sync-server sync-changes changes rev partial)
+       `#hasheq((id . ,id)
+                (success . #t))]
       ;; Open files
       [(hash-table
          ('id id)

@@ -30,7 +30,7 @@ class LocalStorage implements AbstractStorage {
   private db: StorageDB;
   private dbName: string;
 
-  public constructor(public debug = false) {}
+  public constructor(public debug = false) { }
 
   private setDirty() {
     localStorage.setItem(`${this.dbName}-offline-store-dirty?`, "true");
@@ -516,11 +516,17 @@ class StorageDB extends Dexie {
 
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
-    this.version(1).stores({
-      changeLogs: "++id",
-      files: "id, [name+project], [project+open], name, project",
-      projects: "id, name",
-      settings: "id"
+    this.version(2).stores({
+      changeLogs: "$$id",
+      files: "$$id, [name+project], [project+open], name, project",
+      projects: "$$id, name",
+      settings: "$$id"
+    });
+
+    // No TS bindings for Dexie.Syncable
+    (<any>this).syncable.connect("seashell", null);
+    (<any>this).syncable.on("statusChanged", (newStatus: any, url: string) => {
+      console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
     });
   }
 }
