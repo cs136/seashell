@@ -60,14 +60,13 @@ namespace Services {
 
     socketClient    = new SeashellWebsocket(options.debugWebSocket);
     localStorage    = new LocalStorage(options.debugLocalStorage);
-    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
-      options.debugWebStorage);
+    webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
 
     Dexie.Syncable.registerSyncProtocol("seashell", new SyncProtocol(socketClient));
 
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
-    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
-      dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
+    onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,
+      dispatch, async () => {}, getOfflineMode);
 
     if (disp !== null) {
       socketClient.register_callback("connected", () => disp({
@@ -81,8 +80,15 @@ namespace Services {
     }
   }
 
-  export function storage(): WebStorage {
-    if (webStorage === null) {
+  export function getStorage(): LocalStorage {
+    if (localStorage === null) {
+      throw new Error("Must call Services.init() before Services.storage().");
+    }
+    return localStorage;
+  }
+
+  export function getWebStorage(): WebStorage {
+    if (webStorage == null) {
       throw new Error("Must call Services.init() before Services.storage().");
     }
     return webStorage;
@@ -184,7 +190,7 @@ namespace Services {
     await localStorage.connect(`seashell8-${connection.username}`);
     await socketClient.connect(connection);
     if (sync) {
-      await webStorage.syncAll();
+      // TODO trigger sync
     }
     return connection.username;
   }

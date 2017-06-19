@@ -10,7 +10,7 @@ class CurrentFile extends S.File {
   public flusher?: number;
 
   constructor(other: CurrentFile | S.File) {
-    super(other);
+    super(other.id, other);
     if (other instanceof CurrentFile) {
       this.unwrittenContent = other.unwrittenContent;
       this.target = other.target;

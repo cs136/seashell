@@ -1,6 +1,6 @@
 import * as R from "ramda";
 
-export {AbstractStorage, AbstractWebStorage,
+export {AbstractStorage,
         Contents, ContentsStored, ContentsID,
         File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
@@ -34,10 +34,6 @@ abstract class AbstractStorage {
   public abstract async getSettings(): Promise<Settings>;
   // table dump
   public abstract async getAllFiles(): Promise<FileBrief[]>;
-}
-
-abstract class AbstractWebStorage {
-  public abstract async syncAll(): Promise<void>;
 }
 
 type ContentsID = string;

@@ -45,7 +45,8 @@ const mapDispatchToProps = (dispatch: Function) => {
     }
   }
 
-  const storage = Services.storage;
+  const storage = Services.getStorage;
+  const webStorage = Services.getWebStorage;
 
   const actions =  {
     dispatch: {
@@ -116,7 +117,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
             dispatch((dispatch: Function, getState: () => globalState) => {
               let newSettings = getState().settings;
-              asyncAction(Services.storage().setSettings(Settings.fromJSON({
+              asyncAction(storage().setSettings(Settings.fromJSON({
                 id: 0,
                 editor_mode: "standard",
                 font_size: newSettings.fontSize,
@@ -249,7 +250,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.removeFile,
                 payload: file
               });
-              return asyncAction(storage().pullMissingSkeletonFiles(file.project));
+              return asyncAction(webStorage().pullMissingSkeletonFiles(file.project));
             });
         },
         renameFile: (file: S.FileBrief, targetName: string) => {
@@ -271,7 +272,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.updateCurrentFileIfIdEquals,
                 payload: {oldFid: file.id, newFileBrief: newFile}
               });
-              return asyncAction(storage().pullMissingSkeletonFiles(file.project))
+              return asyncAction(webStorage().pullMissingSkeletonFiles(file.project))
                 .then(() => newFile);
             });
         },
@@ -337,14 +338,14 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         getMarmosetResults: async (projectName: string, questionName: string) => {
-          const oldLength = JSON.parse((await asyncAction(Services.storage().getTestResults(projectName + questionName)))).result.length;
-          await asyncAction(Services.storage().marmosetSubmit(projectName, projectName + questionName, questionName));
+          const oldLength = JSON.parse((await asyncAction(webStorage().getTestResults(projectName + questionName)))).result.length;
+          await asyncAction(webStorage().marmosetSubmit(projectName, projectName + questionName, questionName));
           let result = [];
           function sleep(milliseconds: Number) {
             return new Promise(resolve => setTimeout(resolve, milliseconds));
           }
           while (result.length === oldLength || result.length === 0 || result[0].status !== "complete") {
-            const response = (await asyncAction(Services.storage().getTestResults(projectName + questionName)));
+            const response = (await asyncAction(webStorage().getTestResults(projectName + questionName)));
             result = JSON.parse(response).result;
             if (result.length === oldLength || result.length === 0 || result[0].status !== "complete") await sleep(1500); // let's not destroy the server
           }
@@ -392,7 +393,6 @@ const mapDispatchToProps = (dispatch: Function) => {
           try {
             let user = await Services.autoConnect();
             dispatch({type: userActions.BUSY});
-            await storage().syncAll();
             dispatch({ type: userActions.SIGNIN, payload: user });
             return user;
           } catch (e) {
@@ -412,7 +412,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         removeProject: (pid: S.ProjectID) => {
-          return asyncAction(storage().inSkeleton(pid)).then((inSkel) => {
+          return asyncAction(webStorage().inSkeleton(pid)).then((inSkel) => {
             if (inSkel) {
               showError("This project was provided by the course staff and cannot be deleted.");
             } else {
@@ -430,7 +430,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             return arr.indexOf(val) === idx && val !== "common";
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(storage().pullMissingSkeletonFiles(pid)).then(() => {
+          return asyncAction(webStorage().pullMissingSkeletonFiles(pid)).then(() => {
             return asyncAction(storage().getProjectFiles(pid))
               .then((files: S.FileBrief[]) => dispatch({
                 type: appStateActions.switchProject,
@@ -448,7 +448,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         getAllProjects: () => {
-          return asyncAction(storage().fetchNewSkeletons()).then(() => {
+          return asyncAction(webStorage().fetchNewSkeletons()).then(() => {
             return asyncAction(storage().getProjects()).then((projects) => dispatch({
               type: appStateActions.getProjects,
               payload: {
@@ -457,11 +457,6 @@ const mapDispatchToProps = (dispatch: Function) => {
             }));
           });
         }
-      },
-      storage: {
-        syncAll: () => {
-          return asyncAction(storage().syncAll());
-        },
       },
       compile: {
         compileAndRun: (project: string, question: string, fid: S.FileID, test: boolean) => {

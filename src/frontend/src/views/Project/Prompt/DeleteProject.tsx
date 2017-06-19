@@ -20,7 +20,7 @@ class DeleteProject extends React.Component<DeleteProps&actionsInterface&RouterP
 
   private async submitForm(): Promise<void> {
     const proj = this.props.appState.currentProject as SR.appStateReducerProjectState;
-    await Services.storage().deleteProject(proj.id);
+    await Services.getStorage().deleteProject(proj.id);
     const projs = this.props.appState.projects;
     this.props.appState.projects = projs.filter((p) => p.id !== proj.id, projs);
     this.props.history.push("/");

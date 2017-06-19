@@ -1,5 +1,5 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
-import {WebStorage} from "./WebStorage";
+import {LocalStorage} from "./LocalStorage";
 import {ProjectID,
         ProjectBrief,
         FileBrief} from "./Interface";
@@ -21,7 +21,7 @@ const SKEL_FILE_LIST_URL = `${CGI_URL}skeleton_file_list.rkt`;
 
 class SkeletonManager {
 
-  constructor(private socket: SeashellWebsocket, private storage: WebStorage) { }
+  constructor(private socket: SeashellWebsocket, private storage: LocalStorage) { }
 
   private userWhitelist: string[];
   private projectWhitelist: string[];
@@ -143,7 +143,7 @@ class SkeletonManager {
       ));
       // sync afterwards to update the local storage.
       // not ideal, but works for now.
-      return this.storage.syncAll();
+      // TODO trigger sync
     }
   }
 
