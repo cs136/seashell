@@ -1,14 +1,17 @@
 import Dexie from "dexie";
+import "dexie-observable";
+import "dexie-syncable";
 import md5 = require("md5");
 import {sprintf} from "sprintf-js";
 import * as R from "ramda";
 import {AbstractStorage,
+        Contents, ContentsID, ContentsStored,
         File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
         Settings, SettingsStored} from "./Interface";
 import * as E from "../Errors";
 
-export {LocalStorage, ChangeLog}
+export {LocalStorage}
 
 
 interface DBOptions {
@@ -31,19 +34,6 @@ class LocalStorage implements AbstractStorage {
   private dbName: string;
 
   public constructor(public debug = false) { }
-
-  private setDirty() {
-    localStorage.setItem(`${this.dbName}-offline-store-dirty?`, "true");
-  }
-
-  private clearDirty() {
-    localStorage.setItem(`${this.dbName}-offline-store-dirty?`, "false");
-  }
-
-  public async getDirty() {
-    return localStorage.getItem(`${this.dbName}-offline-store-dirty?`) === "true"
-      || await this.countChangeLogs() > 0;
-  }
 
   public async connect(dbName: string): Promise<void> {
     this.dbName = dbName;
@@ -70,88 +60,59 @@ class LocalStorage implements AbstractStorage {
   }
 
   public async writeFile(fid: FileID,
-                         contents: string|undefined,
-                         checksum?: string,
-                         // set pushChangeLog = false in applyChanges to make syncAll faster
-                         pushChangeLog: boolean = true): Promise<void> {
+                         contents: string,
+                         checksum?: string): Promise<void> {
     this.debug && console.log(`writeFile`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      let file: File = await this.readFile(fid);
-      const proj: ProjectBrief = await this.getProject(file.project);
-      // use the last syncAll checksum
-      checksum = checksum || file.checksum;
-      if (pushChangeLog) {
-        await this.pushChangeLog({
-          type: "editFile",
-          file: {file: file.name, project: proj.name},
-          contents: contents,
-          checksum: checksum
-        });
-      }
-      await this.db.files.update(fid, {
+    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
+      let file: File = await this.readFile(fid, false);
+      let cid = await this.db.contents.add({
+        project_id: file.project_id,
+        file_id: fid,
         contents: contents,
-        checksum: checksum,
-        last_modified: Date.now()
+        time: Date.now()
+      });
+      await this.db.files.update(fid, {
+        contents_id: cid
       });
     });
   }
 
-  public async readFile(fid: FileID): Promise<File> {
+  public async readFile(fid: FileID, contents: boolean = true): Promise<File> {
     this.debug && console.log(`readFile`);
-    const tbs = [this.db.files];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("r", [this.db.contents, this.db.files], async () => {
       const file = await this.db.files.get(fid);
       if (! file) {
         throw new LocalStorageError(`file "${fid}" does not exist`);
       }
-      return new File(file);
+      let result = new File(fid, file);
+      if (contents && result.contents_id) {
+        const conts = await this.db.contents.get(result.contents_id);
+        if (!conts) {
+          throw new LocalStorageError(`file ${file.name} has invalid contents.`);
+        }
+        result.contents = new Contents(result.contents_id, conts);
+      }
+      return result;
     });
   }
 
-  public async deleteFile(id: FileID,
+  public async deleteFile(id: FileID/*,
                           // set pushChangeLog = false in applyChanges to make syncAll faster
-                          pushChangeLog: boolean = true): Promise<void> {
+                          pushChangeLog: boolean = true*/): Promise<void> {
     this.debug && console.log(`deleteFile`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("rw", this.db.files, async () => {
       let file = await this.readFile(id);
       await this.db.files.delete(id);
-      const proj: ProjectBrief = await this.getProject(file.project);
-      if (pushChangeLog) {
-        await this.pushChangeLog({
-          type: "deleteFile",
-          file: {file: file.name, project: proj.name},
-          checksum: file.checksum
-        });
-      }
-      // also remove from run files
-      let dbProj = await this.getProject(file.project);
-      // when a project is deleted by both frontend and backend,
-      // in the next sync backend still asks the frontend to delete children
-      // which no longer exists
-      // if (! dbProj) {
-      //   console.warn(id, file);
-      //   return;
-      // }
-      if (dbProj.settings)
-        for (const q in dbProj.settings) {
-          if (dbProj.settings[q] === file.name) {
-            delete dbProj.settings[q];
-          }
-        }
-      await this.db.projects.update(file.project, dbProj);
     });
   }
 
   public async renameFile(fid: FileID, newName: string): Promise<FileBrief> {
     this.debug && console.log(`renameFile`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      const file = await this.readFile(fid);
-      const newFile = await this.newFile(file.project, newName, file.contents);
-      await this.deleteFile(fid);
-      return new FileBrief(newFile);
+    return await this.db.transaction("rw", this.db.files, async () => {
+      await this.db.files.update(fid, {
+        name: newName
+      });
+      return new FileBrief(fid, await this.readFile(fid, false));
     });
   }
 
@@ -163,14 +124,13 @@ class LocalStorage implements AbstractStorage {
   }
 
   private async setProjectSetting(pid: ProjectID, key: string, value: string): Promise<void> {
-    this.setDirty();
     return this.db.transaction("rw", this.db.projects, async () => {
       const project = await this.getProject(pid);
       project.settings = project.settings || {};
       project.settings[key] = value;
       await this.db.projects.update(pid, {
         settings: project.settings,
-        last_modified: Date.now()
+        last_used: Date.now()
       });
     });
   }
@@ -191,8 +151,7 @@ class LocalStorage implements AbstractStorage {
   }
 
   public async getSettings(): Promise<Settings> {
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("r", this.db.settings, async () => {
       this.debug && console.log(`getSettings`);
       const settings = await this.db.settings.get(0);
       return settings ? Settings.fromJSON(settings) : new Settings();
@@ -200,8 +159,7 @@ class LocalStorage implements AbstractStorage {
   }
 
   public async setSettings(settings: Settings): Promise<void> {
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("rw", this.db.settings, async () => {
       this.debug && console.log(`setSettings`);
       await this.db.settings.put({
         id: 0,
@@ -218,14 +176,13 @@ class LocalStorage implements AbstractStorage {
   public async getProjectFiles(pid: ProjectID): Promise<FileBrief[]> {
     this.debug && console.log(`getProjectFiles`);
     // this is called when we open a project, so we will update the last modified time here as well
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("rw", [this.db.projects, this.db.files], async () => {
       const p: Project = await this.getProject(pid);
-      p.last_modified = Date.now();
+      p.last_used = Date.now();
       await this.db.projects.put(p);
       const fbs: FileBrief[] = [];
-      await this.db.files.where("project").equals(pid).each((file: File) => {
-        fbs.push(new FileBrief(file));
+      await this.db.files.where("project_id").equals(pid).each((file: File) => {
+        fbs.push(new FileBrief(file.id, file));
       });
       return fbs;
     });
@@ -233,9 +190,9 @@ class LocalStorage implements AbstractStorage {
 
   public async newFile(pid: ProjectID,
                        name: string,
-                       contents = "",
+                       contents = ""/*,
                         // set pushChangeLog = false in applyChanges to make syncAll faster
-                       pushChangeLog: boolean = true): Promise<FileBrief> {
+                       pushChangeLog: boolean = true*/): Promise<FileBrief> {
     this.debug && console.log(`newFile`);
     const rmatch: RegExpMatchArray | null = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/);
     if (rmatch !== null) {
@@ -245,69 +202,51 @@ class LocalStorage implements AbstractStorage {
         contents = window.atob(rmatch[4]);
       }
     }
-    const checksum = md5(contents);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      /*
-        Known problem:
-          If you rename a file from A to B, then you won't be able to create a file named A again,
-          since rename should not change the original id of the file.
-        How to fix:
-          Make sure the id is unique for each new file. For example: const id = md5(proj + name + Date.now()).
-          This requires the backend to be aware of file ids
-      */
-      const fid: FileID = this.fileID(pid, name);
+    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
       const exist = await this.db.files.where({
         name: name,
-        project: pid
+        project_id: pid
       });
       if (await exist.count() > 0) {
         throw new LocalStorageError(`file "${pid}" "${name}" already exists`);
       }
-      const fs: FileStored = {
-        id: fid,
-        project: pid,
+      const fid = await this.db.files.add({
+        project_id: pid,
         name: name,
+        contents_id: false,
+        flags: 0
+      });
+      const cid = await this.db.contents.add({
+        project_id: pid,
+        file_id: fid,
         contents: contents,
-        checksum: checksum,
-        last_modified: Date.now(),
-      };
-      await this.db.files.add(fs);
-      const proj: ProjectBrief = await this.getProject(pid);
-      if (pushChangeLog) {
-        await this.pushChangeLog({
-          type: "newFile",
-          contents: contents,
-          file: {file: name, project: proj.name},
-          checksum: checksum
-        });
-      }
-      return new FileBrief(fs);
+        time: Date.now()
+      });
+      await this.db.files.update(fid, {
+        contents_id: cid
+      });
+      return new FileBrief(fid, await this.readFile(fid, false));
     });
   }
 
   public async newProject(name: string): Promise<ProjectBrief> {
     this.debug && console.log(`newProject`);
-    const pid = this.projID(name);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("rw", this.db.projects, async () => {
       const ps: ProjectStored = {
-        id: pid,
         name: name,
         settings: {},
-        last_modified: Date.now(),
+        last_used: Date.now()
       };
-      await this.db.projects.add(ps);
-      return new ProjectBrief(ps);
+      const pid = await this.db.projects.add(ps);
+      return new ProjectBrief(pid, ps);
     });
   }
 
   public async deleteProject(pid: ProjectID): Promise<void> {
     this.debug && console.log(`deleteProject`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("rw", [this.db.files, this.db.projects], async () => {
       await this.db.projects.delete(pid);
-      const files = await this.db.files.where("project").equals(pid);
+      const files = await this.db.files.where("project_id").equals(pid);
       await files.delete();
     });
   }
@@ -319,29 +258,16 @@ class LocalStorage implements AbstractStorage {
       if (!p) {
         throw new LocalStorageError(`project "${pid}" doesn't exist`);
       }
-      return new Project(p);
+      return new Project(pid, p);
     });
   }
 
   public async getProjects(): Promise<ProjectBrief[]> {
     this.debug && console.log(`getProjects`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
+    return await this.db.transaction("r", this.db.projects, async () => {
       const projs: ProjectBrief[] = [];
       await this.db.projects.toCollection().each((proj: Project) => {
-        projs.push(new ProjectBrief(proj));
-      });
-      return projs;
-    });
-  }
-
-  public async getProjectsForSync(): Promise<Project[]> {
-    this.debug && console.log(`getProjects`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      const projs: ProjectBrief[] = [];
-      await this.db.projects.toCollection().each((proj: Project) => {
-        projs.push(new Project(proj));
+        projs.push(new ProjectBrief(proj.id, proj));
       });
       return projs;
     });
@@ -351,7 +277,7 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`getAllFiles`);
     return await this.db.transaction("r", this.db.files, async () => {
       const result = await this.db.files.toArray();
-      return R.map((file: File) => new FileBrief(file), result);
+      return R.map((file: File) => new FileBrief(file.id, file), result);
     });
   }
 
@@ -361,7 +287,7 @@ class LocalStorage implements AbstractStorage {
 
   private async getFileByName(pid: ProjectID, fname: string): Promise<FileBrief|undefined> {
     let result = await this.db.files.where("name").equals(fname).first();
-    return result ? new FileBrief(result) : result;
+    return result ? new FileBrief(<FileID>result.id, result) : result;
   }
 
   public async getOpenFiles(pid: ProjectID, question: string): Promise<FileBrief[]> {
@@ -376,7 +302,7 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`addOpenFile`);
     return this.db.transaction("rw", [this.db.projects, this.db.files], async () => {
       const open = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
-      const file = new FileBrief(await this.readFile(fid));
+      const file = new FileBrief(fid, await this.readFile(fid));
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
@@ -397,134 +323,31 @@ class LocalStorage implements AbstractStorage {
         )));
     });
   }
-
-  public async getChangeLogs(): Promise<ChangeLog[]> {
-    this.debug && console.log(`getChangeLogs`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      return await this.db.changeLogs.orderBy("id").reverse().toArray();
-    });
-  }
-
-  public async topChangeLog(): Promise<ChangeLog|false> {
-    this.debug && console.log(`topChangeLog`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      const log = await this.db.changeLogs.orderBy("id").reverse().limit(1).first();
-      return log || false;
-    });
-  }
-
-  public async pushChangeLog(change: ChangeLog): Promise<number> {
-    this.debug && console.log(`pushChangeLog`);
-    const top = await this.topChangeLog();
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      if (top && change.type === "editFile" && top.type === "editFile") {
-        await this.popChangeLog();
-        top.contents = change.contents;
-      }
-      return await this.db.changeLogs.put(change);
-    });
-  }
-
-  public async popChangeLog(): Promise<ChangeLog|false> {
-    this.debug && console.log(`popChangeLog`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      const top = await this.topChangeLog();
-      if (top) {
-        if (top.id) {
-          await this.db.changeLogs.delete(top.id);
-          return top;
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    });
-  }
-
-  public async countChangeLogs(): Promise<number> {
-    this.debug && console.log(`countChangeLogs`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      return await this.db.changeLogs.count();
-    });
-  }
-
-  public async clearChangeLogs(): Promise<void> {
-    this.debug && console.log(`clearChangeLogs`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    return await this.db.transaction("rw", tbs, async () => {
-      this.db.changeLogs.clear();
-    });
-  }
-
-  // Will be replaced by Dexie.Syncable.ISyncProtocol
-  public async applyChanges(changeLogs: ChangeLog[],
-                            newProjects: string[],
-                            deletedProjects: ProjectID[]): Promise<void> {
-    this.debug && console.log(`applyChanges`);
-    const tbs = [this.db.files, this.db.projects, this.db.settings, this.db.changeLogs];
-    let result = await this.db.transaction("rw", tbs, async () => {
-      Dexie.currentTransaction.on("abort", () => {
-        console.warn("applyChanges transaction aborted");
-      });
-      for (const proj of newProjects) {
-        await this.newProject(proj);
-      }
-      for (const change of changeLogs) {
-        const pid = this.projID(change.file.project);
-        const fid = this.fileID(pid, change.file.file);
-        if (change.type === "deleteFile") {
-          await this.deleteFile(fid, false);
-        } else if (change.type === "editFile") {
-          await this.writeFile(fid, change.contents, change.checksum, false);
-        } else if (change.type === "newFile") {
-          await this.newFile(pid, change.file.file, change.contents, false);
-        } else {
-          throw sprintf("applyChanges: unknown change %s!", change);
-        }
-      }
-      for (const pid of deletedProjects) {
-        await this.deleteProject(pid);
-      };
-      await this.clearChangeLogs();
-    });
-    this.clearDirty();
-    return result;
-  }
-}
-
-
-
-interface ChangeLog {
-  id?: number;
-  type: "newFile" | "deleteFile" | "editFile";
-  contents?: string;
-  file: {file: string, project: string};
-  checksum: string;
 }
 
 class StorageDB extends Dexie {
-  public changeLogs: Dexie.Table<ChangeLog, number>;
+  public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
   public settings: Dexie.Table<SettingsStored, number>;
 
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
+    this.version(1).stores({
+      changeLogs: "++id",
+      files: "id, [name+project], [project+open], name, project",
+      projects: "id, name",
+      settings: "id"
+    });
     this.version(2).stores({
-      changeLogs: "$$id",
-      files: "$$id, [name+project], [project+open], name, project",
+      contents: "$$id, project_id, file_id",
+      files: "$$id, [name+project_id], name, project_id",
       projects: "$$id, name",
       settings: "$$id"
     });
 
     // No TS bindings for Dexie.Syncable
-    (<any>this).syncable.connect("seashell", null);
+    (<any>this).syncable.connect("seashell", "");
     (<any>this).syncable.on("statusChanged", (newStatus: any, url: string) => {
       console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
     });

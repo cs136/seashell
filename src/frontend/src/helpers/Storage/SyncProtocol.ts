@@ -1,11 +1,13 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
 import * as E from "../Errors";
 import Dexie from "dexie";
+import "dexie-observable";
+import "dexie-syncable";
 export {SyncProtocol}
 
 const RECONNECT_DELAY = 5000;
 
-class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol
+class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
 
   constructor(private socket: SeashellWebsocket,
               public debug: boolean = false) { }

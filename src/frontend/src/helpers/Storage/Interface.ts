@@ -1,6 +1,7 @@
 import * as R from "ramda";
 
 export {AbstractStorage, AbstractWebStorage,
+        Contents, ContentsStored, ContentsID,
         File, FileID, FileBrief, FileStored,
         Project, ProjectID, ProjectBrief, ProjectStored,
         Settings, SettingsStored,
@@ -39,8 +40,25 @@ abstract class AbstractWebStorage {
   public abstract async syncAll(): Promise<void>;
 }
 
-type FileID = string; // compound key
-type ProjectID = string; // alias of name for now
+type ContentsID = string;
+type FileID = string;
+type ProjectID = string;
+
+class Contents implements ContentsStored {
+  id: ContentsID;
+  project_id: ProjectID;
+  file_id: FileID;
+  contents: string;
+  time: number;
+
+  constructor(id: ContentsID, obj: ContentsStored) {
+    this.id = id;
+    this.project_id = obj.project_id;
+    this.file_id = obj.file_id;
+    this.contents = obj.contents;
+    this.time = obj.time;
+  }
+}
 
 // NOTE: File objects may not necessarily have a valid
 // prototype chain.  Do _NOT_ use instanceof to test
@@ -48,19 +66,20 @@ type ProjectID = string; // alias of name for now
 class File implements FileStored {
   public id: FileID;
   public name: string; // a file name is (test|q*|common)/name
-  public last_modified: number;
+  public project_id: ProjectID;
   public project: ProjectID;
-  public checksum: string;
   public open: boolean;
-  public contents: string | undefined; // undefined ==> unavailable offline / unreadable
+  public contents_id: ContentsID | false; // false => directory
+  public contents: Contents | false; // false => directory or contents not loaded yet
+  public flags: number;
 
-  constructor(obj: FileStored | File) {
-    this.id = obj.id;
+  constructor(id: FileID, obj: FileStored | File) {
+    this.id = id;
     this.name = obj.name;
-    this.last_modified = obj.last_modified;
-    this.project = obj.project;
-    this.checksum = obj.checksum;
-    this.contents = obj.contents;
+    this.project_id = obj.project_id;
+    this.project = obj.project_id;
+    this.contents_id = obj.contents_id;
+    this.contents = false;
   }
 
   public mergeIdFrom(target: FileBrief) {
@@ -80,34 +99,35 @@ class File implements FileStored {
     return this.name.split("/")[0];
   }
   public clone() {
-    return new File(this);
+    return new File(this.id, this);
   }
 }
 
 class FileBrief extends File {
-  public contents: string | undefined = undefined;
-  constructor(obj: FileStored) {
-    super(obj);
-    this.contents = undefined;
+  public contents: Contents | false = false;
+  constructor(id: FileID, obj: FileStored) {
+    super(id, obj);
+    this.contents = false;
   }
 }
 
 class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
-  public last_modified: number;
-  public settings?: {[index: string]: string}; // Read-only copy of settings
-  constructor(obj: ProjectStored) {
-    this.id = obj.id;
+  public last_used: number;
+  public settings: {[index: string]: string}; // Read-only copy of settings
+
+  constructor(id: ProjectID, obj: ProjectStored) {
+    this.id = id;
     this.name = obj.name;
-    this.last_modified = obj.last_modified;
+    this.last_used = obj.last_used;
     this.settings = obj.settings;
   }
 }
 
 class ProjectBrief extends Project {
-  constructor(obj: ProjectStored) {
-    super(obj);
+  constructor(id: ProjectID, obj: ProjectStored) {
+    super(id, obj);
     this.settings = {};
   }
 };
@@ -143,22 +163,27 @@ class Settings implements SettingsStored {
   }
 }
 
+interface ContentsStored {
+  id?: ContentsID;
+  project_id: ProjectID;
+  file_id: FileID;
+  contents: string;
+  time: number;
+}
+
 interface FileStored {
-  id: FileID;
+  id?: FileID;
+  project_id: ProjectID;
   name: string; // a file name is (test|q*|common)/name
-  last_modified: number;
-  project: ProjectID;
-  checksum: string;
-  // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
-  // and very carefully convert it to boolean in File constructor!
-  contents: string | undefined; // undefined ==> unavailable offline / unreadable
+  contents_id: ContentsID | false; // false => directory
+  flags: number;
 }
 
 interface ProjectStored {
-  id: ProjectID;
+  id?: ProjectID;
   name: string;
-  last_modified: number;
-  settings?: {[index: string]: string};
+  settings: {[index: string]: string};
+  last_used: number;
 }
 
 interface SettingsStored {
