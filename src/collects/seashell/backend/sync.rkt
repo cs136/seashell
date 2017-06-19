@@ -1,16 +1,17 @@
 #lang typed/racket
 
 (require seashell/db/changes
+         seashell/db/support
          seashell/db/database
          seashell/websocket
-         seashell/config
+         (submod seashell/seashell-config typed)
          typed/json)
 
 (provide sync-server%
          Sync-Server%)
 
 (define-type Sync-Server% (Class
-  (init [conn : Websocket-Connection])
+  (init [connect Websocket-Connection])
   [client-identity (-> (U String False) String)]
   [subscribe (-> (U Integer False) Void)]
   [sync-changes (-> (Listof database-change) Integer Boolean Void)]))
@@ -18,7 +19,10 @@
 (: sync-server% : Sync-Server%)
 (define sync-server%
   (class object%
-    (init [conn : Websocket-Connection])
+    (init [connect : Websocket-Connection])
+
+    (: conn Websocket-Connection)
+    (define conn connect)
 
     (super-new)
 
@@ -28,13 +32,13 @@
     (: synced-revision Integer)
     (define synced-revision 0)
 
-    (: database Sync-Database%)
+    (: database (Instance Sync-Database%))
     (define database (make-object sync-database%
       (build-path (read-config-path 'seashell) (read-config-path 'database-file))))
 
     (thread (thunk
       (sync (ws-connection-closed-evt conn))
-      (send database unsubscribe send-changes)))
+      (send database unsubscribe (assert current-client))))
 
     (: send-message (-> JSExpr Void))
     (define/private (send-message msg)
@@ -48,25 +52,30 @@
           identity]
         [else
           (set! current-client (send database create-client))
-          current-client]))
+          (assert current-client)]))
 
-    (: send-changes (-> Void))
-    (define/public (send-changes)
-      (define changes (reduce-changes (map row->change (get-changes synced-revision current-client))))
-      (define rev (send database current-revision))
-      (send-message
-        `#hasheq((id . -5)
-                 (type . "changes")
-                 (changes . ,changes)
-                 (currentRevision . ,rev)
-                 (partial . #f)))
-      (set! synced-revision rev))
+    (: get-send-changes (-> (-> Void)))
+    (define/private (get-send-changes)
+      (lambda ()
+        ;; TODO confirm that the below is the correct way to do this...
+        (define changes (map (lambda ([chg : (Pairof (Pairof String String) database-change)])
+            (database-change->json (cdr chg)))
+          (hash->list (reduce-changes (map row->change
+            (send database fetch-changes synced-revision (assert current-client)))))))
+        (define rev (send database current-revision))
+        (send-message
+          #{`#hasheq((id . -5)
+                   (type . "changes")
+                   (changes . ,changes)
+                   (currentRevision . ,rev)
+                   (partial . #f)) :: JSExpr})
+        (set! synced-revision rev)))
 
     (: subscribe (-> (U Integer False) Void))
     (define/public (subscribe revision)
       (set! synced-revision (if revision revision 0))
-      (send-changes)
-      (send database subscribe send-changes))
+      ((get-send-changes))
+      (send database subscribe (assert current-client) (get-send-changes)))
 
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)
@@ -79,13 +88,13 @@
                   (send database apply-partial-create
                     (database-change-table chg)
                     (database-change-key chg)
-                    (database-change-data chg)
+                    (cast (string->jsexpr (database-change-data chg)) DBExpr)
                     (database-change-client chg))]
                 [(= (database-change-type chg) UPDATE)
                   (send database apply-partial-update
                     (database-change-table chg)
                     (database-change-key chg)
-                    (database-change-data chg)
+                    (cast (string->jsexpr (database-change-data chg)) DBExpr)
                     (database-change-client chg))]
                 [(= (database-change-type chg) DELETE)
                   (send database apply-partial-delete
@@ -96,7 +105,7 @@
             (void)]
           [else
             (define base (if revision revision 0))
-            (define srv-changes (reduce-changes (map row->change (send database fetch-changes base current-client))))
+            (define srv-changes (map row->change (send database fetch-changes base (assert current-client))))
             (define resolved (resolve-conflicts changes srv-changes))
             (map (lambda ([chg : database-change])
               (cond
@@ -104,13 +113,13 @@
                   (send database apply-create
                     (database-change-table chg)
                     (database-change-key chg)
-                    (database-change-data chg)
+                    (cast (string->jsexpr (database-change-data chg)) DBExpr)
                     (database-change-client chg))]
                 [(= (database-change-type chg) UPDATE)
                   (send database apply-update
                     (database-change-table chg)
                     (database-change-key chg)
-                    (database-change-data chg)
+                    (cast (string->jsexpr (database-change-data chg)) DBExpr)
                     (database-change-client chg))]
                 [(= (database-change-type chg) DELETE)
                   (send database apply-delete

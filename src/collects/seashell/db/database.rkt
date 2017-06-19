@@ -37,8 +37,8 @@
 (define-type Sync-Database% (Class
   (init [path SQLite3-Database-Storage])
   [get-conn (-> Connection)]
-  [subscribe (-> (-> Void) Void)]
-  [unsubscribe (-> (-> Void) Void)]
+  [subscribe (-> String (-> Void) Void)]
+  [unsubscribe (-> String Void)]
   [create-client (->* () (String) String)]
   [write-transaction (All (A) (-> (-> A) A))]
   [read-transaction (All (A) (-> (-> A) A))]
@@ -61,7 +61,7 @@
     (: database Connection)
     (define database (sqlite-connection path))
 
-    (: subscribers (Listof (-> Void)))
+    (: subscribers (Listof (Pair String (-> Void))))
     (define subscribers '())
 
     (super-new)
@@ -86,17 +86,21 @@
     (define/public (get-conn)
       database)
 
-    (: subscribe (-> (-> Void) Void))
-    (define/public (subscribe cb)
-      (set! subscribers (cons cb (remove cb subscribers))))
+    (: subscribe (-> String (-> Void) Void))
+    (define/public (subscribe client cb)
+      (set! subscribers (cons (cons client cb)
+        (filter-not (lambda ([sub : (Pair String (-> Void))])
+          (string=? client (car sub))) subscribers))))
 
-    (: unsubscribe (-> (-> Void) Void))
-    (define/public (unsubscribe cb)
-      (set! subscribers (remove cb subscribers)))
+    (: unsubscribe (-> String Void))
+    (define/public (unsubscribe client)
+      (set! subscribers
+        (filter-not (lambda ([sub : (Pair String (-> Void))])
+          (string=? client (car sub))) subscribers)))
 
     (: update-subscribers (-> Void))
     (define/private (update-subscribers)
-      (map (lambda ([sub : (-> Void)]) (sub)) subscribers)
+      (map (lambda ([sub : (Pair String (-> Void))]) ((cdr sub))) subscribers)
       (void))
 
     (: create-client (->* () (String) String))

@@ -32,6 +32,7 @@
          racket/contract
          racket/port
          racket/string
+         racket/class
          json)
 
 (provide conn-dispatch)
