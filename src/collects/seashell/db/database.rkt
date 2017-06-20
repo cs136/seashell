@@ -128,7 +128,7 @@
     (: current-revision (-> Integer))
     (define/public (current-revision)
       (define result (query-value database "SELECT MAX(revision) FROM _changes"))
-      (assert result exact-integer?))
+      (if (sql-null? result) 0 (assert result exact-integer?)))
 
     (: fetch (-> String String (Option JSExpr)))
     (define/public (fetch table key)

@@ -16,7 +16,7 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     return this.socket.sendMessage({
       type: "changes",
       changes: changes,
-      baseRevision: baseRevision,
+      baseRevision: baseRevision ? baseRevision : 0,
       partial: partial
     });
   }
@@ -24,36 +24,21 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
   public async clientIdentity(clientIdentity: string) {
     return this.socket.sendMessage({
       type: "clientIdentity",
-      clientIdentity: clientIdentity
+      clientIdentity: clientIdentity ? clientIdentity : false
     });
   }
 
   public async subscribe(syncedRevision: number) {
     return this.socket.sendMessage({
       type: "subscribe",
-      syncedRevision: syncedRevision
+      syncedRevision: syncedRevision ? syncedRevision : false
     });
   }
 
-  public sync(context: any /*Dexie.Syncable.IPersistedContext*/, url: string, options: Object, baseRevision: any,
+  public async sync(context: any /*Dexie.Syncable.IPersistedContext*/, url: string, options: Object, baseRevision: any,
       syncedRevision: any, changes: any[] /*Dexie.Syncable.IDatabaseChange[]*/, partial: boolean,
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,
       onSuccess: (continuation: any) => void, onError: (error: any, again?: number) => void) {
-
-    this.clientIdentity(context.clientIdentity || null).then((res: any) => {
-      context.clientIdentity = res.clientIdentity;
-      context.save();
-    });
-    this.sendChanges(changes, baseRevision, partial).then(onChangesAccepted);
-    this.subscribe(syncedRevision);
-
-    this.socket.register_callback("failed", (message?: any) => {
-      onError(message, RECONNECT_DELAY);
-    });
-
-    this.socket.register_callback("disconnected", (message?: any) => {
-      onError("Socket closed: " + message, RECONNECT_DELAY);
-    });
 
     let isFirstRound = true;
     this.socket.register_callback("changes", (request: any) => {
@@ -70,5 +55,15 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
         isFirstRound = false;
       }
     });
+
+    try {
+      context.clientIdentity = await this.clientIdentity(context.clientIdentity);
+      context.save();
+      await this.sendChanges(changes, baseRevision, partial);
+      onChangesAccepted();
+      await this.subscribe(syncedRevision);
+    } catch (e) {
+      throw new E.WebsocketError("Error occurred while syncing.", e);
+    }
   }
 }

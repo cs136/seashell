@@ -65,17 +65,20 @@
         (define rev (send database current-revision))
         (send-message
           #{`#hasheq((id . -5)
-                   (type . "changes")
-                   (changes . ,changes)
-                   (currentRevision . ,rev)
-                   (partial . #f)) :: JSExpr})
+                     (success . #t)
+                     (result . 
+                       ,#{`#hasheq((type . "changes")
+                               (changes . ,changes)
+                               (currentRevision . ,rev)
+                               (partial . #f)) :: JSExpr})) :: JSExpr})
         (set! synced-revision rev)))
 
     (: subscribe (-> (U Integer False) Void))
     (define/public (subscribe revision)
       (set! synced-revision (if revision revision 0))
       ((get-send-changes))
-      (send database subscribe (assert current-client) (get-send-changes)))
+      (when current-client
+        (send database subscribe (assert current-client) (get-send-changes))))
 
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)

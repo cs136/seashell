@@ -290,7 +290,7 @@
         ('clientIdentity cid))
        `#hash((id . ,id)
               (success . #t)
-              (clientIdentity . ,(send sync-server client-identity cid)))]
+              (result . ,(send sync-server client-identity cid)))]
       [(hash-table
         ('id id)
         ('type "subscribe")

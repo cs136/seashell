@@ -344,10 +344,14 @@ class StorageDB extends Dexie {
       files: "$$id, [name+project_id], name, project_id",
       projects: "$$id, name",
       settings: "$$id"
+    }).upgrade((trans) => {
+      this.delete().then(() => {
+        console.log("Database deleted.");
+      });
     });
 
     // No TS bindings for Dexie.Syncable
-    (<any>this).syncable.connect("seashell", "");
+    (<any>this).syncable.connect("seashell", "http://no-host.org");
     (<any>this).syncable.on("statusChanged", (newStatus: any, url: string) => {
       console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
     });
