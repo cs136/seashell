@@ -39,13 +39,17 @@ class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {
                 <button type="button" className="pt-button" onClick={() => {
                     this.props.closefunc();
                 }}>Cancel</button>
-                <button type="button" className="pt-button pt-intent-primary" disabled={this.state.username === "" || this.state.password === ""} onClick={() => {
-                    this.props.dispatch.user.signin(this.state.username, this.state.password, this.state.reset).then(() => {
-                        this.props.dispatch.project.getAllProjects();
-                        this.props.dispatch.settings.initSettings();
-                        this.props.closefunc();
-                    });
-                }}>Log in again</button>
+                <button type="button" className="pt-button pt-intent-primary"
+                        disabled={this.state.username === "" || this.state.password === "" || this.props.user.busy}
+                        onClick={() => {
+                            this.props.dispatch.user.signin(this.state.username, this.state.password, this.state.reset).then(() => {
+                                this.props.dispatch.project.getAllProjects();
+                                this.props.dispatch.settings.initSettings();
+                                this.props.closefunc();
+                            });
+                        }}>
+                    Log in again
+                </button>
             </div>
         </div>
         );
