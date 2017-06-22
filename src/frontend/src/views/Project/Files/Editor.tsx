@@ -209,9 +209,9 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
 
     this.setDiags(this.props.diags || []);
 
-    return (<div style={style} ref={(container?: HTMLElement) => {
-        this.container = container;
-      }}/>);
+    return (<div style={style} ref={(container: HTMLElement | null) => {
+              this.container = container as HTMLElement;
+            }}/>);
   }
 
 }
