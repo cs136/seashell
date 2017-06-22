@@ -28,25 +28,32 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
     return (
       <nav className={"pt-navbar " + styles.navbar}>
         <div className="pt-navbar-group pt-align-left">
-          <Link to="/" className={"pt-button pt-minimal " + styles.home}><img src={logo} className={styles.logo} alt="Seashell"/></Link>
+          <Link to="/" className={"pt-button pt-minimal " + styles.home}>
+            <img src={logo} className={styles.logo} alt="Seashell"/>
+          </Link>
           {this.props.navLeft}
         </div>
         <div className="pt-navbar-group pt-align-right">
           {this.props.navRight}
-          <Popover className={styles.options} content={<Menu>
-            <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
-            <MenuItem iconName="refresh" text="Sync All" onClick={() => this.props.dispatch.storage.syncAll().then(() => {
-              this.props.dispatch.project.getAllProjects();
-              this.props.dispatch.settings.initSettings();
-            })}/>
-            <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
-            <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
-              this.props.dispatch.dialog.toggleResetOpen(); }}/>
-            <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
-        </Menu>} position={Position.BOTTOM_RIGHT}>
+          <Popover
+            className={styles.options}
+            content={
+              <Menu>
+                  <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
+                  <MenuItem iconName="refresh" text="Sync All" onClick={() => this.props.dispatch.storage.syncAll().then(() => {
+                    this.props.dispatch.project.getAllProjects();
+                    this.props.dispatch.settings.initSettings();
+                  })}/>
+                  <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
+                  <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
+                    this.props.dispatch.dialog.toggleResetOpen(); }}/>
+                  <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
+              </Menu>
+            }
+            position={Position.BOTTOM_RIGHT}>
             <button className="pt-button pt-icon-more pt-minimal"></button>
         </Popover>
-            <div>
+          <div>
             <Dialog className={styles.dialogStyle} title="Seashell Help"
               isOpen={this.props.dialog.help_open}
               onClose={this.props.dispatch.dialog.toggleHelp}>
@@ -72,7 +79,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               }}>
               <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} />
             </Dialog>
-            </div>
+          </div>
         </div>
       </nav>
     );
