@@ -23,7 +23,6 @@ export interface dialogReducerState {
   add_file_open: boolean;
   add_test_open: boolean;
   reset_open: boolean;
-  resetting: boolean;
 }
 
 export default function dialogReducer(
@@ -38,7 +37,6 @@ export default function dialogReducer(
     add_file_open: false,
     add_test_open: false,
     reset_open: false,
-    resetting: false,
   },
   action: dialogAction) {
   state = clone(state);

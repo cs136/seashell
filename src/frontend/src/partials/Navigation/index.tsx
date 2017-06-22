@@ -63,14 +63,14 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               onClose={this.props.dispatch.dialog.toggleAddProject}>
               <AddProjectWindow closefunc={this.props.dispatch.dialog.toggleAddProject}/>
             </Dialog>
-            <Dialog isCloseButtonShown={false} className={styles.dialogStyle} title="Restart Seashell"
+            <Dialog isCloseButtonShown={false} className={styles.dialogStyle} title="Reset Seashell / Log in again"
               isOpen={this.props.dialog.reset_open}
               onClose={() => {
-                if (! this.props.dialog.resetting) {
+                if (! this.props.user.busy) {
                   this.props.dispatch.dialog.toggleResetOpen();
                 }
               }}>
-              <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} reset={this.props.dialog.reset}/>
+              <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} />
             </Dialog>
             </div>
         </div>

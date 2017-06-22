@@ -6,9 +6,9 @@ import * as Blueprint from "@blueprintjs/core";
 import { map, actionsInterface } from "../../actions";
 import { Services } from "../../helpers/Services";
 
-export interface ResetWindowProps { closefunc: Function; reset: boolean; };
+export interface ResetWindowProps { closefunc: Function; };
 
-class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, { username: string, password: string, reset: boolean }> {
+class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {}> {
     constructor(props: ResetWindowProps & actionsInterface) {
         super(props);
     };
@@ -18,20 +18,18 @@ class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {
             <form className="pt-vertical"
                   onSubmit={(e) => {
                         e.preventDefault();
-                        this.props.dialog.resetting = true;
                         this.props.dispatch.user.signin((this.refs.username as HTMLInputElement).value,
                                                         (this.refs.password as HTMLInputElement).value,
                                                         (this.refs.reset as HTMLInputElement).checked).then(() => {
                             if ((this.refs.reset as HTMLInputElement).checked) {
                                 window.location.reload(true);
                             } else {
-                                this.props.dialog.resetting = false;
                                 this.props.closefunc();
                             }
                         });
                     }}>
                 <label className="pt-label">
-                    Please type in your credentials to log in again. Please make sure "Reset" is checked if you also want to reset Seashell.
+                    Please type in your credentials to log in again. Please make sure "reset" is checked if you also want to reset Seashell.
                 </label>
                 <div className="pt-form-group">
                     <div className="pt-input-group pt-large">
