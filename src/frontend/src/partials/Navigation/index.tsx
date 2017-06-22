@@ -41,7 +41,6 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             })}/>
             <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
             <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
-              this.props.dispatch.dialog.setReset(true);
               this.props.dispatch.dialog.toggleResetOpen(); }}/>
             <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
         </Menu>} position={Position.BOTTOM_RIGHT}>
@@ -64,9 +63,13 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               onClose={this.props.dispatch.dialog.toggleAddProject}>
               <AddProjectWindow closefunc={this.props.dispatch.dialog.toggleAddProject}/>
             </Dialog>
-            <Dialog className={styles.dialogStyle} title="Log in again/Reset Seashell"
+            <Dialog isCloseButtonShown={false} className={styles.dialogStyle} title="Restart Seashell"
               isOpen={this.props.dialog.reset_open}
-              onClose={this.props.dispatch.dialog.toggleResetOpen}>
+              onClose={() => {
+                if (! this.props.dialog.resetting) {
+                  this.props.dispatch.dialog.toggleResetOpen();
+                }
+              }}>
               <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} reset={this.props.dialog.reset}/>
             </Dialog>
             </div>

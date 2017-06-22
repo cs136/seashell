@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
 import Navigation from "../partials/Navigation";
 import ProjectLink from "../partials/ProjectLink";
+import { Services } from "../helpers/Services";
+
 const layoutStyles = require("../Layout.scss");
 const styles = require("./Home.scss");
 
@@ -27,7 +29,7 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
     return (<div>
       <Navigation
           navLeft={[
-          <div className="pt-navbar-heading" key="project-name">My Projects</div>]}
+          <div className="pt-navbar-heading" key="project-name">{Services.session().username}</div>]}
           navRight={
             [<button className="pt-button" role="button" key="home-new-project" onClick={this.props.dispatch.dialog.toggleAddProject}>
               <span className="pt-icon-standard pt-icon-plus pt-align-left"></span>

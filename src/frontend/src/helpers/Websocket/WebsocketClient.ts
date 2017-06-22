@@ -102,6 +102,7 @@ class SeashellWebsocket {
     this.coder = new Coder(cnn.key);
     try {
       this.websocket = new WebSocket(cnn.wsURI);
+      this.websocket.onerror = failed;
     } catch (err) {
       console.error(`Could not create WebSocket connection to ${cnn.wsURI}:\n${err}`);
       throw new E.LoginRequired(); // simply ask user to retry
