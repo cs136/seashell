@@ -50,7 +50,7 @@ class SeashellWebsocket {
     this.requests[-3].callback = this.gen_cb("io");
     this.requests[-4].callback = this.gen_cb("test");
     this.requests[-5].callback = this.gen_cb("changes");
-    // if there's an exisitng websocket,
+    // if there's an existing websocket,
     // if it's connection or open: do nothing
     // if it's closing or closed: schedule to open a new connection
     if (this.websocket) {
@@ -178,8 +178,9 @@ class SeashellWebsocket {
     this.debug && console.log("Waiting for server response...");
     // if the server doesn't response in 5s
     // the default chrome's handshake timeout is too long
-    const responseTimeout = setTimeout(() => {
+    let responseTimeout = setTimeout(() => {
       if (this.websocket) {
+        console.log("responseTimeout");
         this.websocket.close();
         // will close with 1006
         // fall back to websocket.onclose()
@@ -208,6 +209,7 @@ class SeashellWebsocket {
 
       this.invoke_cb("connected");
     } catch (err) {
+      console.log(err);
       if (err instanceof E.RequestError) {
         throw new E.LoginRequired();
       } else {

@@ -25,6 +25,7 @@
          seashell/backend/runner
          seashell/backend/offline
          seashell/backend/sync
+         seashell/db/changes
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -47,6 +48,7 @@
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
   (define sync-server (make-object sync-server% connection))
+  (logf 'info "Sync server created\n")
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -304,7 +306,9 @@
         ('baseRevision rev)
         ('changes changes)
         ('partial partial))
-       (send sync-server sync-changes changes rev partial)
+       (send sync-server sync-changes
+         (map (lambda (chg) (send sync-server create-database-change chg)) changes)
+         rev partial)
        `#hasheq((id . ,id)
                 (success . #t))]
       ;; Open files

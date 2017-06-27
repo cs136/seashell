@@ -4,6 +4,7 @@
          seashell/db/support
          seashell/db/database
          seashell/websocket
+         seashell/log
          (submod seashell/seashell-config typed)
          typed/json)
 
@@ -14,6 +15,7 @@
   (init [connect Websocket-Connection])
   [client-identity (-> (U String False) String)]
   [subscribe (-> (U Integer False) Void)]
+  [create-database-change (-> JSExpr database-change)]
   [sync-changes (-> (Listof database-change) Integer Boolean Void)]))
 
 (: sync-server% : Sync-Server%)
@@ -33,12 +35,13 @@
     (define synced-revision 0)
 
     (: database (Instance Sync-Database%))
-    (define database (make-object sync-database%
-      (build-path (read-config-path 'seashell) (read-config-path 'database-file))))
+    (define database (get-sync-database))
 
     (thread (thunk
       (sync (ws-connection-closed-evt conn))
-      (send database unsubscribe (assert current-client))))
+      (logf 'debug "unsubscribing\n")
+      (when current-client
+        (send database unsubscribe (assert current-client)))))
 
     (: send-message (-> JSExpr Void))
     (define/private (send-message msg)
@@ -79,6 +82,17 @@
       ((get-send-changes))
       (when current-client
         (send database subscribe (assert current-client) (get-send-changes))))
+
+    ;; adds the current client to the given hash and converts to a database-change
+    (: create-database-change (-> JSExpr database-change))
+    (define/public (create-database-change chg)
+      (define change (cast chg (HashTable Symbol JSExpr)))
+      (define d-change (if (hash-has-key? change 'obj)
+        (hash-set change 'data (jsexpr->string (hash-ref change 'obj)))
+        change))
+      (json->database-change (if (hash-has-key? d-change 'client)
+        d-change
+        (hash-set d-change 'client (assert current-client)))))
 
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)

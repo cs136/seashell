@@ -20,17 +20,29 @@
 (require typed/json
          typed/db
          typed/db/sqlite3
+         (submod seashell/seashell-config typed)
          seashell/db/support
          seashell/db/changes
          seashell/db/updates
          seashell/utils/uuid)
 
-(provide DBExpr
+(provide get-sync-database
+         DBExpr
          Sync-Database%
          sync-database%)
 
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
+
+(: seashell-sync-database (U False (Instance Sync-Database%)))
+(define seashell-sync-database  #f)
+
+(: get-sync-database (-> (Instance Sync-Database%)))
+(define (get-sync-database)
+  (unless seashell-sync-database
+    (set! seashell-sync-database (make-object sync-database%
+      (build-path (read-config-path 'seashell) (read-config-path 'database-file)))))
+  (assert seashell-sync-database))
 
 (define-type DBExpr (HashTable Symbol JSExpr))
 

@@ -25,6 +25,7 @@
 
 (provide (struct-out database-change)
          database-change->json
+         json->database-change
          row->change
          reduce-changes
          resolve-conflicts)
