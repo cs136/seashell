@@ -14,9 +14,12 @@ class ProjectMenu extends React.Component<actionsInterface, {}> {
     const project = this.props.appState.currentProject;
     if (project) {
       return (<Menu>
-        <MenuItem onClick={() => null} text="Download Project" />
-        <MenuItem onClick={() => null} text="New Question" />
-        <MenuItem onClick={() => this.props.dispatch.dialog.toggleDeleteProject()}
+        <MenuItem onClick={() => { this.props.dispatch.project.downloadProject(project.name); }}
+                  iconName="download"
+                  text="Download Project" />
+        {/*<MenuItem onClick={() => null} text="New Question" />*/}
+        <MenuItem onClick={() => { this.props.dispatch.dialog.toggleDeleteProject(); }}
+                  iconName="trash"
                   text="Delete Project" />
       </Menu>);
     } else {

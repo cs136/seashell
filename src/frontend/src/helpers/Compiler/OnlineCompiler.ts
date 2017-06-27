@@ -1,5 +1,5 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
-import {Connection} from "../Services";
+import {Connection} from "../Websocket/Interface";
 import {AbstractCompiler,
         TestBrief,
         CompilerResult,

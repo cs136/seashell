@@ -1,5 +1,5 @@
 import {AbstractCoder, Coder} from "./Crypto";
-import {Connection} from "../Services";
+import {Connection} from "./Interface";
 import * as R from "ramda";
 import * as E from "../Errors";
 import {Message, Request, Response, Callback} from "./Interface";
@@ -16,7 +16,7 @@ enum OnCloseCode {
 };
 
 class SeashellWebsocket {
-  private connection?: Connection;
+  public connection?: Connection;
   private coder: AbstractCoder;
   private websocket?: WebSocket;
   private lastMsgID: number;
@@ -104,6 +104,7 @@ class SeashellWebsocket {
     this.coder = new Coder(cnn.key);
     try {
       this.websocket = new WebSocket(cnn.wsURI);
+      this.websocket.onerror = failed;
     } catch (err) {
       console.error(`Could not create WebSocket connection to ${cnn.wsURI}:\n${err}`);
       throw new E.LoginRequired(); // simply ask user to retry

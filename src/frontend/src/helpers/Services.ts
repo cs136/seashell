@@ -10,6 +10,7 @@ import {AbstractStorage,
 import {SyncProtocol} from "./Storage/SyncProtocol";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
+import {Connection} from "./Websocket/Interface";
 import {AbstractCompiler,
         Test,
         CompilerResult,
@@ -21,20 +22,7 @@ import "dexie-observable";
 import "dexie-syncable";
 export * from "./Storage/Interface";
 export * from "./Compiler/Interface";
-export {Services, Connection, DispatchFunction};
-
-
-class Connection {
-  public wsURI: string;
-
-  constructor(public username: string,
-              public key: number[],
-              public host: string,
-              public port: number,
-              public pingPort: number) {
-    this.wsURI = `wss://${this.host}:${this.port}`;
-  };
-}
+export {Services, DispatchFunction};
 
 type DispatchFunction = (act: Object) => Object;
 
@@ -48,6 +36,10 @@ namespace Services {
   let onlineCompiler: OnlineCompiler | null = null;
   let offlineMode: boolean = false;
   let debug: boolean;
+
+  export function session() {
+    return connection;
+  }
 
   export function init(disp: DispatchFunction,
                        options?: { debugService?: boolean;
@@ -108,15 +100,16 @@ namespace Services {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
+    let response;
     try {
       debug && console.log(`Logging in at ${uri} ...`);
-      let response = await <PromiseLike<any>>$.ajax({
+      response = await <PromiseLike<any>>$.ajax({
         url: uri,
         type: "POST",
         data: {
           "u": user,
           "p": password,
-          "reset": !! rebootBackend
+          "reset": rebootBackend
         },
         dataType: "json",
         timeout: 10000
@@ -124,11 +117,6 @@ namespace Services {
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
       window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
-      connection = new Connection(user,
-                                  response.key,
-                                  response.host,
-                                  response.port,
-                                  response.pingPort);
     } catch (ajax) {
       if (ajax.status === 0) {
         if (ajax.statusText === "timeout") {
@@ -141,16 +129,21 @@ namespace Services {
       const msg        = ajax.responseJSON.error.message;
       const statusText = ajax.statusText;
       if (code === 5) {
-        throw new LoginError("We couldn't match your username with password :(");
+        throw new LoginError("Username and password don't match.");
       }
       throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
     // login successful
-    await connectWith(connection);
+    await connectWith(new Connection(user,
+                                     response.key,
+                                     response.host,
+                                     response.port,
+                                     response.pingPort),
+                      ! rebootBackend);
   }
 
-  export async function logout(deleteDB: boolean = false) {
+  export async function logout(deleteDB: boolean = false): Promise<void> {
     if (!localStorage || !socketClient) {
       throw new Error("Must call Services.init() before Services.logout()");
     }
@@ -163,38 +156,37 @@ namespace Services {
     debug && console.log("User logged out.");
   }
 
-  export async function autoConnect() {
+  export async function autoConnect(): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
     const credstring = window.localStorage.getItem("seashell-credentials");
     if (credstring) {
       const credentials = JSON.parse(credstring);
-      let connection = new Connection(credentials.user,
-                                      credentials.key,
-                                      credentials.host,
-                                      credentials.port,
-                                      credentials.pingPort);
       // login successful --- we sync after we connect so the UI is still responsive
-      return await connectWith(connection, false);
+      return await connectWith(new Connection(credentials.user,
+                                              credentials.key,
+                                              credentials.host,
+                                              credentials.port,
+                                              credentials.pingPort),
+                               false);
     } else {
       throw new LoginRequired();
     }
   }
 
-  async function connectWith(connection: Connection, sync: boolean = true) {
+  async function connectWith(cnn: Connection, sync: boolean = true): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
 
     try {
-      await socketClient.connect(connection);
-      await localStorage.connect(`seashell9-${connection.username}`);
+      await socketClient.connect(cnn);
+      await localStorage.connect(`seashell9-${cnn.username}`);
+      connection = cnn;
     } catch (e) {
       throw new Error("Failed to connect");
     }
-
-    return connection.username;
   }
 
   export function getOfflineMode(): OfflineMode {
