@@ -807,13 +807,13 @@
                                                           (result . "Could not process request!"))))])
           (call-with-limits #f (read-config 'request-memory-limit)
             (lambda ()
-              (define message (bytes->jsexpr data))
-              (semaphore-post keepalive-sema)
-              (define result (handle-message message))
-              (logf 'info "Responding to msg id=~a. Response: ~a"
-                    (hash-ref result 'id "no_id")
-                    (any->short-str (hash-ref result 'result "no_results") 100))
-              (send-message connection result))))))
+                (define message (bytes->jsexpr data))
+                (semaphore-post keepalive-sema)
+                (define result (handle-message message))
+                (logf 'info "Responding to msg id=~a. Response: ~a"
+                      (hash-ref result 'id "no_id")
+                      (any->short-str (hash-ref result 'result "no_results") 100))
+                (send-message connection result))))))
        (main-loop)]))
 
   (parameterize

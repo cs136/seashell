@@ -412,7 +412,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       project: {
         downloadProject: (name: string) => {
-          return asyncAction(storage().projectDownloadURL(name).then((url: string) => {
+          return asyncAction(webStorage().projectDownloadURL(name).then((url: string) => {
             window.open(url, "_blank");
           }));
         },

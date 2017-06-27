@@ -130,5 +130,5 @@
 (define (standard-logger-setup)
   (if (read-config-boolean 'debug)
     (make-port-logger 'debug (current-error-port))
-    (make-port-logger 'info (current-error-port)))
+    (make-port-logger 'debug (current-error-port)))
   (void))

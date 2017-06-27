@@ -14,8 +14,8 @@
 (define-type Sync-Server% (Class
   (init [connect Websocket-Connection])
   [client-identity (-> (U String False) String)]
-  [subscribe (-> (U Integer False) Void)]
   [create-database-change (-> JSExpr database-change)]
+  [subscribe (-> (U Integer False) Void)]
   [sync-changes (-> (Listof database-change) Integer Boolean Void)]))
 
 (: sync-server% : Sync-Server%)
@@ -76,6 +76,15 @@
                                (partial . #f)) :: JSExpr})) :: JSExpr})
         (set! synced-revision rev)))
 
+
+    ;; adds the current client to the given hash and converts to a database-change
+    (: create-database-change (-> JSExpr database-change))
+    (define/public (create-database-change chg)
+      (define change (cast chg (HashTable Symbol JSExpr)))
+      (json->database-change (if (hash-has-key? change 'client)
+        change
+        (hash-set change 'client (assert current-client)))))
+
     (: subscribe (-> (U Integer False) Void))
     (define/public (subscribe revision)
       (set! synced-revision (if revision revision 0))
@@ -83,20 +92,10 @@
       (when current-client
         (send database subscribe (assert current-client) (get-send-changes))))
 
-    ;; adds the current client to the given hash and converts to a database-change
-    (: create-database-change (-> JSExpr database-change))
-    (define/public (create-database-change chg)
-      (define change (cast chg (HashTable Symbol JSExpr)))
-      (define d-change (if (hash-has-key? change 'obj)
-        (hash-set change 'data (jsexpr->string (hash-ref change 'obj)))
-        change))
-      (json->database-change (if (hash-has-key? d-change 'client)
-        d-change
-        (hash-set d-change 'client (assert current-client)))))
-
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)
       (send database write-transaction (thunk
+        (logf 'info "Inside sync-changes transaction")
         (cond
           [partial
             (map (lambda ([chg : database-change])
@@ -124,6 +123,7 @@
             (define base (if revision revision 0))
             (define srv-changes (map row->change (send database fetch-changes base (assert current-client))))
             (define resolved (resolve-conflicts changes srv-changes))
+            (logf 'info "after resolving conflicts in sync-changes")
             (map (lambda ([chg : database-change])
               (cond
                 [(= (database-change-type chg) CREATE)

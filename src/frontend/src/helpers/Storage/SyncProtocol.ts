@@ -5,17 +5,44 @@ import "dexie-observable";
 import "dexie-syncable";
 export {SyncProtocol}
 
-const RECONNECT_DELAY = 5000;
+const CREATE = 1;
+const UPDATE = 2;
+const DELETE = 3;
 
 class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
 
   constructor(private socket: SeashellWebsocket,
               public debug: boolean = false) { }
 
-  public async sendChanges(changes: any, baseRevision: number, partial: boolean) {
+  private convertChange(change: any) {
+    if (change.type === CREATE) {
+      return {
+        type: CREATE,
+        table: change.table,
+        key: change.key,
+        data: JSON.stringify(change.obj)
+      };
+    } else if (change.type === UPDATE) {
+      return {
+        type: UPDATE,
+        table: change.table,
+        key: change.key,
+        data: JSON.stringify(change.mods)
+      };
+    } else if (change.type === DELETE) {
+      return {
+        type: DELETE,
+        table: change.table,
+        key: change.key,
+        data: ""
+      };
+    }
+  };
+
+  public async sendChanges(changes: any[], baseRevision: number, partial: boolean) {
     return this.socket.sendMessage({
       type: "changes",
-      changes: changes,
+      changes: changes.map(this.convertChange.bind(this)),
       baseRevision: baseRevision ? baseRevision : 0,
       partial: partial
     });
@@ -40,9 +67,34 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,
       onSuccess: (continuation: any) => void, onError: (error: any, again?: number) => void) {
 
+
+    const deconvertChange = (change: any) => {
+      if (change.type === CREATE) {
+        return {
+          type: CREATE,
+          table: change.table,
+          key: change.key,
+          obj: JSON.parse(change.data)
+        };
+      } else if (change.type === UPDATE) {
+        return {
+          type: UPDATE,
+          table: change.table,
+          key: change.key,
+          mods: JSON.parse(change.data)
+        };
+      } else if (change.type === DELETE) {
+        return {
+          type: DELETE,
+          table: change.table,
+          key: change.key
+        };
+      }
+    };
+
     let isFirstRound = true;
     this.socket.register_callback("changes", (request: any) => {
-      const changes = /*<Dexie.Syncable.IDatabaseChange[]>*/request.changes;
+      const changes = /*<Dexie.Syncable.IDatabaseChange[]>*/request.changes.map(deconvertChange);
       const currentRevision = <number>request.currentRevision;
       const partial = <boolean>request.partial;
 

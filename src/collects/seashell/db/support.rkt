@@ -51,8 +51,8 @@
    (connection-pool
     (thunk 
       (if (or (not (path-string? path)) (file-exists? path))
-          (sqlite3-connect #:database path #:use-place #t)
-          (sqlite3-connect #:database path #:use-place #t #:mode 'create))))))
+          (sqlite3-connect #:database path #:use-place #f)
+          (sqlite3-connect #:database path #:use-place #f #:mode 'create))))))
 (define compute-conn (sqlite-connection 'memory))
 
 ;; (string-or-jsexpr->string expr) -> String

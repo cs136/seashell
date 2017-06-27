@@ -27,6 +27,7 @@
          seashell/utils/uuid)
 
 (provide get-sync-database
+         init-sync-database
          DBExpr
          Sync-Database%
          sync-database%)
@@ -39,10 +40,13 @@
 
 (: get-sync-database (-> (Instance Sync-Database%)))
 (define (get-sync-database)
+  (assert seashell-sync-database))
+
+(: init-sync-database (-> Any))
+(define (init-sync-database)
   (unless seashell-sync-database
     (set! seashell-sync-database (make-object sync-database%
-      (build-path (read-config-path 'seashell) (read-config-path 'database-file)))))
-  (assert seashell-sync-database))
+      (build-path (read-config-path 'seashell) (read-config-path 'database-file))))))
 
 (define-type DBExpr (HashTable Symbol JSExpr))
 
@@ -151,7 +155,7 @@
 
     (: fetch-changes (-> Integer String (Listof (Vectorof SQL-Datum))))
     (define/public (fetch-changes revision client)
-      (query-rows database "SELECT * FROM _changes WHERE revision >= $1 AND client != $2" revision client))
+      (query-rows database "SELECT type, client, target_table, target_key, data FROM _changes WHERE revision >= $1 AND client != $2" revision client))
 
     (: apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
