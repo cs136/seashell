@@ -85,7 +85,9 @@ export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleStat
 
   render() {
     let style = {...this.props.style};
-    return(<div style={this.props.style} className={this.props.className} ref={
-      (container: HTMLElement) => { this.container = container; }}></div>);
+    return(<div style={this.props.style}
+                className={this.props.className}
+                ref={(container: HTMLElement | null) => { this.container = container as HTMLElement; }}>
+           </div>);
   }
 }

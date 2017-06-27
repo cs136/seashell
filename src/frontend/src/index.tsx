@@ -38,8 +38,14 @@ install();
 
 // Try to autoconnect if possible.
 (async () => {
-  let dispatch = getDispatch(store.dispatch);
-  await dispatch.dispatch.user.autoConnect();
-  await dispatch.dispatch.project.getAllProjects();
-  await dispatch.dispatch.settings.initSettings();
+  try {
+    let dispatch = getDispatch(store.dispatch);
+    await dispatch.dispatch.user.autoConnect();
+    await dispatch.dispatch.project.getAllProjects();
+    await dispatch.dispatch.settings.initSettings();
+  } catch (err) {
+    if (! (err instanceof LoginRequired)) {
+      throw err;
+    }
+  }
 })();

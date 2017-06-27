@@ -1,4 +1,5 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
+import {Connection} from "../Websocket/Interface";
 import {LocalStorage, ChangeLog} from "./LocalStorage";
 import {SkeletonManager} from "./SkeletonManager";
 import {AbstractStorage, AbstractWebStorage,
@@ -8,9 +9,9 @@ import {AbstractStorage, AbstractWebStorage,
         OfflineMode} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
-export {WebStorage}
 import md5 = require("md5");
 import * as R from "ramda";
+export {WebStorage}
 
 enum FileCategory { Common, Test, Directory, Other };
 
@@ -508,5 +509,14 @@ class WebStorage extends AbstractStorage implements AbstractWebStorage {
 
   public async fetchNewSkeletons(): Promise<string[]> {
     return this.skeletons.fetchNewSkeletons();
+  }
+
+  public async projectDownloadURL(name: string): Promise<string> {
+    const tokens = await this.socket.sendMessage({
+      type: "getExportToken",
+      project: name
+    });
+    const cnn = this.socket.connection as Connection;
+    return `https://${cnn.host}:${cnn.port}/export/${encodeURIComponent(name)}.zip?token=${encodeURIComponent(JSON.stringify(tokens))}`;
   }
 }

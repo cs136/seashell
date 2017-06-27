@@ -86,9 +86,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     if (project) {
       const question = project.currentQuestion;
       return (<div>
-        <Navigation navLeft={[
+        <Navigation
+          navLeft={[
             <Popover content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
-              <button className="pt-navbar-heading pt-button" key="project-name">
+              <button className="pt-button" key="project-name">
                 <span className="pt-icon-standard pt-icon-caret-down" />
                 {project.name}
               </button>
@@ -111,8 +112,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 </button>
               </Popover> :
               <span key="empty-project-open-file"/>
-          ]}
-          navRight={question ? [
+          ].map((item, index) => <div key={index}>{item}</div>)}
+          navRight={(! question) ? [] : [
             <OpenFiles key="project-open-files" />,
             <Tooltip key="project-toggle-view" content="Toggle Editor/Console"
                 position={Position.BOTTOM}>
@@ -154,7 +155,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                         onClick={() => this.props.dispatch.compile.stopProgram()}>
                     </button>
                   </Tooltip>,
-            this.generateMarmosetButton(project)] : []
+            this.generateMarmosetButton(project)].map((item, index) => <div key={index}>{item}</div>)
           }/>
         {question && question.currentFile ?
           <DisplayFiles className={this.state.toggleView ? styles.rightToggle : styles.leftToggle}/>
