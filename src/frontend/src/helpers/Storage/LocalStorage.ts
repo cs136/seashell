@@ -229,6 +229,26 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
+  public async newQuestion(pid: ProjectID, question: string): Promise<void> {
+    this.debug && console.log("newQuestion");
+    return this.db.transaction("rw", this.db.files, () => {
+      return this.db.files.add({
+        project_id: pid,
+        name: question,
+        contents_id: false,
+        flags: 0
+      });
+    });
+  }
+
+  public async deleteQuestion(pid: ProjectID, question: string): Promise<void> {
+    this.debug && console.log("deleteQuestion");
+    // delete the directory file entry and all children files
+    return this.db.transaction("rw", this.db.files, () => {
+      return this.db.files.where("name").startsWith(question).delete();
+    });
+  }
+
   public async newProject(name: string): Promise<ProjectBrief> {
     this.debug && console.log(`newProject`);
     return await this.db.transaction("rw", this.db.projects, async () => {

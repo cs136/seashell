@@ -298,14 +298,22 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
       },
       question: {
-        addQuestion: (newQuestionName: string) => dispatch({
-          type: appStateActions.addQuestion,
-          payload: { name: newQuestionName }
-        }),
-        removeQuestion: (name: string) => dispatch({
-          type: appStateActions.removeQuestion,
-          payload: { name: name }
-        }),
+        addQuestion: (pid: S.ProjectID, newQuestionName: string) => {
+          storage().newQuestion(pid, newQuestionName).then(() => {
+            dispatch({
+              type: appStateActions.addQuestion,
+              payload: { name: newQuestionName }
+            });
+          });
+        },
+        removeQuestion: (pid: S.ProjectID, name: string) => {
+          storage().deleteQuestion(pid, name).then(() => {
+            dispatch({
+              type: appStateActions.removeQuestion,
+              payload: { name: name }
+            });
+          });
+        },
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
