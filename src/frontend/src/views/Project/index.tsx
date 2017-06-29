@@ -17,6 +17,7 @@ import DeleteProjectPrompt from "./Prompt/DeleteProject";
 import MarmosetResultPrompt from "./Prompt/MarmosetResult";
 import AddFilePrompt from "./Prompt/AddFile";
 import AddTestPrompt from "./Prompt/AddTest";
+import AddQuestionPrompt from "./Prompt/AddQuestion";
 import Splash from "./Splash";
 import Loading from "./Loading";
 import {RouteComponentProps} from "react-router";
@@ -193,6 +194,11 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             onClose={this.props.dispatch.dialog.toggleAddTest}>
           <AddTestPrompt questions={project.questions}
               closefunc={this.props.dispatch.dialog.toggleAddTest}/>
+        </Dialog>
+        <Dialog className={styles.dialogStyle} title="Add Question"
+            isOpen={this.props.dialog.add_question_open}
+            onClose={this.props.dispatch.dialog.toggleAddQuestion}>
+          <AddQuestionPrompt closefunc={this.props.dispatch.dialog.toggleAddQuestion} />
         </Dialog>
         <Dialog className={styles.dialogStyle} title="Marmoset Results"
             isOpen={this.state.marmosetResults.open}

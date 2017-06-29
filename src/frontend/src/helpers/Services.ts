@@ -27,6 +27,8 @@ export {Services, DispatchFunction};
 type DispatchFunction = (act: Object) => Object;
 
 namespace Services {
+  const SEASHELL_DB_VERSION_NUMBER = 10;
+
   let connection: Connection;
   let dispatch: DispatchFunction | null = null;
   let socketClient: SeashellWebsocket | null = null;
@@ -182,7 +184,7 @@ namespace Services {
 
     try {
       await socketClient.connect(cnn);
-      await localStorage.connect(`seashell9-${cnn.username}`);
+      await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
     } catch (e) {
       throw new Error("Failed to connect");

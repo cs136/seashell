@@ -19,7 +19,7 @@ abstract class AbstractStorage {
   // files
   public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
-  public abstract async writeFile(file: FileID, contents: string|undefined): Promise<void>;
+  public abstract async writeFile(file: FileID, contents: string|undefined): Promise<FileID>;
   public abstract async renameFile(file: FileID, newName: string): Promise<FileBrief>;
   public abstract async deleteFile(file: FileID): Promise<void>;
   // questions
@@ -78,6 +78,9 @@ class File implements FileStored {
     this.project = obj.project_id;
     this.contents_id = obj.contents_id;
     this.contents = false;
+    if (obj instanceof File) {
+      this.contents = obj.contents;
+    }
   }
 
   public mergeIdFrom(target: FileBrief) {

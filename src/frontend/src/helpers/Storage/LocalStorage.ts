@@ -49,40 +49,33 @@ class LocalStorage implements AbstractStorage {
     return this.db.delete();
   }
 
-  // just for now make sure things are consistent
-  // you might want to change this later
-  public projID(projName: string): ProjectID {
-    return md5(projName);
-  }
-
-  public fileID(pid: ProjectID, fileName: string): ProjectID {
-    return md5(pid + fileName);
-  }
-
-  public async writeFile(fid: FileID,
-                         contents: string,
-                         checksum?: string): Promise<void> {
+  public async writeFile(fid: FileID, contents: string): Promise<FileID> {
     this.debug && console.log(`writeFile`);
-    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
+    return this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
       let file: File = await this.readFile(fid, false);
+      if (!file) {
+        throw new LocalStorageError(`File ID ${fid} does not exist.`);
+      }
+      let nFile = await this.newFile(file.project_id, file.name, contents);
       let cid = await this.db.contents.add({
         project_id: file.project_id,
         file_id: fid,
         contents: contents,
         time: Date.now()
       });
-      await this.db.files.update(fid, {
-        contents_id: cid
-      });
+      await this.deleteFile(fid);
+      return nFile.id;
     });
   }
 
   public async readFile(fid: FileID, contents: boolean = true): Promise<File> {
     this.debug && console.log(`readFile`);
-    return await this.db.transaction("r", [this.db.contents, this.db.files], async () => {
+    let tbls: Dexie.Table<any, string>[] = [this.db.files];
+    if (contents) tbls.push(this.db.contents);
+    return await this.db.transaction("r", tbls, async () => {
       const file = await this.db.files.get(fid);
-      if (! file) {
-        throw new LocalStorageError(`file "${fid}" does not exist`);
+      if (!file) {
+        throw new LocalStorageError(`File "${fid}" does not exist.`);
       }
       let result = new File(fid, file);
       if (contents && result.contents_id) {
@@ -96,23 +89,20 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async deleteFile(id: FileID/*,
-                          // set pushChangeLog = false in applyChanges to make syncAll faster
-                          pushChangeLog: boolean = true*/): Promise<void> {
+  public async deleteFile(id: FileID): Promise<void> {
     this.debug && console.log(`deleteFile`);
     return await this.db.transaction("rw", this.db.files, async () => {
-      let file = await this.readFile(id);
-      await this.db.files.delete(id);
+      return this.db.files.delete(id);
     });
   }
 
   public async renameFile(fid: FileID, newName: string): Promise<FileBrief> {
     this.debug && console.log(`renameFile`);
-    return await this.db.transaction("rw", this.db.files, async () => {
-      await this.db.files.update(fid, {
-        name: newName
-      });
-      return new FileBrief(fid, await this.readFile(fid, false));
+    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
+      let file = await this.readFile(fid);
+      await this.deleteFile(fid);
+      let nFile = await this.newFile(file.project_id, newName, file.contents ? file.contents.contents : "");
+      return new FileBrief(nFile.id, nFile);
     });
   }
 
@@ -192,7 +182,7 @@ class LocalStorage implements AbstractStorage {
                        name: string,
                        contents = ""/*,
                         // set pushChangeLog = false in applyChanges to make syncAll faster
-                       pushChangeLog: boolean = true*/): Promise<FileBrief> {
+                       pushChangeLog: boolean = true*/): Promise<File> {
     this.debug && console.log(`newFile`);
     const rmatch: RegExpMatchArray | null = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/);
     if (rmatch !== null) {
@@ -225,7 +215,7 @@ class LocalStorage implements AbstractStorage {
       await this.db.files.update(fid, {
         contents_id: cid
       });
-      return new FileBrief(fid, await this.readFile(fid, false));
+      return this.readFile(fid, false);
     });
   }
 
@@ -322,7 +312,7 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`addOpenFile`);
     return this.db.transaction("rw", [this.db.projects, this.db.files], async () => {
       const open = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
-      const file = new FileBrief(fid, await this.readFile(fid));
+      const file = new FileBrief(fid, await this.readFile(fid, false));
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
@@ -334,7 +324,7 @@ class LocalStorage implements AbstractStorage {
     this.debug && console.log(`removeOpenFile`);
     return this.db.transaction("rw", this.db.projects, this.db.files, async () => {
       const openNames = JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
-      const removedFile = await this.readFile(fid);
+      const removedFile = await this.readFile(fid, false);
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
@@ -354,20 +344,10 @@ class StorageDB extends Dexie {
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
     this.version(1).stores({
-      changeLogs: "++id",
-      files: "id, [name+project], [project+open], name, project",
-      projects: "id, name",
-      settings: "id"
-    });
-    this.version(2).stores({
-      contents: "$$id, project_id, file_id",
+      contents: "$$id, project_id, file_name",
       files: "$$id, [name+project_id], name, project_id",
       projects: "$$id, name",
       settings: "$$id"
-    }).upgrade((trans) => {
-      this.delete().then(() => {
-        console.log("Database deleted.");
-      });
     });
 
     // No TS bindings for Dexie.Syncable

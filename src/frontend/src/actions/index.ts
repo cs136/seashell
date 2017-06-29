@@ -88,6 +88,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         toggleAddTest: () => {
           dispatch({ type: dialogActions.toggle, payload: "add_test_open" });
+        },
+        toggleAddQuestion: () => {
+          dispatch({ type: dialogActions.toggle, payload: "add_question_open" });
         }
       },
       settings: {
@@ -210,10 +213,12 @@ const mapDispatchToProps = (dispatch: Function) => {
           console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
             .then(() => { return asyncAction(storage().readFile(file.id)); })
-            .then((file: S.File) => dispatch({
-              type: appStateActions.switchFile,
-              payload: file
-            }));
+            .then((fullfile: S.File) => {
+              dispatch({
+                type: appStateActions.switchFile,
+                payload: fullfile
+              });
+            });
         },
         addFile: (project: string, question: string, path: string, newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
@@ -299,7 +304,7 @@ const mapDispatchToProps = (dispatch: Function) => {
       },
       question: {
         addQuestion: (pid: S.ProjectID, newQuestionName: string) => {
-          storage().newQuestion(pid, newQuestionName).then(() => {
+          return asyncAction(storage().newQuestion(pid, newQuestionName)).then(() => {
             dispatch({
               type: appStateActions.addQuestion,
               payload: { name: newQuestionName }
@@ -307,7 +312,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         removeQuestion: (pid: S.ProjectID, name: string) => {
-          storage().deleteQuestion(pid, name).then(() => {
+          return asyncAction(storage().deleteQuestion(pid, name)).then(() => {
             dispatch({
               type: appStateActions.removeQuestion,
               payload: { name: name }
@@ -461,15 +466,16 @@ const mapDispatchToProps = (dispatch: Function) => {
               }));
           });
         },
-        getAllProjects: () => {
-          return asyncAction(webStorage().fetchNewSkeletons()).then(() => {
-            return asyncAction(storage().getProjects()).then((projects) => dispatch({
-              type: appStateActions.getProjects,
-              payload: {
-                projects: projects
-              }
-            }));
-          });
+        getAllProjects: async () => {
+          try {
+            await asyncAction(webStorage().fetchNewSkeletons());
+          } catch (e) { } // still want to get the projects if skeletons fail
+          return asyncAction(storage().getProjects()).then((projects) => dispatch({
+            type: appStateActions.getProjects,
+            payload: {
+              projects: projects
+            }
+          }));
         }
       },
       compile: {

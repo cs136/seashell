@@ -273,7 +273,7 @@ export default function appStateReducer(state: appStateReducerState = {
       {currentProject:
         {currentQuestion:
           {currentFile:
-            {contents: action.payload,
+            {contents: {contents: action.payload},
               target: undefined,
               flusher: undefined,
               unwrittenContent: undefined}}}});
