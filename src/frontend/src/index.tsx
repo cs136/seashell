@@ -13,8 +13,11 @@ import {Services} from "./helpers/Services";
 import thunk from "redux-thunk";
 import {LoginRequired} from "./helpers/Errors";
 import {getDispatch} from "./actions";
+import {DebugLogs} from "./helpers/debug";
 
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
+
+// DebugLogs.enable(100);
 
 if (PRODUCTION && "serviceWorker" in navigator) {
   require("offline-plugin/runtime").install();
