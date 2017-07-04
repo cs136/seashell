@@ -1,9 +1,12 @@
 import * as W from "./Websocket/Interface";
+import * as S from "./Storage/Interface";
 export {LoginError,
         GenericError,
         WebsocketError,
         CompilerError,
         SkeletonError,
+        StorageError,
+        ConflictError,
         LoginRequired,
         RequestError,
         NoInternet,
@@ -76,5 +79,18 @@ class SkeletonError extends GenericError {
   constructor(message: string = "SkeletonError",
               public data?: Object) {
     super(message);
+  }
+}
+
+class StorageError extends GenericError {
+  constructor(message: string = "StorageError",
+              public data?: Object) {
+    super(message);
+  }
+}
+
+class ConflictError extends GenericError {
+  constructor(filename: string, results: S.FileBrief[]) {
+    super(`Conflict occurred in file ${filename}.`);
   }
 }

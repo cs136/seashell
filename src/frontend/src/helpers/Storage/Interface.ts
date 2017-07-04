@@ -19,17 +19,18 @@ abstract class AbstractStorage {
   // files
   public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
   public abstract async readFile(file: FileID): Promise<File>;
+  public abstract async getFileByName(project: ProjectID, filename: string): Promise<File|false>;
   public abstract async writeFile(file: FileID, contents: string|undefined): Promise<FileID>;
-  public abstract async renameFile(file: FileID, newName: string): Promise<FileBrief>;
-  public abstract async deleteFile(file: FileID): Promise<void>;
+  public abstract async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileBrief>;
+  public abstract async deleteFile(project: ProjectID, filename: string): Promise<void>;
   // questions
   public abstract async newQuestion(proj: ProjectID, question: string): Promise<void>;
   public abstract async deleteQuestion(proj: ProjectID, question: string): Promise<void>;
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
   public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
-  public abstract async addOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async removeOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async getOpenFiles(proj: ProjectID, question: string): Promise<FileBrief[]>;
+  public abstract async addOpenFile(proj: ProjectID, question: string, filename: string): Promise<void>;
+  public abstract async removeOpenFile(proj: ProjectID, question: string, filename: string): Promise<void>;
+  public abstract async getOpenFiles(proj: ProjectID, question: string): Promise<string[]>;
 
   // settings
   public abstract async setSettings(settings: Settings): Promise<void>;

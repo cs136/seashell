@@ -23,6 +23,7 @@ class CurrentFile extends S.File {
     return result;
   }
 }
+
 export interface appStateReducerProjectState {
   termWrite?: Function;
   termClear?: Function;
@@ -32,15 +33,16 @@ export interface appStateReducerProjectState {
   questions: string[];
   currentQuestion?: {
     name: string;
-    files: S.FileBrief[];
+    files: string[];
     runFile: string;
-    openFiles: S.FileBrief[];
+    openFiles: string[];
     diags: CompilerDiagnostic[];
     currentFile?: CurrentFile;
   };
 };
+
 export interface appStateReducerState {[key: string]: any;
-  fileOpTarget?: S.FileBrief;
+  fileOpTarget?: string;
   projects: S.ProjectBrief[];
   runState?: number;
   currentProject?: appStateReducerProjectState;
@@ -79,7 +81,7 @@ export enum appStateActions {
   writeConsole,
   clearConsole,
   setDiags,
-  updateCurrentFileIfIdEquals,
+  updateCurrentFileIfNameEquals,
   connected,
   disconnected
 };
@@ -93,15 +95,15 @@ export default function appStateReducer(state: appStateReducerState = {
   }, action: appStateReducerAction) {
   switch (action.type) {
     // This updates the current file if we're renaming
-    // the current file or otherwise changing it's id.
-    case appStateActions.updateCurrentFileIfIdEquals:
-      let {oldFid, newFileBrief} = <{oldFid: S.FileID,
+    // the current file or otherwise changing its name.
+    case appStateActions.updateCurrentFileIfNameEquals:
+      let {oldName, newFileBrief} = <{oldName: string,
                                      newFileBrief: S.FileBrief}>action.payload;
       state = clone(state);
       if (state.currentProject &&
           state.currentProject.currentQuestion &&
           state.currentProject.currentQuestion.currentFile &&
-          state.currentProject.currentQuestion.currentFile.id === oldFid) {
+          state.currentProject.currentQuestion.currentFile.name === oldName) {
             state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFileBrief);
           }
       else
@@ -216,7 +218,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
-          reject((file) => file.id === removeFile.id, files);
+          reject((file) => file === removeFile.name, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
         // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
@@ -269,18 +271,25 @@ export default function appStateReducer(state: appStateReducerState = {
         // throw new Error("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
       }
     case appStateActions.changeFileContent:
-      return mergeBetter(state,
-      {currentProject:
-        {currentQuestion:
-          {currentFile:
-            {contents: {contents: action.payload},
+      return mergeBetter(state, {
+        currentProject: {
+          currentQuestion: {
+            currentFile: {
+              id: action.payload.id,
+              contents: {
+                contents: action.payload.contents
+              },
               target: undefined,
               flusher: undefined,
-              unwrittenContent: undefined}}}});
+              unwrittenContent: undefined
+            }
+          }
+        }
+      });
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (find(propEq("name", action.payload.name), state.currentProject.currentQuestion.openFiles) !== undefined) {
+        if (find(action.payload, state.currentProject.currentQuestion.openFiles) !== undefined) {
           return state; // don't duplicate files
         }
         state.currentProject.currentQuestion.openFiles.push(action.payload);
@@ -291,10 +300,10 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.closeFile:
       state = clone(state);
-      let oldFile = <S.FileBrief>action.payload;
+      let oldFile = action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         state.currentProject.currentQuestion.openFiles =
-          reject((file) => file.id === oldFile.id, state.currentProject.currentQuestion.openFiles);
+          reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
         // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");

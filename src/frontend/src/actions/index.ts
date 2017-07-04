@@ -151,9 +151,9 @@ const mapDispatchToProps = (dispatch: Function) => {
       // other than openFile and closeFile, the file name parameter should always
       //  be the full path, for example "q1/file.txt"
       file: {
-        setFileOpTarget: (file: S.FileBrief) => dispatch({
+        setFileOpTarget: (filename: string) => dispatch({
           type: appStateActions.setFileOpTarget,
-          payload: file
+          payload: filename
         }),
         invalidateFile: () => dispatch({
           type: appStateActions.invalidateFile,
@@ -196,9 +196,12 @@ const mapDispatchToProps = (dispatch: Function) => {
                 }
                 if (target && unwrittenContent) {
                   asyncAction(storage().writeFile(target, unwrittenContent))
-                    .then(() => dispatch({
+                    .then((fid: S.FileID) => dispatch({
                       type: appStateActions.changeFileContent,
-                      payload: unwrittenContent,
+                      payload: {
+                        contents: unwrittenContent,
+                        id: fid
+                      }
                     })).then(resolve).catch(reject);
                 } else {
                   resolve();
@@ -209,10 +212,10 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
           });
         },
-        switchFile: (file: S.FileBrief) => {
+        switchFile: (project: S.ProjectID, filename: string) => {
           console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
-            .then(() => { return asyncAction(storage().readFile(file.id)); })
+            .then(() => { return asyncAction(storage().getFileByName(project, filename)); })
             .then((fullfile: S.File) => {
               dispatch({
                 type: appStateActions.switchFile,
@@ -220,22 +223,22 @@ const mapDispatchToProps = (dispatch: Function) => {
               });
             });
         },
-        addFile: (project: string, question: string, path: string, newFileContent: string) => {
+        addFile: (project: string, question: string, filename: string, newFileContent: string) => {
           // writes a new file, returns a promise the caller can use when finished
           //  to do other stuff (i.e. switch to the file)
-          return asyncAction(storage().newFile(project, path, newFileContent))
+          return asyncAction(storage().newFile(project, filename, newFileContent))
             .then((file) => {
               dispatch({
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(storage().addOpenFile(file.project, question, file.id))
+              return asyncAction(storage().addOpenFile(file.project, question, filename))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
                   file = await storage().readFile(file.id);
                   dispatch({
                     type: appStateActions.openFile,
-                    payload: file
+                    payload: file.name
                   });
                   dispatch({
                     type: appStateActions.switchFile,
@@ -244,61 +247,61 @@ const mapDispatchToProps = (dispatch: Function) => {
                 });
             });
         },
-        deleteFile: (file: S.FileBrief) => {
-          return asyncAction(storage().deleteFile(file.id))
+        deleteFile: (project: S.ProjectID, filename: string) => {
+          return asyncAction(storage().deleteFile(project, filename))
             .then(() => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file
+                payload: filename
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: file
+                payload: filename
               });
-              return asyncAction(webStorage().pullMissingSkeletonFiles(file.project));
+              return asyncAction(webStorage().pullMissingSkeletonFiles(project));
             });
         },
-        renameFile: (file: S.FileBrief, targetName: string) => {
-          return asyncAction(storage().renameFile(file.id, targetName))
+        renameFile: (project: S.ProjectID, currentName: string, targetName: string) => {
+          return asyncAction(storage().renameFile(project, currentName, targetName))
             .then((newFile) => {
               dispatch({
                 type: appStateActions.closeFile,
-                payload: file
+                payload: currentName
               });
               dispatch({
                 type: appStateActions.removeFile,
-                payload: file
+                payload: currentName
               });
               dispatch({
                 type: appStateActions.addFile,
-                payload: newFile
+                payload: targetName
               });
               dispatch({
-                type: appStateActions.updateCurrentFileIfIdEquals,
-                payload: {oldFid: file.id, newFileBrief: newFile}
+                type: appStateActions.updateCurrentFileIfNameEquals,
+                payload: {oldName: currentName, newFileBrief: newFile}
               });
-              return asyncAction(webStorage().pullMissingSkeletonFiles(file.project))
+              return asyncAction(webStorage().pullMissingSkeletonFiles(project))
                 .then(() => newFile);
             });
         },
-        openFile: (question: string, file: S.FileBrief) => {
-          storage().addOpenFile(file.project, question, file.id).then((questions) =>
+        openFile: (project: S.ProjectID, question: string, filename: string) => {
+          storage().addOpenFile(project, question, filename).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
-              payload: file
+              payload: filename
             }));
         },
-        closeFile: (file: S.FileBrief) => {
-          storage().removeOpenFile(file.project, file.question(), file.id).then((questions) =>
+        closeFile: (project: S.ProjectID, question: string, filename: string) => {
+          storage().removeOpenFile(project, question, filename).then((questions) =>
             dispatch({
               type: appStateActions.closeFile,
-              payload: file
+              payload: filename
             }));
         },
-        setRunFile: (question: string, file: S.FileBrief) => {
-          storage().setFileToRun(file.project, question, file.name).then(() => dispatch({
+        setRunFile: (project: S.ProjectID, question: string, filename: string) => {
+          storage().setFileToRun(project, question, filename).then(() => dispatch({
             type: appStateActions.setRunFile,
-            payload: file.name
+            payload: filename
           }));
         },
       },
@@ -332,11 +335,9 @@ const mapDispatchToProps = (dispatch: Function) => {
                             name: name,
                             runFile: runFile,
                             currentFile: undefined,
-                            openFiles: openFiles.filter((file) => file.question() === name ||
-                              file.question() === "common"),
+                            openFiles: openFiles,
                             diags: [],
-                            files: files.filter((file) => file.question() === name ||
-                              file.question() === "common")
+                            files: files
                           };
                           dispatch({
                             type: appStateActions.switchQuestion,

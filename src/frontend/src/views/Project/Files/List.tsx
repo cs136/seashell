@@ -9,27 +9,28 @@ export interface ListProps { question: any; };
 export interface ListState {  }
 
 class List extends React.Component<ListProps & actionsInterface, ListState> {
-    openFiles: any;
-    constructor(props: ListProps & actionsInterface) {
-        super(props);
-        if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
-            throw new Error("FileList initiated on undefined project or question");
-        }
-        else {
-            this.openFiles = this.props.appState.currentProject.currentQuestion;
-        }
+  project: S.ProjectID;
+
+  constructor(props: ListProps & actionsInterface) {
+    super(props);
+    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
+      throw new Error("FileList initiated on undefined project or question");
     }
-    render() {
-        const question = this.props.question;
-        return (<Menu>
-            <MenuItem iconName="plus" text="New File" onClick={() => this.props.dispatch.dialog.toggleAddFile()}/>
-            <MenuItem iconName="plus" text="New Test" onClick={() => this.props.dispatch.dialog.toggleAddTest()}/>
-            {question.files.map((file: S.FileBrief) => (<MenuItem key={"file-list-item-" + file.name} onClick={() => {
-                this.props.dispatch.file.openFile(question.name, file);
-                this.props.dispatch.file.switchFile(file);
-            }} iconName="document" text={
-                file.question() === "common" ? file.name : file.name.substring(file.name.indexOf("/") + 1)} />))}
-        </Menu>);
+    else {
+      this.project = this.props.appState.currentProject.id;
     }
+  }
+  render() {
+    const question = this.props.question;
+    return (<Menu>
+        <MenuItem iconName="plus" text="New File" onClick={() => this.props.dispatch.dialog.toggleAddFile()}/>
+        <MenuItem iconName="plus" text="New Test" onClick={() => this.props.dispatch.dialog.toggleAddTest()}/>
+          {question.files.map((filename: string) => (<MenuItem key={"file-list-item-" + filename} onClick={() => {
+            this.props.dispatch.file.openFile(this.project, question.name, filename);
+            this.props.dispatch.file.switchFile(this.project, filename);
+          }} iconName="document" text={
+            filename.startsWith("common") ? filename : filename.substring(filename.indexOf("/") + 1)} />))}
+    </Menu>);
+  }
 }
 export default map<ListProps>(List);
