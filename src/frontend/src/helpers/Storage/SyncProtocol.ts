@@ -101,8 +101,13 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       applyRemoteChanges(changes, currentRevision, partial);
       if (isFirstRound && !partial) {
         onSuccess({
-          react: this.sendChanges.bind(this),
-          disconnect: () => {}
+          react: async (changes: any, baseRevision: number, partial: boolean, onChangesAccepted: () => void) => {
+            await this.sendChanges(changes, baseRevision, partial);
+            onChangesAccepted();
+          },
+          disconnect: () => {
+            console.warn("disconnect called in sync continuation.");
+          }
         });
         isFirstRound = false;
       }
