@@ -105,7 +105,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
               <span className="pt-navbar-divider" key="project-divider" /> :
               <span key="empty-project-divider" />,
             question ?
-              <Popover content={<ListFiles question={question}/>}
+              <Popover content={<ListFiles />}
                   position={Position.BOTTOM} key="project-open-file">
                 <button className="pt-button">
                   <span className="pt-icon-standard pt-icon-caret-down" />

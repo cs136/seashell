@@ -28,7 +28,7 @@
 ;; What I'm thinking:
 ;;
 ;; Tables:
-;; contents: id, project_id, file_id, contents, time
+;; contents: id, project_id, filename, contents, time
 ;; files: id, project_id, name, contents_id, flags
 ;; projects: id, name, settings, last_used
 

@@ -337,7 +337,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                             currentFile: undefined,
                             openFiles: openFiles,
                             diags: [],
-                            files: files
+                            files: files.map((file: S.FileBrief) => file.name)
                           };
                           dispatch({
                             type: appStateActions.switchQuestion,

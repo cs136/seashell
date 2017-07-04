@@ -46,14 +46,14 @@ type ProjectID = string;
 class Contents implements ContentsStored {
   id: ContentsID;
   project_id: ProjectID;
-  file_id: FileID;
+  filename: string;
   contents: string;
   time: number;
 
   constructor(id: ContentsID, obj: ContentsStored) {
     this.id = id;
     this.project_id = obj.project_id;
-    this.file_id = obj.file_id;
+    this.filename = obj.filename;
     this.contents = obj.contents;
     this.time = obj.time;
   }
@@ -168,7 +168,7 @@ class Settings implements SettingsStored {
 interface ContentsStored {
   id?: ContentsID;
   project_id: ProjectID;
-  file_id: FileID;
+  filename: FileID;
   contents: string;
   time: number;
 }

@@ -50,14 +50,8 @@ class LocalStorage implements AbstractStorage {
       if (!file) {
         throw new E.StorageError(`File ID ${fid} does not exist.`);
       }
+      await this.deleteFile(file.project_id, file.name);
       let nFile = await this.newFile(file.project_id, file.name, contents);
-      let cid = await this.db.contents.add({
-        project_id: file.project_id,
-        file_id: fid,
-        contents: contents,
-        time: Date.now()
-      });
-      await this.deleteFile(file.project_id, fid);
       return nFile.id;
     });
   }
@@ -83,10 +77,35 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
+  public async getFileByName(pid: ProjectID, filename: string, getContents: boolean = true): Promise<File|false> {
+    const tbls = getContents ?
+                 [this.db.files, this.db.contents] :
+                 [this.db.files];
+    return this.db.transaction("r", tbls, async () => {
+      let result = await this.db.files.where("name").equals(filename).toArray();
+      if (result.length > 1) {
+        throw new E.ConflictError(filename, result.map((file) => new File(<FileID>file.id, file)));
+      } else if (result.length === 0) {
+        return false;
+      } else {
+        let file = new File(<FileID>result[0].id, result[0]);
+        if (getContents && file.contents_id) {
+          let contents = await this.db.contents.get(file.contents_id);
+          if (contents === undefined) {
+            throw new E.StorageError(`File contents for ${filename} does not exist.`);
+          } else {
+            file.contents = new Contents(file.contents_id, contents);
+          }
+        }
+        return file;
+      }
+    });
+  }
+
   public async deleteFile(project: ProjectID, filename: string): Promise<void> {
     this.debug && console.log(`deleteFile`);
     return await this.db.transaction("rw", this.db.files, async () => {
-      const file = await this.getFileByName(project, filename);
+      const file = await this.getFileByName(project, filename, false);
       if (!file) {
         throw new E.StorageError(`Deleting file ${filename} which does not exist.`);
       } else {
@@ -193,13 +212,13 @@ class LocalStorage implements AbstractStorage {
       }
     }
     return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
-      /*const exist = await this.db.files.where({
+      const exist = await this.db.files.where({
         name: name,
         project_id: pid
       });
       if (await exist.count() > 0) {
-        throw new E.StorageError(`file "${pid}" "${name}" already exists`);
-      }*/
+        throw new E.StorageError(`File "${name}" already exists.`);
+      }
       const fid = await this.db.files.add({
         project_id: pid,
         name: name,
@@ -208,7 +227,7 @@ class LocalStorage implements AbstractStorage {
       });
       const cid = await this.db.contents.add({
         project_id: pid,
-        file_id: fid,
+        filename: fid,
         contents: contents,
         time: Date.now()
       });
@@ -293,31 +312,6 @@ class LocalStorage implements AbstractStorage {
 
   private openFilesKey(question: string): string {
     return `${question}_open_files`;
-  }
-
-  public async getFileByName(pid: ProjectID, filename: string, getContents: boolean = true): Promise<File|false> {
-    const tbls = getContents ?
-                 [this.db.files, this.db.contents] :
-                 [this.db.files];
-    return this.db.transaction("r", tbls, async () => {
-      let result = await this.db.files.where("name").equals(filename).toArray();
-      if (result.length > 1) {
-        throw new E.ConflictError(filename, result.map((file) => new File(<FileID>file.id, file)));
-      } else if (result.length === 0) {
-        return false;
-      } else {
-        let file = new File(<FileID>result[0].id, result[0]);
-        if (getContents && file.contents_id) {
-          let contents = await this.db.contents.get(file.contents_id);
-          if (contents === undefined) {
-            throw new E.StorageError(`File contents for ${filename} does not exist.`);
-          } else {
-            file.contents = new Contents(file.contents_id, contents);
-          }
-        }
-        return file;
-      }
-    });
   }
 
   public async getOpenFiles(pid: ProjectID, question: string): Promise<string[]> {
