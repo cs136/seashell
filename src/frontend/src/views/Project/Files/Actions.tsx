@@ -23,7 +23,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
     else {
       this.openFiles = this.props.appState.currentProject.currentQuestion.openFiles;
       this.question = this.props.appState.currentProject.currentQuestion.name;
-      this.project = this.props.appState.currentProject.id
+      this.project = this.props.appState.currentProject.id;
     }
   }
   render() {

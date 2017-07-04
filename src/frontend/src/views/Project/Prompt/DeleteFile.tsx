@@ -17,11 +17,12 @@ class DeleteFile extends React.Component<DeleteProps&actionsInterface, {}> {
       const target = this.props.appState.fileOpTarget;
       const project = this.props.appState.currentProject;
       const question = this.props.appState.currentProject.currentQuestion;
-      return this.props.dispatch.file.deleteFile(target).then(() => {
+      return this.props.dispatch.file.deleteFile(project.id, target).then(() => {
         if (this.props.appState.currentProject
             && this.props.appState.currentProject.currentQuestion
             && this.props.appState.currentProject.currentQuestion.openFiles.length > 0) {
           this.props.dispatch.file.switchFile(
+            project.id,
             this.props.appState.currentProject.currentQuestion.openFiles[0]);
         }
         else {

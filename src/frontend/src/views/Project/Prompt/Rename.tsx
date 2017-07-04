@@ -15,7 +15,7 @@ interface RenameState {
   question: string;
   file: string;
   prevFile: string;
-  target: FileBrief;
+  target: string;
   disabled: boolean;
 }
 
@@ -29,8 +29,8 @@ class Rename extends React.Component<RenameProps&actionsInterface, RenameState> 
         && this.props.appState.currentProject.currentQuestion) {
       this.state = {
         question: this.props.questions[0],
-        file: this.props.appState.fileOpTarget.name.split("/").pop() || "",
-        prevFile: this.props.appState.fileOpTarget.name.split("/").pop() || "",
+        file: this.props.appState.fileOpTarget.split("/").pop() || "",
+        prevFile: this.props.appState.fileOpTarget.split("/").pop() || "",
         target: this.props.appState.fileOpTarget,
         disabled: false
       };
@@ -43,13 +43,13 @@ class Rename extends React.Component<RenameProps&actionsInterface, RenameState> 
   private submitForm(): Promise<void> {
     const project = this.props.appState.currentProject;
     if (project) {
-      return this.props.dispatch.file.renameFile(this.state.target,
+      return this.props.dispatch.file.renameFile(project.id, this.state.target,
           `${this.state.question}/${this.state.file}`)
         .then((target) =>
           this.props.dispatch.question.switchQuestion(project.id, this.state.question)
           .then(() => {
-            this.props.dispatch.file.openFile(this.state.question, target);
-            this.props.dispatch.file.switchFile(target);
+            this.props.dispatch.file.openFile(project.id, this.state.question, target.name);
+            this.props.dispatch.file.switchFile(project.id, target.name);
             })
         ).catch((error: any) => {
           if (error !== null) {

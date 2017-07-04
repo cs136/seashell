@@ -23,7 +23,7 @@ class QuestionList extends React.Component<QuestionListProps & actionsInterface,
             (<MenuItem onClick={() =>
               this.props.dispatch.question.switchQuestion(project.id, question).then((question) => {
                 if (question.openFiles.length > 0) {
-                  this.props.dispatch.file.switchFile(question.openFiles[0]);
+                  this.props.dispatch.file.switchFile(project.id, question.openFiles[0]);
                 }
               })} key={"question-list-item-" + question} iconName="comment" text={question} />))}
           <MenuItem onClick={() => this.props.dispatch.dialog.toggleAddQuestion()}
