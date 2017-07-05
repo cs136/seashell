@@ -719,8 +719,9 @@
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
       [else
        (define id (hash-ref message 'id))
-       (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
-             id (hash-ref message 'type "unknown") (any->short-str message 100))
+       (when (not SEASHELL_DEBUG)
+         (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
+             id (hash-ref message 'type "unknown") (any->short-str message 100)))
        (with-handlers
            ([exn:project?
              (lambda (exn)
@@ -779,9 +780,10 @@
               (define message (bytes->jsexpr data))
               (semaphore-post keepalive-sema)
               (define result (handle-message message))
-              (logf 'info "Responding to msg id=~a. Response: ~a"
-                    (hash-ref result 'id "no_id")
-                    (any->short-str (hash-ref result 'result "no_results") 100))
+              (when (not SEASHELL_DEBUG)
+                (logf 'info "Responding to msg id=~a. Response: ~a"
+                      (hash-ref result 'id "no_id")
+                    (any->short-str (hash-ref result 'result "no_results") 100)))
               (send-message connection result))))))
        (main-loop)]))
 
