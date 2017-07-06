@@ -90,7 +90,7 @@
     "ts-jest": "^19.0.0",
     "tslint": "^4.4.2",
     "tslint-loader": "^3.4.2",
-    "typescript": "~2.2.2",
+    "typescript": "~2.3.2",
     "url-loader": "^0.5.7",
     "webpack": "^2.2.1",
     "webpack-archive-plugin": "^3.0.0",
