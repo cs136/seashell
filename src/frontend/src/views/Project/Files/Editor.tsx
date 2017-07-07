@@ -186,6 +186,13 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
     const { language, theme, options } = this.props;
 
+    // FIXME: better way to set EOL
+    let model = monaco.editor.createModel(value, language);
+    if (model.getLineCount() <= 1) {
+      // Default to LF on files with at most one line.
+      model.setEOL(0); // --> https://microsoft.github.io/monaco-editor/api/enums/monaco.editor.endoflinesequence.html 
+    }
+
     this.editor = monaco.editor.create(container, {
       value,
       language,
