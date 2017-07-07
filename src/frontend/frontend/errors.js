@@ -40,6 +40,7 @@ angular.module('frontend-app')
     // makes the UI display an error message
     self.report = function (error, shorthand, type) {
       if (error) {
+        Raven.captureException(error);
         console.error(error);
         self.errors.push({shorthand: shorthand, error: error, type: type});
       }
