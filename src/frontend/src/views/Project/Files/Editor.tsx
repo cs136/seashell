@@ -194,7 +194,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     }
 
     this.editor = monaco.editor.create(container, {
-      value,
+      model,
       language,
       theme,
       ...options,
