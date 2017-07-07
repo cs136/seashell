@@ -44,7 +44,7 @@
     "seashell-clang-js": "https://bintray.com/cs136/seashell-clang-js/download_file?file_path=seashell-clang-js-master.tar.gz"
   },
   "devDependencies": {
-    "@blueprintjs/core": "~1.13.0",
+    "@blueprintjs/core": "~1.22.0",
     "@types/history": "^2.0.44",
     "@types/jest": "^18.1.1",
     "@types/jquery": "^2.0.41",
@@ -90,7 +90,7 @@
     "ts-jest": "^19.0.0",
     "tslint": "^4.4.2",
     "tslint-loader": "^3.4.2",
-    "typescript": "~2.3.2",
+    "typescript": "~2.3.4",
     "url-loader": "^0.5.7",
     "webpack": "^2.2.1",
     "webpack-archive-plugin": "^3.0.0",

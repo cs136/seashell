@@ -1,5 +1,6 @@
 import {mergeBetter} from "../helpers/utils";
 import {clone} from "ramda";
+import {Action} from "redux";
 
 export const dialogActions = {
   open: "dialog_open",
@@ -7,7 +8,7 @@ export const dialogActions = {
   toggle: "dialog_toggle",
 };
 
-export interface dialogAction {
+export interface dialogAction extends Action {
   type: string;
   payload: string;
 }
