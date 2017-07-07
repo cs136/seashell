@@ -8,18 +8,19 @@ import userReducer, {userReducerState} from "./userReducer";
 import settingsReducer, {settingsReducerState} from "./settingsReducer";
 import dialogReducer, {dialogReducerState} from "./dialogReducer";
 
-const rootReducer = combineReducers({
-  appState: appStateReducer,
-  settings: settingsReducer,
-  user: userReducer,
-  dialog: dialogReducer
-});
-
 export interface globalState {
   appState: appStateReducerState;
   user: userReducerState;
   settings: settingsReducerState;
   dialog: dialogReducerState;
 };
+
+const rootReducer = combineReducers<globalState>({
+  appState: appStateReducer,
+  settings: settingsReducer,
+  user: userReducer,
+  dialog: dialogReducer
+});
+
 
 export default rootReducer;

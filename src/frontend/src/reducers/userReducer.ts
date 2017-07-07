@@ -1,10 +1,18 @@
 import {evolve} from "ramda";
 import {projectRef, fileRef} from "../types";
-export interface userReducerState {[key: string]: any;
-    questid?: string;
-    busy: boolean;
+import {Action} from "redux";
+
+export interface userReducerState {
+  [key: string]: any;
+  questid?: string;
+  busy: boolean;
 };
-export interface userReducerAction {type: string; payload: userReducerState; };
+
+export interface userReducerAction extends Action {
+  type: string;
+  payload: userReducerState;
+};
+
 export const userActions = {
   INVALIDATE: "USER_INVALIDATE",
   SIGNIN: "USER_SIGNIN",
@@ -12,6 +20,7 @@ export const userActions = {
   BUSY: "LOGIN_BUSY",
   NOTBUSY: "LOGIN_NOTBUSY"
 };
+
 export default function userReducer(state: userReducerState = {questid: undefined, busy: false}, action: userReducerAction) {
   switch (action.type) {
     case userActions.INVALIDATE:

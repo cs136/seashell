@@ -3,6 +3,7 @@ import {CompilerDiagnostic} from "../helpers/Services";
 import {reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
+import {Action} from "redux";
 
 class CurrentFile extends S.File {
   public unwrittenContent?: string;
@@ -39,7 +40,9 @@ export interface appStateReducerProjectState {
     currentFile?: CurrentFile;
   };
 };
-export interface appStateReducerState {[key: string]: any;
+
+export interface appStateReducerState {
+  [key: string]: any;
   fileOpTarget?: S.FileBrief;
   projects: S.ProjectBrief[];
   runState?: number;
@@ -47,7 +50,7 @@ export interface appStateReducerState {[key: string]: any;
   connected: boolean;
 };
 
-export interface appStateReducerAction {
+export interface appStateReducerAction extends Action {
   type: appStateActions;
   payload: any;
 };
