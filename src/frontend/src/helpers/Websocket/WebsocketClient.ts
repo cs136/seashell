@@ -271,15 +271,15 @@ class SeashellWebsocket {
     this.websocket = undefined;
   }
 
-  public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
+  public async register_callback(type: string, cb: (message?: any) => any, now?: boolean): Promise<void> {
     this.callbacks.push(new Callback(type, cb, now || false));
 
     if (type === "disconnected" && ! this.isConnected() && now) {
-      cb();
+      return cb();
     } else if (type === "connected" && this.isConnected() && now) {
-      cb();
+      return cb();
     } else if (type === "failed" && this.failed && now) {
-      cb();
+      return cb();
     }
   }
 

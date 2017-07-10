@@ -9,6 +9,8 @@ const CREATE = 1;
 const UPDATE = 2;
 const DELETE = 3;
 
+const RECONNECT_DELAY = 5000;
+
 class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
 
   constructor(private socket: SeashellWebsocket,
@@ -60,6 +62,14 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       type: "subscribe",
       syncedRevision: syncedRevision ? syncedRevision : false
     });
+  }
+
+  private async connect(context: any, baseRevision: number, syncedRevision: number, changes: any, partial: boolean, onChangesAccepted: () => void): Promise<void> {
+    context.clientIdentity = await this.clientIdentity(context.clientIdentity);
+    context.save();
+    await this.sendChanges(changes, baseRevision, partial);
+    onChangesAccepted();
+    await this.subscribe(syncedRevision);
   }
 
   public async sync(context: any /*Dexie.Syncable.IPersistedContext*/, url: string, options: Object, baseRevision: any,
@@ -114,11 +124,15 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
 
     try {
-      context.clientIdentity = await this.clientIdentity(context.clientIdentity);
-      context.save();
-      await this.sendChanges(changes, baseRevision, partial);
-      onChangesAccepted();
-      await this.subscribe(syncedRevision);
+      await this.socket.register_callback("connected",
+        this.connect.bind(this, context, baseRevision, syncedRevision, changes, partial, onChangesAccepted), true);
+
+      this.socket.register_callback("disconnected", (msg: any) => {
+        onError(msg, RECONNECT_DELAY);
+      });
+      this.socket.register_callback("failed", (msg: any) => {
+        onError(msg, RECONNECT_DELAY);
+      });
     } catch (e) {
       throw new E.WebsocketError("Error occurred while syncing.", e);
     }
