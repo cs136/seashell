@@ -2,6 +2,7 @@
 
 (require typed/json
          seashell/db/tools
+         seashell/db/database
          seashell/utils/uuid)
 
 (require (submod seashell/seashell-config typed))

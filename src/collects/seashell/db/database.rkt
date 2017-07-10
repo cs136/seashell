@@ -28,6 +28,7 @@
 
 (provide get-sync-database
          init-sync-database
+         clear-sync-database
          DBExpr
          Sync-Database%
          sync-database%)
@@ -42,11 +43,25 @@
 (define (get-sync-database)
   (assert seashell-sync-database))
 
-(: init-sync-database (-> Any))
+(: init-sync-database (-> Void))
 (define (init-sync-database)
   (unless seashell-sync-database
     (set! seashell-sync-database (make-object sync-database%
-      (build-path (read-config-path 'seashell) (read-config-path 'database-file))))))
+      (build-path (read-config-path 'seashell) (read-config-path 'database-file))))
+    (init-sync-database-tables)))
+
+(: init-sync-database-tables (-> Void))
+(define (init-sync-database-tables)
+  (define db (get-sync-database))
+  (send db write-transaction (thunk
+    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT)")
+    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, data TEXT)")
+    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS contents (id TEXT PRIMARY KEY, data TEXT)"))))
+
+(: clear-sync-database (-> Void))
+(define (clear-sync-database)
+  (when seashell-sync-database
+    (set! seashell-sync-database #f)))
 
 (define-type DBExpr (HashTable Symbol JSExpr))
 

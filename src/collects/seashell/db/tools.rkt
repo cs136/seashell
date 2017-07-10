@@ -23,9 +23,7 @@
          seashell/utils/uuid
          seashell/db/database)
 
-(provide init-database
-         clear-database
-         insert-new
+(provide insert-new
          select-id
          delete-id
          select-projects
@@ -40,52 +38,24 @@
 ;; Dexie syncable interface. These will be used by the backend support tools as well as the
 ;; Seashell server when doing things like cloning skeleton projects.
 
-(: seashell-database (U (Instance Sync-Database%) False))
-(define seashell-database #f)
-
-(: get-database (-> (Instance Sync-Database%)))
-(define (get-database)
-  (unless seashell-database
-    (error "Must call init-database before accessing the database."))
-  (cast seashell-database (Instance Sync-Database%)))
-
-;; Must be called before accessing the database
-(: init-database (->* () (SQLite3-Database-Storage) Void))
-(define (init-database [storage 'memory])
-  (set! seashell-database (make-object sync-database% storage))
-  (init-tables))
-
-(: init-tables (-> Void))
-(define (init-tables)
-  (define db (get-database))
-  (send db write-transaction (thunk
-    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT)")
-    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, data TEXT)")
-    (query-exec (send db get-conn) "CREATE TABLE IF NOT EXISTS contents (id TEXT PRIMARY KEY, data TEXT)"))))
-
-(: clear-database (-> Void))
-(define (clear-database)
-  (when seashell-database
-    (set! seashell-database #f)))
-
 ;; Inserts the given object, generating a new UUID for it
 (: insert-new (->* (String DBExpr) (String) String))
 (define (insert-new table object [id #f])
   (define new-id (if id id (uuid-generate)))
-  (send (get-database) apply-create table new-id object)
+  (send (get-sync-database) apply-create table new-id object)
   new-id)
 
 (: select-id (-> String String (Option JSExpr)))
 (define (select-id table id)
-  (send (get-database) fetch table id))
+  (send (get-sync-database) fetch table id))
 
 (: delete-id (-> String String Void))
 (define (delete-id table id)
-  (void (send (get-database) apply-delete table id)))
+  (void (send (get-sync-database) apply-delete table id)))
 
 (: select-projects (-> (Listof JSExpr)))
 (define (select-projects)
-  (define db (get-database))
+  (define db (get-sync-database))
   (define result
     (query-rows (send db get-conn)
       "SELECT json_insert(data, '$.id', id) FROM projects"))
@@ -94,13 +64,13 @@
 ;; TODO: handle the case where a project with that name does not exist
 (: select-project-name (-> String JSExpr))
 (define (select-project-name name)
-  (define db (get-database))
+  (define db (get-sync-database))
   (string->jsexpr (cast (vector-ref (first (query-rows (send db get-conn)
     "SELECT json_insert(data, '$.id', id) FROM projects WHERE json_extract(data, '$.name')=$1" name)) 0) String)))
 
 (: select-files-for-project (-> String (Listof JSExpr)))
 (define (select-files-for-project pid)
-  (define db (get-database))
+  (define db (get-sync-database))
   (define result
     (query-rows (send db get-conn)
       "SELECT json_insert(data, '$.id', id) FROM files WHERE json_extract(data,'$.project_id')=$1" pid))
@@ -108,7 +78,7 @@
 
 (: delete-files-for-project (-> String Void))
 (define (delete-files-for-project pid)
-  (define db (get-database))
+  (define db (get-sync-database))
   (send db write-transaction (thunk
     (define files (select-files-for-project pid))
     (void (map (lambda ([x : JSExpr])
@@ -117,7 +87,7 @@
 
 (: filename-exists? (-> String String Boolean))
 (define (filename-exists? pid name)
-  (define db (get-database))
+  (define db (get-sync-database))
   (not (false?
     (query-maybe-value (send db get-conn)
       "SELECT json(data) FROM files WHERE json_extract(data, '$.project_id')=$1 AND json_extract(data, '$.name')=$2"
@@ -125,8 +95,8 @@
 
 (: call-with-read-transaction (All (A) (-> (-> A) A)))
 (define (call-with-read-transaction tnk)
-  (send (get-database) read-transaction tnk))
+  (send (get-sync-database) read-transaction tnk))
 
 (: call-with-write-transaction (All (A) (-> (-> A) A)))
 (define (call-with-write-transaction tnk)
-  (send (get-database) write-transaction tnk))
+  (send (get-sync-database) write-transaction tnk))

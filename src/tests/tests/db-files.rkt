@@ -1,14 +1,15 @@
 #lang racket
 
 (require seashell/db/tools
+         seashell/db/database
          seashell/backend/db-files
          seashell/seashell-config
          rackunit)
 
 (define/provide-test-suite db-files-suite
   (test-suite "Files suite with SQLite backend"
-    #:before init-database
-    #:after clear-database
+    #:before init-sync-database
+    #:after clear-sync-database
     (test-case "Create simple project"
       (define pid (new-project "A1"))
       (define did (new-directory pid "q1"))
