@@ -164,6 +164,10 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         '$window', '$document', '$rootScope', 'localfiles',
         function($cookies, ws, settings, errors, projects, $window, $document, $rootScope,
                 localfiles) {
+    var ck = $cookies.getObject(SEASHELL_CREDS_COOKIE);
+    if (ck) {
+      Raven.setUserContext({email: ck.user + "@uwaterloo.ca"});
+    }
     ws.connect();
     // Reload settings on (re)connect.
     ws.register_callback('connected', function () {
