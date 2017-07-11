@@ -31,6 +31,7 @@
          select-files-for-project
          delete-files-for-project
          filename-exists?
+         project-exists?
          call-with-read-transaction
          call-with-write-transaction)
 
@@ -84,6 +85,14 @@
     (void (map (lambda ([x : JSExpr])
       (send db apply-delete "files" (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'id) String)))
       files)))))
+
+(: project-exists? (-> String Boolean))
+(define (project-exists? proj)
+  (define db (get-sync-database))
+  (not (false?
+    (query-maybe-value (send db get-conn)
+      "SELECT json(data) FROM projects WHERE json_extract(data, '$.name')=$1"
+      proj))))
 
 (: filename-exists? (-> String String Boolean))
 (define (filename-exists? pid name)

@@ -261,6 +261,10 @@ class LocalStorage implements AbstractStorage {
   public async newProject(name: string): Promise<ProjectBrief> {
     this.debug && console.log(`newProject`);
     return await this.db.transaction("rw", this.db.projects, async () => {
+      const num = await this.db.projects.where("name").equals(name).count();
+      if (num > 0) {
+        throw new E.StorageError(`Project '${name}' already exists.`);
+      }
       const ps: ProjectStored = {
         name: name,
         settings: {},
@@ -356,7 +360,7 @@ class StorageDB extends Dexie {
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
     this.version(1).stores({
-      contents: "$$id, project_id, file_name",
+      contents: "$$id, project_id, filename",
       files: "$$id, [name+project_id], name, project_id",
       projects: "$$id, name",
       settings: "$$id"

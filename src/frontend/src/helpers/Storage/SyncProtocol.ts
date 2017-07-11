@@ -77,15 +77,16 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,
       onSuccess: (continuation: any) => void, onError: (error: any, again?: number) => void) {
 
-
     const deconvertChange = (change: any) => {
       if (change.type === CREATE) {
-        return {
+        let res = {
           type: CREATE,
           table: change.table,
           key: change.key,
           obj: JSON.parse(change.data)
         };
+        res.obj.id = change.key;
+        return res;
       } else if (change.type === UPDATE) {
         return {
           type: UPDATE,
@@ -124,15 +125,16 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
 
     try {
-      await this.socket.register_callback("connected",
-        this.connect.bind(this, context, baseRevision, syncedRevision, changes, partial, onChangesAccepted), true);
-
       this.socket.register_callback("disconnected", (msg: any) => {
         onError(msg, RECONNECT_DELAY);
       });
       this.socket.register_callback("failed", (msg: any) => {
         onError(msg, RECONNECT_DELAY);
       });
+
+      await this.connect(context, baseRevision, syncedRevision, changes, partial, onChangesAccepted);
+      //await this.socket.register_callback("connected",
+      //  this.connect.bind(this, context, baseRevision, syncedRevision, changes, partial, onChangesAccepted), true);
     } catch (e) {
       throw new E.WebsocketError("Error occurred while syncing.", e);
     }

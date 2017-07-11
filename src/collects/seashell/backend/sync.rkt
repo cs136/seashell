@@ -95,7 +95,6 @@
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)
       (send database write-transaction (thunk
-        (logf 'info "Inside sync-changes transaction")
         (cond
           [partial
             (map (lambda ([chg : database-change])
@@ -123,7 +122,6 @@
             (define base (if revision revision 0))
             (define srv-changes (map row->change (send database fetch-changes base (assert current-client))))
             (define resolved (resolve-conflicts changes srv-changes))
-            (logf 'info "after resolving conflicts in sync-changes")
             (map (lambda ([chg : database-change])
               (cond
                 [(= (database-change-type chg) CREATE)

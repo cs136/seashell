@@ -21,6 +21,7 @@
          typed/db
          typed/db/sqlite3
          (submod seashell/seashell-config typed)
+         seashell/log
          seashell/db/support
          seashell/db/changes
          seashell/db/updates
@@ -227,6 +228,7 @@
  
     (: apply-delete (->* (String String) ((Option String) Boolean) Any))
     (define/public (apply-delete table key [_client #f] [_transaction #t])
+      (logf 'info (format "delete ~a ~a ~a" table key _client))
       (define todo (thunk
                     (define exists? (query-maybe-value database "SELECT 1 FROM sqlite_master WHERE type = $1 AND name = $2" "table" table))
                     (when exists?

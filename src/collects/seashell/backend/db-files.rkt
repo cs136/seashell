@@ -10,6 +10,7 @@
 (require/typed file/zip
   [zip (-> (U String Path) (U String Path) Void)])
 (require/typed file/unzip
+  [unzip (-> (U String Input-Port) (-> Bytes Boolean Input-Port Any) Void)]
   [call-with-unzip (All (A) (-> Input-Port (-> Path A) A))])
 
 (require/typed seashell/backend/template
@@ -27,19 +28,19 @@
          export-all
          compile-and-run-project/db)
 
-;; What I'm thinking:
+;; Database Schema:
 ;;
 ;; Tables:
 ;; contents: id, project_id, filename, contents, time
 ;; files: id, project_id, name, contents_id, flags
 ;; projects: id, name, settings, last_used
 
-;; TODO: put the database rows into structures so we don't need to do as much casting
-
 ;; Returns new project ID
 (: new-project (->* (String) ((U String False) (HashTable Symbol String)) String))
 (define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol String)}])
   (call-with-write-transaction (thunk
+    (when (project-exists? name)
+      (error (format "The project ~a already exists." name)))
     (define pid (insert-new "projects"
       #{`#hasheq((name . ,name)
                  (settings . ,(cast settings JSExpr))
@@ -61,41 +62,29 @@
 ;; Restores a file from a skeleton/template.
 ;;
 ;; Args:
-;;  project - Project.
+;;  pid - project ID
 ;;  file - Path to file.
 ;;  template - Path (possibly URL) to template.
-;; Returns:
-;;  MD5 hash of file.
 (: restore-file-from-template (-> String String String Void))
-(define (restore-file-from-template project file template)
- (void))
-;(define/contract (restore-file-from-template project file template)
-;  (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
-;  (define ok #f)
-;  (define-values (question-dir filename _) (split-path file))
-;  (define dest-dir (check-and-build-path (build-project-path project) question-dir))
-;  (make-directory* dest-dir)
-;  (define destination (check-and-build-path dest-dir filename))
-;  (define source (explode-path file))
-;  (call-with-template template
-;                      (lambda (port)
-;                        (unzip port
-;                               (lambda (name _2 contents)
-;                                 (define lname (explode-path (simplify-path (bytes->path name) #f)))
-;                                 (when (and (not (null? lname))
-;                                            (equal? source (cdr lname)))
-;                                   (call-with-write-lock (thunk
-;                                     (call-with-output-file destination
-;                                                            (lambda (dport)
-;                                                              (define-values (md5in md5out) (make-pipe))
-;                                                              (copy-port contents dport md5out)
-;                                                              (close-output-port md5out)
-;                                                              (set! ok (md5 md5in)))
-;                                                            #:exists 'replace))))))))
-;  (when (not ok)
-;    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template)
-;           (current-continuation-marks))))
-;  ok)
+(define (restore-file-from-template pid file template)
+  (: ok Boolean)
+  (define ok #f)
+  (define source (explode-path file))
+  (call-with-template template
+    (lambda ([port : Input-Port])
+      (unzip port
+        (lambda ([name : Bytes] [dir : Boolean] [contents : Input-Port])
+          (define lname (explode-path (simplify-path (bytes->path name) #f)))
+          (when (and (not (null? lname))
+                     (equal? source (cdr lname)))
+            (new-file pid
+                      file
+                      (port->string contents)
+                      0)
+            (set! ok #t))))))
+  (unless ok
+    (raise (exn:fail (format "File ~a not found in template ~a." file template)
+      (current-continuation-marks)))))
 
 (: delete-project (-> String Void))
 (define (delete-project id)
@@ -103,7 +92,6 @@
     (delete-id "projects" id)
     (delete-files-for-project id))))
 
-;; TODO: new-file should fail if the file name already exists
 (: new-file (-> String String (U String False) Integer (Values String (U String False))))
 (define (new-file pid name contents flags)
   (define result (call-with-write-transaction (thunk
@@ -117,7 +105,7 @@
                (flags . ,flags))))
     (when contents (insert-new "contents"
       `#hasheq((project_id . ,pid)
-               (file_id . ,file-id)
+               (filename . ,name)
                (contents . ,contents)
                (time . ,(current-milliseconds))) contents-id))
     (cons file-id contents-id))))
