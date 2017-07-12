@@ -90,7 +90,7 @@ class StorageError extends GenericError {
 }
 
 class ConflictError extends GenericError {
-  constructor(filename: string, results: S.FileBrief[]) {
+  constructor(filename: string, results: S.File[]) {
     super(`Conflict occurred in file ${filename}.`);
   }
 }

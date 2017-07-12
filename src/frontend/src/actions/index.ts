@@ -170,7 +170,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           return Promise.resolve();
         },
-        updateFile: (file: S.File, newFileContent: string) => {
+        updateFile: (file: S.FileEntry, newFileContent: string) => {
           dispatch({
             type: appStateActions.changeFileBufferedContent,
             payload: {
@@ -216,11 +216,13 @@ const mapDispatchToProps = (dispatch: Function) => {
           console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
             .then(() => { return asyncAction(storage().getFileByName(project, filename)); })
-            .then((fullfile: S.File) => {
-              dispatch({
-                type: appStateActions.switchFile,
-                payload: fullfile
-              });
+            .then((fullfile) => {
+              if (fullfile) {
+                dispatch({
+                  type: appStateActions.switchFile,
+                  payload: fullfile
+                });
+              }
             });
         },
         addFile: (project: string, question: string, filename: string, newFileContent: string) => {
@@ -232,18 +234,20 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.addFile,
                 payload: file
               });
-              return asyncAction(storage().addOpenFile(file.project, question, filename))
+              return asyncAction(storage().addOpenFile(file.project_id, question, filename))
                 .then(async () => {
                   // file needs to be read here to obtain the default contents
-                  file = await storage().readFile(file.id);
-                  dispatch({
-                    type: appStateActions.openFile,
-                    payload: file.name
-                  });
-                  dispatch({
-                    type: appStateActions.switchFile,
-                    payload: file
-                  });
+                  let entry = await storage().getFileByName(file.project_id, file.name);
+                  if (entry) {
+                    dispatch({
+                      type: appStateActions.openFile,
+                      payload: entry.name
+                    });
+                    dispatch({
+                      type: appStateActions.switchFile,
+                      payload: entry
+                    });
+                  }
                 });
             });
         },
@@ -278,7 +282,7 @@ const mapDispatchToProps = (dispatch: Function) => {
               });
               dispatch({
                 type: appStateActions.updateCurrentFileIfNameEquals,
-                payload: {oldName: currentName, newFileBrief: newFile}
+                payload: {oldName: currentName, newFile: newFile}
               });
               return asyncAction(webStorage().pullMissingSkeletonFiles(project))
                 .then(() => newFile);
@@ -325,8 +329,8 @@ const mapDispatchToProps = (dispatch: Function) => {
         switchQuestion: (pid: S.ProjectID, name: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
-              return asyncAction(storage().getProjectFiles(pid))
-                .then((files: S.FileBrief[]) => {
+              return asyncAction(storage().getFiles(pid, name))
+                .then((files: S.File[]) => {
                   return asyncAction(storage().getOpenFiles(pid, name))
                     .then((openFiles) => {
                       return asyncAction(storage().getFileToRun(pid, name)
@@ -337,7 +341,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                             currentFile: undefined,
                             openFiles: openFiles,
                             diags: [],
-                            files: files.map((file: S.FileBrief) => file.name)
+                            files: files.map((file: S.File) => file.name)
                           };
                           dispatch({
                             type: appStateActions.switchQuestion,
@@ -423,7 +427,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           }));
         },
         addProject: (newProjectName: string) => {
-          return asyncAction(storage().newProject(newProjectName)).then((proj: S.ProjectBrief) => {
+          return asyncAction(storage().newProject(newProjectName)).then((proj: S.Project) => {
             dispatch({
               type: appStateActions.addProject,
               payload: proj
@@ -451,8 +455,8 @@ const mapDispatchToProps = (dispatch: Function) => {
           }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
           return asyncAction(webStorage().pullMissingSkeletonFiles(pid)).then(() => {
-            return asyncAction(storage().getProjectFiles(pid))
-              .then((files: S.FileBrief[]) => dispatch({
+            return asyncAction(storage().getQuestions(pid))
+              .then((questions: string[]) => dispatch({
                 type: appStateActions.switchProject,
                 payload: {
                   project: {
@@ -460,7 +464,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                     termClear: null,
                     name: name,
                     id: pid,
-                    questions: files.map((file) => file.question()).filter(uniqueNotCommon),
+                    questions: questions,
                     currentQuestion: undefined
                   }
                 }

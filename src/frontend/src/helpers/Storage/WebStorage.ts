@@ -2,8 +2,8 @@ import {SeashellWebsocket} from "../Websocket/WebsocketClient";
 import {LocalStorage} from "./LocalStorage";
 import {Connection} from "../Websocket/Interface";
 import {SkeletonManager} from "./SkeletonManager";
-import {Project, ProjectID, ProjectBrief,
-        File, FileID, FileBrief,
+import {Project, ProjectID,
+        File, FileID,
         SettingsStored, Settings,
         OfflineMode} from "./Interface";
 import {History, Change} from "../types";

@@ -5,13 +5,13 @@ import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 import {Action} from "redux";
 
-class CurrentFile extends S.File {
+class CurrentFile extends S.FileEntry {
   public unwrittenContent?: string;
   public target?: S.FileID;
   public flusher?: number;
 
-  constructor(other: CurrentFile | S.File) {
-    super(other.id, other);
+  constructor(other: CurrentFile | S.FileEntry) {
+    super(other);
     if (other instanceof CurrentFile) {
       this.unwrittenContent = other.unwrittenContent;
       this.target = other.target;
@@ -45,7 +45,7 @@ export interface appStateReducerProjectState {
 export interface appStateReducerState {
   [key: string]: any;
   fileOpTarget?: string;
-  projects: S.ProjectBrief[];
+  projects: S.Project[];
   runState?: number;
   currentProject?: appStateReducerProjectState;
   connected: boolean;
@@ -99,14 +99,14 @@ export default function appStateReducer(state: appStateReducerState = {
     // This updates the current file if we're renaming
     // the current file or otherwise changing its name.
     case appStateActions.updateCurrentFileIfNameEquals:
-      let {oldName, newFileBrief} = <{oldName: string,
-                                     newFileBrief: S.FileBrief}>action.payload;
+      let {oldName, newFile} = <{oldName: string,
+                                 newFile: S.FileEntry}>action.payload;
       state = clone(state);
       if (state.currentProject &&
           state.currentProject.currentQuestion &&
           state.currentProject.currentQuestion.currentFile &&
           state.currentProject.currentQuestion.currentFile.name === oldName) {
-            state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFileBrief);
+            state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFile);
           }
       else
         console.warn("Inconsistent state reached -- currentFile is undefined in updateCurrentFile...");
@@ -175,7 +175,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.switchFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (action.payload instanceof S.File) {
+        if (action.payload instanceof S.FileEntry) {
           state.currentProject.currentQuestion.currentFile = new CurrentFile(action.payload);
         } else {
           console.error("switchFile was not passed a file:", action.payload);
@@ -216,7 +216,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      let removeFile = <S.FileBrief>action.payload;
+      let removeFile = <S.File>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
@@ -236,7 +236,7 @@ export default function appStateReducer(state: appStateReducerState = {
       }
       return state;
     case appStateActions.addProject:
-      // TODO: make sure projectbrief is passed in
+      // TODO: make sure project is passed in
       state = clone(state);
       if (state.projects) {
         state.projects.push(action.payload);

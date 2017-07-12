@@ -1,6 +1,6 @@
 import * as React from "react";
 import {merge} from "ramda";
-import {FileBrief} from "../../../helpers/Storage/Interface";
+import {File} from "../../../helpers/Storage/Interface";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 import {showError} from "../../../partials/Errors";

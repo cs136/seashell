@@ -1,8 +1,8 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
 import {LocalStorage} from "./LocalStorage";
 import {ProjectID,
-        ProjectBrief,
-        FileBrief} from "./Interface";
+        Project,
+        File} from "./Interface";
 import * as E from "../Errors";
 import * as $ from "jquery";
 
@@ -112,9 +112,9 @@ class SkeletonManager {
   }
 
   private async getMissingSkeletonFiles(proj: ProjectID): Promise<string[]> {
-    let [localFileBriefList, serverFileList] =
-      await Promise.all([this.storage.getProjectFiles(proj), this.listSkeletonFiles(proj)]);
-    let localFileList = localFileBriefList.map((f: FileBrief) => f.name);
+    let [localFileObjList, serverFileList] =
+      await Promise.all([this.storage.getFiles(proj), this.listSkeletonFiles(proj)]);
+    let localFileList = localFileObjList.map((f: File) => f.name);
     return serverFileList.filter((f: string) => localFileList.find((g: string) => f === g));
   }
 
@@ -151,7 +151,7 @@ class SkeletonManager {
       from skeletons. */
   public async fetchNewSkeletons(): Promise<string[]> {
     const localProjects = (await this.storage.getProjects())
-      .map((p: ProjectBrief) => p.name);
+      .map((p: Project) => p.name);
     let skels: any = await Promise.all((await this.getProjectsWithSkeletons())
       .map(async (a: string) => [a, await this.getSkeletonZipFileURL(a)]));
     if (await this.currentUserIsWhitelisted()) {

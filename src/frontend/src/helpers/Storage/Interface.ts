@@ -2,8 +2,8 @@ import * as R from "ramda";
 
 export {AbstractStorage,
         Contents, ContentsStored, ContentsID,
-        File, FileID, FileBrief, FileStored,
-        Project, ProjectID, ProjectBrief, ProjectStored,
+        File, FileID, FileEntry, FileStored,
+        Project, ProjectID, ProjectStored,
         Settings, SettingsStored,
         OfflineMode}
 
@@ -11,19 +11,20 @@ enum OfflineMode { Off, On, Forced }
 
 abstract class AbstractStorage {
   // projects
-  public abstract async newProject(name: string): Promise<ProjectBrief>;
+  public abstract async newProject(name: string): Promise<Project>;
   public abstract async getProject(proj: ProjectID): Promise<Project>;
-  public abstract async getProjects(): Promise<ProjectBrief[]>;
+  public abstract async getProjects(): Promise<Project[]>;
   public abstract async deleteProject(proj: ProjectID): Promise<void>;
-  public abstract async getProjectFiles(proj: ProjectID): Promise<FileBrief[]>;
   // files
-  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
-  public abstract async readFile(file: FileID): Promise<File>;
-  public abstract async getFileByName(project: ProjectID, filename: string): Promise<File|false>;
+  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileEntry>;
+  public abstract async readFile(file: FileID, contents?: boolean): Promise<FileEntry>;
+  public abstract async getFiles(proj: ProjectID, question?: string, contents?: boolean): Promise<File[]>;
+  public abstract async getFileByName(project: ProjectID, filename: string): Promise<FileEntry|false>;
   public abstract async writeFile(file: FileID, contents: string|undefined): Promise<FileID>;
-  public abstract async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileBrief>;
+  public abstract async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileEntry>;
   public abstract async deleteFile(project: ProjectID, filename: string): Promise<void>;
   // questions
+  public abstract async getQuestions(proj: ProjectID): Promise<string[]>;
   public abstract async newQuestion(proj: ProjectID, question: string): Promise<void>;
   public abstract async deleteQuestion(proj: ProjectID, question: string): Promise<void>;
   public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
@@ -36,12 +37,13 @@ abstract class AbstractStorage {
   public abstract async setSettings(settings: Settings): Promise<void>;
   public abstract async getSettings(): Promise<Settings>;
   // table dump
-  public abstract async getAllFiles(): Promise<FileBrief[]>;
+  public abstract async getAllFiles(): Promise<File[]>;
 }
 
-type ContentsID = string;
-type FileID = string;
-type ProjectID = string;
+type UUID = string;
+type ContentsID = UUID;
+type FileID = UUID;
+type ProjectID = UUID;
 
 class Contents implements ContentsStored {
   id: ContentsID;
@@ -62,21 +64,16 @@ class Contents implements ContentsStored {
 // NOTE: File objects may not necessarily have a valid
 // prototype chain.  Do _NOT_ use instanceof to test
 // if something's a File object.
-class File implements FileStored {
-  public id: FileID;
-  public name: string; // a file name is (test|q*|common)/name
+class File {
+  public name: string; // a file name is (question|common)(/tests)?/name
   public project_id: ProjectID;
-  public project: ProjectID;
-  public open: boolean;
   public contents_id: ContentsID | false; // false => directory
-  public contents: Contents | false; // false => directory or contents not loaded yet
+  public contents: Contents | false; // false => directory or contents not loaded
   public flags: number;
 
-  constructor(id: FileID, obj: FileStored | File) {
-    this.id = id;
+  constructor(obj: FileStored | File) {
     this.name = obj.name;
     this.project_id = obj.project_id;
-    this.project = obj.project_id;
     this.contents_id = obj.contents_id;
     this.contents = false;
     if (obj instanceof File) {
@@ -84,32 +81,37 @@ class File implements FileStored {
     }
   }
 
-  public mergeIdFrom(target: FileBrief) {
-    this.id = target.id;
-    this.name = target.name;
-  }
   public basename() {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");
     arr.pop();
     return arr.join(".");
   }
+
   public extension() {
     return this.name.split(".").pop();
   }
+
   public question() {
     return this.name.split("/")[0];
   }
+
   public clone() {
-    return new File(this.id, this);
+    return new File(this);
   }
 }
 
-class FileBrief extends File {
-  public contents: Contents | false = false;
-  constructor(id: FileID, obj: FileStored) {
-    super(id, obj);
-    this.contents = false;
+class FileEntry extends File {
+  public id: FileID;
+
+  constructor(obj: FileStored) {
+    super(obj);
+    this.id = obj.id as string;
+  }
+
+  public mergeIdFrom(target: FileEntry) {
+    this.id = target.id;
+    this.name = target.name;
   }
 }
 
@@ -119,20 +121,13 @@ class Project implements ProjectStored {
   public last_used: number;
   public settings: {[index: string]: string}; // Read-only copy of settings
 
-  constructor(id: ProjectID, obj: ProjectStored) {
-    this.id = id;
+  constructor(obj: ProjectStored) {
+    this.id = obj.id as ProjectID;
     this.name = obj.name;
     this.last_used = obj.last_used;
     this.settings = obj.settings;
   }
 }
-
-class ProjectBrief extends Project {
-  constructor(id: ProjectID, obj: ProjectStored) {
-    super(id, obj);
-    this.settings = {};
-  }
-};
 
 class Settings implements SettingsStored {
   public id: 0 = 0;

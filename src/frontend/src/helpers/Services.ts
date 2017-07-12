@@ -3,8 +3,8 @@ import {SeashellWebsocket} from "./Websocket/WebsocketClient";
 import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {AbstractStorage,
-        File, FileID, FileBrief,
-        Project, ProjectID, ProjectBrief,
+        File, FileID,
+        Project, ProjectID,
         Settings,
         OfflineMode} from "./Storage/Interface";
 import {SyncProtocol} from "./Storage/SyncProtocol";
