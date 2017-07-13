@@ -340,10 +340,10 @@
         ('project name)
         ('question question)
         ('tests test))
-       (define-values (success? result)
+       (define result
          (compile-and-run-project/db name question test))
        `#hash((id . ,id)
-              (success . ,success?)
+              (success . #t)
               (result . ,result))]
       [(hash-table
          ('id id)

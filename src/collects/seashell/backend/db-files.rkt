@@ -187,13 +187,15 @@
 ;;
 ;; Runner file is determined by the project settings. This function access the database
 ;;  then calls compile-and-run-project with the appropriate parameters.
-(: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
+(: compile-and-run-project/db (-> String String (Listof String) (HashTable Symbol JSExpr)))
 (define (compile-and-run-project/db pid question tests)
   (define tmpdir (make-temporary-file "seashell-compile-tmp-~a" 'directory))
   (match-define (cons res hsh) (dynamic-wind
     void
     (thunk (define run-file (call-with-read-transaction (thunk
         (define proj (select-id "projects" pid))
+        (unless proj (raise (exn:fail (format "Project with id ~a does not exist." pid)
+                                      (current-continuation-marks))))
         (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
         (export-project pid #f tmpdir)
         (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
@@ -204,4 +206,4 @@
       (define-values (res hsh) (compile-and-run-project tmpdir run-file question tests #t))
       (cons res hsh))
     (thunk (delete-directory/files tmpdir))))
-  (values res hsh))
+  hsh)

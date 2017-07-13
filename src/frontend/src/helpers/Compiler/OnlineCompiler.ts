@@ -37,10 +37,10 @@ class OnlineCompiler extends AbstractCompiler {
     this.socket.register_callback("test", this.handleTest());
   }
 
-  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
+  public async compileAndRunProject(pid: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     const mode = this.getOfflineMode();
     if (!this.socket.isConnected() && mode === OfflineMode.On || mode === OfflineMode.Forced) {
-      return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
+      return this.offlineCompiler.compileAndRunProject(pid, question, file, runTests);
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
@@ -49,18 +49,17 @@ class OnlineCompiler extends AbstractCompiler {
 
     let tests: TestBrief[] = [];
     if (runTests) {
-      tests = await this.getTestsForQuestion(proj, question);
+      tests = await this.getTestsForQuestion(pid, question);
       if (tests.length < 1) {
         throw new CompilerError("There are no tests to run for this question.");
       }
     }
 
-    let project = await this.storage.getProject(proj);
     let result: any = null;
     try {
       result = await this.socket.sendMessage({
         type: "compileAndRunProject",
-        project: project.name,
+        project: pid,
         question: question,
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
@@ -94,11 +93,11 @@ class OnlineCompiler extends AbstractCompiler {
     if (result.status === "running") {
       const pids = runTests ? result.pids : [result.pid];
       this.activePIDs = this.activePIDs.concat(pids);
-      pids.map((pid: number) => {
+      pids.map((procid: number) => {
         this.socket.sendMessage({
           type: "startIO",
-          project: project.name,
-          pid: pid
+          project: pid,
+          pid: procid
         });
       });
     }

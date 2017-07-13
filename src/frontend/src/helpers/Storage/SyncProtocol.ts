@@ -125,16 +125,14 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
 
     try {
-      this.socket.register_callback("disconnected", (msg: any) => {
-        onError(msg, RECONNECT_DELAY);
-      });
-      this.socket.register_callback("failed", (msg: any) => {
-        onError(msg, RECONNECT_DELAY);
+      // reconnect the sync protocol after the websocket service has taken care
+      //  of the automatic reconnecting.
+      this.socket.register_callback("connected", (msg: any) => {
+        onError(msg, 100);
       });
 
       await this.connect(context, baseRevision, syncedRevision, changes, partial, onChangesAccepted);
     } catch (e) {
-      onError("Websocket is disconnected", RECONNECT_DELAY);
       // don't throw errors that result from being disconnected
       if (this.socket.isConnected()) {
         throw new E.WebsocketError("Error occurred while syncing.", e);

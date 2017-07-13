@@ -78,7 +78,10 @@ class LocalStorage implements AbstractStorage {
 
   public async getFiles(pid: ProjectID, question: string = "", contents: boolean = false): Promise<File[]> {
     this.debug && console.log("getFiles");
-    return this.db.transaction("r", this.db.files, async () => {
+    const tables = contents ?
+      [this.db.files, this.db.contents] :
+      [this.db.files];
+    return this.db.transaction("r", tables, async () => {
       let res = (await this.db.files.where("project_id").equals(pid).toArray())
         .filter((item: FileStored) => item.id && item.contents_id);
       if (question !== "") {
@@ -331,15 +334,10 @@ class LocalStorage implements AbstractStorage {
     return `${question}_open_files`;
   }
 
-  private wrapLog<T>(val: T): T {
-    console.log("wrapLog", val);
-    return val;
-  }
-
   public async getOpenFiles(pid: ProjectID, question: string): Promise<string[]> {
     this.debug && console.log("getOpenFiles");
     return this.db.transaction("r", this.db.projects, async () => {
-      return this.wrapLog(JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]"));
+      return JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
     });
   }
 
@@ -350,7 +348,7 @@ class LocalStorage implements AbstractStorage {
       return this.setProjectSetting(
         pid,
         this.openFilesKey(question),
-        this.wrapLog(JSON.stringify(open.concat([filename]))));
+        JSON.stringify(open.concat([filename])));
     });
   }
 
