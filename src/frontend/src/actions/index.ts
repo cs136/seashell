@@ -213,7 +213,6 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         switchFile: (project: S.ProjectID, filename: string) => {
-          console.log("switchfile-action");
           return actions.dispatch.file.flushFileBuffer()
             .then(() => { return asyncAction(storage().getFileByName(project, filename)); })
             .then((fullfile) => {

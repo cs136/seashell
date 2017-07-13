@@ -60,21 +60,21 @@
     (: get-send-changes (-> (-> Void)))
     (define/private (get-send-changes)
       (lambda ()
-        ;; TODO confirm that the below is the correct way to do this...
-        (define changes (map (lambda ([chg : (Pairof (Pairof String String) database-change)])
-            (database-change->json (cdr chg)))
-          (hash->list (reduce-changes (map row->change
-            (send database fetch-changes synced-revision (assert current-client)))))))
-        (define rev (send database current-revision))
-        (send-message
-          #{`#hasheq((id . -5)
-                     (success . #t)
-                     (result . 
-                       ,#{`#hasheq((type . "changes")
-                               (changes . ,changes)
-                               (currentRevision . ,rev)
-                               (partial . #f)) :: JSExpr})) :: JSExpr})
-        (set! synced-revision rev)))
+        (send database read-transaction (thunk
+          (define changes (map (lambda ([chg : (Pairof (Pairof String String) database-change)])
+              (database-change->json (cdr chg)))
+            (hash->list (reduce-changes (map row->change
+              (send database fetch-changes synced-revision (assert current-client)))))))
+          (define rev (send database current-revision))
+          (send-message
+            #{`#hasheq((id . -5)
+                       (success . #t)
+                       (result . 
+                         ,#{`#hasheq((type . "changes")
+                                 (changes . ,changes)
+                                 (currentRevision . ,rev)
+                                 (partial . #f)) :: JSExpr})) :: JSExpr})
+          (set! synced-revision rev)))))
 
 
     ;; adds the current client to the given hash and converts to a database-change
@@ -88,9 +88,10 @@
     (: subscribe (-> (U Integer False) Void))
     (define/public (subscribe revision)
       (set! synced-revision (if revision revision 0))
-      ((get-send-changes))
-      (when current-client
-        (send database subscribe (assert current-client) (get-send-changes))))
+      (send database read-transaction (thunk
+        ((get-send-changes))
+        (when current-client
+          (send database subscribe (assert current-client) (get-send-changes))))))
 
     (: sync-changes (-> (Listof database-change) Integer Boolean Void))
     (define/public (sync-changes changes revision partial)
@@ -123,6 +124,7 @@
             (define srv-changes (map row->change (send database fetch-changes base (assert current-client))))
             (define resolved (resolve-conflicts changes srv-changes))
             (map (lambda ([chg : database-change])
+              (logf 'info "Syncing change: ~a" chg)
               (cond
                 [(= (database-change-type chg) CREATE)
                   (send database apply-create

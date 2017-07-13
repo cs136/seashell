@@ -27,7 +27,7 @@ export {Services, DispatchFunction};
 type DispatchFunction = (act: Object) => Object;
 
 namespace Services {
-  const SEASHELL_DB_VERSION_NUMBER = 11;
+  const SEASHELL_DB_VERSION_NUMBER = 12;
 
   let connection: Connection;
   let dispatch: DispatchFunction | null = null;

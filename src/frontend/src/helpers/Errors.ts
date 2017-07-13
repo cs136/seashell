@@ -92,5 +92,6 @@ class StorageError extends GenericError {
 class ConflictError extends GenericError {
   constructor(filename: string, results: S.File[]) {
     super(`Conflict occurred in file ${filename}.`);
+    console.log("ConflictError", results);
   }
 }

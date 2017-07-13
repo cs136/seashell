@@ -16,7 +16,6 @@ class QuestionList extends React.Component<QuestionListProps & actionsInterface,
 
     render() {
       const project = this.props.appState.currentProject;
-      console.log("switchquestion-diag");
       if (project)
         return (<Menu>
           {project.questions.map((question: string) =>

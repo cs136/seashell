@@ -30,7 +30,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
     const filename = this.props.filename;
     return (<Menu>
       <MenuItem text="Set as Run File" onClick={
-        this.props.dispatch.file.setRunFile.bind(null, this.question, filename)
+        this.props.dispatch.file.setRunFile.bind(null, this.project, this.question, filename)
       }/>
       <MenuDivider />
       <MenuItem text="Rename/Move" onClick={() => {

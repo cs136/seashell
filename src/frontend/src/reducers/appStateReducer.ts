@@ -291,7 +291,8 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (find(action.payload, state.currentProject.currentQuestion.openFiles) !== undefined) {
+        if (state.currentProject.currentQuestion.openFiles.find((ofile) =>
+              ofile === action.payload) !== undefined) {
           return state; // don't duplicate files
         }
         state.currentProject.currentQuestion.openFiles.push(action.payload);

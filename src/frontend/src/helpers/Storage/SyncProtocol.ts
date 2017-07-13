@@ -133,10 +133,12 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       });
 
       await this.connect(context, baseRevision, syncedRevision, changes, partial, onChangesAccepted);
-      // await this.socket.register_callback("connected",
-      //   this.connect.bind(this, context, baseRevision, syncedRevision, changes, partial, onChangesAccepted), true);
     } catch (e) {
-      throw new E.WebsocketError("Error occurred while syncing.", e);
+      onError("Websocket is disconnected", RECONNECT_DELAY);
+      // don't throw errors that result from being disconnected
+      if (this.socket.isConnected()) {
+        throw new E.WebsocketError("Error occurred while syncing.", e);
+      }
     }
   }
 }
