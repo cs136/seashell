@@ -49,7 +49,10 @@
 (define (sqlite-connection path)
   (virtual-connection
    (connection-pool
-    (thunk (sqlite3-connect #:database path #:use-place #t)))))
+    (thunk 
+      (if (or (not (path-string? path)) (file-exists? path))
+          (sqlite3-connect #:database path #:use-place #f)
+          (sqlite3-connect #:database path #:use-place #f #:mode 'create))))))
 (define compute-conn (sqlite-connection 'memory))
 
 ;; (string-or-jsexpr->string expr) -> String

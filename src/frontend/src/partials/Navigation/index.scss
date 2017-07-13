@@ -1,0 +1,68 @@
+@import "../../Layout";
+.logo{
+    height:1em;
+    display:inline-block;
+    top:0.15em;
+    position:relative;
+}
+.home{ 
+    padding:0 !important;
+    text-align:center;
+    margin-right:1em;
+}   
+.dialogStyle{
+    max-width:500px !important;
+    width: 100% !important;
+    margin:4em 0zem !important;
+    background:#FFF !important;
+    top:0 !important;
+}
+
+.navbar{
+    background:#FFF;
+    border-bottom:1px solid #EEE !important;
+    border-style:none;
+    box-shadow:none !important;
+    padding:0.4em 1em !important;
+    justify-content: space-between;
+    height:auto !important;
+    :global{
+        .pt-align-right{
+            display:flex;
+            float:none !important;
+        }
+    }
+}
+.navbar>div button{
+    margin:0 0.4em;
+}
+.navbar>div{
+    height:auto;
+}
+
+.options{
+    margin-left:auto;
+}
+
+:global{
+    .pt-dark{
+        :local{
+            .navbar{
+                border-bottom-color: $darkBorder !important;
+            }
+        }
+    }
+}
+
+@media(max-width: $mobile-break){
+    .navbar{
+        flex-wrap: wrap;
+        line-height:40px;
+        :global{
+            .pt-align-right{
+                width:100%;
+                flex-wrap: wrap;
+            }
+        }
+    }
+}

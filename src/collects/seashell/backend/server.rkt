@@ -33,6 +33,7 @@
          seashell/backend/authenticate
          seashell/compiler
          seashell/crypto
+         seashell/db/database
          web-server/web-server
          web-server/http/request-structs
          ffi/unsafe/atomic
@@ -218,6 +219,7 @@
     ;; Directory setup.
     (init-environment)
     (init-projects)
+    (init-sync-database)
 
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
@@ -307,8 +309,6 @@
                                       (conn-dispatch keepalive-sema conn state))
                                     #:conn-headers (lambda (method url headers)
                                                      (values #t '() #t))))
-             (filter:make #rx"^/export/" project-export-dispatcher)
-             (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
 
           ;; Start the server.

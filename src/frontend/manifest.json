@@ -1,0 +1,13 @@
+{
+  "short_name": "Seashell",
+  "name": "Seashell",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "256x221"
+    }
+  ],
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait"
+}

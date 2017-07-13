@@ -68,7 +68,8 @@
            (lambda () (let ([err (read-line ssherr)])
                         (if (eof-object? err)
                             (thunk sshout)
-                            (raise (exn:fail (format "Error when fetching template: ~a" err))))))
+                            (raise (exn:fail (format "Error when fetching template: ~a" err)
+                                             (current-continuation-marks))))))
            (lambda () (close-input-port sshout)
                       (close-input-port ssherr)))]
        [else

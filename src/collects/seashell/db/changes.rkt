@@ -19,20 +19,23 @@
 (require typed/json)
 (require typed/db)
 (require typed/db/sqlite3)
+(require seashell/utils/typed-json-struct)
 (require "support.rkt")
 (require "updates.rkt")
 
 (provide (struct-out database-change)
+         database-change->json
+         json->database-change
          row->change
          reduce-changes
          resolve-conflicts)
 
-(struct database-change ([type : Integer] [client : String] [table : String] [key : String] [data : String]) #:transparent)
+(json-struct database-change ([type : Integer] [client : String] [table : String] [key : String] [data : String]) #:transparent)
 
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
 
-;; (row-change SQLRow) -> database-change
+;; (row->change SQLRow) -> database-change
 ;; Converts a row in the SQLite3 database to a database-change struct.
 ;; Arguments:
 ;;  row - Row as given by query-row.

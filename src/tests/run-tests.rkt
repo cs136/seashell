@@ -4,15 +4,13 @@
          rackunit/text-ui
          errortrace
          "tests/test-environment.rkt"
-         "tests/files.rkt"
-         "tests/project.rkt"
          "tests/crypto.rkt"
          "tests/compiler.rkt"
          "tests/asan-error-parse.rkt"
          "tests/config.rkt"
          "tests/cli.rkt"
-         "tests/offline.rkt"
-         "tests/db.rkt")
+         "tests/db.rkt"
+         "tests/db-files.rkt")
 
 (setup-test-environment)
 ;; Run tests
@@ -23,13 +21,11 @@
         config-suite
         asan-parser-suite
         compiler-suite
-        file-suite
-        project-suite
         crypto-suite
         asan-parser-suite
         seashell-cli-suite
-        offline-suite
         database-suite
+        db-files-suite
         ))))
 (teardown-test-environment)
 
