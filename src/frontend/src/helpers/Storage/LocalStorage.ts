@@ -88,12 +88,18 @@ class LocalStorage implements AbstractStorage {
         res = res.filter((item: FileStored) =>
           item.name.startsWith(question) || item.name.startsWith("common"));
       }
+      let result: File[] = [];
       if (contents) {
-        return Promise.all(res.map((item: FileStored) => this.readFile(item.id as FileID)));
+        result = await Promise.all(res.map((item: FileStored) => this.readFile(item.id as FileID)));
       }
       else {
-        return res.map((item: FileStored) => new File(item));
+        result = res.map((item: FileStored) => new File(item));
       }
+      return result.sort((a: File, b: File) => {
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return 1;
+        return 0;
+      });
     });
   }
 
@@ -103,7 +109,7 @@ class LocalStorage implements AbstractStorage {
       let res = await this.db.files.where("project_id").equals(pid).toArray();
       return res.filter((item: FileStored) =>
           !item.contents_id && item.name !== "common" && item.name.indexOf("/") === -1)
-        .map((item: FileStored) => item.name);
+        .map((item: FileStored) => item.name).sort();
     });
   }
 
@@ -319,7 +325,14 @@ class LocalStorage implements AbstractStorage {
       await this.db.projects.toCollection().each((proj: Project) => {
         projs.push(new Project(proj));
       });
-      return projs;
+      return projs.sort((a: Project, b: Project) => b.last_used - a.last_used);
+    });
+  }
+
+  public updateLastUsed(pid: ProjectID): Promise<void> {
+    this.debug && console.log("updateLastUsed");
+    return this.db.transaction("rw", this.db.projects, () => {
+      return this.db.projects.update(pid, {last_used: Date.now()});
     });
   }
 
@@ -337,7 +350,7 @@ class LocalStorage implements AbstractStorage {
   public async getOpenFiles(pid: ProjectID, question: string): Promise<string[]> {
     this.debug && console.log("getOpenFiles");
     return this.db.transaction("r", this.db.projects, async () => {
-      return JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]");
+      return JSON.parse(await this.getProjectSetting(pid, this.openFilesKey(question)) || "[]").sort();
     });
   }
 

@@ -447,27 +447,25 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
         },
         switchProject: (name: string, pid: S.ProjectID) => {
-          // we will leave switching question and file to the UI
-          // efficiency is for noobs
-          function uniqueNotCommon(val: string, idx: Number, arr: any) {
-            return arr.indexOf(val) === idx && val !== "common";
-          }
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
           return asyncAction(webStorage().pullMissingSkeletonFiles(pid)).then(() => {
             return asyncAction(storage().getQuestions(pid))
-              .then((questions: string[]) => dispatch({
-                type: appStateActions.switchProject,
-                payload: {
-                  project: {
-                    termWrite: null,
-                    termClear: null,
-                    name: name,
-                    id: pid,
-                    questions: questions,
-                    currentQuestion: undefined
+              .then((questions: string[]) => {
+                dispatch({
+                  type: appStateActions.switchProject,
+                  payload: {
+                    project: {
+                      termWrite: null,
+                      termClear: null,
+                      name: name,
+                      id: pid,
+                      questions: questions,
+                      currentQuestion: undefined
+                    }
                   }
-                }
-              }));
+                });
+                return asyncAction(storage().updateLastUsed(pid));
+              });
           });
         },
         getAllProjects: async () => {
