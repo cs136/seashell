@@ -185,7 +185,8 @@ namespace Services {
       await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
     } catch (e) {
-      throw new Error("Failed to connect");
+      console.log("Failed to connect", e);
+      //throw new Error("Failed to connect");
     }
   }
 

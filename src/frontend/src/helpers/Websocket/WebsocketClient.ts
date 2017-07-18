@@ -23,7 +23,6 @@ class SeashellWebsocket {
   private websocket?: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
-  private failed: boolean; // not used?
   private closes: () => void;
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
@@ -79,7 +78,7 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.CLOSING: {
-          console.log(`Existing websocket is closing. Wait to reopen new connection.`);
+          console.log("Existing websocket is closing. Wait to reopen new connection.");
           const promise = new Promise<void>((accept, reject) => {
             // wait for a graceful shutdown then reconnect
             websocket.onclose = () => {
@@ -89,7 +88,7 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.CLOSED: {
-          console.log(`Existing websocket is closed. Reopening new connection.`);
+          console.log("Existing websocket is closed. Reopening new connection.");
           // pass through to continue connection
         }
       }
@@ -108,8 +107,6 @@ class SeashellWebsocket {
       this.websocket = new WebSocket(cnn.wsURI);
       this.websocket.onerror = (err) => {
         firstTime() && failed(err);
-        err.preventDefault();
-        err.stopImmediatePropagation();
       };
     } catch (err) {
       console.error(`Could not create WebSocket connection to ${cnn.wsURI}:\n${err}`);
@@ -219,7 +216,6 @@ class SeashellWebsocket {
 
       this.invoke_cb("connected");
     } catch (err) {
-      console.log(err);
       if (err instanceof E.RequestError) {
         firstTime() && failed();
         return;
@@ -287,8 +283,6 @@ class SeashellWebsocket {
     if (type === "disconnected" && ! this.isConnected() && now) {
       return cb();
     } else if (type === "connected" && this.isConnected() && now) {
-      return cb();
-    } else if (type === "failed" && this.failed && now) {
       return cb();
     }
   }
