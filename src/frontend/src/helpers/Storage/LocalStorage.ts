@@ -386,6 +386,20 @@ class LocalStorage implements AbstractStorage {
         )));
     });
   }
+
+  public waitForSync(expectingChange: boolean = false): Promise<void> {
+    return this.db.waitForSync(expectingChange);
+  }
+}
+
+// from http://dexie.org/docs/Syncable/Dexie.Syncable.Statuses.html
+enum SyncStatus {
+  ERROR = -1,
+  OFFLINE = 0,
+  CONNECTING = 1,
+  ONLINE = 2,
+  SYNCING = 3,
+  ERROR_WILL_RETRY = 4
 }
 
 class StorageDB extends Dexie {
@@ -393,6 +407,10 @@ class StorageDB extends Dexie {
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
   public settings: Dexie.Table<SettingsStored, number>;
+
+  // list of [accept, reject] pairs waiting for sync to complete
+  private waitlist: [Function, Function][];
+  private syncStatus: SyncStatus;
 
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
@@ -403,10 +421,44 @@ class StorageDB extends Dexie {
       settings: "$$id"
     });
 
+    this.waitlist = [];
+
     // No TS bindings for Dexie.Syncable
     (<any>this).syncable.connect("seashell", "http://no-host.org");
-    (<any>this).syncable.on("statusChanged", (newStatus: any, url: string) => {
+    (<any>this).syncable.on("statusChanged", (newStatus: SyncStatus, url: string) => {
       console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
+      this.syncStatus = newStatus;
+      if (newStatus === SyncStatus.ONLINE) {
+        for (let i in this.waitlist) {
+          this.waitlist[i][0]();
+        }
+        this.waitlist = [];
+      } else if (newStatus === SyncStatus.ERROR || newStatus === SyncStatus.ERROR_WILL_RETRY) {
+        for (let i in this.waitlist) {
+          this.waitlist[i][1]();
+        }
+        this.waitlist = [];
+      }
+    });
+  }
+
+  // Returns a promise that resolves when the database changes to ONLINE.
+  // The expectingChange parameter should be set to true if it is known that
+  //  a sync is incoming. This works around the fact that Dexie does not
+  //  start syncing immediately when a change is made to the database.
+  // Setting this to true in this case will avoid a race condition.
+  // Setting it to true when no sync is incoming will cause the promise
+  //  to not resolve until a database change is made.
+  public waitForSync(expectingChange: boolean = false): Promise<void> {
+    return new Promise<void>(async (acc, rej) => {
+      if (!expectingChange && this.syncStatus === SyncStatus.ONLINE) {
+        acc();
+      } else if (this.syncStatus === SyncStatus.ERROR ||
+                 this.syncStatus === SyncStatus.ERROR_WILL_RETRY) {
+        rej();
+      } else {
+        this.waitlist.push([acc, rej]);
+      }
     });
   }
 }

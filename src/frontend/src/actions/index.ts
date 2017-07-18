@@ -182,8 +182,8 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        flushFileBuffer: () : Promise<void> => {
-          return new Promise<void>((resolve, reject) => {
+        flushFileBuffer: () : Promise<boolean> => {
+          return new Promise<boolean>((resolve, reject) => {
             dispatch((dispatch: Function, getState: () => globalState) => {
               const state = getState();
               if (state.appState.currentProject &&
@@ -196,18 +196,21 @@ const mapDispatchToProps = (dispatch: Function) => {
                 }
                 if (target && unwrittenContent) {
                   asyncAction(storage().writeFile(target, unwrittenContent))
-                    .then((fid: S.FileID) => dispatch({
-                      type: appStateActions.changeFileContent,
-                      payload: {
-                        contents: unwrittenContent,
-                        id: fid
-                      }
-                    })).then(resolve).catch(reject);
+                    .then((fid: S.FileID) => {
+                      dispatch({
+                        type: appStateActions.changeFileContent,
+                        payload: {
+                          contents: unwrittenContent,
+                          id: fid
+                        }
+                      });
+                      resolve(true);
+                    }).catch(reject);
                 } else {
-                  resolve();
+                  resolve(false);
                 }
               } else {
-                resolve(); // Nothing to flush
+                resolve(false); // Nothing to flush
               }
             });
           });
@@ -508,7 +511,8 @@ const mapDispatchToProps = (dispatch: Function) => {
             payload: {}
           });
           asyncAction(actions.dispatch.file.flushFileBuffer())
-            .then(() =>
+            .then((expectingChange) =>
+                asyncAction(storage().waitForSync(expectingChange)).then(() =>
                   asyncAction(Services.compiler().compileAndRunProject(project,
                     question, fid, test)).then((result: C.CompilerResult) => {
                       dispatch({
@@ -526,7 +530,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                           payload: {}
                         });
                       }
-                    }).catch((reason) => {
+                    })).catch((reason) => {
                       dispatch({
                         type: appStateActions.setNotRunning,
                         payload: {}

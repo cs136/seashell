@@ -60,7 +60,7 @@ namespace Services {
 
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,
-      dispatch, async () => {}, getOfflineMode);
+      dispatch, getOfflineMode);
 
     if (disp !== null) {
       socketClient.register_callback("connected", () => disp({
@@ -185,8 +185,7 @@ namespace Services {
       await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
     } catch (e) {
-      console.log("Failed to connect", e);
-      //throw new Error("Failed to connect");
+      throw new Error("Failed to connect");
     }
   }
 

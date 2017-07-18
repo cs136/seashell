@@ -3,6 +3,7 @@ import * as E from "../Errors";
 import Dexie from "dexie";
 import "dexie-observable";
 import "dexie-syncable";
+
 export {SyncProtocol}
 
 const CREATE = 1;
