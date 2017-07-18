@@ -214,14 +214,20 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         switchFile: (project: S.ProjectID, filename: string) => {
           return actions.dispatch.file.flushFileBuffer()
-            .then(() => { return asyncAction(storage().getFileByName(project, filename)); })
-            .then((fullfile) => {
-              if (fullfile) {
-                dispatch({
-                  type: appStateActions.switchFile,
-                  payload: fullfile
+            .then(() => {
+              return asyncAction(storage().getFileByName(project, filename)).then((fullfile) => {
+                return asyncAction(storage().getVersions(project, filename)).then((versions) => {
+                  if (fullfile) {
+                    dispatch({
+                      type: appStateActions.switchFile,
+                      payload: {
+                        file: fullfile,
+                        versions: versions
+                      }
+                    });
+                  }
                 });
-              }
+              });
             });
         },
         addFile: (project: string, question: string, filename: string, newFileContent: string) => {
@@ -295,17 +301,28 @@ const mapDispatchToProps = (dispatch: Function) => {
             }));
         },
         closeFile: (project: S.ProjectID, question: string, filename: string) => {
-          storage().removeOpenFile(project, question, filename).then((questions) =>
+          asyncAction(storage().removeOpenFile(project, question, filename)).then((questions) =>
             dispatch({
               type: appStateActions.closeFile,
               payload: filename
             }));
         },
         setRunFile: (project: S.ProjectID, question: string, filename: string) => {
-          storage().setFileToRun(project, question, filename).then(() => dispatch({
+          asyncAction(storage().setFileToRun(project, question, filename)).then(() => dispatch({
             type: appStateActions.setRunFile,
             payload: filename
           }));
+        },
+        revertFile: (fid: S.FileID, cnts: S.Contents) => {
+          asyncAction(storage().writeFile(fid, cnts.contents)).then((nid) => {
+            dispatch({
+              type: appStateActions.changeFileContent,
+              payload: {
+                contents: cnts.contents,
+                id: nid
+              }
+            });
+          });
         },
       },
       question: {

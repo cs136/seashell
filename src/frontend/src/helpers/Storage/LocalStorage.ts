@@ -113,9 +113,9 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async getFileByName(pid: ProjectID, filename: string, getContents: boolean = true): Promise<FileEntry|false> {
+  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
     this.debug && console.log("getFileByName");
-    const tbls = getContents ?
+    const tbls = contents ?
                  [this.db.files, this.db.contents] :
                  [this.db.files];
     return this.db.transaction("r", tbls, async () => {
@@ -127,12 +127,12 @@ class LocalStorage implements AbstractStorage {
         return false;
       } else {
         let file = new FileEntry(result[0]);
-        if (getContents && file.contents_id) {
-          let contents = await this.db.contents.get(file.contents_id);
-          if (contents === undefined) {
+        if (contents && file.contents_id) {
+          let cnts = await this.db.contents.get(file.contents_id);
+          if (cnts === undefined) {
             throw new E.StorageError(`File contents for ${filename} does not exist.`);
           } else {
-            file.contents = new Contents(file.contents_id, contents);
+            file.contents = new Contents(file.contents_id, cnts);
           }
         }
         return file;
@@ -162,6 +162,15 @@ class LocalStorage implements AbstractStorage {
       await this.deleteFile(project, file.name);
       let nFile = await this.newFile(project, newName, file.contents ? file.contents.contents : "");
       return new FileEntry(nFile);
+    });
+  }
+
+  public async getVersions(pid: ProjectID, filename: string): Promise<Contents[]> {
+    this.debug && console.log("getVersions");
+    return this.db.transaction("r", this.db.contents, async () => {
+      let result = await this.db.contents.where("[project_id+filename]")
+        .equals([pid, filename]).toArray();
+      return result.map((vrs: ContentsStored) => new Contents(vrs.id as ContentsID, vrs));
     });
   }
 
@@ -250,7 +259,7 @@ class LocalStorage implements AbstractStorage {
       });
       const cid = await this.db.contents.add({
         project_id: pid,
-        filename: fid,
+        filename: name,
         contents: contents,
         time: Date.now()
       });

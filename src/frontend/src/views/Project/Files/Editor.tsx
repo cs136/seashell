@@ -181,7 +181,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     let model = this.editor.getModel();
     if (model.getLineCount() <= 1) {
       // Default to LF on files with at most one line.
-      model.setEOL(0); // --> https://microsoft.github.io/monaco-editor/api/enums/monaco.editor.endoflinesequence.html 
+      model.setEOL(0); // --> https://microsoft.github.io/monaco-editor/api/enums/monaco.editor.endoflinesequence.html
     }
   }
 

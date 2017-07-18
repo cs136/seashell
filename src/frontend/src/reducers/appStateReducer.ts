@@ -9,18 +9,23 @@ class CurrentFile extends S.FileEntry {
   public unwrittenContent?: string;
   public target?: S.FileID;
   public flusher?: number;
+  public versions: S.Contents[];
 
-  constructor(other: CurrentFile | S.FileEntry) {
+  constructor(other: CurrentFile | S.FileEntry, versions: S.Contents[]) {
     super(other);
+    if (versions) {
+      this.versions = versions;
+    }
     if (other instanceof CurrentFile) {
       this.unwrittenContent = other.unwrittenContent;
       this.target = other.target;
       this.flusher = other.flusher;
+      this.versions = other.versions;
     }
   }
 
   public clone(): CurrentFile {
-    let result: CurrentFile = new CurrentFile(this);
+    let result: CurrentFile = new CurrentFile(this, []);
     return result;
   }
 }
@@ -175,10 +180,11 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.switchFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (action.payload instanceof S.FileEntry) {
-          state.currentProject.currentQuestion.currentFile = new CurrentFile(action.payload);
+        if (action.payload.file instanceof S.FileEntry) {
+          state.currentProject.currentQuestion.currentFile =
+            new CurrentFile(action.payload.file, action.payload.versions);
         } else {
-          console.error("switchFile was not passed a file:", action.payload);
+          console.error("switchFile was not passed a file entry:", action.payload);
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
