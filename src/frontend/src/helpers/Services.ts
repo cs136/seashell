@@ -56,7 +56,8 @@ namespace Services {
     localStorage    = new LocalStorage(options.debugLocalStorage);
     webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
 
-    Dexie.Syncable.registerSyncProtocol("seashell", new SyncProtocol(socketClient));
+    Dexie.Syncable.registerSyncProtocol("seashell",
+      new SyncProtocol(socketClient, disp, options.debugLocalStorage));
 
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,

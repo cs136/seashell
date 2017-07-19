@@ -5,7 +5,7 @@ export {AbstractStorage,
         File, FileID, FileEntry, FileStored,
         Project, ProjectID, ProjectStored,
         Settings, SettingsStored,
-        OfflineMode}
+        OfflineMode, ChangeType}
 
 enum OfflineMode { Off, On, Forced }
 
@@ -46,6 +46,12 @@ type UUID = string;
 type ContentsID = UUID;
 type FileID = UUID;
 type ProjectID = UUID;
+
+enum ChangeType {
+  CREATE = 1,
+  UPDATE = 2,
+  DELETE = 3
+}
 
 class Contents implements ContentsStored {
   id: ContentsID;

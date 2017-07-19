@@ -90,7 +90,8 @@ export enum appStateActions {
   setDiags,
   updateCurrentFileIfNameEquals,
   connected,
-  disconnected
+  disconnected,
+  applyServerChanges
 };
 
 export default function appStateReducer(state: appStateReducerState = {
@@ -336,6 +337,66 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.disconnected:
       state = clone(state);
       return mergeBetter(state, {connected: false});
+    case appStateActions.applyServerChanges:
+      state = clone(state);
+      const findIndex = <T>(arr: T[], pred: (x: T) => boolean): number => {
+        for (let i in arr) {
+          if (pred(arr[i]))
+            return parseInt(i);
+        }
+        return -1;
+      };
+      let chgs = action.payload;
+      let pchgs = chgs.filter((chg: any) => chg.table === "projects");
+      // update the state's project list
+      for (let i in pchgs) {
+        if (pchgs[i].type === S.ChangeType.UPDATE) {
+          let cur = findIndex(state.projects, (proj) => pchgs[i].key === proj.id);
+          if (cur !== -1) {
+            state.projects[cur] = mergeBetter(state.projects[cur], pchgs[i].mods);
+          }
+        } else if (pchgs[i].type === S.ChangeType.DELETE) {
+          state.projects = state.projects.filter((proj) => proj.id !== pchgs[i].key);
+        } else if (pchgs[i].type === S.ChangeType.CREATE) {
+          state.projects.push(new S.Project(mergeBetter(pchgs[i].obj, {id: pchgs[i].key}) as S.ProjectStored));
+        }
+      }
+      if (state.currentProject) {
+        const currentProject = state.currentProject;
+        // update the current project
+        let pchg = pchgs.find((p: any) => currentProject.id === p.key);
+        if (pchg !== undefined) {
+          if (pchg.type === S.ChangeType.UPDATE) {
+            state.currentProject = mergeBetter(state.currentProject, pchg.mods);
+          } else if (pchg.type === S.ChangeType.DELETE) {
+            state.currentProject = undefined;
+          } else {
+            throw new Error("Something bad happened when applying server changes to the current project.");
+          }
+        }
+        if (currentProject.currentQuestion) {
+          const question = currentProject.currentQuestion;
+          // TODO: Do something to update the list of questions, runFile, openFile
+          if (question.currentFile) {
+            const file = question.currentFile;
+            // update the current file
+            let fchg = chgs.find((chg: any) => chg.table === "files"
+              && chg.key === file.id);
+            if (fchg !== undefined) {
+              // if this file entry has been deleted, just jump out of the file
+              if (fchg.type === S.ChangeType.DELETE) {
+                if (state.currentProject
+                    && state.currentProject.currentQuestion) {
+                  state.currentProject.currentQuestion.currentFile = undefined;
+                }
+              } else {
+                throw new Error("Something bad happened when applying server changes to the current file.");
+              }
+            }
+          }
+        }
+      }
+      return state;
     default:
       return state;
   }
