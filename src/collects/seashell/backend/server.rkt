@@ -34,6 +34,7 @@
          seashell/compiler
          seashell/crypto
          seashell/db/database
+         seashell/db/tools
          web-server/web-server
          web-server/http/request-structs
          ffi/unsafe/atomic
@@ -353,6 +354,9 @@
           ;; Detach from backend, and close the credentials port.
           (close-output-port credentials-port)
           (detach)
+
+          ;; TODO: this might not be the best place to start garbage collection
+          (thread seashell-collect-garbage)
 
           ;; Write out the listening port
           (logf 'info "Listening on port ~a." start-result)
