@@ -6,7 +6,7 @@ import { appStateActions } from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";
 import { Settings } from "../helpers/Storage/Interface";
-import { GenericError, LoginError } from "../helpers/Errors";
+import { GenericError, LoginError, ConflictError } from "../helpers/Errors";
 import { showError } from "../partials/Errors";
 import { trim } from "ramda";
 import { settingsActions, settingsReducerState, settingsReducerStateNullable } from "../reducers/settingsReducer";
@@ -27,11 +27,20 @@ const mapStoreToProps = (state: globalState) => state;
 
 const mapDispatchToProps = (dispatch: Function) => {
 
-  async function asyncAction<T>(pr: Promise<T>) {
+  async function asyncAction<T>(pr: Promise<T>): Promise<T> {
     try {
       const result = await pr;
       return result;
     } catch (e) {
+      // in case of a conflict, override regular error handling
+      if (e instanceof ConflictError) {
+        dispatch({
+          type: appStateActions.conflictOccurred,
+          payload: e.results
+        });
+        await actions.dispatch.dialog.toggleResolveConflict();
+        return Promise.reject(e.message);
+      }
       console.error(e);
       if (e.message) {
         showError(e.message);
@@ -91,6 +100,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         toggleAddQuestion: () => {
           dispatch({ type: dialogActions.toggle, payload: "add_question_open" });
+        },
+        toggleResolveConflict: () => {
+          dispatch({ type: dialogActions.toggle, payload: "resolve_conflict_open" });
         }
       },
       settings: {
@@ -297,27 +309,27 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         openFile: (project: S.ProjectID, question: string, filename: string) => {
-          storage().addOpenFile(project, question, filename).then((questions) =>
+          return asyncAction(storage().addOpenFile(project, question, filename)).then((questions) =>
             dispatch({
               type: appStateActions.openFile,
               payload: filename
             }));
         },
         closeFile: (project: S.ProjectID, question: string, filename: string) => {
-          asyncAction(storage().removeOpenFile(project, question, filename)).then((questions) =>
+          return asyncAction(storage().removeOpenFile(project, question, filename)).then((questions) =>
             dispatch({
               type: appStateActions.closeFile,
               payload: filename
             }));
         },
         setRunFile: (project: S.ProjectID, question: string, filename: string) => {
-          asyncAction(storage().setFileToRun(project, question, filename)).then(() => dispatch({
+          return asyncAction(storage().setFileToRun(project, question, filename)).then(() => dispatch({
             type: appStateActions.setRunFile,
             payload: filename
           }));
         },
         revertFile: (fid: S.FileID, cnts: S.Contents) => {
-          asyncAction(storage().writeFile(fid, cnts.contents)).then((nid) => {
+          return asyncAction(storage().writeFile(fid, cnts.contents)).then((nid) => {
             dispatch({
               type: appStateActions.changeFileContent,
               payload: {
@@ -327,6 +339,14 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
           });
         },
+        resolveConflict: (contents: S.Contents) => {
+          return asyncAction(storage().resolveConflict(contents)).then(() =>
+            dispatch({
+              type: appStateActions.conflictResolved,
+              payload: null
+            })
+          );
+        }
       },
       question: {
         addQuestion: (pid: S.ProjectID, newQuestionName: string) => {

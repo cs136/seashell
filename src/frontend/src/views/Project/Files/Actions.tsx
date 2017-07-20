@@ -2,6 +2,7 @@ import * as React from "react";
 import {Menu, MenuItem, MenuDivider} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 import * as S from "../../../helpers/Storage/Interface";
+import {dateString} from "../../../helpers/utils";
 const styles = require("../Project.scss");
 
 export interface ActionsProps {
@@ -34,15 +35,6 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
   }
   render() {
     const filename = this.props.filename;
-
-    const dateString = (timestamp: number) => {
-      let d = new Date(timestamp);
-      let h = d.getHours();
-      let hlf = h < 12 ? "AM" : "PM";
-      h = h % 12;
-      if (h === 0) h = 12;
-      return `${`0${d.getMonth() + 1}`.slice(-2)}/${`0${d.getDate()}`.slice(-2)}/${d.getFullYear().toString().slice(-2)} ${h}:${`0${d.getMinutes()}`.slice(-2)} ${hlf}`;
-    };
 
     return (<Menu>
       <MenuItem text="Set as Run File" onClick={

@@ -51,3 +51,12 @@ export const groupBy = (lst: any[], grp: (a: any) => string): {[key: string]: an
   }
   return result;
 };
+
+export const dateString = (timestamp: number): string => {
+  let d = new Date(timestamp);
+  let h = d.getHours();
+  let hlf = h < 12 ? "AM" : "PM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${`0${d.getMonth() + 1}`.slice(-2)}/${`0${d.getDate()}`.slice(-2)}/${d.getFullYear().toString().slice(-2)} ${h}:${`0${d.getMinutes()}`.slice(-2)} ${hlf}`;
+};

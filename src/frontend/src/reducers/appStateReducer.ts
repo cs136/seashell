@@ -50,6 +50,7 @@ export interface appStateReducerProjectState {
 export interface appStateReducerState {
   [key: string]: any;
   fileOpTarget?: string;
+  conflictContents: S.Contents[];
   projects: S.Project[];
   runState?: number;
   currentProject?: appStateReducerProjectState;
@@ -91,11 +92,14 @@ export enum appStateActions {
   updateCurrentFileIfNameEquals,
   connected,
   disconnected,
-  applyServerChanges
+  applyServerChanges,
+  conflictOccurred,
+  conflictResolved
 };
 
 export default function appStateReducer(state: appStateReducerState = {
     fileOpTarget: undefined,
+    conflictContents: [],
     projects: [],
     runState: 0,
     currentProject: undefined,
@@ -337,6 +341,14 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.disconnected:
       state = clone(state);
       return mergeBetter(state, {connected: false});
+    case appStateActions.conflictOccurred:
+      state = clone(state);
+      state.conflictContents = action.payload;
+      return state;
+    case appStateActions.conflictResolved:
+      state = clone(state);
+      state.conflictContents = [];
+      return state;
     case appStateActions.applyServerChanges:
       state = clone(state);
       const findIndex = <T>(arr: T[], pred: (x: T) => boolean): number => {

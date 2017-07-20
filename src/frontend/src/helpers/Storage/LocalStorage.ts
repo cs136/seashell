@@ -115,17 +115,27 @@ class LocalStorage implements AbstractStorage {
 
   public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
     this.debug && console.log("getFileByName");
-    const tbls = contents ?
-                 [this.db.files, this.db.contents] :
-                 [this.db.files];
-    return this.db.transaction("r", tbls, async () => {
+    return this.db.transaction("r", this.db.files, this.db.contents, async () => {
       let result = await this.db.files.where("[name+project_id]")
         .equals([filename, pid]).toArray();
+      // Now is the time to detect any file conflict on this filename
       if (result.length > 1) {
-        throw new E.ConflictError(filename, result.map((file) => new File(file)));
-      } else if (result.length === 0) {
+        let conflictContents = await Promise.all(result.map(async (file) => {
+          if (file.contents_id) {
+            let conts = await this.db.contents.get(file.contents_id);
+            if (conts) {
+              return new Contents(file.contents_id, conts);
+            } else {
+              throw new E.StorageError("Error when detecting file conflict.", result);
+            }
+          } else {
+            throw new E.StorageError("Error when detecting file conflict.", result);
+          }
+        }));
+        throw new E.ConflictError(filename, conflictContents);
+      } else if (result.length === 0) { // file does not exist
         return false;
-      } else {
+      } else { // file exists, and no conflict
         let file = new FileEntry(result[0]);
         if (contents && file.contents_id) {
           let cnts = await this.db.contents.get(file.contents_id);
@@ -137,6 +147,25 @@ class LocalStorage implements AbstractStorage {
         }
         return file;
       }
+    });
+  }
+
+  public async resolveConflict(contents: Contents): Promise<void> {
+    this.debug && console.log("resolveConflict");
+    return this.db.transaction("rw", this.db.files, async () => {
+      let res = await this.db.files.where("[name+project_id]")
+        .equals([contents.filename, contents.project_id]).toArray();
+      if (res.length < 1) {
+        throw new E.StorageError("Resolving conflict on file that does not exist.");
+      }
+      await this.db.files.where("[name+project_id]")
+        .equals([contents.filename, contents.project_id]).delete();
+      await this.db.files.add({
+        project_id: contents.project_id,
+        name: contents.filename,
+        contents_id: contents.id,
+        flags: res[0].flags
+      });
     });
   }
 
