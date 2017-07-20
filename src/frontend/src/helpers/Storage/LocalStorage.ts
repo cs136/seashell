@@ -171,7 +171,7 @@ class LocalStorage implements AbstractStorage {
 
   public async deleteFile(project: ProjectID, filename: string): Promise<void> {
     this.debug && console.log("deleteFile");
-    return await this.db.transaction("rw", this.db.files, async () => {
+    return await this.db.transaction("rw", this.db.files, this.db.contents, async () => {
       const file = await this.getFileByName(project, filename, false);
       if (!file) {
         throw new E.StorageError(`Deleting file ${filename} which does not exist.`);
@@ -183,7 +183,7 @@ class LocalStorage implements AbstractStorage {
 
   public async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileEntry> {
     this.debug && console.log("renameFile");
-    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
+    return await this.db.transaction("rw", this.db.contents, this.db.files, async () => {
       let file = await this.getFileByName(project, currentName);
       if (!file) {
         throw new E.StorageError(`Renaming file ${currentName} which does not exist.`);
@@ -199,7 +199,8 @@ class LocalStorage implements AbstractStorage {
     return this.db.transaction("r", this.db.contents, async () => {
       let result = await this.db.contents.where("[project_id+filename]")
         .equals([pid, filename]).toArray();
-      return result.map((vrs: ContentsStored) => new Contents(vrs.id as ContentsID, vrs));
+      return result.map((vrs: ContentsStored) => new Contents(vrs.id as ContentsID, vrs))
+        .sort((a: Contents, b: Contents) => b.time - a.time);
     });
   }
 
@@ -438,7 +439,7 @@ class StorageDB extends Dexie {
   public settings: Dexie.Table<SettingsStored, number>;
 
   // list of [accept, reject] pairs waiting for sync to complete
-  private waitlist: [Function, Function][];
+  private waitlist: {accept: Function, reject: Function}[];
   private syncStatus: SyncStatus;
 
   public constructor(dbName: string, options?: DBOptions) {
@@ -459,12 +460,12 @@ class StorageDB extends Dexie {
       this.syncStatus = newStatus;
       if (newStatus === SyncStatus.ONLINE) {
         for (let i in this.waitlist) {
-          this.waitlist[i][0]();
+          this.waitlist[i].accept();
         }
         this.waitlist = [];
       } else if (newStatus === SyncStatus.ERROR || newStatus === SyncStatus.ERROR_WILL_RETRY) {
         for (let i in this.waitlist) {
-          this.waitlist[i][1]();
+          this.waitlist[i].reject();
         }
         this.waitlist = [];
       }
@@ -486,7 +487,7 @@ class StorageDB extends Dexie {
                  this.syncStatus === SyncStatus.ERROR_WILL_RETRY) {
         rej();
       } else {
-        this.waitlist.push([acc, rej]);
+        this.waitlist.push({accept: acc, reject: rej});
       }
     });
   }

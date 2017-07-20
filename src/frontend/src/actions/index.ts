@@ -39,7 +39,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           payload: e.results
         });
         await actions.dispatch.dialog.toggleResolveConflict();
-        return Promise.reject(e.message);
+        throw e;
       }
       console.error(e);
       if (e.message) {

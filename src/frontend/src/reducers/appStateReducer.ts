@@ -4,6 +4,7 @@ import {reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 import {Action} from "redux";
+import {showInfo} from "../partials/Errors";
 
 class CurrentFile extends S.FileEntry {
   public unwrittenContent?: string;
@@ -397,6 +398,7 @@ export default function appStateReducer(state: appStateReducerState = {
             if (fchg !== undefined) {
               // if this file entry has been deleted, just jump out of the file
               if (fchg.type === S.ChangeType.DELETE) {
+                showInfo("The current file was modified on the server. Open it again to edit it.");
                 if (state.currentProject
                     && state.currentProject.currentQuestion) {
                   state.currentProject.currentQuestion.currentFile = undefined;
