@@ -31,6 +31,7 @@
          seashell/backend/project
          seashell/backend/http-dispatchers
          seashell/backend/authenticate
+         seashell/backend/files
          seashell/compiler
          seashell/crypto
          seashell/db/database
@@ -165,6 +166,15 @@
     (flush-output (current-output-port))
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
+
+(define (garbage-collection-loop)
+  (define hour (* 60 60))
+  (seashell-collect-garbage)
+  (sleep hour)
+  (logf 'info "Exporting all projects.")
+  (export-all (read-config 'export-path))
+  (logf 'info "Export of all projects completed.")
+  (garbage-collection-loop))
 
 ;; make-udp-ping-listener our-port -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
@@ -356,7 +366,7 @@
           (detach)
 
           ;; TODO: this might not be the best place to start garbage collection
-          (thread seashell-collect-garbage)
+          (thread garbage-collection-loop)
 
           ;; Write out the listening port
           (logf 'info "Listening on port ~a." start-result)

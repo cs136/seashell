@@ -1,75 +1,82 @@
-#lang racket/base
-;; Seashell's backend server.
-;; Copyright (C) 2013-2015 The Seashell Maintainers.
-;;
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-;;
-;; See also 'ADDITIONAL TERMS' at the end of the included LICENSE file.
-;;
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-;;
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/backend/project
-         seashell/backend/template
-         seashell/seashell-config
-         seashell/log
-         net/uri-codec
-         net/base64
-         json
-         racket/contract
-         racket/port
-         racket/match
-         racket/file
-         racket/path
-         racket/date
-         racket/generator
-         racket/string
-         racket/function
-         file/unzip
-         openssl/md5)
+#lang typed/racket
 
-;(provide restore-file-from-template)
+(require typed/json
+         seashell/db/tools
+         seashell/utils/uuid)
+
+(require/typed file/unzip
+  [unzip (-> (U String Input-Port) (-> Bytes Boolean Input-Port Any) Void)])
+
+(require/typed seashell/backend/template
+  [call-with-template (All (A) (-> String (-> Input-Port A) A))])
+
+(provide new-file
+         new-directory
+         restore-file-from-template
+         export-file
+         export-directory)
+
+(: new-file (-> String String (U String False) Integer (Values String (U String False))))
+(define (new-file pid name contents flags)
+  (define result (call-with-write-transaction (thunk
+    (when (filename-exists? pid name)
+      (error (format "A file with the name '~a' already exists." name)))
+    (define contents-id (if contents (uuid-generate) #f))
+    (define file-id (insert-new "files"
+      `#hasheq((project_id . ,pid)
+               (name . ,name)
+               (contents_id . ,contents-id)
+               (flags . ,flags))))
+    (when contents (insert-new "contents"
+      `#hasheq((project_id . ,pid)
+               (filename . ,name)
+               (contents . ,contents)
+               (time . ,(current-milliseconds))) contents-id))
+    (cons file-id contents-id))))
+  (values (car result) (cdr result)))
+
+(: new-directory (-> String String String))
+(define (new-directory pid name)
+  (define-values (fid cid) (new-file pid name #f 0))
+  fid)
 
 ;; (restore-file-from-template project file template)
 ;; Restores a file from a skeleton/template.
 ;;
 ;; Args:
-;;  project - Project.
+;;  pid - project ID
 ;;  file - Path to file.
 ;;  template - Path (possibly URL) to template.
-;; Returns:
-;;  MD5 hash of file.
-;(define/contract (restore-file-from-template project file template)
-;  (-> (and/c project-name? is-project?) path-string? (or/c path-string? url-string?) string?)
-;  (define ok #f)
-;  (define-values (question-dir filename _) (split-path file))
-;  (define dest-dir (check-and-build-path (build-project-path project) question-dir))
-;  (make-directory* dest-dir)
-;  (define destination (check-and-build-path dest-dir filename))
-;  (define source (explode-path file))
-;  (call-with-template template
-;                      (lambda (port)
-;                        (unzip port
-;                               (lambda (name _2 contents)
-;                                 (define lname (explode-path (simplify-path (bytes->path name) #f)))
-;                                 (when (and (not (null? lname))
-;                                            (equal? source (cdr lname)))
-;                                   (call-with-write-lock (thunk
-;                                     (call-with-output-file destination
-;                                                            (lambda (dport)
-;                                                              (define-values (md5in md5out) (make-pipe))
-;                                                              (copy-port contents dport md5out)
-;                                                              (close-output-port md5out)
-;                                                              (set! ok (md5 md5in)))
-;                                                            #:exists 'replace))))))))
-;  (when (not ok)
-;    (raise (exn:fail (format "File ~a (~a) not found in template ~a!" file source template)
-;           (current-continuation-marks))))
-;  ok)
+(: restore-file-from-template (-> String String String Void))
+(define (restore-file-from-template pid file template)
+  (: ok Boolean)
+  (define ok #f)
+  (define source (explode-path file))
+  (call-with-template template
+    (lambda ([port : Input-Port])
+      (unzip port
+        (lambda ([name : Bytes] [dir : Boolean] [contents : Input-Port])
+          (define lname (explode-path (simplify-path (bytes->path name) #f)))
+          (when (and (not (null? lname))
+                     (equal? source (cdr lname)))
+            (new-file pid
+                      file
+                      (port->string contents)
+                      0)
+            (set! ok #t))))))
+  (unless ok
+    (raise (exn:fail (format "File ~a not found in template ~a." file template)
+      (current-continuation-marks)))))
+
+(: export-file (-> JSExpr (U String Path) Void))
+(define (export-file file proj-dir)
+  (printf "file: ~a\n" file)
+  (define contents (select-id "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
+  (when contents
+    (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
+      (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))))))
+
+(: export-directory (-> JSExpr (U String Path) Void))
+(define (export-directory dir proj-dir)
+  (define path (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String)))
+  (unless (directory-exists? path) (make-directory path)))

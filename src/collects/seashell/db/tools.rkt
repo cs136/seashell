@@ -31,6 +31,7 @@
          select-project-name
          select-files-for-project
          delete-files-for-project
+         delete-everything
          filename-exists?
          project-exists?
          seashell-collect-garbage
@@ -87,6 +88,27 @@
     (void (map (lambda ([x : JSExpr])
       (send db apply-delete "files" (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'id) String)))
       files)))))
+
+(: delete-everything (-> Void))
+(define (delete-everything)
+  (define db (get-sync-database))
+  (send db write-transaction (thunk
+    ;; table by table, apply each delete one by one
+    (define projects (query-rows (send db get-conn)
+      "SELECT id FROM projects"))
+    (for-each (lambda ([x : (Vectorof SQL-Datum)])
+      (send db apply-delete "projects" (cast (vector-ref x 0) String)))
+      projects)
+    (define files (query-rows (send db get-conn)
+      "SELECT id FROM files"))
+    (for-each (lambda ([x : (Vectorof SQL-Datum)])
+      (send db apply-delete "files" (cast (vector-ref x 0) String)))
+      files)
+    (define contents (query-rows (send db get-conn)
+      "SELECT id FROM contents"))
+    (for-each (lambda ([x : (Vectorof SQL-Datum)])
+      (send db apply-delete "contents" (cast (vector-ref x 0) String)))
+      contents))))
 
 (: project-exists? (-> String Boolean))
 (define (project-exists? proj)

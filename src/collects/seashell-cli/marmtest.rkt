@@ -60,7 +60,8 @@
         #:exists 'truncate))
     (void))
 
-  (define-values (code info) (compile-and-run-project (path->complete-path project-dir) main-file "." (list test-name) #t 'current-directory))
+  (define-values (code info)
+    (compile-and-run-project (path->string (path->complete-path project-dir)) main-file "." (list test-name) #t 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
       (eprintf "Compilation failed. Compiler errors:~n")

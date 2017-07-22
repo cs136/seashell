@@ -21,7 +21,7 @@
          seashell/log
          seashell/seashell-config
          seashell/backend/project
-         seashell/backend/db-files
+         seashell/backend/files
          seashell/backend/runner
          seashell/backend/sync
          seashell/db/changes
