@@ -509,8 +509,8 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         switchProject: (name: string, pid: S.ProjectID) => {
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(webStorage().pullMissingSkeletonFiles(pid)).then(() => {
-            return asyncAction(storage().getQuestions(pid))
+          return asyncAction(webStorage().pullMissingSkeletonFiles(pid).then(() => {
+            return storage().getQuestions(pid)
               .then((questions: string[]) => {
                 dispatch({
                   type: appStateActions.switchProject,
@@ -525,9 +525,17 @@ const mapDispatchToProps = (dispatch: Function) => {
                     }
                   }
                 });
-                return asyncAction(storage().updateLastUsed(pid));
+                return storage().updateLastUsed(pid);
               });
-          });
+            }).catch((e) => {
+                console.warn(e);
+                // If we fail to open the project, redirect home so we don't get stuck
+                //  in a bad route
+                dispatch({
+                  type: appStateActions.redirectHome,
+                  payload: null
+                });
+          }));
         },
         getAllProjects: async () => {
           try {
@@ -548,7 +556,16 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         archiveProjects: () => {
           return asyncAction(webStorage().archiveProjects()).then(() =>
-            asyncAction(storage().waitForSync()));
+            asyncAction(storage().waitForSync())).then(() => dispatch({
+              type: appStateActions.redirectHome,
+              payload: null
+            }));
+        },
+        makeConsistent: () => {
+          dispatch({
+            type: appStateActions.makeConsistent,
+            payload: null
+          });
         }
       },
       compile: {

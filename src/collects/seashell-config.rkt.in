@@ -268,6 +268,8 @@
       (cons 'racket-interpreter            (if (file-exists? "/usr/bin/racket")
                                              (string->path "/usr/bin/racket")
                                              (string->path SEASHELL_RACKET)))
+      ;; Location of the SQLite3 binary
+      (cons 'sqlite3                       "/usr/bin/sqlite3")
       ;; diff program
       (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
