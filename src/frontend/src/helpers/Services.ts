@@ -21,6 +21,7 @@ import Dexie from "dexie";
 import "dexie-observable";
 import "dexie-syncable";
 export * from "./Storage/Interface";
+export * from "./Storage/WebStorage";
 export * from "./Compiler/Interface";
 export {Services, DispatchFunction};
 
@@ -56,11 +57,12 @@ namespace Services {
     localStorage    = new LocalStorage(options.debugLocalStorage);
     webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
 
-    Dexie.Syncable.registerSyncProtocol("seashell", new SyncProtocol(socketClient));
+    Dexie.Syncable.registerSyncProtocol("seashell",
+      new SyncProtocol(socketClient, disp, options.debugLocalStorage));
 
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,
-      dispatch, async () => {}, getOfflineMode);
+      dispatch, getOfflineMode);
 
     if (disp !== null) {
       socketClient.register_callback("connected", () => disp({
@@ -141,8 +143,7 @@ namespace Services {
                                      response.key,
                                      response.host,
                                      response.port,
-                                     response.pingPort),
-                      ! rebootBackend);
+                                     response.pingPort));
   }
 
   export async function logout(deleteDB: boolean = false): Promise<void> {
@@ -165,19 +166,18 @@ namespace Services {
     const credstring = window.localStorage.getItem("seashell-credentials");
     if (credstring) {
       const credentials = JSON.parse(credstring);
-      // login successful --- we sync after we connect so the UI is still responsive
+      // login successful
       return await connectWith(new Connection(credentials.user,
                                               credentials.key,
                                               credentials.host,
                                               credentials.port,
-                                              credentials.pingPort),
-                               false);
+                                              credentials.pingPort));
     } else {
       throw new LoginRequired();
     }
   }
 
-  async function connectWith(cnn: Connection, sync: boolean = true): Promise<void> {
+  async function connectWith(cnn: Connection): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }

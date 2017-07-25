@@ -113,26 +113,36 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
-  public async getFileByName(pid: ProjectID, filename: string, getContents: boolean = true): Promise<FileEntry|false> {
+  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
     this.debug && console.log("getFileByName");
-    const tbls = getContents ?
-                 [this.db.files, this.db.contents] :
-                 [this.db.files];
-    return this.db.transaction("r", tbls, async () => {
+    return this.db.transaction("r", this.db.files, this.db.contents, async () => {
       let result = await this.db.files.where("[name+project_id]")
         .equals([filename, pid]).toArray();
+      // Now is the time to detect any file conflict on this filename
       if (result.length > 1) {
-        throw new E.ConflictError(filename, result.map((file) => new File(file)));
-      } else if (result.length === 0) {
+        let conflictContents = await Promise.all(result.map(async (file) => {
+          if (file.contents_id) {
+            let conts = await this.db.contents.get(file.contents_id);
+            if (conts) {
+              return new Contents(file.contents_id, conts);
+            } else {
+              throw new E.StorageError("Error when detecting file conflict.", result);
+            }
+          } else {
+            throw new E.StorageError("Error when detecting file conflict.", result);
+          }
+        }));
+        throw new E.ConflictError(filename, conflictContents);
+      } else if (result.length === 0) { // file does not exist
         return false;
-      } else {
+      } else { // file exists, and no conflict
         let file = new FileEntry(result[0]);
-        if (getContents && file.contents_id) {
-          let contents = await this.db.contents.get(file.contents_id);
-          if (contents === undefined) {
+        if (contents && file.contents_id) {
+          let cnts = await this.db.contents.get(file.contents_id);
+          if (cnts === undefined) {
             throw new E.StorageError(`File contents for ${filename} does not exist.`);
           } else {
-            file.contents = new Contents(file.contents_id, contents);
+            file.contents = new Contents(file.contents_id, cnts);
           }
         }
         return file;
@@ -140,9 +150,28 @@ class LocalStorage implements AbstractStorage {
     });
   }
 
+  public async resolveConflict(contents: Contents): Promise<void> {
+    this.debug && console.log("resolveConflict");
+    return this.db.transaction("rw", this.db.files, async () => {
+      let res = await this.db.files.where("[name+project_id]")
+        .equals([contents.filename, contents.project_id]).toArray();
+      if (res.length < 1) {
+        throw new E.StorageError("Resolving conflict on file that does not exist.");
+      }
+      await this.db.files.where("[name+project_id]")
+        .equals([contents.filename, contents.project_id]).delete();
+      await this.db.files.add({
+        project_id: contents.project_id,
+        name: contents.filename,
+        contents_id: contents.id,
+        flags: res[0].flags
+      });
+    });
+  }
+
   public async deleteFile(project: ProjectID, filename: string): Promise<void> {
     this.debug && console.log("deleteFile");
-    return await this.db.transaction("rw", this.db.files, async () => {
+    return await this.db.transaction("rw", this.db.files, this.db.contents, async () => {
       const file = await this.getFileByName(project, filename, false);
       if (!file) {
         throw new E.StorageError(`Deleting file ${filename} which does not exist.`);
@@ -154,7 +183,7 @@ class LocalStorage implements AbstractStorage {
 
   public async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileEntry> {
     this.debug && console.log("renameFile");
-    return await this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
+    return await this.db.transaction("rw", this.db.contents, this.db.files, async () => {
       let file = await this.getFileByName(project, currentName);
       if (!file) {
         throw new E.StorageError(`Renaming file ${currentName} which does not exist.`);
@@ -162,6 +191,16 @@ class LocalStorage implements AbstractStorage {
       await this.deleteFile(project, file.name);
       let nFile = await this.newFile(project, newName, file.contents ? file.contents.contents : "");
       return new FileEntry(nFile);
+    });
+  }
+
+  public async getVersions(pid: ProjectID, filename: string): Promise<Contents[]> {
+    this.debug && console.log("getVersions");
+    return this.db.transaction("r", this.db.contents, async () => {
+      let result = await this.db.contents.where("[project_id+filename]")
+        .equals([pid, filename]).toArray();
+      return result.map((vrs: ContentsStored) => new Contents(vrs.id as ContentsID, vrs))
+        .sort((a: Contents, b: Contents) => b.time - a.time);
     });
   }
 
@@ -250,7 +289,7 @@ class LocalStorage implements AbstractStorage {
       });
       const cid = await this.db.contents.add({
         project_id: pid,
-        filename: fid,
+        filename: name,
         contents: contents,
         time: Date.now()
       });
@@ -377,6 +416,20 @@ class LocalStorage implements AbstractStorage {
         )));
     });
   }
+
+  public waitForSync(expectingChange: boolean = false): Promise<void> {
+    return this.db.waitForSync(expectingChange);
+  }
+}
+
+// from http://dexie.org/docs/Syncable/Dexie.Syncable.Statuses.html
+enum SyncStatus {
+  ERROR = -1,
+  OFFLINE = 0,
+  CONNECTING = 1,
+  ONLINE = 2,
+  SYNCING = 3,
+  ERROR_WILL_RETRY = 4
 }
 
 class StorageDB extends Dexie {
@@ -384,6 +437,10 @@ class StorageDB extends Dexie {
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
   public settings: Dexie.Table<SettingsStored, number>;
+
+  // list of [accept, reject] pairs waiting for sync to complete
+  private waitlist: {accept: Function, reject: Function}[];
+  private syncStatus: SyncStatus;
 
   public constructor(dbName: string, options?: DBOptions) {
     super(dbName, options);
@@ -394,10 +451,44 @@ class StorageDB extends Dexie {
       settings: "$$id"
     });
 
+    this.waitlist = [];
+
     // No TS bindings for Dexie.Syncable
     (<any>this).syncable.connect("seashell", "http://no-host.org");
-    (<any>this).syncable.on("statusChanged", (newStatus: any, url: string) => {
+    (<any>this).syncable.on("statusChanged", (newStatus: SyncStatus, url: string) => {
       console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
+      this.syncStatus = newStatus;
+      if (newStatus === SyncStatus.ONLINE) {
+        for (let i in this.waitlist) {
+          this.waitlist[i].accept();
+        }
+        this.waitlist = [];
+      } else if (newStatus === SyncStatus.ERROR || newStatus === SyncStatus.ERROR_WILL_RETRY) {
+        for (let i in this.waitlist) {
+          this.waitlist[i].reject();
+        }
+        this.waitlist = [];
+      }
+    });
+  }
+
+  // Returns a promise that resolves when the database changes to ONLINE.
+  // The expectingChange parameter should be set to true if it is known that
+  //  a sync is incoming. This works around the fact that Dexie does not
+  //  start syncing immediately when a change is made to the database.
+  // Setting this to true in this case will avoid a race condition.
+  // Setting it to true when no sync is incoming will cause the promise
+  //  to not resolve until a database change is made.
+  public waitForSync(expectingChange: boolean = false): Promise<void> {
+    return new Promise<void>(async (acc, rej) => {
+      if (!expectingChange && this.syncStatus === SyncStatus.ONLINE) {
+        acc();
+      } else if (this.syncStatus === SyncStatus.ERROR ||
+                 this.syncStatus === SyncStatus.ERROR_WILL_RETRY) {
+        rej();
+      } else {
+        this.waitlist.push({accept: acc, reject: rej});
+      }
     });
   }
 }

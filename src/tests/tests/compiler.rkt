@@ -15,7 +15,7 @@
       (make-directory (build-path tmpdir "q1"))
       (with-output-to-file (build-path tmpdir "q1" "test.c")
         (thunk (display contents)))
-      (compile-and-run-project tmpdir "q1/test.c" "q1" '() #t))
+      (compile-and-run-project (path->string tmpdir) "q1/test.c" "q1" '() #t))
     (thunk (delete-directory/files tmpdir))))
 
 (define/provide-test-suite compiler-suite

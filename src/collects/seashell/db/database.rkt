@@ -34,6 +34,13 @@
          Sync-Database%
          sync-database%)
 
+;; Database Schema:
+;;
+;; Tables:
+;; contents: id, project_id, filename, contents, time
+;; files: id, project_id, name, contents_id, flags
+;; projects: id, name, settings, last_used
+
 (: true? (All (A) (-> (Option A) Any : #:+ A)))
 (define (true? x) x)
 

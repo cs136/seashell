@@ -6,14 +6,15 @@ import {AbstractCompiler,
         CompilerDiagnostic,
         CompilerError} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
-import {AbstractStorage,
-        ProjectID,
+import {ProjectID,
         FileID,
         OfflineMode} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {DispatchFunction} from "../Services";
 import {appStateActions} from "../../reducers/appStateReducer";
-export {OnlineCompiler};
 import {RequestError} from "../Errors";
+
+export {OnlineCompiler};
 
 class OnlineCompiler extends AbstractCompiler {
 
@@ -21,16 +22,14 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  private syncAll: () => Promise<void>;
   private getOfflineMode: () => OfflineMode;
 
-  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler,
-      dispatch: DispatchFunction, syncAll: () => Promise<void>, getOfflineMode: () => OfflineMode) {
+  constructor(socket: SeashellWebsocket, storage: LocalStorage, offComp: OfflineCompiler,
+      dispatch: DispatchFunction, getOfflineMode: () => OfflineMode) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
-    this.syncAll = syncAll;
     this.getOfflineMode = getOfflineMode;
 
     this.socket.register_callback("io", this.handleIO());
@@ -45,7 +44,7 @@ class OnlineCompiler extends AbstractCompiler {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
 
-    await this.syncAll();
+    await this.storage.waitForSync();
 
     let tests: TestBrief[] = [];
     if (runTests) {

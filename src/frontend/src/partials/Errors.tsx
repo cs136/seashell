@@ -12,3 +12,10 @@ export const showError = (message: string) =>
     timeout: 0,
     intent: Intent.DANGER
   });
+
+export const showInfo = (message: string) =>
+  Errors.show({
+    message: message,
+    timeout: 5000,
+    intent: Intent.PRIMARY
+  });

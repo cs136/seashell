@@ -2,6 +2,7 @@ import * as React from "react";
 import {Menu, MenuItem, MenuDivider} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../../actions";
 import * as S from "../../../helpers/Storage/Interface";
+import {dateString} from "../../../helpers/utils";
 const styles = require("../Project.scss");
 
 export interface ActionsProps {
@@ -14,20 +15,27 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
   openFiles: any;
   question: string;
   project: S.ProjectID;
+  currentFile: S.FileEntry;
+  versions: S.Contents[];
 
   constructor(props: ActionsProps & actionsInterface) {
     super(props);
-    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
+    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion
+        || !this.props.appState.currentProject.currentQuestion.currentFile) {
       throw new Error("Invoking FileActions on undefined currentProject or currentQuestion!");
     }
     else {
       this.openFiles = this.props.appState.currentProject.currentQuestion.openFiles;
       this.question = this.props.appState.currentProject.currentQuestion.name;
       this.project = this.props.appState.currentProject.id;
+      this.currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
+      this.versions = this.props.appState.currentProject.currentQuestion.currentFile.versions;
+      console.log("versions", this.versions);
     }
   }
   render() {
     const filename = this.props.filename;
+
     return (<Menu>
       <MenuItem text="Set as Run File" onClick={
         this.props.dispatch.file.setRunFile.bind(null, this.project, this.question, filename)
@@ -45,6 +53,17 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
         this.props.dispatch.file.setFileOpTarget(filename);
         this.props.dispatch.dialog.toggleDeleteFile();
       }}/>
+      {// Display old versions for the current file only
+      this.props.filename === this.currentFile.name &&
+        <MenuItem text="Old Versions">
+          {this.versions.map((cnts: S.Contents) =>
+            (<MenuItem text={dateString(cnts.time)} onClick={() => {
+              this.props.dispatch.file.revertFile(
+                this.currentFile.id, cnts);
+            }}/>))
+          }
+        </MenuItem>
+      }
       <MenuDivider />
       <MenuItem text="Close File" onClick={() => {
         this.props.dispatch.file.closeFile(this.project, this.question, filename);

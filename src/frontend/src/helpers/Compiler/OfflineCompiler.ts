@@ -4,13 +4,14 @@ import {AbstractCompiler,
         CompilerResult,
         IOMessage,
         TestMessage} from "./Interface";
-import {AbstractStorage,
-        ProjectID,
+import {ProjectID,
         FileID,
         File} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
 import {appStateActions} from "../../reducers/appStateReducer";
+
 export {OfflineCompiler};
 
 const CompilerWorker = (() => {
@@ -51,7 +52,7 @@ interface TesterWorkerResult {
 
 class OfflineCompiler extends AbstractCompiler {
 
-  constructor(storage: AbstractStorage, dispatch: DispatchFunction) {
+  constructor(storage: LocalStorage, dispatch: DispatchFunction) {
     super(storage, dispatch);
 
     this.freePID = 0;

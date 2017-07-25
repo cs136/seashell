@@ -2,7 +2,8 @@
 
 (require seashell/db/tools
          seashell/db/database
-         seashell/backend/db-files
+         seashell/backend/files
+         seashell/backend/project
          seashell/seashell-config
          rackunit)
 

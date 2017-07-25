@@ -1,7 +1,7 @@
-import {AbstractStorage,
-        ProjectID,
+import {ProjectID,
         FileID,
         File} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {groupBy} from "../utils";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
@@ -20,7 +20,7 @@ export {AbstractCompiler,
 
 abstract class AbstractCompiler {
 
-  constructor(protected storage: AbstractStorage, protected dispatch: DispatchFunction) {
+  constructor(protected storage: LocalStorage, protected dispatch: DispatchFunction) {
     this.buffer = new OutputBuffer(dispatch);
   }
 
@@ -31,7 +31,6 @@ abstract class AbstractCompiler {
   public abstract async programInput(contents: string): Promise<void>;
   public abstract programDone(pid: number): void;
   // End public interface
-
 
   protected buffer: OutputBuffer;
 

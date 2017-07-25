@@ -1,7 +1,7 @@
 #lang racket
 
 (require racket/cmdline
-         seashell/backend/db-files)
+         seashell/backend/project)
 
 (provide export-main)
 

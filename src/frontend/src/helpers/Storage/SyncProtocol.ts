@@ -1,39 +1,38 @@
 import {SeashellWebsocket} from "../Websocket/WebsocketClient";
+import {ChangeType} from "./Interface";
+import {DispatchFunction} from "../Services";
+import {appStateActions} from "../../reducers/appStateReducer";
 import * as E from "../Errors";
 import Dexie from "dexie";
 import "dexie-observable";
 import "dexie-syncable";
+
 export {SyncProtocol}
-
-const CREATE = 1;
-const UPDATE = 2;
-const DELETE = 3;
-
-const RECONNECT_DELAY = 5000;
 
 class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
 
   constructor(private socket: SeashellWebsocket,
+              private dispatch: DispatchFunction,
               public debug: boolean = false) { }
 
   private convertChange(change: any) {
-    if (change.type === CREATE) {
+    if (change.type === ChangeType.CREATE) {
       return {
-        type: CREATE,
+        type: ChangeType.CREATE,
         table: change.table,
         key: change.key,
         data: JSON.stringify(change.obj)
       };
-    } else if (change.type === UPDATE) {
+    } else if (change.type === ChangeType.UPDATE) {
       return {
-        type: UPDATE,
+        type: ChangeType.UPDATE,
         table: change.table,
         key: change.key,
         data: JSON.stringify(change.mods)
       };
-    } else if (change.type === DELETE) {
+    } else if (change.type === ChangeType.DELETE) {
       return {
-        type: DELETE,
+        type: ChangeType.DELETE,
         table: change.table,
         key: change.key,
         data: ""
@@ -78,25 +77,25 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       onSuccess: (continuation: any) => void, onError: (error: any, again?: number) => void) {
 
     const deconvertChange = (change: any) => {
-      if (change.type === CREATE) {
+      if (change.type === ChangeType.CREATE) {
         let res = {
-          type: CREATE,
+          type: ChangeType.CREATE,
           table: change.table,
           key: change.key,
           obj: JSON.parse(change.data)
         };
         res.obj.id = change.key;
         return res;
-      } else if (change.type === UPDATE) {
+      } else if (change.type === ChangeType.UPDATE) {
         return {
-          type: UPDATE,
+          type: ChangeType.UPDATE,
           table: change.table,
           key: change.key,
           mods: JSON.parse(change.data)
         };
-      } else if (change.type === DELETE) {
+      } else if (change.type === ChangeType.DELETE) {
         return {
-          type: DELETE,
+          type: ChangeType.DELETE,
           table: change.table,
           key: change.key
         };
@@ -121,6 +120,12 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
           }
         });
         isFirstRound = false;
+      }
+      if (changes.length > 0) {
+        this.dispatch({
+          type: appStateActions.applyServerChanges,
+          payload: changes
+        });
       }
     });
 

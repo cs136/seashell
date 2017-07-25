@@ -220,6 +220,8 @@
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Location of the runtime-files directory.
       (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      ;; Location to store periodic database backups in filesystem
+      (cons 'export-path                   (build-path (find-system-path 'home-dir) ".seashell" "projects"))
       ;; Location of SQLite database file relative to the 'seashell directory
       (cons 'database-file                 "seashell.db")
       ;; Name of credentials file.
