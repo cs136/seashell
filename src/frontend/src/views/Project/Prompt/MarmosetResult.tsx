@@ -12,6 +12,7 @@ interface MarmosetResultProps {
 interface MarmosetResultState {
   disabled: boolean;
   marmProject: string;
+  defaultMessage: string;
 }
 
 class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterface, MarmosetResultState> {
@@ -34,7 +35,8 @@ class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterfac
       }
       this.state = {
         disabled: false,
-        marmProject: mproj === undefined ? "" : mproj.project
+        marmProject: mproj === undefined ? "" : mproj.project,
+        defaultMessage: "No results yet."
       };
     } else {
       throw new Error("Opening MarmosetResult prompt without a question selected.");
@@ -44,13 +46,14 @@ class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterfac
   private submit() {
     this.setState(merge(this.state, {disabled: true}));
     return this.props.dispatch.question.marmosetSubmit(this.pid, this.question, this.state.marmProject)
-      .then(() => this.setState(merge(this.state, {disabled: false})));
+      .then(() => this.setState(merge(this.state, {disabled: false,
+        defaultMessage: "Submitted! Waiting for results."})));
   }
 
   render() {
     const result = this.props.result;
     let message = (<div className="pt-callout">
-        <strong>No results yet.</strong>
+        <strong>{this.state.defaultMessage}</strong>
     </div>);
     if (result !== null) {
       if (result.passed === result.points) {

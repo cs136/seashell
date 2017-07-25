@@ -67,6 +67,13 @@ class WebStorage {
     return this.skeletons.fetchNewSkeletons();
   }
 
+  public async archiveProjects(): Promise<void> {
+    await this.socket.sendMessage({
+      type: "archiveProjects",
+      location: false
+    });
+  }
+
   public async projectDownloadURL(name: string): Promise<string> {
     const tokens = await this.socket.sendMessage({
       type: "getExportToken",

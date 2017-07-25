@@ -103,6 +103,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         toggleResolveConflict: () => {
           dispatch({ type: dialogActions.toggle, payload: "resolve_conflict_open" });
+        },
+        toggleArchive: () => {
+          dispatch({ type: dialogActions.toggle, payload: "archive_open" });
         }
       },
       settings: {
@@ -542,6 +545,10 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.setMarmosetProjects,
             payload: lst
           }));
+        },
+        archiveProjects: () => {
+          return asyncAction(webStorage().archiveProjects()).then(() =>
+            asyncAction(storage().waitForSync()));
         }
       },
       compile: {

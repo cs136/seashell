@@ -415,5 +415,6 @@
     (make-directory arch-root))
   ;; copy the current database
   (copy-file db-file arch-file)
+  (logf 'info (format "Archived database to ~a" arch-file))
   ;; delete everything from the database
   (delete-everything))
