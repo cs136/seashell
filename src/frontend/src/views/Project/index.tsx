@@ -62,7 +62,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
 
   generateMarmosetButton(project: appStateReducerProjectState) {
       if (project.currentQuestion) {
-        if (!this.props.appState.marmosetProjects) {
+        if (this.props.appState.marmosetProjects.length === 0) {
           this.props.dispatch.project.getMarmosetProjects();
         }
         const marmosetDispatch = (async (projectName: string, questionName: string) => {
