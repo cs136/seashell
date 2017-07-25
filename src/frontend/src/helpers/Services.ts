@@ -21,6 +21,7 @@ import Dexie from "dexie";
 import "dexie-observable";
 import "dexie-syncable";
 export * from "./Storage/Interface";
+export * from "./Storage/WebStorage";
 export * from "./Compiler/Interface";
 export {Services, DispatchFunction};
 

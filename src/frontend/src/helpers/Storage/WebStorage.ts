@@ -10,9 +10,16 @@ import {History, Change} from "../types";
 import * as E from "../Errors";
 import md5 = require("md5");
 import * as R from "ramda";
-export {WebStorage}
+import * as $ from "jquery";
+
+export {WebStorage, MarmosetProject}
 
 enum FileCategory { Common, Test, Directory, Other };
+
+interface MarmosetProject {
+  project: string;
+  title: string;
+}
 
 class WebStorage {
 
@@ -24,10 +31,10 @@ class WebStorage {
 
   private skeletons: SkeletonManager;
 
-  public async marmosetSubmit(project_name: string, marmosetProject: string, question: string) {
+  public async marmosetSubmit(project: ProjectID, question: string, marmosetProject: string) {
     await this.socket.sendMessage({
       type: "marmosetSubmit",
-      project: project_name,
+      project: project,
       subdir: question,
       assn: marmosetProject
     });
@@ -38,6 +45,13 @@ class WebStorage {
       type: "marmosetTestResults",
       project: marmosetProject,
       testtype: "public"
+    });
+  }
+
+  public async getMarmosetProjects(): Promise<MarmosetProject[]> {
+    return new Promise<MarmosetProject[]>((acc, rej) => {
+      $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt",
+        (lst) => acc(lst));
     });
   }
 

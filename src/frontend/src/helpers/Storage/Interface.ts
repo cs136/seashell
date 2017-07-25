@@ -1,5 +1,6 @@
 import * as R from "ramda";
 
+export * from "./WebStorage";
 export {AbstractStorage,
         Contents, ContentsStored, ContentsID,
         File, FileID, FileEntry, FileStored,

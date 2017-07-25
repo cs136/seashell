@@ -27,12 +27,21 @@ import {appStateReducerProjectState} from "../../reducers/appStateReducer";
 import * as S from "../../helpers/Storage/Interface";
 import ProjectMenu from "./ProjectMenu";
 
-export interface ProjectProps extends RouteComponentProps
-    <{name: string, id: S.ProjectID}> { title: string; }
-export interface ProjectState { toggleView: boolean; marmosetResults: {open: boolean; result: any}; }
+interface ProjectProps extends RouteComponentProps
+    <{name: string, id: S.ProjectID}> {
+  title: string;
+}
 
+interface ProjectState {
+  toggleView: boolean;
+  marmosetResults: {
+    open: boolean;
+    result: any
+  };
+}
 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
+
   constructor(props: ProjectProps&actionsInterface) {
     super(props);
     this.state = {
@@ -43,15 +52,26 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       }
     };
   }
+
+  private matchMarmosetProject(project: string, question: string): string {
+    const candidate = `${project}${question}`.toUpperCase();
+    const found = this.props.appState.marmosetProjects.find((p: S.MarmosetProject) =>
+      candidate === p.project);
+    return found === undefined ? "" : found.project;
+  }
+
   generateMarmosetButton(project: appStateReducerProjectState) {
-      const projectPattern = /A[0-9]+/, questionPattern = /[qp][0-9]+/;
-      if (project.currentQuestion && project.name.match(projectPattern) && project.currentQuestion.name.match(questionPattern)) {
+      if (project.currentQuestion) {
+        if (!this.props.appState.marmosetProjects) {
+          this.props.dispatch.project.getMarmosetProjects();
+        }
         const marmosetDispatch = (async (projectName: string, questionName: string) => {
           this.setState({marmosetResults: {
             open: true,
             result: null
           }});
-          const result = await this.props.dispatch.question.getMarmosetResults(projectName, questionName);
+          const result = await this.props.dispatch.question.getMarmosetResults(
+            this.matchMarmosetProject(projectName, questionName));
           this.setState({marmosetResults: {
             open: true,
             result: result
@@ -64,6 +84,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       }
       return <span />;
   }
+
   componentWillMount() {
     const willOpenPid = this.props.match.params.id;
     const willOpenName = this.props.match.params.name;
@@ -80,9 +101,11 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       });
     }
   }
+
   toggleView() {
     this.setState(merge(this.state, {toggleView: !this.state.toggleView}));
   }
+
   render() {
     const project = this.props.appState.currentProject;
     if (project) {
@@ -210,6 +233,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
             isOpen={this.state.marmosetResults.open}
             onClose={(() => {
               this.setState({marmosetResults: {open: false, result: this.state.marmosetResults.result}});
+              this.props.dispatch.question.clearMarmosetInterval();
             }).bind(this)}>
                 <MarmosetResultPrompt result={this.state.marmosetResults.result} />
         </Dialog>

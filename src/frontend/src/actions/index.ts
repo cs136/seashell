@@ -394,20 +394,38 @@ const mapDispatchToProps = (dispatch: Function) => {
                 });
             });
         },
-        getMarmosetResults: async (projectName: string, questionName: string) => {
-          const oldLength = JSON.parse((await asyncAction(webStorage().getTestResults(projectName + questionName)))).result.length;
-          await asyncAction(webStorage().marmosetSubmit(projectName, projectName + questionName, questionName));
-          let result = [];
-          function sleep(milliseconds: Number) {
-            return new Promise(resolve => setTimeout(resolve, milliseconds));
-          }
-          while (result.length === oldLength || result.length === 0 || result[0].status !== "complete") {
-            const response = (await asyncAction(webStorage().getTestResults(projectName + questionName)));
-            result = JSON.parse(response).result;
-            if (result.length === oldLength || result.length === 0 || result[0].status !== "complete") await sleep(1500); // let's not destroy the server
-          }
-          console.log(result[0]);
-          return result[0];
+        marmosetSubmit: (project: S.ProjectID, question: string, marmosetProject: string) => {
+          return asyncAction(actions.dispatch.file.flushFileBuffer())
+            .then((expectingChange) =>
+              asyncAction(storage().waitForSync(expectingChange)).then(() =>
+                asyncAction(webStorage().marmosetSubmit(project,
+                  marmosetProject, question))));
+        },
+        getMarmosetResults: async (marmosetProject: string) => {
+          const oldLength = JSON.parse(await asyncAction(webStorage().getTestResults(marmosetProject))).result.length;
+          let result: any[] = [];
+          return new Promise<any>((accept, reject) => {
+            dispatch((dispatch: Function, getState: () => globalState) =>
+              dispatch({
+                type: appStateActions.setMarmosetInterval,
+                payload: setInterval(async () => {
+                  if (result.length === oldLength || result.length === 0 || result[0].status !== "complete") {
+                    const response = (await asyncAction(webStorage().getTestResults(marmosetProject)));
+                    result = JSON.parse(response).result;
+                    if (!(result.length === oldLength || result.length === 0 || result[0].status !== "complete")) {
+                      clearInterval(getState().appState.marmosetInterval);
+                      accept(result[0]);
+                    }
+                  }
+                }, 4000)
+              })
+            );
+          });
+        },
+        clearMarmosetInterval: () => {
+          dispatch((dispatch: Function, getState: () => globalState) =>
+            clearInterval(getState().appState.marmosetInterval)
+          );
         }
       },
       user: {
@@ -517,6 +535,12 @@ const mapDispatchToProps = (dispatch: Function) => {
             payload: {
               projects: projects
             }
+          }));
+        },
+        getMarmosetProjects: () => {
+          return asyncAction(webStorage().getMarmosetProjects()).then((lst) => dispatch({
+            type: appStateActions.setMarmosetProjects,
+            payload: lst
           }));
         }
       },

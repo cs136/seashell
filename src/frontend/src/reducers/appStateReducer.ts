@@ -53,6 +53,8 @@ export interface appStateReducerState {
   fileOpTarget?: string;
   conflictContents: S.Contents[];
   projects: S.Project[];
+  marmosetProjects: S.MarmosetProject[];
+  marmosetInterval: number;
   runState?: number;
   currentProject?: appStateReducerProjectState;
   connected: boolean;
@@ -81,6 +83,9 @@ export enum appStateActions {
   setRunFile,
   copyFile,
   getProjects,
+  setMarmosetProjects,
+  setMarmosetInterval,
+  clearMarmosetInterval,
   invalidateFile,
   setFileOpTarget,
   setRunning,
@@ -102,6 +107,8 @@ export default function appStateReducer(state: appStateReducerState = {
     fileOpTarget: undefined,
     conflictContents: [],
     projects: [],
+    marmosetProjects: [],
+    marmosetInterval: 0,
     runState: 0,
     currentProject: undefined,
     connected: false
@@ -182,6 +189,14 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.getProjects:
       state = clone(state);
       state.projects = action.payload.projects;
+      return state;
+    case appStateActions.setMarmosetProjects:
+      state = clone(state);
+      state.marmosetProjects = action.payload;
+      return state;
+    case appStateActions.setMarmosetInterval:
+      state = clone(state);
+      state.marmosetInterval = action.payload;
       return state;
     case appStateActions.switchFile:
       state = clone(state);
