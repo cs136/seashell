@@ -23,7 +23,8 @@
          seashell/backend/project
          seashell/backend/files
          seashell/backend/runner
-         seashell/backend/offline
+         seashell/backend/sync
+         seashell/db/changes
          racket/async-channel
          racket/serialize
          racket/sandbox
@@ -31,6 +32,7 @@
          racket/contract
          racket/port
          racket/string
+         racket/class
          json)
 
 (provide conn-dispatch)
@@ -44,6 +46,8 @@
   (define authenticated? #f)
   (define our-challenge (make-challenge))
   (define thread-to-lock-on (current-thread))
+  (define sync-server (make-object sync-server% connection))
+  (logf 'info "Sync server created\n")
  
   ;; (send-message connection message) -> void?
   ;; Sends a JSON message, by converting it to a bytestring.
@@ -280,38 +284,32 @@
   (define/contract (dispatch-authenticated message)
     (-> jsexpr? jsexpr?)
     (match message
-      ;; Open files
-      [(hash-table
-         ('id id)
-         ('type "addOpenFile")
-         ('project project)
-         ('question question)
-         ('file file))
-       (add-open-file project question file)
-       `#hash((id . ,id) (success . #t) (result . #t))]
-      [(hash-table
-         ('id id)
-         ('type "removeOpenFile")
-         ('project project)
-         ('question question)
-         ('file file))
-       (remove-open-file project question file)
-       `#hash((id . ,id) (success . #t) (result . #t))]
-      [(hash-table
-         ('id id)
-         ('type "getOpenFiles")
-         ('project project)
-         ('question question))
-       `#hash((id . ,id) (success . #t) (result . ,(get-open-files project question)))]
-      ;;
+      ;; Sync protocol methods
       [(hash-table
         ('id id)
-        ('type "sync")
-        (_ _) ...)
-       ;; Sync
+        ('type "clientIdentity")
+        ('clientIdentity cid))
        `#hash((id . ,id)
               (success . #t)
-              (result . ,(sync-offline-changes message)))]
+              (result . ,(send sync-server client-identity cid)))]
+      [(hash-table
+        ('id id)
+        ('type "subscribe")
+        ('syncedRevision rev))
+       (send sync-server subscribe rev)
+       `#hash((id . ,id)
+              (success . #t))]
+      [(hash-table
+        ('id id)
+        ('type "changes")
+        ('baseRevision rev)
+        ('changes changes)
+        ('partial partial))
+       (send sync-server sync-changes
+         (map (lambda (chg) (send sync-server create-database-change chg)) changes)
+         rev partial)
+       `#hasheq((id . ,id)
+                (success . #t))]
       ;; Ping, for timeout checking.
       [(hash-table
         ('id id)
@@ -342,11 +340,11 @@
         ('project name)
         ('question question)
         ('tests test))
-       (define-values (success? result)
-         (compile-and-run-project/use-runner name question test))
+       (define-values (suc res)
+         (compile-and-run-project/db name question test))
        `#hash((id . ,id)
-              (success . ,success?)
-              (result . ,result))]
+              (success . #t)
+              (result . ,res))]
       [(hash-table
          ('id id)
          ('type "startIO")
@@ -363,20 +361,6 @@
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
-      ;; Project manipulation functions.
-      [(hash-table
-        ('id id)
-        ('type "getProjects"))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(list-projects)))]
-      [(hash-table
-        ('id id)
-        ('type "listProject")
-        ('project project))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(list-files project)))]
       [(hash-table
         ('id id)
         ('type "newProject")
@@ -390,174 +374,10 @@
         ('type "newProjectFrom")
         ('project project)
         ('source source))
-        (new-project-from project source)
+        (new-project project source)
         `#hash((id . ,id)
                (success . #t)
                (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "deleteProject")
-        ('project project))
-       (delete-project project)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "lockProject")
-        ('project project))
-       (define locked (lock-project project thread-to-lock-on))
-       `#hash((id . ,id)
-              (success . ,locked)
-              (result . ,(if locked #t "locked")))]
-      [(hash-table
-        ('id id)
-        ('type "forceLockProject")
-        ('project project))
-       (force-lock-project project thread-to-lock-on)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "unlockProject")
-        ('project project))
-       (unlock-project project)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "downloadProject")
-        ('project project))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(make-download-token project)))]
-      ;; File functions.
-      [(hash-table
-         ('id id)
-         ('type "newFile")
-         ('project project)
-         ('file file)
-         ('normalize normalize)
-         (_ _) ...)
-       (define tag (new-file project file
-                             (string->bytes/utf-8 (hash-ref message 'contents ""))
-                             (string->symbol (hash-ref message 'encoding "raw"))
-                             normalize))
-       `#hash((id . ,id)
-              (checksum . ,tag)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "newDirectory")
-        ('project project)
-        ('dir dir))
-       (new-directory project dir)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "deleteFile")
-        ('project project)
-        ('file file))
-       (remove-file project file)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "deleteDirectory")
-        ('project project)
-        ('dir dir))
-       (remove-directory project dir)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "writeFile")
-        ('project project)
-        ('file file)
-        ('contents contents)
-        ('history history)
-        (_ _) ...)
-       (define checksum
-         (write-file project file (string->bytes/utf-8 contents)
-                     (if history (string->bytes/utf-8 history) #"")
-                     (hash-ref message 'checksum #f)))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,checksum))]
-      [(hash-table
-        ('id id)
-        ('type "readFile")
-        ('project project)
-        ('file file))
-       (define-values (data checksum history) (read-file project file))
-       `#hash((id . ,id)
-              (success . #t)
-              (result .
-                      #hash((data . ,(bytes->string/utf-8 data))
-                            (history . ,(bytes->string/utf-8 history))
-                            (checksum . ,checksum))))]
-      ;; Download/Upload token functions:
-      [(hash-table
-        ('id id)
-        ('type "getExportToken")
-        ('project project))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(make-download-token project)))]
-      [(hash-table
-        ('id id)
-        ('type "getUploadFileToken")
-        ('project project)
-        ('file file))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(make-file-upload-token project file)))]
-      ;; Directory manipulation functions
-      [(hash-table
-         ('id id)
-         ('type "createDirectory")
-         ('project project)
-         ('directory directory))
-       ;; TODO: Create directory
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-         ('id id)
-         ('type "renameDirectory")
-         ('project project)
-         ('directory directory))
-       ;; TODO: Rename directory
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-         ('id id)
-         ('type "deleteDirectory")
-         ('project project)
-         ('directory directory))
-       ;; TODO: Delete directory
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      ;; Renaming file dispatch
-      [(hash-table
-        ('id id)
-        ('type "renameFile")
-        ('project project)
-        ('oldName old-file)
-        ('newName new-file))
-       (define result (rename-file project old-file new-file))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,result))]
       [(hash-table
         ('id id)
         ('type "restoreFileFrom")
@@ -567,59 +387,6 @@
        `#hash((id . ,id)
               (success . #t)
               (result . ,(restore-file-from-template project file template)))]
-      [(hash-table
-        ('id id)
-        ('type "getMostRecentlyUsed")
-        ('project project)
-        ('question question))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(get-most-recently-used project question)))]
-      [(hash-table
-        ('id id)
-        ('type "updateMostRecentlyUsed")
-        ('project project)
-        ('question question)
-        ('file file))
-       (update-most-recently-used project question file)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "getFileToRun")
-        ('project project)
-        ('question question))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,(get-file-to-run project question)))]
-      [(hash-table
-        ('id id)
-        ('type "setFileToRun")
-        ('project project)
-        ('folder folder)
-        ('question question)
-        ('file file))
-       (set-file-to-run project question folder file)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "saveSettings")
-        ('settings settings))
-       (with-output-to-file (build-path (read-config 'seashell) "settings.txt")
-         (lambda () (write settings)) #:exists 'truncate)
-       `#hash((id . ,id)
-              (success . #t)
-              (result . #t))]
-      [(hash-table
-        ('id id)
-        ('type "getSettings"))
-       (define-values (settings x) (read-settings))
-       `#hash((id . ,id)
-              (success . #t)
-              (result . ,settings))]
       [(hash-table
         ('id id)
         ('project project)
@@ -723,12 +490,7 @@
          (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
              id (hash-ref message 'type "unknown") (any->short-str message 100)))
        (with-handlers
-           ([exn:project?
-             (lambda (exn)
-               `#hash((id . ,id)
-                      (success . #f)
-                      (result . ,(exn-message exn))))]
-            [exn:fail:contract?
+           ([exn:fail:contract?
              (lambda (exn)
                (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
                      (format-stack-trace (exn-continuation-marks exn)))

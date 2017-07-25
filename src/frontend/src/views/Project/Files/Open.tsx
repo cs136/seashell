@@ -21,15 +21,15 @@ class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
       const switchFile = this.props.dispatch.file.switchFile;
       if (question) {
         return (<div className={styles.openFiles}>
-          {question.openFiles.map((file) => {
-            const index = file.name.indexOf(question.name);
-            return (<div className={styles.openFilesTab} key={"file-tab-" + file.id}>
-              <div className={`pt-button-group ${styles.openFilesTab} ${(question.currentFile && file.id === question.currentFile.id) ? styles.active : ""}`}>
-                <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, file)}>
-                  {file.name === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
-                  {file.name.substring(index === -1 ? 0 : index + question.name.length + 1)}
+          {question.openFiles.map((filename) => {
+            const index = filename.indexOf(question.name);
+            return (<div className={styles.openFilesTab} key={"file-tab-" + filename}>
+              <div className={`pt-button-group ${styles.openFilesTab} ${(question.currentFile && filename === question.currentFile.name) ? styles.active : ""}`}>
+                <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, project.id, filename)}>
+                  {filename === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
+                  {filename.substring(index === -1 ? 0 : index + question.name.length + 1)}
                 </button>
-                <Popover content={<FileActions file={file}/>}
+                <Popover content={<FileActions filename={filename}/>}
                         position={Position.BOTTOM}>
                   <button className={"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}>
                   </button>

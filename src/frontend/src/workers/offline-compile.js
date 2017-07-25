@@ -122,18 +122,28 @@ self.onmessage = function(msg) {
     FS.mkdir("/seashell");
     FS.mkdir("/seashell/"+data.project);
     FS.mkdir("/seashell/"+data.project+"/"+data.question);
+    FS.mkdir("/seashell/"+data.project+"/"+data.question+"/tests");
     FS.mkdir("/seashell/"+data.project+"/common");
   } catch(e) { }
   var rf = "/seashell/"+data.project+"/"+data.runnerFile;
-  for(var i=0; i<data.files.length; i++) {
+  try {
+  for (var i=0; i<data.files.length; i++) {
+    console.log("file: ", data.files[i]);
     var contents = "";
-    if(data.files[i].contents) contents = data.files[i].contents;
+    if (data.files[i].contents.contents) contents = data.files[i].contents.contents;
     var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
     var len = lengthBytesUTF8(contents)+1;
     var arr = new Uint8Array(len);
     var copied = stringToUTF8Array(contents, arr, 0, len);
     FS.write(file, arr, 0, copied);
     FS.close(file);
+  }
+  } catch (e) {
+    postMessage({
+      status: "error",
+      err: e.message + "\n" + e.stack
+    });
+    close();
   }
 
   if(init) {

@@ -20,12 +20,12 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
 
   constructor(props: CopyProps&actionsInterface) {
     super(props);
-    let file = this.props.appState.fileOpTarget;
-    if (file) {
+    let filename = this.props.appState.fileOpTarget;
+    if (filename) {
       this.state = {
         question: this.props.questions[0],
-        file: file.name.split("/").pop() || "", // Both of these are unreachable
-        prevFile: file.name.split("/").pop() || "", // As above ^ ^
+        file: filename.split("/").pop() || "", // Both of these are unreachable
+        prevFile: filename.split("/").pop() || "", // As above ^ ^
         disabled: false
       };
     } else {

@@ -1,20 +1,27 @@
 #lang racket
 
-(require seashell/backend/project
-         seashell/backend/runner
-         seashell/log
+(require seashell/backend/runner
+         seashell/backend/project
          seashell/compiler
          seashell/seashell-config
-         racket/serialize
          racket/cmdline
+         racket/serialize
          json)
 
-(define (marmtest-main)
+(provide marmtest-main)
+
+;; nicely formats a compiler message to be output to the user
+(define/contract (format-message msg)
+  (-> list? string?)
+  (match-define (list error? file line column errstr) msg)
+  (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
+
+(define (marmtest-main flags)
   (define RUN-TIMEOUT (make-parameter #f))
   (define-values (project-dir main-file test-name out-file err-file)
     (command-line
       #:program "seashell-cli marmtest"
-      #:argv (rest flags)
+      #:argv flags
       #:usage-help "Seashell command-line tester. Return codes:\n  10 means failed compilation.\n  20 means the program crashed at runtime.\n  21 means the program failed an assert.\n  30 means the program failed its test.\n  40 means the program passed its test."
       #:once-each
       [("-t" "--timeout") timeout
@@ -53,13 +60,8 @@
         #:exists 'truncate))
     (void))
 
-  ;; nicely formats a compiler message to be output to the user
-  (define/contract (format-message msg)
-    (-> list? string?)
-    (match-define (list error? file line column errstr) msg)
-    (format "~a:~a:~a: ~a: ~a~n" file line column (if error? "error" "warning") errstr))
-
-  (define-values (code info) (compile-and-run-project (path->complete-path project-dir) main-file "." (list test-name) #t 'current-directory))
+  (define-values (code info)
+    (compile-and-run-project (path->string (path->complete-path project-dir)) main-file "." (list test-name) #t 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
       (eprintf "Compilation failed. Compiler errors:~n")
@@ -101,36 +103,3 @@
         (exit 98)]
        )]
     [x (error (format "Seashell failed: compile-and-run-project returned ~s.~n" x))]))
-
-
-(define (object-main)
-  (define args
-    (command-line
-      #:program "seashell-cli object"
-      #:argv (rest flags)
-      #:usage-help "Generate object files (actually LLVM bytecode) for use with Seashell. Takes in a list of files to generate code for."
-      #:args args
-      args))
-  (void (map (lambda (arg)
-    (define-values (result errs) (seashell-generate-bytecode (path->complete-path (string->path arg))))
-    (if result
-      (let ([fparts (string-split arg ".")])
-        (with-output-to-file (string-join (append (drop-right fparts 1) '("ll")) ".")
-          (thunk (display result)) #:exists 'replace))
-      (write errs))) args)))
-
-(define tools `#hash(("marmtest" . (,marmtest-main "Marmoset test runner."))
-                     ("object" . (,object-main "Generate object files for Seashell."))))
-
-;; main program execution begins here
-(define flags (vector->list (current-command-line-arguments)))
-
-(when (or (empty? flags) (not (hash-has-key? tools (first flags))))
-  (printf "seashell-cli <tool>; possible tools are:~n")
-  (hash-for-each tools (lambda (tool props)
-    (printf "  ~a: ~a~n" tool (second props))))
-  (exit 1))
-
-(standard-logger-setup)
-;; invoke main method for tool
-((first (hash-ref tools (first flags))))

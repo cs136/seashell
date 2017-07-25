@@ -8,7 +8,7 @@ import * as S from "../helpers/Storage/Interface";
 const layoutStyles = require("../Layout.scss");
 const styles = require("./ProjectLink.scss");
 
-export interface ProjectLinkProps { project: S.ProjectBrief; }
+export interface ProjectLinkProps { project: S.Project; }
 export interface ProjectLinkState { }
 
 class ProjectLink extends React.Component<ProjectLinkProps&actionsInterface, ProjectLinkState> {

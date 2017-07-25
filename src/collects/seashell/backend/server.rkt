@@ -31,8 +31,11 @@
          seashell/backend/project
          seashell/backend/http-dispatchers
          seashell/backend/authenticate
+         seashell/backend/files
          seashell/compiler
          seashell/crypto
+         seashell/db/database
+         seashell/db/tools
          web-server/web-server
          web-server/http/request-structs
          ffi/unsafe/atomic
@@ -164,6 +167,15 @@
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
 
+(define (garbage-collection-loop)
+  (define hour (* 60 60))
+  (seashell-collect-garbage)
+  (sleep hour)
+  (logf 'info "Exporting all projects.")
+  (export-all (read-config 'export-path))
+  (logf 'info "Export of all projects completed.")
+  (garbage-collection-loop))
+
 ;; make-udp-ping-listener our-port -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
 (define/contract (make-udp-ping-listener our-port)
@@ -218,6 +230,7 @@
     ;; Directory setup.
     (init-environment)
     (init-projects)
+    (init-sync-database)
 
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
@@ -307,8 +320,6 @@
                                       (conn-dispatch keepalive-sema conn state))
                                     #:conn-headers (lambda (method url headers)
                                                      (values #t '() #t))))
-             (filter:make #rx"^/export/" project-export-dispatcher)
-             (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
 
           ;; Start the server.
@@ -353,6 +364,9 @@
           ;; Detach from backend, and close the credentials port.
           (close-output-port credentials-port)
           (detach)
+
+          ;; TODO: this might not be the best place to start garbage collection
+          (thread garbage-collection-loop)
 
           ;; Write out the listening port
           (logf 'info "Listening on port ~a." start-result)

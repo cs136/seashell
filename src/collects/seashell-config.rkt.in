@@ -171,6 +171,13 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Location of the seashell-cli binary
+      (cons 'seashell-cli                  (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-cli")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli/seashell-cli")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
       ;; Project settings filename.
       (cons 'project-settings-filename     (string->path ".project-settings.txt"))
 
@@ -213,6 +220,10 @@
       (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Location of the runtime-files directory.
       (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      ;; Location to store periodic database backups in filesystem
+      (cons 'export-path                   (build-path (find-system-path 'home-dir) ".seashell" "projects"))
+      ;; Location of SQLite database file relative to the 'seashell directory
+      (cons 'database-file                 "seashell.db")
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
