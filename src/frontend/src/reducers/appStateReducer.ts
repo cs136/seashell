@@ -58,6 +58,7 @@ export interface appStateReducerState {
   runState?: number;
   currentProject?: appStateReducerProjectState;
   connected: boolean;
+  inconsistent: boolean;
 };
 
 export interface appStateReducerAction extends Action {
@@ -100,7 +101,9 @@ export enum appStateActions {
   disconnected,
   applyServerChanges,
   conflictOccurred,
-  conflictResolved
+  conflictResolved,
+  redirectHome,
+  makeConsistent
 };
 
 export default function appStateReducer(state: appStateReducerState = {
@@ -111,7 +114,8 @@ export default function appStateReducer(state: appStateReducerState = {
     marmosetInterval: 0,
     runState: 0,
     currentProject: undefined,
-    connected: false
+    connected: false,
+    inconsistent: false
   }, action: appStateReducerAction) {
   switch (action.type) {
     // This updates the current file if we're renaming
@@ -126,8 +130,10 @@ export default function appStateReducer(state: appStateReducerState = {
           state.currentProject.currentQuestion.currentFile.name === oldName) {
             state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFile);
           }
-      else
+      else {
         console.warn("Inconsistent state reached -- currentFile is undefined in updateCurrentFile...");
+        state.inconsistent = true;
+      }
       return state;
     case appStateActions.setTerm:
       state = clone(state);
@@ -136,7 +142,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.termClear = action.payload.termClear;
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in setTerm");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in setTerm");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.writeConsole:
@@ -147,7 +153,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in writeConsole");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in writeConsole");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.clearConsole:
@@ -158,7 +164,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in clearConsole");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in clearConsole");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.setRunning:
@@ -278,7 +284,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion.files.push(action.payload.name);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in addFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.changeFileBufferedContent:
@@ -297,7 +303,7 @@ export default function appStateReducer(state: appStateReducerState = {
                 flusher: setTimeout(flusher, 2500)}}}});
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
+        state.inconsistent = true;
       }
     case appStateActions.changeFileContent:
       return mergeBetter(state, {
@@ -325,7 +331,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion.openFiles.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.closeFile:
@@ -336,7 +342,7 @@ export default function appStateReducer(state: appStateReducerState = {
           reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.setRunFile:
@@ -348,7 +354,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion.diags = action.payload;
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.connected:
@@ -425,6 +431,14 @@ export default function appStateReducer(state: appStateReducerState = {
           }
         }
       }
+      return state;
+    case appStateActions.redirectHome:
+      state = clone(state);
+      state.inconsistent = true;
+      return state;
+    case appStateActions.makeConsistent:
+      state = clone(state);
+      state.inconsistent = false;
       return state;
     default:
       return state;
