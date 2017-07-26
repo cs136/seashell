@@ -224,6 +224,9 @@
       (cons 'export-path                   (build-path (find-system-path 'home-dir) ".seashell" "projects"))
       ;; Location of SQLite database file relative to the 'seashell directory
       (cons 'database-file                 "seashell.db")
+      ;; Location of the Seashell database for a parameterized user. Used in seashell-cli.
+      ;; TODO make sure this is consistent with the above.
+      (cons 'database-file-format          "/u/~a/.seashell/seashell.db")
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie

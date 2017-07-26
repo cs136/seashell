@@ -54,8 +54,9 @@
 (: init-sync-database (->* () ((U False SQLite3-Database-Storage)) Void))
 (define (init-sync-database [location #f])
   (unless seashell-sync-database
-    (set! seashell-sync-database (make-object sync-database%
+    (define loc (if location location
       (build-path (read-config-path 'seashell) (read-config-path 'database-file))))
+    (set! seashell-sync-database (make-object sync-database% loc))
     (init-sync-database-tables)))
 
 (: init-sync-database-tables (-> Void))
