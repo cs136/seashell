@@ -45,7 +45,7 @@
     "ws": "^2.2.1",
     "xterm": "^2.3.2",
     "seashell-clang-js": "https://bintray.com/cs136/seashell-clang-js/download_file?file_path=seashell-clang-js-master.tar.gz",
-    "fake-indexeddb": "git+https://github.com/YLiLarry/fakeIndexedDB.git#3bb9ccc67b2f02bdb2f8d027707903f775b953d0",
+    "fake-indexeddb": "2.0.3",
     "localstorage-memory": "^1.0.2"
   },
   "devDependencies": {
