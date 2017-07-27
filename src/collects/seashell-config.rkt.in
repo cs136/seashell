@@ -319,6 +319,7 @@
   (require/typed (submod "." "..")
                  [config-refresh! (-> Void)]
                  [read-config (-> Symbol (U String (Listof String) Number Boolean Path-String))]
+                 [config-set! (-> Symbol (U String (Listof String) Number Boolean Path-String) Void)]
                  [SEASHELL_VERSION String]
                  [SEASHELL_BRANCH String]
                  [SEASHELL_COMMIT String]
@@ -330,6 +331,7 @@
                  [SEASHELL_INSTALL_PATH String])
   (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
            read-config-integer read-config-optional-path read-config-nonnegative-real
+           config-set!
            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
            SEASHELL_SOURCE_PATH
            SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
