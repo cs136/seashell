@@ -16,10 +16,15 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require (submod seashell/seashell-config typed))
+(require (submod seashell/seashell-config typed)
+         "utils/sentry.rkt")
 (provide logf make-port-logger standard-logger-setup format-stack-trace)
 
-(define logger (make-logger 'seashell))
+(define logger (make-logger 'seashell-all))
+(define trace-logger (make-logger 'seashell-api-trace logger))
+(define message-logger (make-logger 'seashell logger))
+(define reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
+
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
 
 ;; log-ts-args
@@ -41,10 +46,10 @@
       (string-append (number->string (quotient (date-time-zone-offset dt) 3600))
                     (pad-left 2 (remainder (date-time-zone-offset dt) 3600))))))
 
-;; logf: category format args... -> void?
-;; Writes an entry into the logger.
-(: logf (-> Log-Level String Any * Void))
-(define (logf category format-string . args)
+;; logf/tracef: category format args... -> void?
+;; Writes an entry into the message/tracer logger.
+(: logf-to (-> Logger Log-Level String (Listof Any) Void))
+(define (logf-to logger category format-string args)
   (unless (read-config-boolean 'test-mode)
     (define block (make-semaphore))
     (log-message logger
@@ -59,6 +64,12 @@
     (unless (and (eq? category 'debug) (not (read-config-boolean 'debug)))
       (semaphore-wait block)))
   (void))
+(: logf (-> Log-Level String Any * Void))
+(define (logf category format-string . args)
+  (logf-to message-logger category format-string args))
+(: tracef (-> Log-Level String Any * Void))
+(define (tracef category format-string . args)
+  (logf-to trace-logger category format-string args))
 
 ;; make-log-reader: level -> log-receiver
 ;; Creates a log receiver that receives all messages at level or higher.

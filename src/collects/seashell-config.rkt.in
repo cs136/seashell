@@ -280,7 +280,7 @@
       ;; This needs to be long enough for a file to compile.
       (cons 'compiler-ttl                  60)
       ;; Sentry logging endpoint (default #f -- disabled)
-      (cons 'sentry-logging                #f)
+      (cons 'sentry-target                 #f)
       )))
   config-hash)
 

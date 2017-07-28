@@ -23,6 +23,8 @@
          "uuid.rkt")
 (require/typed racket/hash
                [hash-union (-> (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) (HashTable Symbol JSExpr))])
+(provide sentry-reporter%)
+
 (struct exn:fail:sentry exn:fail ())
 
 (: check-present (All (A) (-> String (Option A) A)))
