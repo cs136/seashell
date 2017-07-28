@@ -25,14 +25,9 @@
 (define logger (make-logger 'seashell-all))
 (define trace-logger (make-logger 'seashell-api-trace logger))
 (define message-logger (make-logger 'seashell logger))
-(define reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
-(define userid (format "~a@uwaterloo.ca" (seashell_get_username)))
-(define context
-  #{`#hasheq((user .
-   ,#{`#hasheq((id . ,userid)
-               (email . ,userid))
-      :: JSExpr})) :: (HashTable Symbol JSExpr)})
-(send reporter set-context! context)
+(define reporter (new sentry-reporter% [opt-dsn #f])) ;; -- default uninitialized, we set it up properly
+                                                      ;; in standard-logger-setup as the configuration
+                                                      ;; hasn't been loaded yet.
 
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
 
@@ -158,6 +153,14 @@
 ;; debugging.
 (: standard-logger-setup (-> Void))
 (define (standard-logger-setup)
+  (define userid (format "~a@uwaterloo.ca" (seashell_get_username)))
+  (define context
+    #{`#hasheq((user .
+     ,#{`#hasheq((id . ,userid)
+                 (email . ,userid))
+        :: JSExpr})) :: (HashTable Symbol JSExpr)})
+  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
+  (send reporter set-context! context)
   (if (read-config-boolean 'debug)
     (make-port-logger 'debug (current-error-port))
     (make-port-logger 'debug (current-error-port)))
