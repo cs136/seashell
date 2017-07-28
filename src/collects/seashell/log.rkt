@@ -17,7 +17,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require (submod seashell/seashell-config typed)
-         "utils/sentry.rkt")
+         "utils/sentry.rkt"
+         typed/json)
 (provide logf make-port-logger standard-logger-setup format-stack-trace)
 
 (define logger (make-logger 'seashell-all))
@@ -70,6 +71,16 @@
 (: tracef (-> Log-Level String Any * Void))
 (define (tracef category format-string . args)
   (logf-to trace-logger category format-string args))
+
+;; traced-raise exn -> Any
+;; Raises an exception, logging to Sentry and to the trace logger.
+(: traced-raise (-> exn Any))
+(define (traced-raise exn)
+  (thread
+    (thunk
+      (tracef 'error "An exception was raised: ~a" (exn-message exn))
+      (send reporter report-exception exn #{`#hasheq() :: (HashTable Symbol JSExpr)})))
+  (raise exn))
 
 ;; make-log-reader: level -> log-receiver
 ;; Creates a log receiver that receives all messages at level or higher.
