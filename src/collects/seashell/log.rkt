@@ -18,6 +18,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require (submod seashell/seashell-config typed)
          "utils/sentry.rkt"
+         "support-native.rkt"
          typed/json)
 (provide logf make-port-logger standard-logger-setup format-stack-trace)
 
@@ -25,6 +26,13 @@
 (define trace-logger (make-logger 'seashell-api-trace logger))
 (define message-logger (make-logger 'seashell logger))
 (define reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
+(define userid (format "~a@uwaterloo.ca" (seashell_get_username)))
+(define context
+  #{`#hasheq((user .
+   ,#{`#hasheq((id . ,userid)
+               (email . ,userid))
+      :: JSExpr})) :: (HashTable Symbol JSExpr)})
+(send reporter set-context! context)
 
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
 
