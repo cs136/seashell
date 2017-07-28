@@ -144,8 +144,7 @@
       (define header (make-header))
       (thread
        (thunk
-        (copy-port (post-impure-port target (jsexpr->bytes full-packet) `(,header "Content-Type: application/json"))
-                   (current-output-port)))))
+        (close-input-port (post-impure-port target (jsexpr->bytes full-packet) `(,header "Content-Type: application/json"))))))
 
     (: report-exception (-> exn (HashTable Symbol JSExpr) Any))
     (define/public (report-exception exn local-tags)
