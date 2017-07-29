@@ -51,11 +51,12 @@
 (define (get-sync-database)
   (assert seashell-sync-database))
 
-(: init-sync-database (-> Void))
-(define (init-sync-database)
+(: init-sync-database (->* () ((U False SQLite3-Database-Storage)) Void))
+(define (init-sync-database [location #f])
   (unless seashell-sync-database
-    (set! seashell-sync-database (make-object sync-database%
+    (define loc (if location location
       (build-path (read-config-path 'seashell) (read-config-path 'database-file))))
+    (set! seashell-sync-database (make-object sync-database% loc))
     (init-sync-database-tables)))
 
 (: init-sync-database-tables (-> Void))
@@ -76,6 +77,7 @@
 (define-type Sync-Database% (Class
   (init [path SQLite3-Database-Storage])
   [get-conn (-> Connection)]
+  [get-path (-> SQLite3-Database-Storage)]
   [subscribe (-> String (-> Void) Void)]
   [unsubscribe (-> String Void)]
   [create-client (->* () (String) String)]
@@ -96,6 +98,9 @@
 (define sync-database%
   (class object%
     (init [path : SQLite3-Database-Storage])
+
+    (: db-path SQLite3-Database-Storage)
+    (define db-path path)
 
     (: database Connection)
     (define database (sqlite-connection path))
@@ -124,6 +129,10 @@
     (: get-conn (-> Connection))
     (define/public (get-conn)
       database)
+
+    (: get-path (-> SQLite3-Database-Storage))
+    (define/public (get-path)
+      db-path)
 
     (: subscribe (-> String (-> Void) Void))
     (define/public (subscribe client cb)

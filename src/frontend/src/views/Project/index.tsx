@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Redirect } from "react-router";
 import {Popover, Position, Tooltip} from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 import DisplayFiles from "./Files/Display";
@@ -238,6 +239,8 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 <MarmosetResultPrompt result={this.state.marmosetResults.result} />
         </Dialog>
       </div>);
+    } else if (this.props.appState.inconsistent) {
+      return <Redirect to="/" />;
     } else {
       return <Loading/>;
     }
