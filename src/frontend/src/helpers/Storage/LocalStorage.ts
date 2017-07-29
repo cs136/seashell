@@ -4,8 +4,7 @@ import "dexie-syncable";
 import md5 = require("md5");
 import {sprintf} from "sprintf-js";
 import * as R from "ramda";
-import {AbstractStorage,
-        Contents, ContentsID, ContentsStored,
+import {Contents, ContentsID, ContentsStored,
         File, FileID, FileStored, FileEntry,
         Project, ProjectID, ProjectStored,
         Settings, SettingsStored} from "./Interface";
@@ -21,7 +20,7 @@ interface DBOptions {
   IDBKeyRange?: new () => IDBKeyRange;
 }
 
-class LocalStorage implements AbstractStorage {
+class LocalStorage {
 
   private db: StorageDB;
   private dbName: string;
