@@ -17,9 +17,12 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(struct exn:database exn:fail:user ())
+
 (require typed/json
          typed/db
          typed/db/sqlite3
+         (submod seashell/seashell-config typed)
          seashell/log
          seashell/utils/uuid
          seashell/db/database)
@@ -32,6 +35,7 @@
          select-files-for-project
          delete-files-for-project
          delete-everything
+         backup-database
          filename-exists?
          project-exists?
          seashell-collect-garbage
@@ -109,6 +113,23 @@
     (for-each (lambda ([x : (Vectorof SQL-Datum)])
       (send db apply-delete "contents" (cast (vector-ref x 0) String)))
       contents))))
+
+(: backup-database (-> String Void))
+(define (backup-database target)
+  (define db-path (send (get-sync-database) get-path))
+  (unless (or (path? db-path) (string? db-path))
+    (raise (exn:database "Cannot backup a database which is not stored in the filesystem."
+      (current-continuation-marks))))
+  (define-values (proc out in err)
+    (subprocess #f #f #f (read-config-string 'sqlite3) (cast db-path Path-String)
+      (format ".backup ~a" target)))
+  (subprocess-wait proc)
+  (close-output-port in)
+  (close-input-port out)
+  (close-input-port err)
+  (define exit-status (cast (subprocess-status proc) Integer))
+  (unless (zero? exit-status)
+    (raise (exn:database "Failed to backup database." (current-continuation-marks)))))
 
 (: project-exists? (-> String Boolean))
 (define (project-exists? proj)

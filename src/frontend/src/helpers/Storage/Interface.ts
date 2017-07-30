@@ -1,47 +1,13 @@
 import * as R from "ramda";
 
 export * from "./WebStorage";
-export {AbstractStorage,
-        Contents, ContentsStored, ContentsID,
+export {Contents, ContentsStored, ContentsID,
         File, FileID, FileEntry, FileStored,
         Project, ProjectID, ProjectStored,
         Settings, SettingsStored,
         OfflineMode, ChangeType}
 
 enum OfflineMode { Off, On, Forced }
-
-abstract class AbstractStorage {
-  // projects
-  public abstract async newProject(name: string): Promise<Project>;
-  public abstract async getProject(pid: ProjectID): Promise<Project>;
-  public abstract async getProjects(): Promise<Project[]>;
-  public abstract async deleteProject(pid: ProjectID): Promise<void>;
-  public abstract async updateLastUsed(pid: ProjectID): Promise<void>
-  // files
-  public abstract async newFile(pid: ProjectID, filename: string, contents?: string): Promise<FileEntry>;
-  public abstract async readFile(file: FileID, contents?: boolean): Promise<FileEntry>;
-  public abstract async getFiles(pid: ProjectID, question?: string, contents?: boolean): Promise<File[]>;
-  public abstract async getFileByName(pid: ProjectID, filename: string): Promise<FileEntry|false>;
-  public abstract async writeFile(file: FileID, contents: string|undefined): Promise<FileID>;
-  public abstract async renameFile(pid: ProjectID, currentName: string, newName: string): Promise<FileEntry>;
-  public abstract async deleteFile(pid: ProjectID, filename: string): Promise<void>;
-  public abstract async getVersions(pid: ProjectID, filename: string): Promise<Contents[]>;
-  // questions
-  public abstract async getQuestions(pid: ProjectID): Promise<string[]>;
-  public abstract async newQuestion(pid: ProjectID, question: string): Promise<void>;
-  public abstract async deleteQuestion(pid: ProjectID, question: string): Promise<void>;
-  public abstract async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void>;
-  public abstract async getFileToRun(pid: ProjectID, question: string): Promise<string|false>;
-  public abstract async addOpenFile(pid: ProjectID, question: string, filename: string): Promise<void>;
-  public abstract async removeOpenFile(pid: ProjectID, question: string, filename: string): Promise<void>;
-  public abstract async getOpenFiles(pid: ProjectID, question: string): Promise<string[]>;
-
-  // settings
-  public abstract async setSettings(settings: Settings): Promise<void>;
-  public abstract async getSettings(): Promise<Settings>;
-  // table dump
-  public abstract async getAllFiles(): Promise<File[]>;
-}
 
 type UUID = string;
 type ContentsID = UUID;

@@ -224,6 +224,9 @@
       (cons 'export-path                   (build-path (find-system-path 'home-dir) ".seashell" "projects"))
       ;; Location of SQLite database file relative to the 'seashell directory
       (cons 'database-file                 "seashell.db")
+      ;; Location of the Seashell database for a parameterized user. Used in seashell-cli.
+      ;; TODO make sure this is consistent with the above.
+      (cons 'database-file-format          "/u/~a/.seashell/seashell.db")
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
@@ -268,6 +271,8 @@
       (cons 'racket-interpreter            (if (file-exists? "/usr/bin/racket")
                                              (string->path "/usr/bin/racket")
                                              (string->path SEASHELL_RACKET)))
+      ;; Location of the SQLite3 binary
+      (cons 'sqlite3                       "/usr/bin/sqlite3")
       ;; diff program
       (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
@@ -316,6 +321,7 @@
   (require/typed (submod "." "..")
                  [config-refresh! (-> Void)]
                  [read-config (-> Symbol (U String (Listof String) Number Boolean Path-String))]
+                 [config-set! (-> Symbol (U String (Listof String) Number Boolean Path-String) Void)]
                  [SEASHELL_VERSION String]
                  [SEASHELL_BRANCH String]
                  [SEASHELL_COMMIT String]
@@ -327,6 +333,7 @@
                  [SEASHELL_INSTALL_PATH String])
   (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
            read-config-integer read-config-optional-path read-config-nonnegative-real read-config-optional-string
+           config-set!
            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
            SEASHELL_SOURCE_PATH
            SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
