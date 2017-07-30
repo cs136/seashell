@@ -1,5 +1,6 @@
-import sjcl = require("sjcl");
-export {AbstractCoder, Coder, CoderEncrypted, ShittyCoder}
+export {AbstractCoder, Coder, CoderEncrypted, storeCredentials, checkCredentials}
+
+let Buffer = require("buffer").Buffer;
 
 const webcrypto = window.crypto ? window.crypto : <Crypto> (() => {
   if (!IS_BROWSER) {
@@ -19,8 +20,6 @@ interface CoderEncrypted {
   nonce: number[];
 }
 
-// factored some code out in the abstract class
-// so that you can migrate away from the shitty sjcl later if every possible
 abstract class AbstractCoder {
   constructor(public rawKey: number[]) {};
   public abstract async encrypt(rawKey: number[], challenge: number[], nonce: number[], iv: number[]): Promise<CoderEncrypted>;
@@ -92,78 +91,49 @@ class Coder extends AbstractCoder {
   }
 }
 
-class ShittyCoder extends AbstractCoder {
-  constructor(public rawKey: number[]) {
-    super(rawKey);
-  };
+async function hashCredentials(salt: Uint8Array, password: string) {
+  let bytes = Buffer.from(password, "utf8");
+  let rawKey = await window.crypto.subtle.importKey(
+    "raw",
+    bytes,
+    {name: "PBKDF2"},
+    false,
+    ["deriveBits", "deriveKey"]);
+  let key = await webcrypto.subtle.deriveKey({
+    "name": "PBKDF2",
+    "salt": salt,
+    "iterations": 100,
+    "hash": "SHA-256"},
+    rawKey,
+    { "name": "AES-CBC", "length": 256},
+    true,
+    [ "encrypt", "decrypt"]);
+ let result = await webcrypto.subtle.exportKey("raw", key);
+ return Buffer.from(result).toString("hex");
+}
 
-  public async encrypt(rawKey: number[],
-                       server_challenge: number[],
-                       client_nonce: number[],
-                       iv: number[]): Promise<CoderEncrypted> {
-    let cipher = new sjcl.cipher.aes(rawKey);
-    /** OK, now we proceed to authenticate. */
-    let raw_response: number[] = [];
-    raw_response.concat(client_nonce, server_challenge);
+async function storeCredentials(user: string, password: string) {
+  let salt = new Uint8Array(12);
+  webcrypto.getRandomValues(salt);
 
-    let ivArr = this.toBits(iv);
+  let cached = await hashCredentials(salt, password);
+  let toStore = JSON.stringify({salt: Buffer.from(salt).toString("hex"),
+                                credentials: cached});
+  localStorage.setItem("credentials-" + user, toStore);
+}
 
-    let frameArr = this.toBits(raw_response);
-    let authArr = ivArr;
-    let out = sjcl.mode.gcm.encrypt(cipher,
-        frameArr,
-        ivArr,
-        authArr,
-        128);
-    let tagArr = sjcl.bitArray.bitSlice(out, sjcl.bitArray.bitLength(out) - 128, sjcl.bitArray.bitLength(out));
-    let codedArr = sjcl.bitArray.bitSlice(out, 0, sjcl.bitArray.bitLength(out) - 128);
+async function checkCredentials(user: string, password: string) {
+  let data = localStorage.getItem("credentials-" + user);
+  if (!data)
+    throw new Error("User " + user + " has no offline credentials!");
 
-    return {
-      iv: this.fromBits(ivArr),
-      encrypted: this.fromBits(codedArr),
-      authTag: this.fromBits(tagArr),
-      nonce: client_nonce
-    };
+  let creds = JSON.parse(data);
+  let expected = creds.credentials;
+  let have = await hashCredentials(creds.salt, password);
+
+  if (expected !== have) {
+    throw new Error("User " + user + " credentials do not match saved credentials!");
   }
 
-  public async genRandom(): Promise<{iv: number[], nonce: number[]}> {
-    let iv = sjcl.random.randomWords(12); // We'll generate 48 bytes of entropy and use 12.
-    let client_nonce = sjcl.random.randomWords(32);
-    for (let i = 0; i < client_nonce.length; i++) {
-      client_nonce[i] = client_nonce[i] & 0xFF;
-    }
-    return {
-      iv: iv,
-      nonce: client_nonce
-    };
-  }
-
-  /** Convert from a bitArray to an array of bytes. */
-  public fromBits(arr: number[]) {
-    let out = [], bl = sjcl.bitArray.bitLength(arr), tmp: number = 0;
-    for (let i = 0; i < bl / 8; i++) {
-      if ((i & 3) === 0) {
-        tmp = arr[i / 4];
-      }
-      out.push(tmp >>> 24);
-      tmp <<= 8;
-    }
-    return out;
-  }
-  /** Convert from an array of bytes to a bitArray. */
-  public toBits(bytes: number[]) {
-    let out = [], i, tmp = 0;
-    for (i = 0; i < bytes.length; i++) {
-      tmp = tmp << 8 | bytes[i];
-      if ((i & 3) === 3) {
-      out.push(tmp);
-      tmp = 0;
-      }
-    }
-    if (i & 3) {
-      out.push(sjcl.bitArray.partial(8 * ( i & 3), tmp));
-    }
-    return out;
-  }
-
+  return true;
 }

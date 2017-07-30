@@ -18,6 +18,7 @@ import {LoginError, LoginRequired} from "./Errors";
 import {appStateActions} from "../reducers/appStateReducer";
 import Dexie from "dexie";
 import "dexie-observable";
+import {storeCredentials} from "./Crypto";
 import "dexie-syncable";
 export * from "./Storage/Interface";
 export * from "./Storage/WebStorage";
@@ -119,6 +120,11 @@ namespace Services {
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
+      try {
+        await storeCredentials(user, password);
+      } catch (err) {
+        console.warn("Could not cache credentials for offline usage! -- %s", err);
+      }
       window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
     } catch (ajax) {
       if (ajax.status === 0) {
