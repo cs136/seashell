@@ -284,6 +284,8 @@
       ;; Default TTL for the compiler place.
       ;; This needs to be long enough for a file to compile.
       (cons 'compiler-ttl                  60)
+      ;; Sentry logging endpoint (default #f -- disabled)
+      (cons 'sentry-target                 #f)
       )))
   config-hash)
 
@@ -330,7 +332,7 @@
                  [SEASHELL_INSTALLED Boolean]
                  [SEASHELL_INSTALL_PATH String])
   (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
-           read-config-integer read-config-optional-path read-config-nonnegative-real
+           read-config-integer read-config-optional-path read-config-nonnegative-real read-config-optional-string
            config-set!
            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
            SEASHELL_SOURCE_PATH
@@ -341,6 +343,11 @@
     (define result (read-config symbol))
     (cond [(path? result) (some-system-path->string result)]
           [else (cast result String)]))
+  (: read-config-optional-string (-> Symbol (Option String)))
+  (define (read-config-optional-string symbol)
+    (define result (read-config symbol))
+    (cond [(path? result) (some-system-path->string result)]
+          [else (cast result (Option String))]))
   (: read-config-strings (-> Symbol (Listof String)))
   (define (read-config-strings symbol)
     (define result (read-config symbol))
