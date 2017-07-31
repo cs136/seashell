@@ -112,6 +112,10 @@
 #error "Unsupported version of clang."
 #endif
 
+#ifndef NDEBUG
+#define NDEBUG
+#endif
+
 /** Data structure for compiler diagnostic messages.
  * Opaque to Racket - C accessor functions described below.
  */
