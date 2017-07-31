@@ -1,4 +1,4 @@
-import {AbstractCoder, Coder} from "./Crypto";
+import {AbstractCoder, Coder} from "../Crypto";
 import {Connection} from "./Interface";
 import * as R from "ramda";
 import * as E from "../Errors";
@@ -120,12 +120,14 @@ class SeashellWebsocket {
       console.warn("Websocket lost connection.");
       clearInterval(this.pingLoop);
       for (const i in this.requests) {
-        if (parseInt(i) >= 0) {
+        if (parseInt(i) >= -2) {
           if (evt.code === OnCloseCode.Unknown) {
             this.requests[i].reject(new E.WebsocketError(evt.reason));
           } else {
             this.requests[i].reject(new E.RequestAborted("RequestAborted: Websocket disconnected."));
           }
+        }
+        if (parseInt(i) >= 0) {
           delete this.requests[i];
         }
       }
@@ -183,7 +185,7 @@ class SeashellWebsocket {
       }
     };
 
-    this.debug && console.log("Waiting for server response...");
+    this.debug && console.log("Waiting for server response -- setting timeout for %d seconds...", RESPONSE_TIMEOUT);
     // if the server doesn't response in 5s
     // the default chrome's handshake timeout is too long
     let responseTimeout = setTimeout(() => {
@@ -193,7 +195,14 @@ class SeashellWebsocket {
         // fall back to websocket.onclose()
       }
     }, RESPONSE_TIMEOUT);
-    const serverChallenge = await this.requests[-1].received;
+    let serverChallenge: any;
+    try {
+      serverChallenge = await this.requests[-1].received;
+    } catch (err) {
+      console.warn("Invalid server response -- timeout cleared.");
+      clearTimeout(responseTimeout);
+      throw err;
+    }
     clearTimeout(responseTimeout);
 
     try {
