@@ -23,11 +23,11 @@
 
     (test-case "ok-print-Hello."
       (define-values (success hsh) (create-project-with-contents-and-run 
-        "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n"))
+        "#include <stdio.h>\nint main() {\nprintf(\"Hello.\\n\");\n}\n"))
       (check-true success)
       (define pid (hash-ref hsh 'pid))
       (sync (program-wait-evt pid))
-      (check string=? (port->string (program-stdout pid)) "Hello."))
+      (check string=? (port->string (program-stdout pid)) "Hello.\r\n"))
 
     (test-case "ok-shutdown-compiler"
       (seashell-compile-place/shutdown)

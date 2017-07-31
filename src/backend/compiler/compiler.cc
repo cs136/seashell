@@ -1268,8 +1268,9 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
       compiler->source_paths.push_back(*src);
     }
   }
+#ifndef NDEBUG
   print_sources(compiler);
-
+#endif
   /* Success. */
   return 0;
   #undef PUSH_DIAGNOSTIC
