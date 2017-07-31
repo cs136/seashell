@@ -27,6 +27,7 @@
       (check-true success)
       (define pid (hash-ref hsh 'pid))
       (sync (program-wait-evt pid))
+      (eprintf ">>> ~a~n" (port->string (program-stderr pid)))
       (check string=? (port->string (program-stdout pid)) "Hello.\r\n"))
 
     (test-case "ok-shutdown-compiler"
