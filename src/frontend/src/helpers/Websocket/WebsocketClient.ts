@@ -185,7 +185,7 @@ class SeashellWebsocket {
       }
     };
 
-    console.log("Waiting for server response -- setting timeout for %d seconds...", RESPONSE_TIMEOUT);
+    this.debug && console.log("Waiting for server response -- setting timeout for %d seconds...", RESPONSE_TIMEOUT);
     // if the server doesn't response in 5s
     // the default chrome's handshake timeout is too long
     let responseTimeout = setTimeout(() => {
@@ -218,7 +218,7 @@ class SeashellWebsocket {
         response: response
       };
 
-      console.log("Authenticating websocket...");
+      this.debug && console.log("Authenticating websocket...");
 
       // Authentication should race against websocket.onclose
       await this.sendRequest(this.requests[-2]);
