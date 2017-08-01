@@ -1,7 +1,7 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
 import {Link} from "react-router-dom";
-import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
+import {Menu, MenuItem, MenuDivider, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
@@ -44,7 +44,11 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
                   <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
                   <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
                     this.props.dispatch.dialog.toggleResetOpen(); }}/>
+                  <MenuDivider />
                   <MenuItem iconName="box" text="Archive Projects" onClick={this.props.dispatch.dialog.toggleArchive} />
+                  <MenuItem onClick={() => { this.props.dispatch.project.downloadAll(); }}
+                    iconName="download" text="Download Projects" />
+                  <MenuDivider />
                   <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
               </Menu>
             }

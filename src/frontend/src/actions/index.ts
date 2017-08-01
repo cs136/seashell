@@ -13,7 +13,8 @@ import { settingsActions, settingsReducerState, settingsReducerStateNullable } f
 import * as S from "../helpers/Storage/Interface";
 import * as C from "../helpers/Compiler/Interface";
 import { dialogActions } from "../reducers/dialogReducer";
-
+import { saveAs } from "file-saver";
+import JSZip = require("jszip");
 
 interface Func<T> {
   ([...args]: any): T;
@@ -481,10 +482,17 @@ const mapDispatchToProps = (dispatch: Function) => {
         }
       },
       project: {
-        downloadProject: (name: string) => {
-          return asyncAction(webStorage().projectDownloadURL(name).then((url: string) => {
-            window.open(url, "_blank");
-          }));
+        downloadAll: () => {
+          return asyncAction(storage().exportAsZip()).then(async (zip: JSZip) => {
+            let blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+            saveAs(blob, Services.session().username + ".zip");
+          });
+        },
+        downloadProject: (pid: S.ProjectID, name: string) => {
+          return asyncAction(storage().exportAsZip(pid)).then(async (zip: JSZip) => {
+            let blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+            saveAs(blob, name + ".zip");
+          });
         },
         addProject: (newProjectName: string) => {
           return asyncAction(storage().newProject(newProjectName)).then((proj: S.Project) => {

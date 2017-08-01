@@ -2,13 +2,13 @@ import Dexie from "dexie";
 import "dexie-observable";
 import "dexie-syncable";
 import md5 = require("md5");
-import {sprintf} from "sprintf-js";
 import * as R from "ramda";
 import {Contents, ContentsID, ContentsStored,
         File, FileID, FileStored, FileEntry,
         Project, ProjectID, ProjectStored,
         Settings, SettingsStored} from "./Interface";
 import * as E from "../Errors";
+import JSZip = require("jszip");
 
 export {LocalStorage}
 
@@ -75,15 +75,15 @@ class LocalStorage {
     });
   }
 
-  public async getFiles(pid: ProjectID, question: string = "", contents: boolean = false): Promise<File[]> {
+  public async getFiles(pid: ProjectID, question: string | undefined = undefined, contents: boolean = false): Promise<File[]> {
     this.debug && console.log("getFiles");
     const tables = contents ?
       [this.db.files, this.db.contents] :
       [this.db.files];
     return this.db.transaction("r", tables, async () => {
       let res = (await this.db.files.where("project_id").equals(pid).toArray())
-        .filter((item: FileStored) => item.id && item.contents_id);
-      if (question !== "") {
+        .filter((item: FileStored) => item.contents_id);
+      if (question) {
         res = res.filter((item: FileStored) =>
           item.name.startsWith(question) || item.name.startsWith("common"));
       }
@@ -374,10 +374,16 @@ class LocalStorage {
     });
   }
 
-  public async getAllFiles(): Promise<File[]> {
+  public async getAllFiles(contents: boolean = false): Promise<File[]> {
     this.debug && console.log("getAllFiles");
-    return await this.db.transaction("r", this.db.files, async () => {
-      return (await this.db.files.toArray()).map((file: FileStored) => new File(file));
+    let tables = contents ? [this.db.files, this.db.contents] : [this.db.files];
+    return await this.db.transaction("r", tables, async () => {
+      let files = (await this.db.files.toArray()).filter((file: FileStored) => file.contents_id);
+      if (contents) {
+        return Promise.all(files.map((file: FileStored) => this.readFile(file.id as FileID)));
+      } else {
+        return files.map((file: FileStored) => new File(file));
+      }
     });
   }
 
@@ -419,8 +425,21 @@ class LocalStorage {
   public waitForSync(expectingChange: boolean = false): Promise<void> {
     return this.db.waitForSync(expectingChange);
   }
+
+  public async exportAsZip(pid: ProjectID | undefined = undefined, question: string | undefined = undefined): Promise<JSZip> {
+    return this.db.transaction("r", [this.db.projects, this.db.files, this.db.contents], async () => {
+      let files = await (pid ? this.getFiles(pid, question, true) : this.getAllFiles(true));
+      let result = new JSZip();
+      await Promise.all(files.map(async (file: File) => {
+        result.file(pid ? file.name : ((await this.getProject(file.project_id)).name) + "/" + file.name,
+                    file.contents === false ? "" : file.contents.contents);
+      }));
+      return result;
+    });
+  }
 }
 
+// FIXME: Figure out how to import this from Dexie.
 // from http://dexie.org/docs/Syncable/Dexie.Syncable.Statuses.html
 enum SyncStatus {
   ERROR = -1,
