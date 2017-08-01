@@ -507,35 +507,34 @@ const mapDispatchToProps = (dispatch: Function) => {
             }
           });
         },
-        switchProject: (name: string, pid: S.ProjectID) => {
+        switchProject: async (name: string, pid: S.ProjectID) => {
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          return asyncAction(webStorage().pullMissingSkeletonFiles(pid).then(() => {
-            return storage().getQuestions(pid)
-              .then((questions: string[]) => {
-                dispatch({
-                  type: appStateActions.switchProject,
-                  payload: {
-                    project: {
-                      termWrite: null,
-                      termClear: null,
-                      name: name,
-                      id: pid,
-                      questions: questions,
-                      currentQuestion: undefined
-                    }
+          await asyncAction(webStorage().pullMissingSkeletonFiles(pid));
+          return asyncAction(storage().getQuestions(pid))
+            .then((questions: string[]) => {
+              dispatch({
+                type: appStateActions.switchProject,
+                payload: {
+                  project: {
+                    termWrite: null,
+                    termClear: null,
+                    name: name,
+                    id: pid,
+                    questions: questions,
+                    currentQuestion: undefined
                   }
-                });
-                return storage().updateLastUsed(pid);
+                }
               });
+              return storage().updateLastUsed(pid);
             }).catch((e) => {
-                console.warn(e);
-                // If we fail to open the project, redirect home so we don't get stuck
-                //  in a bad route
-                dispatch({
-                  type: appStateActions.redirectHome,
-                  payload: null
-                });
-          }));
+              console.warn(e);
+              // If we fail to open the project, redirect home so we don't get stuck
+              //  in a bad route
+              dispatch({
+                type: appStateActions.redirectHome,
+                payload: null
+              });
+            });
         },
         getAllProjects: async () => {
           try {

@@ -4,11 +4,14 @@ class Connection {
   public wsURI: string;
 
   constructor(public username: string,
-              public key: number[],
-              public host: string,
-              public port: number,
-              public pingPort: number) {
-    this.wsURI = `wss://${this.host}:${this.port}`;
+              public offline: boolean,
+              public key?: number[],
+              public host?: string,
+              public port?: number,
+              public pingPort?: number) {
+    if (!this.offline) {
+      this.wsURI = `wss://${this.host}:${this.port}`;
+    }
   };
 }
 
