@@ -28,16 +28,13 @@
          compute-conn
          CREATE UPDATE DELETE
          SERVER_CLIENT_KEY
-         SERVER_MERGE_KEY
-         db-in-transaction?)
+         SERVER_MERGE_KEY)
 
 (define CREATE 1)
 (define UPDATE 2)
 (define DELETE 3)
 (define SERVER_CLIENT_KEY "__SERVER_CHANGE")
 (define SERVER_MERGE_KEY "__SERVER_MERGED_CHANGE")
-(: db-in-transaction? (Parameter Boolean))
-(define db-in-transaction? (make-parameter #f))
 
 ;; (sqlite-connection path) -> Connection
 ;; Opens a virtual connection to the specified SQLite3 database.

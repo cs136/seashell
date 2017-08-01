@@ -108,6 +108,9 @@
     (: subscribers (Listof (Pair String (-> Void))))
     (define subscribers '())
 
+    (: db-in-transaction? (Parameter Boolean))
+    (define db-in-transaction? (make-parameter #f))
+
     (super-new)
 
     (query-exec database "CREATE TABLE IF NOT EXISTS _clients (id TEXT PRIMARY KEY, description TEXT)")
