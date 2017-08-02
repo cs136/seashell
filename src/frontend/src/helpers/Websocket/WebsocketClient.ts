@@ -40,7 +40,9 @@ class SeashellWebsocket {
   // It must be safe to call this function consecutively many times
   public async connect(cnn: Connection): Promise<void> {
     if (cnn.offline) {
-      throw new E.WebsocketError("Tried to initialize websocket with offline connection.", cnn);
+      // if offline, set the offline connection and exit
+      this.connection = cnn;
+      return;
     }
 
     const firstTime: () => boolean = () => ! this.connection;

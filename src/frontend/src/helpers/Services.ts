@@ -211,9 +211,7 @@ namespace Services {
     }
 
     try {
-      if (!cnn.offline) {
-        await socketClient.connect(cnn);
-      }
+      await socketClient.connect(cnn);
       await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
     } catch (e) {

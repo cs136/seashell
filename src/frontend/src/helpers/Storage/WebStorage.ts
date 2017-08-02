@@ -50,7 +50,7 @@ class WebStorage {
       project: marmosetProject,
       testtype: "public"
     }).catch((e) => {
-      if(!(e instanceof E.NoInternet)) {
+      if (!(e instanceof E.NoInternet)) {
         throw e;
       }
       return {};
