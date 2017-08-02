@@ -4,8 +4,7 @@ import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
 import {File, FileID,
         Project, ProjectID,
-        Settings,
-        OfflineMode} from "./Storage/Interface";
+        Settings} from "./Storage/Interface";
 import {SyncProtocol} from "./Storage/SyncProtocol";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
@@ -63,7 +62,7 @@ namespace Services {
 
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
     onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,
-      dispatch, getOfflineMode);
+      dispatch);
 
     if (disp !== null) {
       socketClient.register_callback("connected", () => disp({
@@ -217,14 +216,5 @@ namespace Services {
     } catch (e) {
       throw new Error("Failed to connect");
     }
-  }
-
-  export function getOfflineMode(): OfflineMode {
-    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.Off;
-  }
-
-  export function setOfflineMode(mode: OfflineMode): void {
-    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(mode));
   }
 }

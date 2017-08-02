@@ -4,10 +4,7 @@ export * from "./WebStorage";
 export {Contents, ContentsStored, ContentsID,
         File, FileID, FileEntry, FileStored,
         Project, ProjectID, ProjectStored,
-        Settings, SettingsStored,
-        OfflineMode, ChangeType}
-
-enum OfflineMode { Off, On, Forced }
+        Settings, SettingsStored, ChangeType}
 
 type UUID = string;
 type ContentsID = UUID;

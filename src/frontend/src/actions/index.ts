@@ -120,7 +120,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                 editorMode: 0,
                 tabWidth: settings.tab_width,
                 theme: settings.theme === "light" ? 1 : 0,
-                offlineMode: Services.getOfflineMode(),
                 editorRatio: 0.5,
                 updated: 0,
               }
@@ -146,17 +145,6 @@ const mapDispatchToProps = (dispatch: Function) => {
                 tab_width: newSettings.tabWidth,
               })));
             });
-            if (newSettings.offlineMode !== undefined) {
-              Services.setOfflineMode(newSettings.offlineMode);
-              // Force reload
-              if (newSettings.offlineMode === 0 &&
-                  oldSettings.offlineMode > 0 ||
-                  newSettings.offlineMode > 0 &&
-                  oldSettings.offlineMode === 0) {
-                    window.location.hash = "";
-                    window.location.reload(true);
-                  }
-            }
           });
         },
         updateEditorRatio: (ratio: number) => dispatch({
