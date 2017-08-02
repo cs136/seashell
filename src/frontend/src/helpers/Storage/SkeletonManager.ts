@@ -32,7 +32,10 @@ class SkeletonManager {
       try {
         this.userWhitelist = await <PromiseLike<any>>$.get(USER_WHITELIST_URL);
       } catch (e) {
-        throw new E.WebsocketError("Could not load user whitelist file.", e);
+        if (this.socket.isConnected()) {
+          throw new E.WebsocketError("Could not load user whitelist file.", e);
+        }
+        return [];
       }
     }
     return this.userWhitelist || [];
@@ -49,7 +52,10 @@ class SkeletonManager {
       try {
         this.projectWhitelist = await <PromiseLike<any>>$.get(PROJ_WHITELIST_URL);
       } catch (e) {
-        throw new E.WebsocketError("Could not load project whitelist file.", e);
+        if (this.socket.isConnected()) {
+          throw new E.WebsocketError("Could not load project whitelist file.", e);
+        }
+        return [];
       }
     }
     return this.projectWhitelist || [];
@@ -60,7 +66,10 @@ class SkeletonManager {
       try {
         this.projectsWithSkeletons = await <PromiseLike<any>>$.get(PROJ_SKEL_URL);
       } catch (e) {
-        throw new E.WebsocketError("Could not load project skeleton list.", e);
+        if (this.socket.isConnected()) {
+          throw new E.WebsocketError("Could not load project skeleton list.", e);
+        }
+        return [];
       }
     }
     return this.projectsWithSkeletons || [];
@@ -106,8 +115,11 @@ class SkeletonManager {
       }
       return [];
     } catch (e) {
-      console.error(e);
-      throw new E.SkeletonError("Failed to list project skeleton files.", e);
+      if (this.socket.isConnected()) {
+        console.error(e);
+        throw new E.SkeletonError("Failed to list project skeleton files.", e);
+      }
+      return [];
     }
   }
 
@@ -139,11 +151,15 @@ class SkeletonManager {
           project: project.name,
           file: f,
           template: await this.getSkeletonZipFileURL(project.name)
+        }).catch((e) => {
+          if (!(e instanceof E.NoInternet)) {
+            throw e;
+          }
         })
       ));
       // sync afterwards to update the local storage.
       // not ideal, but works for now.
-      // TODO trigger sync
+      await this.storage.waitForSync(true);
     }
   }
 
@@ -169,8 +185,10 @@ class SkeletonManager {
           source: newProjects[i][1]
         });
       } catch (e) {
-        console.error(e);
-        failed.push(newProjects[i][0]);
+        if (!(e instanceof E.NoInternet)) {
+          console.error(e);
+          failed.push(newProjects[i][0]);
+        }
       }
     }
     if (failed.length > 0) {

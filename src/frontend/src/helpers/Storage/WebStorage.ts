@@ -37,6 +37,10 @@ class WebStorage {
       project: project,
       subdir: question,
       assn: marmosetProject
+    }).catch((e) => {
+      if (!(e instanceof E.NoInternet)) {
+        throw e;
+      }
     });
   }
 
@@ -45,13 +49,25 @@ class WebStorage {
       type: "marmosetTestResults",
       project: marmosetProject,
       testtype: "public"
+    }).catch((e) => {
+      if (!(e instanceof E.NoInternet)) {
+        throw e;
+      }
+      return {};
     });
   }
 
   public async getMarmosetProjects(): Promise<MarmosetProject[]> {
     return new Promise<MarmosetProject[]>((acc, rej) => {
-      $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt",
-        (lst) => acc(lst));
+      try {
+        $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt",
+          (lst) => acc(lst));
+      } catch (e) {
+        if (this.socket.isConnected()) {
+          rej(e);
+        }
+        return [];
+      }
     });
   }
 
@@ -71,15 +87,10 @@ class WebStorage {
     await this.socket.sendMessage({
       type: "archiveProjects",
       location: false
+    }).catch((e) => {
+      if (!(e instanceof E.NoInternet)) {
+        throw e;
+      }
     });
-  }
-
-  public async projectDownloadURL(name: string): Promise<string> {
-    const tokens = await this.socket.sendMessage({
-      type: "getExportToken",
-      project: name
-    });
-    const cnn = this.socket.connection as Connection;
-    return `https://${cnn.host}:${cnn.port}/export/${encodeURIComponent(name)}.zip?token=${encodeURIComponent(JSON.stringify(tokens))}`;
   }
 }

@@ -48,6 +48,8 @@
 (require/typed file/unzip
   [unzip (-> (U String Input-Port) (-> Bytes Boolean Input-Port Any) Void)]
   [call-with-unzip (All (A) (-> Input-Port (-> Path A) A))])
+(require/typed racket/hash
+  [hash-union (-> (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) (HashTable Symbol JSExpr))])
 
 (require/typed seashell/backend/template
   [call-with-template (All (A) (-> String (-> Input-Port A) A))])
@@ -65,28 +67,54 @@
   (make-directory* (runtime-files-path))
   (void))
 
+;; Returns (values read-only project-settings)
+(: read-metadata (-> Path-String (Values (Listof String) (HashTable Symbol JSExpr))))
+(define (read-metadata file)
+  (match-define (cons read-only settings)
+    (foldl (lambda ([pair : (Pairof Symbol JSExpr)] [res : (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))])
+      #{(match (car pair)
+        ['read_only (cons (cast (cdr pair) (Listof String)) (cdr res))]
+        [setting (cons (car res) (cons (cons setting (cdr pair)) (cdr res)))])
+          :: (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))})
+      #{(cons '() '()) :: (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))}
+      (cast (string->jsexpr (file->string file)) (Listof (Pairof Symbol JSExpr)))))
+  (values read-only (make-hash settings)))
+
 ;; Returns new project ID
-(: new-project (->* (String) ((U String False) (HashTable Symbol String)) String))
-(define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol String)}])
+(: new-project (->* (String) ((U String False) (HashTable Symbol JSExpr)) String))
+(define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol JSExpr)}])
   (call-with-write-transaction (thunk
     (when (project-exists? name)
       (raise (exn:project (format "The project ~a already exists." name)
         (current-continuation-marks))))
-    (define pid (insert-new "projects"
-      #{`#hasheq((name . ,name)
-                 (settings . ,(cast settings JSExpr))
-                 (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
     (call-with-template (if template template (read-config-string 'default-project-template))
       (lambda ([port : Input-Port])
         (call-with-unzip port
           (lambda ([dir : Path])
             (parameterize ([current-directory (build-path dir (first (directory-list dir)))])
-              (map (lambda ([p : Path])
-                  (if (directory-exists? p)
-                    (new-directory pid (path->string p))
-                    (new-file pid (path->string p) (file->string p) 0)) (void))
-                (sequence->list (in-directory))))))))
-    pid)))
+              (define-values (read-only meta-settings)
+                (if (file-exists? (read-config-path 'project-settings-filename))
+                    (read-metadata (read-config-path 'project-settings-filename))
+                    (values '() #{(hash) :: (HashTable Symbol JSExpr)})))
+              (define pid (insert-new "projects"
+                #{`#hasheq((name . ,name)
+                           (settings . ,(cast (hash-union settings meta-settings) JSExpr))
+                           (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
+              (for-each (lambda ([p : Path])
+                (cond
+                  [(directory-exists? p)
+                    (new-directory pid (path->string p))]
+                  [(not (string=? (read-config-string 'project-settings-filename)
+                                  (path->string p)))
+                    (new-file pid
+                              (path->string p)
+                              (file->string p)
+                              (if (member (path->string p) read-only)
+                                  (read-config-integer 'read-only-mask)
+                              0))
+                    (void)]))
+                (sequence->list (in-directory)))
+              pid))))))))
 
 (: delete-project (-> String Void))
 (define (delete-project id)

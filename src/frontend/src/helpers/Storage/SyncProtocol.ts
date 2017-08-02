@@ -63,14 +63,6 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
   }
 
-  private async connect(context: any, baseRevision: number, syncedRevision: number, changes: any, partial: boolean, onChangesAccepted: () => void): Promise<void> {
-    context.clientIdentity = await this.clientIdentity(context.clientIdentity);
-    context.save();
-    await this.sendChanges(changes, baseRevision, partial);
-    onChangesAccepted();
-    await this.subscribe(syncedRevision);
-  }
-
   public async sync(context: any /*Dexie.Syncable.IPersistedContext*/, url: string, options: Object, baseRevision: any,
       syncedRevision: any, changes: any[] /*Dexie.Syncable.IDatabaseChange[]*/, partial: boolean,
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,
@@ -136,7 +128,11 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
         onError(msg, 100);
       });
 
-      await this.connect(context, baseRevision, syncedRevision, changes, partial, onChangesAccepted);
+      context.clientIdentity = await this.clientIdentity(context.clientIdentity);
+      context.save();
+      await this.sendChanges(changes, baseRevision, partial);
+      onChangesAccepted();
+      await this.subscribe(syncedRevision);
     } catch (e) {
       // don't throw errors that result from being disconnected
       if (this.socket.isConnected()) {

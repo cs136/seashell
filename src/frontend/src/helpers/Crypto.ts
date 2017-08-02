@@ -129,7 +129,7 @@ async function checkCredentials(user: string, password: string) {
 
   let creds = JSON.parse(data);
   let expected = creds.credentials;
-  let have = await hashCredentials(creds.salt, password);
+  let have = await hashCredentials(Buffer.from(creds.salt, "hex"), password);
 
   if (expected !== have) {
     throw new Error("User " + user + " credentials do not match saved credentials!");

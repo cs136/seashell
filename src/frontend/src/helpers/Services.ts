@@ -18,7 +18,8 @@ import {LoginError, LoginRequired} from "./Errors";
 import {appStateActions} from "../reducers/appStateReducer";
 import Dexie from "dexie";
 import "dexie-observable";
-import {storeCredentials} from "./Crypto";
+import {storeCredentials,
+        checkCredentials} from "./Crypto";
 import "dexie-syncable";
 export * from "./Storage/Interface";
 export * from "./Storage/WebStorage";
@@ -127,28 +128,49 @@ namespace Services {
       }
       window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
     } catch (ajax) {
+      let tryOffline = false;
+      let msg = "";
+      let status = 0;
+      let code = ajax.status;
+      let statusText = undefined;
       if (ajax.status === 0) {
-        if (ajax.statusText === "timeout") {
-          throw new LoginError("Something bad happened - Login timed out :(");
+        // If there is no internet connection we will usually end up here
+        tryOffline = true;
+      } else {
+        status     = ajax.status;
+        code       = ajax.responseJSON.error.code;
+        msg        = ajax.responseJSON.error.message;
+        statusText = ajax.statusText;
+        if (code === 5) {
+          msg = "Username and password don't match.";
+        } else if (status === 404) {
+          // if there is no internet, we could get a 404.
+          tryOffline = true;
         }
-        throw new LoginError("Something bad happened - The Internet might be down :(");
       }
-      const status     = ajax.status;
-      const code       = ajax.responseJSON.error.code;
-      const msg        = ajax.responseJSON.error.message;
-      const statusText = ajax.statusText;
-      if (code === 5) {
-        throw new LoginError("Username and password don't match.");
+      if (tryOffline) {
+        try {
+          await checkCredentials(user, password);
+        } catch (e) {
+          throw new LoginError(e);
+        }
+      } else {
+        throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
       }
-      throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
-    // login successful
-    await connectWith(new Connection(user,
-                                     response.key,
-                                     response.host,
-                                     response.port,
-                                     response.pingPort));
+    if (response !== undefined) {
+      // login successful
+      await connectWith(new Connection(user,
+                                       false,
+                                       response.key,
+                                       response.host,
+                                       response.port,
+                                       response.pingPort));
+    } else {
+      // successful offline login
+      await connectWith(new Connection(user, true));
+    }
   }
 
   export async function logout(deleteDB: boolean = false): Promise<void> {
@@ -173,6 +195,7 @@ namespace Services {
       const credentials = JSON.parse(credstring);
       // login successful
       return await connectWith(new Connection(credentials.user,
+                                              false,
                                               credentials.key,
                                               credentials.host,
                                               credentials.port,
