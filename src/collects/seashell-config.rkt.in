@@ -179,7 +179,7 @@
                                               build-path
                                               install-path)))
       ;; Project settings filename.
-      (cons 'project-settings-filename     (string->path ".project-settings.txt"))
+      (cons 'project-settings-filename     (string->path ".metadata"))
 
       ;; These flags can be overridden by the configuration file.
       ;; Listen IP (default ::0)
@@ -241,6 +241,8 @@
       (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
+      ;; File setting bitmasks
+      (cons 'read-only-mask                 1)
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
       (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having
