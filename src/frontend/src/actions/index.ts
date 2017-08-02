@@ -277,7 +277,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         deleteFile: (project: S.ProjectID, filename: string) => {
           return asyncAction(storage().deleteFile(project, filename))
-            .then(() => {
+            .then(async () => {
               dispatch({
                 type: appStateActions.closeFile,
                 payload: filename
@@ -286,7 +286,11 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.removeFile,
                 payload: filename
               });
-              return asyncAction(webStorage().pullMissingSkeletonFiles(project));
+              try {
+                return await asyncAction(webStorage().pullMissingSkeletonFiles(project));
+              } catch (e) {
+                console.warn("Could not load missing skeleton files after deleting %s -- %s", filename, e);
+              }
             });
         },
         renameFile: (project: S.ProjectID, currentName: string, targetName: string) => {
@@ -517,7 +521,11 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         switchProject: async (name: string, pid: S.ProjectID) => {
           dispatch({type: appStateActions.switchProject, payload: {project: null}});
-          await asyncAction(webStorage().pullMissingSkeletonFiles(pid));
+          try {
+            await asyncAction(webStorage().pullMissingSkeletonFiles(pid));
+          } catch (e) {
+            console.warn("Could not load missing skeleton files for %s -- %s", name, e);
+          }
           return asyncAction(storage().getQuestions(pid))
             .then((questions: string[]) => {
               dispatch({
