@@ -7,8 +7,7 @@ import {AbstractCompiler,
         CompilerError} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
 import {ProjectID,
-        FileID,
-        OfflineMode} from "../Storage/Interface";
+        FileID} from "../Storage/Interface";
 import {LocalStorage} from "../Storage/LocalStorage";
 import {DispatchFunction} from "../Services";
 import {appStateActions} from "../../reducers/appStateReducer";
@@ -22,23 +21,19 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  private getOfflineMode: () => OfflineMode;
-
   constructor(socket: SeashellWebsocket, storage: LocalStorage, offComp: OfflineCompiler,
-      dispatch: DispatchFunction, getOfflineMode: () => OfflineMode) {
+      dispatch: DispatchFunction) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
-    this.getOfflineMode = getOfflineMode;
 
     this.socket.register_callback("io", this.handleIO());
     this.socket.register_callback("test", this.handleTest());
   }
 
   public async compileAndRunProject(pid: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
-    const mode = this.getOfflineMode();
-    if (!this.socket.isConnected() && mode === OfflineMode.On || mode === OfflineMode.Forced) {
+    if (!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(pid, question, file, runTests);
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");

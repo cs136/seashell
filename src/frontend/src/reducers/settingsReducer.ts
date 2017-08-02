@@ -1,5 +1,4 @@
 import {mergeBetter} from "../helpers/utils";
-import {OfflineMode} from "../helpers/Storage/Interface";
 import {Action} from "redux";
 
 export interface settingsReducerStateNullable {[key: string]: any;
@@ -9,7 +8,6 @@ export interface settingsReducerStateNullable {[key: string]: any;
   tabWidth?: number;
   theme?: number;
   editorRatio?: number;
-  offlineMode?: OfflineMode;
   updated?: number;
 };
 
@@ -20,7 +18,6 @@ export interface settingsReducerState extends settingsReducerStateNullable {[key
   tabWidth: number;
   theme: number;
   editorRatio: number;
-  offlineMode: OfflineMode;
   updated: number;
 };
 
@@ -41,7 +38,6 @@ export default function settingsReducer(
     editorMode: 0,
     tabWidth: 1,
     theme: 0,
-    offlineMode: 0,
     editorRatio: 0.5,
     updated: 0},
   action: settingsReducerAction) {

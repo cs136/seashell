@@ -4,8 +4,7 @@ import {Connection} from "../Websocket/Interface";
 import {SkeletonManager} from "./SkeletonManager";
 import {Project, ProjectID,
         File, FileID,
-        SettingsStored, Settings,
-        OfflineMode} from "./Interface";
+        SettingsStored, Settings} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
 import md5 = require("md5");
