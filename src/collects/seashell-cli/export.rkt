@@ -13,8 +13,12 @@
   (define will-export-all (make-parameter #f))
   (: as-zip (Parameter Boolean))
   (define as-zip (make-parameter #f))
-  (: selected-user (Parameter (U False String)))
-  (define selected-user (make-parameter #f))
+  (define-values (proc out in err) (subprocess #f #f #f (read-config-string 'whoami)))
+  (subprocess-wait proc)
+  (when (not (zero? (cast (subprocess-status proc) Integer)))
+    (raise (exn:fail "Could not identify current user." (current-continuation-marks))))
+  (: selected-user (Parameter String))
+  (define selected-user (make-parameter (port->string out)))
   (: args (Listof String))
   (define args
     (parse-command-line "seashell-cli export" flags
