@@ -34,13 +34,21 @@ class OnlineCompiler extends AbstractCompiler {
 
   public async compileAndRunProject(pid: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     console.log("Compiling project -- connection status: %s", this.socket.isConnected() ? "connected" : "not connected");
+    try {
+      await this.storage.waitForSync();
+    } catch (e) {
+      // If the socket's disconnected we simply try the offline compiler.
+      if (this.socket.isConnected()) {
+        throw e;
+      }
+    }
+
     if (!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(pid, question, file, runTests);
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
 
-    await this.storage.waitForSync();
 
     let tests: TestBrief[] = [];
     if (runTests) {

@@ -301,7 +301,7 @@ class SeashellWebsocket {
     } else if (type === "connected" && this.isConnected() && now) {
       cb();
     }
-    return this.lastCB-1;
+    return this.lastCB - 1;
   }
 
   public unregister_callback(key: number) {

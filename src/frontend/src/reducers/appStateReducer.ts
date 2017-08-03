@@ -53,7 +53,7 @@ export interface appStateReducerState {
   fileOpTarget?: string;
   conflictContents: S.Contents[];
   projects: S.Project[];
-  marmosetProjects: S.MarmosetProject[];
+  marmosetProjects?: S.MarmosetProject[];
   marmosetInterval: number;
   runState?: number;
   currentProject?: appStateReducerProjectState;
@@ -110,7 +110,7 @@ export default function appStateReducer(state: appStateReducerState = {
     fileOpTarget: undefined,
     conflictContents: [],
     projects: [],
-    marmosetProjects: [],
+    marmosetProjects: undefined,
     marmosetInterval: 0,
     runState: 0,
     currentProject: undefined,

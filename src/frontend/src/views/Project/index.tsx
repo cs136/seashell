@@ -56,21 +56,19 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
 
   private matchMarmosetProject(project: string, question: string): string {
     const candidate = `${project}${question}`.toUpperCase();
-    const found = this.props.appState.marmosetProjects.find((p: S.MarmosetProject) =>
+    const found = (this.props.appState.marmosetProjects || []).find((p: S.MarmosetProject) =>
       candidate === p.project);
     return found === undefined ? "" : found.project;
   }
 
   generateMarmosetButton(project: appStateReducerProjectState) {
       if (project.currentQuestion) {
-        if (this.props.appState.marmosetProjects.length === 0) {
-          this.props.dispatch.project.getMarmosetProjects();
-        }
         const marmosetDispatch = (async (projectName: string, questionName: string) => {
           this.setState({marmosetResults: {
             open: true,
             result: null
           }});
+          await this.props.dispatch.project.getMarmosetProjects();
           const result = await this.props.dispatch.question.getMarmosetResults(
             this.matchMarmosetProject(projectName, questionName));
           this.setState({marmosetResults: {

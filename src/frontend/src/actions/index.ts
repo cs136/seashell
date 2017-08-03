@@ -392,7 +392,6 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         marmosetSubmit: (project: S.ProjectID, question: string, marmosetProject: string) => {
           return asyncAction(actions.dispatch.file.flushFileBuffer())
-                 .then(() => asyncAction(storage().waitForSync()))
                  .then(() => asyncAction(webStorage().marmosetSubmit(project,
                         marmosetProject, question)));
         },
@@ -558,7 +557,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         archiveProjects: () => {
           return asyncAction(webStorage().archiveProjects()).then(() =>
-            asyncAction(storage().waitForSync())).then(() => dispatch({
+            dispatch({
               type: appStateActions.redirectHome,
               payload: null
             }));
