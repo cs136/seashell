@@ -33,6 +33,7 @@ class OnlineCompiler extends AbstractCompiler {
   }
 
   public async compileAndRunProject(pid: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
+    console.log("Compiling project -- connection status: %s", this.socket.isConnected() ? "connected" : "not connected");
     if (!this.socket.isConnected()) {
       return this.offlineCompiler.compileAndRunProject(pid, question, file, runTests);
     } else if (this.activePIDs.length > 0) {

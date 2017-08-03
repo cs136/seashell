@@ -24,15 +24,18 @@ class LocalStorage {
 
   private db: StorageDB;
   private dbName: string;
+  private isConnected: Function;
 
-  public constructor(public debug = false) { }
+  public constructor(public debug = false, isConnected: Function) {
+    this.isConnected = isConnected;
+  }
 
   public async connect(dbName: string): Promise<void> {
     this.dbName = dbName;
     this.db = new StorageDB(dbName, {
       IDBKeyRange: (<any>window).IDBKeyRange,
       indexedDB: (<any>window).indexedDB
-    });
+    }, this.isConnected);
 
     await this.db.open();
   }
@@ -422,8 +425,8 @@ class LocalStorage {
     });
   }
 
-  public waitForSync(expectingChange: boolean = false): Promise<void> {
-    return this.db.waitForSync(expectingChange);
+  public waitForSync(): Promise<void> {
+    return this.db.waitForSync();
   }
 
   public async exportAsZip(pid: ProjectID | undefined = undefined, question: string | undefined = undefined): Promise<JSZip> {
@@ -439,28 +442,15 @@ class LocalStorage {
   }
 }
 
-// FIXME: Figure out how to import this from Dexie.
-// from http://dexie.org/docs/Syncable/Dexie.Syncable.Statuses.html
-enum SyncStatus {
-  ERROR = -1,
-  OFFLINE = 0,
-  CONNECTING = 1,
-  ONLINE = 2,
-  SYNCING = 3,
-  ERROR_WILL_RETRY = 4
-}
-
 class StorageDB extends Dexie {
   public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
   public settings: Dexie.Table<SettingsStored, number>;
 
-  // list of [accept, reject] pairs waiting for sync to complete
-  private waitlist: {accept: Function, reject: Function}[];
-  private syncStatus: SyncStatus;
+  private isConnected: Function;
 
-  public constructor(dbName: string, options?: DBOptions) {
+  public constructor(dbName: string, options: DBOptions, isConnected: Function) {
     super(dbName, options);
     this.version(1).stores({
       contents: "$$id, project_id, filename, [project_id+filename]",
@@ -469,44 +459,19 @@ class StorageDB extends Dexie {
       settings: "$$id"
     });
 
-    this.waitlist = [];
-
-    // No TS bindings for Dexie.Syncable
-    (<any>this).syncable.connect("seashell", "http://no-host.org");
-    (<any>this).syncable.on("statusChanged", (newStatus: SyncStatus, url: string) => {
-      console.log(`Sync status changed: ${(<any>Dexie).Syncable.StatusTexts[newStatus]}`);
-      this.syncStatus = newStatus;
-      if (newStatus === SyncStatus.ONLINE) {
-        for (let i in this.waitlist) {
-          this.waitlist[i].accept();
-        }
-        this.waitlist = [];
-      } else if (newStatus === SyncStatus.ERROR || newStatus === SyncStatus.ERROR_WILL_RETRY) {
-        for (let i in this.waitlist) {
-          this.waitlist[i].reject();
-        }
-        this.waitlist = [];
-      }
-    });
+    this.isConnected = isConnected;
+    this.syncable.connect("seashell", "http://no-host.org");
   }
 
   // Returns a promise that resolves when the database changes to ONLINE.
-  // The expectingChange parameter should be set to true if it is known that
-  //  a sync is incoming. This works around the fact that Dexie does not
-  //  start syncing immediately when a change is made to the database.
-  // Setting this to true in this case will avoid a race condition.
-  // Setting it to true when no sync is incoming will cause the promise
-  //  to not resolve until a database change is made.
-  public waitForSync(expectingChange: boolean = false): Promise<void> {
-    return new Promise<void>(async (acc, rej) => {
-      if (!expectingChange && this.syncStatus === SyncStatus.ONLINE) {
-        acc();
-      } else if (this.syncStatus === SyncStatus.ERROR ||
-                 this.syncStatus === SyncStatus.ERROR_WILL_RETRY) {
-        rej();
-      } else {
-        this.waitlist.push({accept: acc, reject: rej});
+  public async waitForSync() {
+    if (this.isConnected()) {
+      try {
+        await this.syncable.disconnect("http://no-host.org");
+        await this.syncable.connect("seashell", "http://no-host.org");
+      } catch (e) {
+        console.warn("Using stale contents -- waitForSync failed with %s.", e);
       }
-    });
+    }
   }
 }

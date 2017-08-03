@@ -10,6 +10,8 @@ import "dexie-syncable";
 export {SyncProtocol}
 
 class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
+  private change_key: number;
+  private connect_key: number;
 
   constructor(private socket: SeashellWebsocket,
               private dispatch: DispatchFunction,
@@ -67,7 +69,7 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       syncedRevision: any, changes: any[] /*Dexie.Syncable.IDatabaseChange[]*/, partial: boolean,
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,
       onSuccess: (continuation: any) => void, onError: (error: any, again?: number) => void) {
-
+    console.log("Connecting sync protocol.");
     const deconvertChange = (change: any) => {
       if (change.type === ChangeType.CREATE) {
         let res = {
@@ -95,7 +97,7 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     };
 
     let isFirstRound = true;
-    this.socket.register_callback("changes", (request: any) => {
+    this.change_key = this.socket.register_callback("changes", (request: any) => {
       const changes = /*<Dexie.Syncable.IDatabaseChange[]>*/request.changes.map(deconvertChange);
       const currentRevision = <number>request.currentRevision;
       const partial = <boolean>request.partial;
@@ -108,7 +110,9 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
             onChangesAccepted();
           },
           disconnect: () => {
-            console.warn("disconnect called in sync continuation.");
+            console.log("Disconnecting sync protocol due to request.");
+            this.socket.unregister_callback(this.change_key);
+            this.socket.unregister_callback(this.connect_key);
           }
         });
         isFirstRound = false;
@@ -121,23 +125,23 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
       }
     });
 
-    try {
-      // reconnect the sync protocol after the websocket service has taken care
-      //  of the automatic reconnecting.
-      this.socket.register_callback("connected", (msg: any) => {
-        onError(msg, 100);
-      });
+    // reconnect the sync protocol after the websocket service has taken care
+    //  of the automatic reconnecting.
+    this.connect_key = this.socket.register_callback("connected", (msg: any) => {
+      onError(msg, 100);
+    });
 
+
+    try {
       context.clientIdentity = await this.clientIdentity(context.clientIdentity);
       context.save();
       await this.sendChanges(changes, baseRevision, partial);
       onChangesAccepted();
       await this.subscribe(syncedRevision);
     } catch (e) {
-      // don't throw errors that result from being disconnected
-      if (this.socket.isConnected()) {
-        throw new E.WebsocketError("Error occurred while syncing.", e);
-      }
+      // Couldn't connect -- if this is repairable, the connect callback will automatically
+      // restart the protocol.
+      onError(e, Infinity);
     }
   }
 }

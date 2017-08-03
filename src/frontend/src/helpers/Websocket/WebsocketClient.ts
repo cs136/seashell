@@ -27,8 +27,9 @@ class SeashellWebsocket {
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
   private pingLoop: any;
-  private callbacks: Callback[];
+  private callbacks: {[index: number]: Callback};
   private lastPong: number = 0;
+  private lastCB: number = 0;
 
   constructor(debug?: boolean) {
     this.debug = debug || false;
@@ -292,18 +293,23 @@ class SeashellWebsocket {
     this.websocket = undefined;
   }
 
-  public async register_callback(type: string, cb: (message?: any) => any, now?: boolean): Promise<void> {
-    this.callbacks.push(new Callback(type, cb, now || false));
+  public register_callback(type: string, cb: (message?: any) => any, now?: boolean): number {
+    this.callbacks[this.lastCB++] = new Callback(type, cb, now || false);
 
     if (type === "disconnected" && ! this.isConnected() && now) {
-      return cb();
+      cb();
     } else if (type === "connected" && this.isConnected() && now) {
-      return cb();
+      cb();
     }
+    return this.lastCB-1;
+  }
+
+  public unregister_callback(key: number) {
+    delete this.callbacks[key];
   }
 
   public async invoke_cb(type: string, message?: any): Promise<Array<any>> {
-    return this.callbacks.filter(
+    return (<any>Object).values(this.callbacks).filter(
       (x: Callback) => { return x && x.type === type; }).map(
         async (x: Callback) => { return x.cb(message); });
   }

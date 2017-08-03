@@ -54,7 +54,8 @@ namespace Services {
     debug    = options.debugService || false;
 
     socketClient    = new SeashellWebsocket(options.debugWebSocket);
-    localStorage    = new LocalStorage(options.debugLocalStorage);
+    localStorage    = new LocalStorage(options.debugLocalStorage,
+                                      () => (socketClient as SeashellWebsocket).isConnected());
     webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
 
     Dexie.Syncable.registerSyncProtocol("seashell",

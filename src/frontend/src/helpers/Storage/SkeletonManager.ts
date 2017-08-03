@@ -159,7 +159,7 @@ class SkeletonManager {
       ));
       // sync afterwards to update the local storage.
       // not ideal, but works for now.
-      await this.storage.waitForSync(true);
+      await this.storage.waitForSync();
     }
   }
 

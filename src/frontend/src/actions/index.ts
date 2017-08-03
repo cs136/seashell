@@ -392,10 +392,9 @@ const mapDispatchToProps = (dispatch: Function) => {
         },
         marmosetSubmit: (project: S.ProjectID, question: string, marmosetProject: string) => {
           return asyncAction(actions.dispatch.file.flushFileBuffer())
-            .then((expectingChange) =>
-              asyncAction(storage().waitForSync(expectingChange)).then(() =>
-                asyncAction(webStorage().marmosetSubmit(project,
-                  marmosetProject, question))));
+                 .then(() => asyncAction(storage().waitForSync()))
+                 .then(() => asyncAction(webStorage().marmosetSubmit(project,
+                        marmosetProject, question)));
         },
         getMarmosetResults: async (marmosetProject: string) => {
           const oldLength = JSON.parse(await asyncAction(webStorage().getTestResults(marmosetProject))).result.length;
@@ -583,7 +582,7 @@ const mapDispatchToProps = (dispatch: Function) => {
           });
           asyncAction(actions.dispatch.file.flushFileBuffer())
             .then((expectingChange) =>
-                asyncAction(storage().waitForSync(expectingChange)).then(() =>
+                asyncAction(storage().waitForSync()).then(() =>
                   asyncAction(Services.compiler().compileAndRunProject(project,
                     question, fid, test)).then((result: C.CompilerResult) => {
                       dispatch({
