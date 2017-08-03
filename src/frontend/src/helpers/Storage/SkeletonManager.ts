@@ -123,11 +123,16 @@ class SkeletonManager {
         let query = querybuilder.toString();
         let raw = await fetch(`${SKEL_FILE_LIST_URL}?${query}`);
         if (raw.ok) {
-          return (await raw.json()).map(
-            (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
-          ).filter(
-            (path: string) => path.length > 0 && path[path.length - 1] !== "/"
-          ).sort();
+          let result = await raw.json();
+          if (!result.error) {
+            return result.result.map(
+              (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
+            ).filter(
+              (path: string) => path.length > 0 && path[path.length - 1] !== "/"
+            ).sort();
+          } else {
+            throw new E.SkeletonError(`Could not load skeleton files for ${project.name} - ${result.result}.`);
+          }
         } else {
           throw new E.SkeletonError(`Could not load skeleton files for ${project.name}.`);
         }
@@ -145,7 +150,7 @@ class SkeletonManager {
     let [localFileObjList, serverFileList] =
       await Promise.all([this.storage.getFiles(proj), this.listSkeletonFiles(proj)]);
     let localFileList = localFileObjList.map((f: File) => f.name);
-    return serverFileList.filter((f: string) => localFileList.find((g: string) => f === g));
+    return serverFileList.filter((f: string) => !localFileList.find((g: string) => f === g));
   }
 
   private async getSkeletonZipFileURL(pname: string): Promise<string|false> {
