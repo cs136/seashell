@@ -114,29 +114,30 @@ class SkeletonManager {
   private async listSkeletonFiles(proj: ProjectID): Promise<string[]> {
     const project = await this.storage.getProject(proj);
     try {
-      const zipURL = await this.getSkeletonZipFileURL(proj);
+      const zipURL = await this.getSkeletonZipFileURL(project.name);
       if (zipURL) {
-        const req = await <PromiseLike<any>>$.get({
-          url: SKEL_FILE_LIST_URL,
-          data: {
-            template: project.name,
-            user: this.socket.getUsername(),
-            whitelist: (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist
-          }
-        });
-        return req.result.map(
-          (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
-        ).filter(
-          (path: string) => path.length > 0 && path[path.length - 1] !== "/"
-        ).sort();
+        let querybuilder = new URLSearchParams();
+        querybuilder.append("template", project.name);
+        querybuilder.append("user", this.socket.getUsername());
+        querybuilder.append("whitelist", (await this._inSkeleton(proj)) === SkeletonStatus.Whitelist ? "true" : "false");
+        let query = querybuilder.toString();
+        let raw = await fetch(`${SKEL_FILE_LIST_URL}?${query}`);
+        if (raw.ok) {
+          return (await raw.json()).map(
+            (path: string) => path.replace(new RegExp(`^${project.name}/`), "")
+          ).filter(
+            (path: string) => path.length > 0 && path[path.length - 1] !== "/"
+          ).sort();
+        } else {
+          throw new E.SkeletonError(`Could not load skeleton files for ${project.name}.`);
+        }
       }
       return [];
     } catch (e) {
-      if (this.socket.isConnected()) {
-        console.error(e);
-        throw new E.SkeletonError("Failed to list project skeleton files.", e);
+      if (e instanceof TypeError) {
+        return [];
       }
-      return [];
+      else throw e;
     }
   }
 

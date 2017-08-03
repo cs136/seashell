@@ -187,9 +187,6 @@ export default function appStateReducer(state: appStateReducerState = {
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
         state.currentProject.currentQuestion.currentFile = undefined;
-      } else {
-        console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in invalidateFile");
-        // throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in invalidateFile");
       }
       return state;
     case appStateActions.getProjects:
