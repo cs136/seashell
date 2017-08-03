@@ -28,7 +28,7 @@ class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterfac
       this.pid = this.props.appState.currentProject.id;
       this.pname = this.props.appState.currentProject.name;
       this.question = this.props.appState.currentProject.currentQuestion.name;
-      const mproj = this.props.appState.marmosetProjects.find((proj: S.MarmosetProject) =>
+      const mproj = (this.props.appState.marmosetProjects || []).find((proj: S.MarmosetProject) =>
         `${this.pname}${this.question}`.toUpperCase() === proj.project);
       if (mproj) {
         this.matchedProject = mproj.project;
@@ -72,7 +72,7 @@ class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterfac
       <select className="pt-select" disabled={this.state.disabled}
           value={this.state.marmProject} onChange={e =>
             this.setState(merge(this.state, {marmProject: e.currentTarget.value}))}>
-        {this.props.appState.marmosetProjects.map((proj: S.MarmosetProject) =>
+        {(this.props.appState.marmosetProjects || []).map((proj: S.MarmosetProject) =>
           (<option value={proj.project}>{proj.project}</option>))}
       </select>
       <button type="button" className="pt-button" onClick={() => this.submit()}>

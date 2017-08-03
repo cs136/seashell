@@ -7,9 +7,7 @@ import {Project, ProjectID,
         SettingsStored, Settings} from "./Interface";
 import {History, Change} from "../types";
 import * as E from "../Errors";
-import md5 = require("md5");
 import * as R from "ramda";
-import * as $ from "jquery";
 
 export {WebStorage, MarmosetProject}
 
@@ -31,43 +29,39 @@ class WebStorage {
   private skeletons: SkeletonManager;
 
   public async marmosetSubmit(project: ProjectID, question: string, marmosetProject: string) {
-    await this.socket.sendMessage({
+    await this.localStorage.waitForSync();
+    return await this.socket.sendMessage({
       type: "marmosetSubmit",
       project: project,
       subdir: question,
       assn: marmosetProject
-    }).catch((e) => {
-      if (!(e instanceof E.NoInternet)) {
-        throw e;
-      }
     });
   }
 
   public async getTestResults(marmosetProject: string): Promise<any> {
-    return this.socket.sendMessage({
+    return await this.socket.sendMessage({
       type: "marmosetTestResults",
       project: marmosetProject,
       testtype: "public"
-    }).catch((e) => {
-      if (!(e instanceof E.NoInternet)) {
-        throw e;
-      }
-      return {};
     });
   }
 
   public async getMarmosetProjects(): Promise<MarmosetProject[]> {
-    return new Promise<MarmosetProject[]>((acc, rej) => {
-      try {
-        $.get("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt",
-          (lst) => acc(lst));
-      } catch (e) {
-        if (this.socket.isConnected()) {
-          rej(e);
-        }
+    let result: MarmosetProject[] = [];
+    try {
+      let raw = await fetch("https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt");
+
+      if (raw.ok) {
+        return await raw.json();
+      } else {
+        throw new Error("Could not list Marmoset projects -- " + raw.statusText);
+      }
+    } catch (e) {
+      if (e instanceof TypeError) {
         return [];
       }
-    });
+      throw e;
+    }
   }
 
   public async inSkeleton(proj: ProjectID): Promise<boolean> {
@@ -83,13 +77,12 @@ class WebStorage {
   }
 
   public async archiveProjects(): Promise<void> {
-    await this.socket.sendMessage({
+    await this.localStorage.waitForSync();
+    let result = await this.socket.sendMessage({
       type: "archiveProjects",
       location: false
-    }).catch((e) => {
-      if (!(e instanceof E.NoInternet)) {
-        throw e;
-      }
     });
+    await this.localStorage.waitForSync();
+    return;
   }
 }

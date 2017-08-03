@@ -471,6 +471,7 @@ class StorageDB extends Dexie {
         await this.syncable.connect("seashell", "http://no-host.org");
       } catch (e) {
         console.warn("Using stale contents -- waitForSync failed with %s.", e);
+        throw new E.StorageError("Error syncing with the backend -- " + e);
       }
     }
   }
