@@ -263,9 +263,10 @@ const mapDispatchToProps = (dispatch: Function) => {
                 });
             });
         },
-        deleteFile: (project: S.ProjectID, filename: string) => {
+        deleteFile: (project: S.ProjectID, question: string, filename: string) => {
           return asyncAction(storage().deleteFile(project, filename))
             .then(async () => {
+              await storage().removeOpenFile(project, question, filename);
               dispatch({
                 type: appStateActions.closeFile,
                 payload: filename
