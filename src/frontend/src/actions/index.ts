@@ -257,7 +257,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                     });
                     dispatch({
                       type: appStateActions.switchFile,
-                      payload: entry
+                      payload: {file: entry}
                     });
                   }
                 });
