@@ -15,13 +15,12 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
   openFiles: any;
   question: string;
   project: S.ProjectID;
-  currentFile: S.FileEntry;
+  currentFile?: S.FileEntry;
   versions: S.Contents[];
 
   constructor(props: ActionsProps & actionsInterface) {
     super(props);
-    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion
-        || !this.props.appState.currentProject.currentQuestion.currentFile) {
+    if (!this.props.appState.currentProject || !this.props.appState.currentProject.currentQuestion) {
       throw new Error("Invoking FileActions on undefined currentProject or currentQuestion!");
     }
     else {
@@ -29,8 +28,9 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
       this.question = this.props.appState.currentProject.currentQuestion.name;
       this.project = this.props.appState.currentProject.id;
       this.currentFile = this.props.appState.currentProject.currentQuestion.currentFile;
-      this.versions = this.props.appState.currentProject.currentQuestion.currentFile.versions;
-      console.log("versions", this.versions);
+      if (this.props.appState.currentProject.currentQuestion.currentFile) {
+        this.versions = this.props.appState.currentProject.currentQuestion.currentFile.versions;
+      }
     }
   }
   render() {
@@ -54,12 +54,13 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
         this.props.dispatch.dialog.toggleDeleteFile();
       }}/>
       {// Display old versions for the current file only
+      this.currentFile &&
       this.props.filename === this.currentFile.name &&
         <MenuItem text="Old Versions">
           {this.versions.map((cnts: S.Contents) =>
             (<MenuItem text={dateString(cnts.time)} onClick={() => {
               this.props.dispatch.file.revertFile(
-                this.currentFile.id, cnts);
+                this.currentFile ? this.currentFile.id : "" /* unreachable case, only to type check */, cnts);
             }}/>))
           }
         </MenuItem>
