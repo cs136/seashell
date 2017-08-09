@@ -97,12 +97,12 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     };
 
     let isFirstRound = true;
-    this.change_key = this.socket.register_callback("changes", (request: any) => {
+    this.change_key = this.socket.register_callback("changes", async (request: any) => {
       const changes = /*<Dexie.Syncable.IDatabaseChange[]>*/request.changes.map(deconvertChange);
       const currentRevision = <number>request.currentRevision;
       const partial = <boolean>request.partial;
 
-      applyRemoteChanges(changes, currentRevision, partial);
+      await applyRemoteChanges(changes, currentRevision, partial);
       if (isFirstRound && !partial) {
         onSuccess({
           react: async (changes: any, baseRevision: number, partial: boolean, onChangesAccepted: () => void) => {
