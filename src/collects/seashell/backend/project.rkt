@@ -28,7 +28,8 @@
          export-all
          marmoset-submit
          marmoset-test-results
-         archive-projects)
+         archive-projects
+         zip-from-dir)
 
 (require seashell/log
          (submod seashell/seashell-config typed)
