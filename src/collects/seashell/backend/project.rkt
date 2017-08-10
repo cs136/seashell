@@ -68,18 +68,18 @@
   (make-directory* (runtime-files-path))
   (void))
 
-;; Returns (values read-only project-settings)
-(: read-metadata (-> Path-String (Values (Listof String) (HashTable Symbol JSExpr))))
+;; Returns (values flags project-settings)
+(: read-metadata (-> Path-String (Values (Listof (List String Integer)) (HashTable Symbol JSExpr))))
 (define (read-metadata file)
-  (match-define (cons read-only settings)
-    (foldl (lambda ([pair : (Pairof Symbol JSExpr)] [res : (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))])
+  (match-define (cons flags settings)
+    (foldl (lambda ([pair : (Pairof Symbol JSExpr)] [res : (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))])
       #{(match (car pair)
-        ['read_only (cons (cast (cdr pair) (Listof String)) (cdr res))]
+        ['flags (cons (cast (cdr pair) (Listof (List String Integer))) (cdr res))]
         [setting (cons (car res) (cons (cons setting (cdr pair)) (cdr res)))])
-          :: (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))})
-      #{(cons '() '()) :: (Pairof (Listof String) (Listof (Pairof Symbol JSExpr)))}
-      (cast (string->jsexpr (file->string file)) (Listof (Pairof Symbol JSExpr)))))
-  (values read-only (make-hash settings)))
+          :: (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))})
+      #{(cons '() '()) :: (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))}
+      (hash->list (cast (string->jsexpr (file->string file)) (HashTable Symbol JSExpr)))))
+  (values flags (make-hash settings)))
 
 ;; Returns new project ID
 (: new-project (->* (String) ((U String False) (HashTable Symbol JSExpr)) String))
@@ -93,7 +93,7 @@
         (call-with-unzip port
           (lambda ([dir : Path])
             (parameterize ([current-directory (build-path dir (first (directory-list dir)))])
-              (define-values (read-only meta-settings)
+              (define-values (flags meta-settings)
                 (if (file-exists? (read-config-path 'project-settings-filename))
                     (read-metadata (read-config-path 'project-settings-filename))
                     (values '() #{(hash) :: (HashTable Symbol JSExpr)})))
@@ -107,12 +107,15 @@
                     (new-directory pid (path->string p))]
                   [(not (string=? (read-config-string 'project-settings-filename)
                                   (path->string p)))
+                    (define stored-flags (filter (lambda ([fl : (List String Integer)])
+                      (string=? (first fl) (path->string p)))
+                      flags))
                     (new-file pid
                               (path->string p)
                               (file->string p)
-                              (if (member (path->string p) read-only)
-                                  (read-config-integer 'read-only-mask)
-                              0))
+                              (if (empty? stored-flags)
+                                  0
+                                  (second (first stored-flags))))
                     (void)]))
                 (sequence->list (in-directory)))
               pid))))))))
@@ -338,10 +341,20 @@
                (lambda ([a : JSExpr] [b : JSExpr]) (string<? (cast (hash-ref (cast a (HashTable Symbol JSExpr)) 'name) String)
                                                              (cast (hash-ref (cast b (HashTable Symbol JSExpr)) 'name) String)))))
     ;; then create all the regular files
-    (map (lambda ([f : JSExpr]) (export-file f tmpdir))
-         (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
-                 files))
-    (printf "~s\n" files)
+    ;; compile a list of flags as we go
+    (define flags (foldl (lambda ([f : JSExpr] [flags : (Listof (List String Integer))])
+        (export-file f tmpdir)
+        (define flg (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'flags) Integer))
+        (if (zero? flg)
+            flags
+            (cons (list (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'name) String) flg) flags)))
+      '()
+      (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
+              files)))
+    (define project (assert (select-id "projects" pid)))
+    (define psettings (cast (hash-ref (cast project (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol JSExpr)))
+    (with-output-to-file (build-path tmpdir (read-config-path 'project-settings-file))
+      (thunk (display (jsexpr->string (hash-set psettings 'flags flags)))))
     (cond
       [zip?
         (when (file-exists? target) (delete-file target))
