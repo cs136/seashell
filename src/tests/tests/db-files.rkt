@@ -27,9 +27,9 @@
       (define did (new-directory pid "example"))
       (define-values (fid cid) (new-file pid "example/main.c" "int main(void) { }\n" 0))
       (delete-project pid)
-      (export-project pid #f "export")
-      (check-true (not (file-exists? "export/example/main.c")))
-      (delete-directory/files "export"))
+      (check-true (with-handlers ([exn:project? (thunk* #t)])
+        (export-project pid #f "export")
+        #f)))
 
     (test-case "Fetch template (HTTP)"
       (define pid (new-project "template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip"))

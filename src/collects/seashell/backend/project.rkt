@@ -29,7 +29,8 @@
          marmoset-submit
          marmoset-test-results
          archive-projects
-         zip-from-dir)
+         zip-from-dir
+         (struct-out exn:project))
 
 (require seashell/log
          (submod seashell/seashell-config typed)
@@ -351,9 +352,11 @@
       '()
       (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
               files)))
-    (define project (assert (select-id "projects" pid)))
+    (define project (select-id "projects" pid))
+    (unless project
+      (raise (exn:project "The project being exported does not exist." (current-continuation-marks))))
     (define psettings (cast (hash-ref (cast project (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol JSExpr)))
-    (with-output-to-file (build-path tmpdir (read-config-path 'project-settings-file))
+    (with-output-to-file (build-path tmpdir (read-config-path 'project-settings-filename))
       (thunk (display (jsexpr->string (hash-set psettings 'flags flags)))))
     (cond
       [zip?
