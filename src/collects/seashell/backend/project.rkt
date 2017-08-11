@@ -335,13 +335,8 @@
   (call-with-read-transaction (thunk
     (define files (select-files-for-project pid))
     (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
-    ;; filter out only directories, sort them lexicographically, then create them all.
-    (map (lambda ([d : JSExpr]) (export-directory d tmpdir))
-         (sort (filter (lambda ([x : JSExpr]) (not (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False))))
-                       files)
-               (lambda ([a : JSExpr] [b : JSExpr]) (string<? (cast (hash-ref (cast a (HashTable Symbol JSExpr)) 'name) String)
-                                                             (cast (hash-ref (cast b (HashTable Symbol JSExpr)) 'name) String)))))
-    ;; then create all the regular files
+    ;; export-file will ensure that the necessary directories are created
+    ;; create all the regular files
     ;; compile a list of flags as we go
     (define flags (foldl (lambda ([f : JSExpr] [flags : (Listof (List String Integer))])
         (export-file f tmpdir)
