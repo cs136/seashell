@@ -4,7 +4,8 @@ export * from "./WebStorage";
 export {Contents, ContentsStored, ContentsID,
         File, FileID, FileEntry, FileStored,
         Project, ProjectID, ProjectStored,
-        Settings, SettingsStored, ChangeType}
+        Settings, SettingsStored, ChangeType,
+        FlagMask}
 
 type UUID = string;
 type ContentsID = UUID;
@@ -31,6 +32,10 @@ class Contents implements ContentsStored {
     this.contents = obj.contents;
     this.time = obj.time;
   }
+}
+
+enum FlagMask {
+  READONLY = 1
 }
 
 // NOTE: File objects may not necessarily have a valid
@@ -70,6 +75,10 @@ class File {
 
   public clone() {
     return new File(this);
+  }
+
+  public hasFlag(f: FlagMask): boolean {
+    return !!(this.flags & f);
   }
 }
 

@@ -3,7 +3,7 @@ import {map, actionsInterface} from "../../../actions";
 import MonacoEditor from "./Editor";
 import Console from "./Console";
 import Loading from "../Loading";
-import {CompilerDiagnostic} from "../../../helpers/Services";
+import {CompilerDiagnostic, FlagMask} from "../../../helpers/Services";
 import * as Draggable from "react-draggable"; // Both at the same time
 import { merge } from "ramda";
 
@@ -149,7 +149,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             diags={currentQuestion.diags}
             onChange={this.onChange.bind(this)}
             editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
-            readOnly={!currentFile.contents} />
+            readOnly={!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
             <div ref="resizeHandle" className={styles.resizeHandle} />
           </Draggable>

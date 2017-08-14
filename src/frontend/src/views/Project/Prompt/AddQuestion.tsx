@@ -26,6 +26,7 @@ class AddQuestion extends React.Component<AddQuestionProps&actionsInterface, Add
         prevQuestion: "",
         disabled: false
       };
+      this.project = this.props.appState.currentProject.id;
     } else {
       throw new Error("AddTest invoked on undefined project!");
     }

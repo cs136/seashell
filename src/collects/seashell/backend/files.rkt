@@ -70,10 +70,12 @@
 
 (: export-file (-> JSExpr (U String Path) Void))
 (define (export-file file proj-dir)
-  (printf "file: ~a\n" file)
   (define contents (select-id "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
   (when contents
-    (with-output-to-file (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String))
+    (define path (build-path proj-dir (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'name) String)))
+    ;; first ensure the directory exists
+    (make-parent-directory* path)
+    (with-output-to-file path
       (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))))))
 
 (: export-directory (-> JSExpr (U String Path) Void))

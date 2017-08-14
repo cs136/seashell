@@ -97,7 +97,6 @@ class OfflineCompiler extends AbstractCompiler {
           throw new CompilerError(result.data.err || "Unknown error");
         } else {
           this.buffer.outputDiagnostics(result.data.messages);
-          resolve(result.data);
         }
         if (result.data.status === "running") {
           if (!runTests) {
@@ -111,7 +110,10 @@ class OfflineCompiler extends AbstractCompiler {
               id: pid,
               runner: runner
             });
-            runner.postMessage(result.data.obj);
+            runner.postMessage({
+              obj: result.data.obj,
+              pid: pid
+            });
           } else {
             // run all the tests
             let tests: Test[] = await this.getTestsForQuestion(proj, question);
@@ -124,6 +126,9 @@ class OfflineCompiler extends AbstractCompiler {
               tester.runner.postMessage(result.data.obj);
             }
           }
+        }
+        if (result.data.status !== "error") {
+          resolve(result.data);
         }
       };
       compiler.postMessage({

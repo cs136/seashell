@@ -56,6 +56,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
       {// Display old versions for the current file only
       this.currentFile &&
       this.props.filename === this.currentFile.name &&
+      this.versions &&
         <MenuItem text="Old Versions">
           {this.versions.map((cnts: S.Contents) =>
             (<MenuItem text={dateString(cnts.time)} onClick={() => {

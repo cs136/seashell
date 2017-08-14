@@ -9,6 +9,17 @@ import {appStateActions} from  "../../reducers/appStateReducer";
 
 export {OutputBuffer};
 
+enum ColourCode {
+  BLACK = 0,
+  RED = 1,
+  GREEN = 2,
+  YELLOW = 3,
+  BLUE = 4,
+  MAGENTA = 5,
+  CYAN = 6,
+  WHITE = 7
+}
+
 class OutputBuffer {
 
   private stdout: string;
@@ -93,21 +104,25 @@ class OutputBuffer {
     this.timeout = setTimeout(this.flush(), 100);
   }
 
+  private wrapColour(str: string, colour: ColourCode) {
+    return `\x1B[1;3${colour}m${str}\x1B[0m`;
+  }
+
   public outputTest(result: TestMessage): void {
     let output = "----------------------------------\n";
     const ASAN = result.asan_output ? JSON.parse(result.asan_output) : false;
     if (result.result === "passed") {
-      output += `Test "${result.test_name}" passed.\n`;
+      output += this.wrapColour(`Test "${result.test_name}" passed.\n`, ColourCode.GREEN);
     } else if (result.result === "failed") {
-      output += `Test "${result.test_name}" failed.\n`;
+      output += this.wrapColour(`Test "${result.test_name}" failed.\n`, ColourCode.RED);
     } else if (result.result === "error") {
-      output += `Test "${result.test_name}" caused an error!\n`;
+      output += this.wrapColour(`Test "${result.test_name}" caused an error!\n`, ColourCode.RED);
     } else if (result.result === "no-expect") {
-      output += `Test "${result.test_name}" completed.\n`;
+      output += this.wrapColour(`Test "${result.test_name}" completed.\n`, ColourCode.BLACK);
     } else if (result.result === "timeout") {
-      output += `Test "${result.test_name}" timed out.\n`;
+      output += this.wrapColour(`Test "${result.test_name}" timed out.\n`, ColourCode.RED);
     } else if (result.result === "killed") {
-      output += `Test "${result.test_name}" was killed.\n`;
+      output += this.wrapColour(`Test "${result.test_name}" was killed.\n`, ColourCode.BLACK);
     };
     if (result.result !== "passed") {
       output += "Produced output (stdout):\n";
