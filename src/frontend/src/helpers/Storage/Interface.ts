@@ -51,6 +51,7 @@ class File {
   constructor(obj: FileStored | File) {
     this.name = obj.name;
     this.project_id = obj.project_id;
+    this.flags = obj.flags;
     this.contents_id = obj.contents_id;
     this.contents = false;
     if (obj instanceof File) {

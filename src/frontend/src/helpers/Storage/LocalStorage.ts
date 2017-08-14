@@ -431,12 +431,19 @@ class LocalStorage {
 
   public async exportAsZip(pid: ProjectID | undefined = undefined, question: string | undefined = undefined): Promise<JSZip> {
     return this.db.transaction("r", [this.db.projects, this.db.files, this.db.contents], async () => {
-      let files = await (pid ? this.getFiles(pid, question, true) : this.getAllFiles(true));
       let result = new JSZip();
+      let files = await (pid ? this.getFiles(pid, question, true) : this.getAllFiles(true));
+      // export the files themselves
       await Promise.all(files.map(async (file: File) => {
         result.file(pid ? file.name : ((await this.getProject(file.project_id)).name) + "/" + file.name,
                     file.contents === false ? "" : file.contents.contents);
       }));
+      // create the metadata file if we are exporting a single project
+      if (pid) {
+        let psettings: any = (await this.getProject(pid)).settings;
+        psettings.flags = files.map((file: File) => [file.name, file.flags ? file.flags : 0]);
+        result.file(".metadata", JSON.stringify(psettings));
+      }
       return result;
     });
   }
