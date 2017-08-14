@@ -57,19 +57,25 @@
   [call-with-template (All (A) (-> String (-> Input-Port A) A))])
 
 ;; (runtime-files-path)
-;; Gets the path where runtime files are stored.
+;; Returns the path where runtime files are stored.
 (: runtime-files-path (-> String))
 (define (runtime-files-path)
   (path->string (build-path (read-config-string 'runtime-files-path))))
 
 ;; (init-projects)
-;; Creates the directories for projects
+;; Creates directories necessary to run Seashell
 (: init-projects (-> Void))
 (define (init-projects)
   (make-directory* (runtime-files-path))
   (void))
 
-;; Returns (values flags project-settings)
+;; (read-metadata file)
+;; Parses the .metadata file when importing a project from a template.
+;;
+;; Args:
+;;  file - path to the metadata file
+;; Returns:
+;;  Two values: a list of (list filename flags) and the project settings hash
 (: read-metadata (-> Path-String (Values (Listof (List String Integer)) (HashTable Symbol JSExpr))))
 (define (read-metadata file)
   (match-define (cons flags settings)
@@ -82,7 +88,17 @@
       (hash->list (cast (string->jsexpr (file->string file)) (HashTable Symbol JSExpr)))))
   (values flags (make-hash settings)))
 
-;; Returns new project ID
+;; (new-project name template? settings?)
+;; Creates a new project.
+;;
+;; Args:
+;;  name - name of the new project
+;;  template - (Optional) location of the project template zip file to clone.
+;;             If not provided, uses a default project template.
+;;  settings - (Optional) hash of project settings for new project.
+;;             Will be merged with the hash from the metadata file (if applicable)
+;; Returns:
+;;  New project ID
 (: new-project (->* (String) ((U String False) (HashTable Symbol JSExpr)) String))
 (define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol JSExpr)}])
   (call-with-write-transaction (thunk
@@ -121,6 +137,11 @@
                 (sequence->list (in-directory)))
               pid))))))))
 
+;; (delete-project id)
+;; Deletes a project.
+;;
+;; Args:
+;;  id - project ID to delete
 (: delete-project (-> String Void))
 (define (delete-project id)
   (call-with-write-transaction (thunk
@@ -293,13 +314,15 @@
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 ;; (compile-and-run-project/db pid question tests)
+;; Exports the given project, then compiles and runs it with compile-and-run-project.
+;; Runner file is determined by the project settings in the database.
 ;;
-;; pid: project id we are running
-;; question: question name we are running
-;; tests: list of the names of tests to run (not suffixed with .in/.expect)
-;;
-;; Runner file is determined by the project settings. This function access the database
-;;  then calls compile-and-run-project with the appropriate parameters.
+;; Args:
+;;  pid - project id we are running
+;;  question - question name we are running
+;;  tests - list of the names of tests to run (not suffixed with .in/.expect)
+;; Returns:
+;;  Same as compile-and-run-project
 (: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
 (define (compile-and-run-project/db pid question tests)
   (define tmpdir (make-temporary-file "seashell-compile-tmp-~a" 'directory))
@@ -322,6 +345,12 @@
     (thunk (delete-directory/files tmpdir))))
   (values res hsh))
 
+;; (zip-from-dir target dir)
+;; Creates a .zip from the directory provided
+;;
+;; Args:
+;;  target - path of .zip file to create
+;;  dir - directory we are zipping
 (: zip-from-dir (-> Path-String Path-String Void))
 (define (zip-from-dir target dir)
   (define cur (current-directory))
@@ -330,6 +359,13 @@
        ".")
   (current-directory cur))
 
+;; (export-project pid zip? target)
+;; Exports a project from the database to the filesystem
+;;
+;; Args:
+;;  pid - project ID to export
+;;  zip? - boolean, #t to export as a .zip, #f to export as a directory
+;;  target - path to .zip or directory to export to
 (: export-project (-> String Boolean Path-String Void))
 (define (export-project pid zip? target)
   (call-with-read-transaction (thunk
@@ -362,12 +398,24 @@
         (when (directory-exists? target) (delete-directory/files target))
         (rename-file-or-directory tmpdir target)]))))
 
+;; (export-project-name name zip? target)
+;; Exports the project with the given name from the database to the filesystem.
+;; Looks up the name in the projects table then calls export-project.
+;;
+;; Args:
+;;  name - name of project to export
+;;  zip?, target - same as export-project
 (: export-project-name (-> String Boolean String Void))
 (define (export-project-name name zip? target)
   (call-with-read-transaction (thunk
     (define proj (select-project-name name))
     (export-project (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'id) String) zip? target))))
 
+;; (export-all target)
+;; Exports all projects in the database to the filesystem.
+;;
+;; Args:
+;;  target - path of directory to export everything under
 (: export-all (-> String Void))
 (define (export-all target)
   (unless (directory-exists? target)
@@ -420,6 +468,14 @@
       (delete-directory/files (assert tmpzip) #:must-exist? #f))))
 
 ;; (marmoset-test-results course project type)
+;; Retrieves the results for the given project from Marmoset.
+;;
+;; Args:
+;;  course - name of course in Marmoset
+;;  project - name of Marmoset project
+;;  type - 'public or 'secret tests
+;; Returns:
+;;  JSON string containing the Marmoset results
 (: marmoset-test-results (-> String String (U 'public 'secret) String))
 (define (marmoset-test-results course project type)
   ;; Run the script that gets test results
