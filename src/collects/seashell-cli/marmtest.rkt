@@ -70,7 +70,7 @@
     (void))
 
   (define-values (code info)
-    (compile-and-run-project (path->string (path->complete-path project-dir)) main-file "." (list test-name) #t 'current-directory))
+    (compile-and-run-project (path->string (path->complete-path project-dir)) main-file "." (list test-name) 'current-directory))
   (match info
     [(hash-table ('messages msgs) ('status "compile-failed"))
       (eprintf "Compilation failed. Compiler errors:~n")
