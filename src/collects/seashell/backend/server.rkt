@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/contract
+         (only-in racket/file make-directory*)
          racket/async-channel
          racket/serialize
          racket/udp
@@ -149,7 +150,13 @@
 (define/contract (init-environment)
   (-> void?)
   (when (not (directory-exists? (read-config 'seashell)))
-    (make-directory (read-config 'seashell))))
+    (make-directory* (read-config 'seashell)))
+  ;; If old seashell folder (/u/userid/.seashell) doesn't exist, make it a symlink
+  ;; to the new seashell folder (/u/userid/cs136/seashell/)
+  (when (and (not (file-exists? (read-config 'old-seashell)))
+             (not (link-exists? (read-config 'old-seashell)))
+             (not (directory-exists? (read-config 'old-seashell))))
+    (make-file-or-directory-link (read-config 'seashell) (read-config 'old-seashell))))
 
 ;; exit-from-seashell return -> any/c
 ;; Seashell-specific exit function.
@@ -231,6 +238,11 @@
     (init-environment)
     (init-projects)
     (init-sync-database)
+
+    ;; Make sure the seashell.db file has group read and write permissions so that
+    ;; course accounts can use seashell-cli
+    (define db-file-path (build-path (read-config-path 'seashell) (read-config-path 'database-file)))
+    (when (file-exists? db-file-path) (file-or-directory-permissions db-file-path #o660)))
 
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
