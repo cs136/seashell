@@ -18,8 +18,14 @@ interface MarmosetProject {
   title: string;
 }
 
+/* Provides any functions that require websocket calls or AJAX requests. */
 class WebStorage {
 
+  /* WebStorage(socket, localStorage, debug)
+    Args:
+     socket - the active SeashellWebsocket
+     localStorage - the active LocalStorage
+     debug - (Optional) Set true to turn on debug console.logs. Default false. */
   constructor(private socket: SeashellWebsocket,
               private localStorage: LocalStorage,
               public debug: boolean = false) {
@@ -28,9 +34,16 @@ class WebStorage {
 
   private skeletons: SkeletonManager;
 
+  /* marmosetSubmit(project, question, marmosetProject)
+    Submits a question to Marmoset.
+
+    Args:
+     project - project ID
+     question - question name
+     marmosetProject - name of the project on Marmoset to submit to */
   public async marmosetSubmit(project: ProjectID, question: string, marmosetProject: string) {
     await this.localStorage.waitForSync();
-    return await this.socket.sendMessage({
+    return this.socket.sendMessage({
       type: "marmosetSubmit",
       project: project,
       subdir: question,
@@ -38,6 +51,13 @@ class WebStorage {
     });
   }
 
+  /* getTestResults(marmosetProject)
+    Gets the current user's Marmoset test results for a Marmoset project.
+
+    Args:
+     marmosetProject - the Marmoset project to query for results
+    Returns:
+     Object storing the Marmoset results */
   public async getTestResults(marmosetProject: string): Promise<any> {
     return await this.socket.sendMessage({
       type: "marmosetTestResults",
@@ -46,6 +66,11 @@ class WebStorage {
     });
   }
 
+  /* getMarmosetProjects()
+    Gets the list of all projects on Marmoset.
+
+    Returns:
+     Array of MarmosetProject objects */
   public async getMarmosetProjects(): Promise<MarmosetProject[]> {
     let result: MarmosetProject[] = [];
     try {
@@ -64,6 +89,7 @@ class WebStorage {
     }
   }
 
+  // The next 3 functions are wrappers for SkeletonManager functions.
   public async inSkeleton(proj: ProjectID): Promise<boolean> {
     return this.skeletons.inSkeleton(proj);
   }
@@ -76,6 +102,9 @@ class WebStorage {
     return this.skeletons.fetchNewSkeletons();
   }
 
+  /* archiveProjects()
+    Archives all of the user's projects.
+    They will no longer be accessible from within Seashell. */
   public async archiveProjects(): Promise<void> {
     await this.localStorage.waitForSync();
     let result = await this.socket.sendMessage({

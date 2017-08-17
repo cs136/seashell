@@ -658,7 +658,7 @@ class LocalStorage {
   }
 }
 
-/* Class storing database schema and initializing the sync protocol */
+/* Class defining database schema and initializing the sync protocol */
 class StorageDB extends Dexie {
   public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
@@ -668,7 +668,6 @@ class StorageDB extends Dexie {
   private isConnected: Function;
 
   /* StorageDB(dbName, options, isConnected)
-    
     Args:
      dbName - name of the IndexedDB database
      options - Dexie options
