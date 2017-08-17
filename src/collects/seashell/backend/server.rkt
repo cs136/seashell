@@ -241,8 +241,8 @@
 
     ;; Make sure the seashell.db file has group read and write permissions so that
     ;; course accounts can use seashell-cli
-    (define db-file-path (build-path (read-config-path 'seashell) (read-config-path 'database-file)))
-    (when (file-exists? db-file-path) (file-or-directory-permissions db-file-path #o660)))
+    (define db-file-path (build-path (read-config 'seashell) (read-config 'database-file)))
+    (when (file-exists? db-file-path) (file-or-directory-permissions db-file-path #o660))
 
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
