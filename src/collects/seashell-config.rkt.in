@@ -34,6 +34,8 @@
 (define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@)
 (define SEASHELL_RACKET "@SEASHELL_RACKET@")
 
+(define COURSE "cs136")
+
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
 ;; found
@@ -217,16 +219,18 @@
       ;; via SSH.
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
-      (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      (cons 'seashell                      (build-path (find-system-path 'home-dir) COURSE "seashell"))
+      ;; Location of old per-user configuration directory, for backwards compatibility
+      (cons 'old-seashell                  (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Location of the runtime-files directory.
-      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) COURSE "seashell" "runtime-files"))
       ;; Location to store periodic database backups in filesystem
-      (cons 'export-path                   (build-path (find-system-path 'home-dir) ".seashell" "projects"))
+      (cons 'export-path                   (build-path (find-system-path 'home-dir) COURSE "seashell" "projects"))
       ;; Location of SQLite database file relative to the 'seashell directory
       (cons 'database-file                 "seashell.db")
       ;; Location of the Seashell database for a parameterized user. Used in seashell-cli.
       ;; TODO make sure this is consistent with the above.
-      (cons 'database-file-format          "/u/~a/.seashell/seashell.db")
+      (cons 'database-file-format          (format "/u/~~a/~a/seashell/seashell.db" COURSE))
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
@@ -238,7 +242,7 @@
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
       ;; Location of the Marmoset test results script
-      (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
+      (cons 'test-results-tool              (format "/u/~a/marmoset-scripts/get-test-results/get-test-results" COURSE))
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; File setting bitmasks
@@ -288,6 +292,8 @@
       (cons 'compiler-ttl                  60)
       ;; Sentry logging endpoint (default #f -- disabled)
       (cons 'sentry-target                 #f)
+      ;; whoami binary (used for CLI)
+      (cons 'whoami                        "/usr/bin/whoami")
       )))
   config-hash)
 
