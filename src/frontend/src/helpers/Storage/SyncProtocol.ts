@@ -9,14 +9,23 @@ import "dexie-syncable";
 
 export {SyncProtocol}
 
-class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
+/* Implements the Dexie.Syncable.ISyncProtocol interface to sync with Seashell's backend server. */
+class SyncProtocol {
   private change_key: number;
   private connect_key: number;
 
+  /* SyncProtocol(socket, dispatch, debug)
+    Args:
+     socket - the active SeashellWebsocket
+     dispatch - the React dispatch function
+     debug - (Optional) Set true to turn on debug console.logs. Default false. */
   constructor(private socket: SeashellWebsocket,
               private dispatch: DispatchFunction,
               public debug: boolean = false) { }
 
+  /* convertChange(change)
+    Converts a database change from the format used by Dexie.Syncable to the
+    format used by Seashell's backend. */
   private convertChange(change: any) {
     if (change.type === ChangeType.CREATE) {
       return {
@@ -42,6 +51,8 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     }
   };
 
+  /* sendChanges(changes, baseRevision, partial)
+    Sends a set of changes over the websocket. */
   public async sendChanges(changes: any[], baseRevision: number, partial: boolean) {
     return this.socket.sendMessage({
       type: "changes",
@@ -51,6 +62,8 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
   }
 
+  /* clientIdentity(clientIdentity)
+    Used to tell the server which client we are, or to request a fresh ID from the server. */
   public async clientIdentity(clientIdentity: string) {
     return this.socket.sendMessage({
       type: "clientIdentity",
@@ -58,6 +71,8 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
   }
 
+  /* subscribe(syncedRevision)
+    Subscribes to updates from the sync server. */
   public async subscribe(syncedRevision: number) {
     return this.socket.sendMessage({
       type: "subscribe",
@@ -65,6 +80,9 @@ class SyncProtocol { // implements Dexie.Syncable.ISyncProtocol {
     });
   }
 
+  /* sync(context, url, options, baseRevision, syncedRevision, changes, partial, applyRemoteChanges,
+          onChangesAccepted, onSuccess, onError)
+    Called by Dexie when a sync is necessary. */
   public async sync(context: any /*Dexie.Syncable.IPersistedContext*/, url: string, options: Object, baseRevision: any,
       syncedRevision: any, changes: any[] /*Dexie.Syncable.IDatabaseChange[]*/, partial: boolean,
       applyRemoteChanges: Function /*Dexie.Syncable.ApplyRemoteChangesFunction*/, onChangesAccepted: () => void,

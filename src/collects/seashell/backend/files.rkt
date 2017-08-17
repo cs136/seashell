@@ -16,6 +16,16 @@
          export-file
          export-directory)
 
+;; (new-file pid name contents flags)
+;; Creates a new file with the given name, contents, and flags
+;;
+;; Args:
+;;  pid - project ID
+;;  name - name of new file to create, such as q1/main.c
+;;  contents - initial contents of the new file. #f creates a directory instead
+;;  flags - integer representing the file's flags
+;; Returns:
+;;  Two values: the new file ID and the new contents ID (contents ID is #f for a directory)
 (: new-file (-> String String (U String False) Integer (Values String (U String False))))
 (define (new-file pid name contents flags)
   (define result (call-with-write-transaction (thunk
@@ -35,6 +45,14 @@
     (cons file-id contents-id))))
   (values (car result) (cdr result)))
 
+;; (new-directory pid name)
+;; Creates a new directory with the given name
+;;
+;; Args:
+;;  pid - project ID
+;;  name - name of the directory to create
+;; Returns:
+;;  New file ID for the directory
 (: new-directory (-> String String String))
 (define (new-directory pid name)
   (define-values (fid cid) (new-file pid name #f 0))
@@ -68,6 +86,13 @@
     (raise (exn:fail (format "File ~a not found in template ~a." file template)
       (current-continuation-marks)))))
 
+;; (export-file file proj-dir)
+;; Exports a single file to the given project path. Called by export-project.
+;;
+;; Args:
+;;  file - file ID to export
+;;  proj-dir - location of the root path for the project we are currently exporting.
+;;             will export to {proj-dir}/{file.name}
 (: export-file (-> JSExpr (U String Path) Void))
 (define (export-file file proj-dir)
   (define contents (select-id "contents" (cast (hash-ref (cast file (HashTable Symbol JSExpr)) 'contents_id) String)))
@@ -78,6 +103,13 @@
     (with-output-to-file path
       (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))))))
 
+;; (export-directory dir proj-dir)
+;; Exports a single directory to the given project path. Called by export-project.
+;;
+;; Args:
+;;  dir - file ID of dir to export
+;;  proj-dir - location of the root path for the project we are currently exporting.
+;;             will export to {proj-dir}/{dir.name}
 (: export-directory (-> JSExpr (U String Path) Void))
 (define (export-directory dir proj-dir)
   (define path (build-path proj-dir (cast (hash-ref (cast dir (HashTable Symbol JSExpr)) 'name) String)))

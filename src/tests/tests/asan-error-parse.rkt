@@ -20,7 +20,7 @@
       (with-output-to-file (build-path tmpdir "default" "main.c")
         (thunk (display code)))
       (define-values (success hsh)
-        (compile-and-run-project (path->string tmpdir) "default/main.c" "default" '() #t))
+        (compile-and-run-project (path->string tmpdir) "default/main.c" "default" '()))
       (sync (program-wait-evt (hash-ref hsh 'pid)))
       (string->jsexpr (bytes->string/utf-8 (program-asan-message (hash-ref hsh 'pid)))))
     (thunk (delete-directory/files tmpdir))))

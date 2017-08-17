@@ -15,7 +15,7 @@
       (make-directory (build-path tmpdir "q1"))
       (with-output-to-file (build-path tmpdir "q1" "test.c")
         (thunk (write-string contents)))
-      (define-values (succ hsh) (compile-and-run-project (path->string tmpdir) "q1/test.c" "q1" '() #t))
+      (define-values (succ hsh) (compile-and-run-project (path->string tmpdir) "q1/test.c" "q1" '()))
       (when succ (sync (program-wait-evt (hash-ref hsh 'pid))))
       (values succ hsh))
     (thunk (delete-directory/files tmpdir))))

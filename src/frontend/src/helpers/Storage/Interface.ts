@@ -12,12 +12,14 @@ type ContentsID = UUID;
 type FileID = UUID;
 type ProjectID = UUID;
 
+/* enum of the 3 change types used by Dexie.Syncable */
 enum ChangeType {
   CREATE = 1,
   UPDATE = 2,
   DELETE = 3
 }
 
+/* Stores data for one file contents row */
 class Contents implements ContentsStored {
   id: ContentsID;
   project_id: ProjectID;
@@ -34,10 +36,13 @@ class Contents implements ContentsStored {
   }
 }
 
+/* Bitmasks for the flags we store in File.flags */
 enum FlagMask {
   READONLY = 1
 }
 
+/* File class stores data associated with a file.
+   May or may not have contents stored, depending on how it was constructed. */
 // NOTE: File objects may not necessarily have a valid
 // prototype chain.  Do _NOT_ use instanceof to test
 // if something's a File object.
@@ -51,6 +56,7 @@ class File {
   constructor(obj: FileStored | File) {
     this.name = obj.name;
     this.project_id = obj.project_id;
+    this.flags = obj.flags;
     this.contents_id = obj.contents_id;
     this.contents = false;
     if (obj instanceof File) {
@@ -82,6 +88,8 @@ class File {
   }
 }
 
+/* Extends File to include an ID, so FileEntry corresponds
+   to exactly one entry in the files table. */
 class FileEntry extends File {
   public id: FileID;
 
@@ -96,6 +104,7 @@ class FileEntry extends File {
   }
 }
 
+/* Stores data for a project */
 class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
@@ -110,6 +119,7 @@ class Project implements ProjectStored {
   }
 }
 
+/* Stores data for the global Seashell settings */
 class Settings implements SettingsStored {
   public id: 0 = 0;
   public editor_mode: string = "standard";
@@ -141,6 +151,7 @@ class Settings implements SettingsStored {
   }
 }
 
+/* How contents are stored in the database */
 interface ContentsStored {
   id?: ContentsID;
   project_id: ProjectID;
@@ -149,6 +160,7 @@ interface ContentsStored {
   time: number;
 }
 
+/* How files are stored in the database */
 interface FileStored {
   id?: FileID;
   project_id: ProjectID;
@@ -157,6 +169,7 @@ interface FileStored {
   flags: number;
 }
 
+/* How projects are stored in the database */
 interface ProjectStored {
   id?: ProjectID;
   name: string;
@@ -164,6 +177,7 @@ interface ProjectStored {
   last_used: number;
 }
 
+/* How Seashell settings are stored in the database */
 interface SettingsStored {
   id: 0;
   editor_mode: string;

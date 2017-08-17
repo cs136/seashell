@@ -57,19 +57,25 @@
   [call-with-template (All (A) (-> String (-> Input-Port A) A))])
 
 ;; (runtime-files-path)
-;; Gets the path where runtime files are stored.
+;; Returns the path where runtime files are stored.
 (: runtime-files-path (-> String))
 (define (runtime-files-path)
   (path->string (build-path (read-config-string 'runtime-files-path))))
 
 ;; (init-projects)
-;; Creates the directories for projects
+;; Creates directories necessary to run Seashell
 (: init-projects (-> Void))
 (define (init-projects)
   (make-directory* (runtime-files-path))
   (void))
 
-;; Returns (values flags project-settings)
+;; (read-metadata file)
+;; Parses the .metadata file when importing a project from a template.
+;;
+;; Args:
+;;  file - path to the metadata file
+;; Returns:
+;;  Two values: a list of (list filename flags) and the project settings hash
 (: read-metadata (-> Path-String (Values (Listof (List String Integer)) (HashTable Symbol JSExpr))))
 (define (read-metadata file)
   (match-define (cons flags settings)
@@ -82,7 +88,17 @@
       (hash->list (cast (string->jsexpr (file->string file)) (HashTable Symbol JSExpr)))))
   (values flags (make-hash settings)))
 
-;; Returns new project ID
+;; (new-project name template? settings?)
+;; Creates a new project.
+;;
+;; Args:
+;;  name - name of the new project
+;;  template - (Optional) location of the project template zip file to clone.
+;;             If not provided, uses a default project template.
+;;  settings - (Optional) hash of project settings for new project.
+;;             Will be merged with the hash from the metadata file (if applicable)
+;; Returns:
+;;  New project ID
 (: new-project (->* (String) ((U String False) (HashTable Symbol JSExpr)) String))
 (define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol JSExpr)}])
   (call-with-write-transaction (thunk
@@ -121,25 +137,27 @@
                 (sequence->list (in-directory)))
               pid))))))))
 
+;; (delete-project id)
+;; Deletes a project.
+;;
+;; Args:
+;;  id - project ID to delete
 (: delete-project (-> String Void))
 (define (delete-project id)
   (call-with-write-transaction (thunk
     (delete-id "projects" id)
     (delete-files-for-project id))))
 
-;; (compile-and-run-project name file question-name tests full-path test-location)
+;; (compile-and-run-project location file question-name tests test-location)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
-;;  name - Name of project.
+;;  location - directory where the project is located
 ;;  file - Full path and name of file we are compiling from
 ;;         When called from compile-and-run-project/use-runner below, looks like
 ;;         "q1/file.rkt" or "common/file.rkt"
 ;;  question-name - Name of the question we are running
 ;;  test - Name of test, or empty to denote no test.
-;;  full-path - If #f, looks for the project in the standard project location.
-;;                 #t, assumes name is the full path to the project directory.
-;;    By default, #f.
 ;;  test-location - One of:
 ;;    'tree - Look for the tests in <directory containing file>/test.
 ;;    'flat - Look for the tests in <directory containing file>.
@@ -154,18 +172,16 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(: compile-and-run-project (->* (String String String (Listof String)) (Boolean (U 'tree 'flat 'current-directory String)) (Values Boolean (HashTable Symbol JSExpr))))
-(define (compile-and-run-project name file question-name tests [full-path #f] [test-location 'tree])
-  (when (or (not full-path)
-            (and full-path (not (directory-exists? name))))
-    (raise (exn:project (format "Project ~a does not exist!" name)
+(: compile-and-run-project (->* (String String String (Listof String)) ((U 'tree 'flat 'current-directory String)) (Values Boolean (HashTable Symbol JSExpr))))
+(define (compile-and-run-project location file question-name tests [test-location 'tree])
+  (when (not (directory-exists? location))
+    (raise (exn:project (format "Project ~a does not exist!" location)
                         (current-continuation-marks))))
 
-  (define project-base name)
+  (define project-base location)
   (define project-base-str (path->string (path->complete-path project-base)))
-  (define project-common (if full-path
-    (build-path project-base (read-config-string 'common-subdirectory))
-    (build-path project-base (read-config-string 'common-subdirectory))))
+  (define project-common
+    (build-path project-base (read-config-string 'common-subdirectory)))
   (define project-question (build-path project-base question-name))
 
   (define project-common-list
@@ -293,13 +309,15 @@
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
 ;; (compile-and-run-project/db pid question tests)
+;; Exports the given project, then compiles and runs it with compile-and-run-project.
+;; Runner file is determined by the project settings in the database.
 ;;
-;; pid: project id we are running
-;; question: question name we are running
-;; tests: list of the names of tests to run (not suffixed with .in/.expect)
-;;
-;; Runner file is determined by the project settings. This function access the database
-;;  then calls compile-and-run-project with the appropriate parameters.
+;; Args:
+;;  pid - project id we are running
+;;  question - question name we are running
+;;  tests - list of the names of tests to run (not suffixed with .in/.expect)
+;; Returns:
+;;  Same as compile-and-run-project
 (: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
 (define (compile-and-run-project/db pid question tests)
   (define tmpdir (make-temporary-file "seashell-compile-tmp-~a" 'directory))
@@ -317,11 +335,17 @@
       (define path (build-path tmpdir run-file))
       (printf "path: ~a\nexists: ~a\n" path (file-exists? path))
       (define-values (res hsh)
-        (compile-and-run-project (path->string tmpdir) run-file question tests #t))
+        (compile-and-run-project (path->string tmpdir) run-file question tests))
       (cons res hsh))
     (thunk (delete-directory/files tmpdir))))
   (values res hsh))
 
+;; (zip-from-dir target dir)
+;; Creates a .zip from the directory provided
+;;
+;; Args:
+;;  target - path of .zip file to create
+;;  dir - directory we are zipping
 (: zip-from-dir (-> Path-String Path-String Void))
 (define (zip-from-dir target dir)
   (define cur (current-directory))
@@ -330,6 +354,13 @@
        ".")
   (current-directory cur))
 
+;; (export-project pid zip? target)
+;; Exports a project from the database to the filesystem
+;;
+;; Args:
+;;  pid - project ID to export
+;;  zip? - boolean, #t to export as a .zip, #f to export as a directory
+;;  target - path to .zip or directory to export to
 (: export-project (-> String Boolean Path-String Void))
 (define (export-project pid zip? target)
   (call-with-read-transaction (thunk
@@ -362,12 +393,24 @@
         (when (directory-exists? target) (delete-directory/files target))
         (rename-file-or-directory tmpdir target)]))))
 
+;; (export-project-name name zip? target)
+;; Exports the project with the given name from the database to the filesystem.
+;; Looks up the name in the projects table then calls export-project.
+;;
+;; Args:
+;;  name - name of project to export
+;;  zip?, target - same as export-project
 (: export-project-name (-> String Boolean String Void))
 (define (export-project-name name zip? target)
   (call-with-read-transaction (thunk
     (define proj (select-project-name name))
     (export-project (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'id) String) zip? target))))
 
+;; (export-all target)
+;; Exports all projects in the database to the filesystem.
+;;
+;; Args:
+;;  target - path of directory to export everything under
 (: export-all (-> String Void))
 (define (export-all target)
   (unless (directory-exists? target)
@@ -379,14 +422,14 @@
     projects)
   (void))
 
-;; (marmoset-submit course assn project file) -> void
-;; Submits a file to marmoset
+;; (marmoset-submit course assn pid question)
+;; Submits a question to Marmoset.
 ;;
-;; Arguments:
-;;   course  - Name of the course, used in SQL query (i.e. "CS136")
-;;   assn    - Name of the assignment/project in marmoset
-;;   pid     - Project ID
-;;   question - Name of question to submit
+;; Args:
+;;  course - name of the course, used in SQL query (i.e. "CS136")
+;;  assn - name of the assignment/project in marmoset
+;;  pid - project ID
+;;  question - name of question to submit
 (: marmoset-submit (-> String String String (U False String) Void))
 (define (marmoset-submit course assn pid question)
   (: tmpzip (U False Path))
@@ -420,6 +463,14 @@
       (delete-directory/files (assert tmpzip) #:must-exist? #f))))
 
 ;; (marmoset-test-results course project type)
+;; Retrieves the results for the given project from Marmoset.
+;;
+;; Args:
+;;  course - name of course in Marmoset
+;;  project - name of Marmoset project
+;;  type - 'public or 'secret tests
+;; Returns:
+;;  JSON string containing the Marmoset results
 (: marmoset-test-results (-> String String (U 'public 'secret) String))
 (define (marmoset-test-results course project type)
   ;; Run the script that gets test results
@@ -437,14 +488,11 @@
       (jsexpr->string (hash 'error #t 'result empty))
       stdout-output))
 
-;; (archive-projects archive-name) moves all existing project files into a
-;;   directory called archive-name
+;; (archive-projects archive-name)
+;; Moves all existing project files into a directory called archive-name
 ;;
-;; Params:
-;;   archive-name - name of new db file to archive to, or #f to use timestamp
-;;
-;; Returns:
-;;   Void
+;; Args:
+;;  archive-name - name of new db file to archive to, or #f to use timestamp
 (: archive-projects (-> (U False String) Void))
 (define (archive-projects archive-name)
   (define arch-file (build-path (read-config-string 'seashell) "archives"

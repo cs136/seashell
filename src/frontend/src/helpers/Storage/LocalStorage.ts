@@ -12,13 +12,21 @@ import JSZip = require("jszip");
 
 export {LocalStorage}
 
-
 interface DBOptions {
   addons?: Array<(db: Dexie) => void>;
   autoOpen?: boolean;
   indexedDB?: IDBFactory;
   IDBKeyRange?: new () => IDBKeyRange;
 }
+
+/*
+  In the storage interface, a filename is always a path from the root of the project.
+  These can have three basic forms:
+
+  {question}/{file}
+  {question}/tests/{file}
+  common/{file}
+*/
 
 class LocalStorage {
 
@@ -30,6 +38,11 @@ class LocalStorage {
     this.isConnected = isConnected;
   }
 
+  /* connect(dbName)
+    Connects to the IndexedDB database.
+
+    Args:
+    dbName - Name of database to connect to */
   public async connect(dbName: string): Promise<void> {
     this.dbName = dbName;
     this.db = new StorageDB(dbName, {
@@ -40,10 +53,20 @@ class LocalStorage {
     await this.db.open();
   }
 
+  /* deleteDB()
+    Deletes the entire IndexedDB database. */
   public async deleteDB(): Promise<void> {
     return this.db.delete();
   }
 
+  /* writeFile(fid, contents)
+    Overwrites the contents of an existing file.
+
+    Args:
+     fid - The file ID of the file we are overwriting.
+     contents - the new contents of the file
+    Returns:
+     The new file ID associated with the file */
   public async writeFile(fid: FileID, contents: string): Promise<FileID> {
     this.debug && console.log("writeFile");
     return this.db.transaction("rw", [this.db.contents, this.db.files], async () => {
@@ -57,6 +80,14 @@ class LocalStorage {
     });
   }
 
+  /* readFile(fid, contents)
+    Reads a file entry form the database.
+
+    Args:
+     fid - The file ID to read from.
+     contents - true to grab the associated contents, false to leave contents undefined
+    Returns:
+     The FileEntry object associated with the file */
   public async readFile(fid: FileID, contents: boolean = true): Promise<FileEntry> {
     this.debug && console.log("readFile");
     let tbls: Dexie.Table<any, string>[] = [this.db.files];
@@ -78,6 +109,15 @@ class LocalStorage {
     });
   }
 
+  /* getFiles(pid, question, contents)
+    Fetches a list of all files in a certain project or question.
+
+    Args:
+     pid - project ID
+     question - (Optional) Name of question to get files for. If undefined, gets all files for the project.
+     contents - (Optional) Set to true to fetch file contents as well. Default false.
+    Returns:
+     An array of the corresponding File objects */
   public async getFiles(pid: ProjectID, question: string | undefined = undefined, contents: boolean = false): Promise<File[]> {
     this.debug && console.log("getFiles");
     const tables = contents ?
@@ -105,6 +145,13 @@ class LocalStorage {
     });
   }
 
+  /* getQuestions(pid)
+    Fetches the list of questions for a given project.
+
+    Args:
+     pid - project ID
+    Returns:
+     An array of strings representing the question names */
   public async getQuestions(pid: ProjectID): Promise<string[]> {
     this.debug && console.log("getQuestions");
     return this.db.transaction("r", this.db.files, async () => {
@@ -115,6 +162,17 @@ class LocalStorage {
     });
   }
 
+  /* getFileByName(pid, filename, contents)
+    Reads a file from the database by filename, if it exists.
+
+    Args:
+     pid - project ID
+     filename - the filename within the project we are attempting to read, such as "q1/main.c"
+     contents - (Optional) Set false if you do not need the file contents. Default true.
+    Returns:
+     If a file with that name exists, returns the corresponding FileEntry.
+     If no such file exists, returns false.
+     If there are multiple rows in the files table matching that filename, throws a ConflictError. */
   public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
     this.debug && console.log("getFileByName");
     return this.db.transaction("r", this.db.files, this.db.contents, async () => {
@@ -152,6 +210,12 @@ class LocalStorage {
     });
   }
 
+  /* resolveConflict(contents)
+    Overwrites any existing contents with the same filename with the given contents.
+    Uses the Contents object's filename.
+
+    Args:
+     contents - The Contents object that will become the current contents for the file */
   public async resolveConflict(contents: Contents): Promise<void> {
     this.debug && console.log("resolveConflict");
     return this.db.transaction("rw", this.db.files, async () => {
@@ -171,10 +235,16 @@ class LocalStorage {
     });
   }
 
-  public async deleteFile(project: ProjectID, filename: string): Promise<void> {
+  /* deleteFile(pid, filename)
+    Deletes a file.
+
+    Args:
+     pid - project ID
+     filename - name of file to delete, such as "q1/main.c" */
+  public async deleteFile(pid: ProjectID, filename: string): Promise<void> {
     this.debug && console.log("deleteFile");
     return await this.db.transaction("rw", this.db.files, this.db.contents, async () => {
-      const file = await this.getFileByName(project, filename, false);
+      const file = await this.getFileByName(pid, filename, false);
       if (!file) {
         throw new E.StorageError(`Deleting file ${filename} which does not exist.`);
       } else {
@@ -183,19 +253,36 @@ class LocalStorage {
     });
   }
 
-  public async renameFile(project: ProjectID, currentName: string, newName: string): Promise<FileEntry> {
+  /* renameFile(pid, currentName, newName)
+    Renames an existing file. Implemented by deleting and creating a new file.
+
+    Args:
+     pid - project ID
+     currentName - name of the file to be renamed, such as "q1/main.c"
+     newName - new name of the file
+    Returns:
+      A FileEntry object representing the renamed file */
+  public async renameFile(pid: ProjectID, currentName: string, newName: string): Promise<FileEntry> {
     this.debug && console.log("renameFile");
     return await this.db.transaction("rw", this.db.contents, this.db.files, async () => {
-      let file = await this.getFileByName(project, currentName);
+      let file = await this.getFileByName(pid, currentName);
       if (!file) {
         throw new E.StorageError(`Renaming file ${currentName} which does not exist.`);
       }
-      await this.deleteFile(project, file.name);
-      let nFile = await this.newFile(project, newName, file.contents ? file.contents.contents : "");
+      await this.deleteFile(pid, file.name);
+      let nFile = await this.newFile(pid, newName, file.contents ? file.contents.contents : "");
       return new FileEntry(nFile);
     });
   }
 
+  /* getVersions(pid, filename)
+    Fetches a list of all previous revisions of a file in the database.
+
+    Args:
+     pid - project ID
+     filename - name of file to get versions for, such as "q1/main.c"
+    Returns:
+     An array of Contents objects, each represents a previous version of the file */
   public async getVersions(pid: ProjectID, filename: string): Promise<Contents[]> {
     this.debug && console.log("getVersions");
     return this.db.transaction("r", this.db.contents, async () => {
@@ -206,6 +293,15 @@ class LocalStorage {
     });
   }
 
+  /* getProjectSetting(pid, key)
+    Gets the value of a specific project setting.
+
+    Args:
+     pid - project ID
+     key - The setting key you are looking up, such as "q1_runner_file"
+    Returns:
+     The value associated with the key, if it exists.
+     If it does not exist, returns undefined. */
   private async getProjectSetting(pid: ProjectID, key: string): Promise<string|undefined> {
     return this.db.transaction("r", this.db.projects, async () => {
       const project = await this.getProject(pid);
@@ -213,6 +309,13 @@ class LocalStorage {
     });
   }
 
+  /* setProjectSetting(pid, key, value)
+   Sets the value of a specific project setting
+
+   Args:
+    pid - project ID
+    key - The setting key you want to set
+    value - The new value of the setting */
   private async setProjectSetting(pid: ProjectID, key: string, value: string): Promise<void> {
     return this.db.transaction("rw", this.db.projects, async () => {
       const project = await this.getProject(pid);
@@ -225,21 +328,33 @@ class LocalStorage {
     });
   }
 
+  /* runnerFileKey(question)
+   Returns the project setting key which stores the runner file for the given question. */
   private runnerFileKey(question: string): string {
     return `${question}_runner_file`;
   }
 
+  /* getFileToRun(pid, question)
+   Returns the runner file's filename for the given question. */
   public async getFileToRun(pid: ProjectID, question: string): Promise<string|false> {
     this.debug && console.log("getFileToRun");
     return (await this.getProjectSetting(pid, this.runnerFileKey(question))) || false;
   }
 
-  // a file name is (q*/tests|q*|common)/name
+  /* setFileToRun(pid, question, filename)
+   Sets the runner file for the given question.
+
+   Args:
+    pid - project ID
+    question - name of question
+    filename - name of new runner file, such as "q1/main.c" */
   public async setFileToRun(pid: ProjectID, question: string, filename: string): Promise<void> {
     this.debug && console.log("setFileToRun");
     return this.setProjectSetting(pid, this.runnerFileKey(question), filename);
   }
 
+  /* getSettings()
+   Returns the global settings object for the current user. */
   public async getSettings(): Promise<Settings> {
     this.debug && console.log("getSettings");
     return await this.db.transaction("r", this.db.settings, async () => {
@@ -249,6 +364,8 @@ class LocalStorage {
     });
   }
 
+  /* setSettings(settings)
+   Sets the global settings object for the current user. */
   public async setSettings(settings: Settings): Promise<void> {
     this.debug && console.log("setSettings");
     return await this.db.transaction("rw", this.db.settings, async () => {
@@ -265,6 +382,15 @@ class LocalStorage {
     });
   }
 
+  /* newFile(pid, name, contents)
+   Creates a new file.
+
+   Args:
+    pid - project ID
+    name - name of the file to create
+    contents - (Optional) The initial contents of the created file. Defaults to empty string.
+   Returns:
+    A FileEntry object for the new file */
   public async newFile(pid: ProjectID, name: string, contents: string = ""): Promise<FileEntry> {
     this.debug && console.log("newFile");
     const rmatch: RegExpMatchArray | null = contents.match(/^data:([^;]*)?(?:;(?!base64)([^;]*))?(?:;(base64))?,(.*)/);
@@ -302,6 +428,12 @@ class LocalStorage {
     });
   }
 
+  /* newQuestion(pid, question)
+   Creates a new question.
+
+   Args:
+    pid - project ID
+    question - name of the question to create */
   public async newQuestion(pid: ProjectID, question: string): Promise<void> {
     this.debug && console.log("newQuestion");
     await this.db.transaction("rw", this.db.files, () => {
@@ -314,6 +446,12 @@ class LocalStorage {
     });
   }
 
+  /* deleteQuestion(pid, question)
+    Deletes a question.
+
+    Args:
+     pid - project ID
+     question - name of the question to delete */
   public async deleteQuestion(pid: ProjectID, question: string): Promise<void> {
     this.debug && console.log("deleteQuestion");
     // delete the directory file entry and all children files
@@ -322,6 +460,13 @@ class LocalStorage {
     });
   }
 
+  /* newProject(name)
+    Creates a new project.
+
+    Args:
+     name - name of the project to create
+    Returns:
+     A Project object for the new project */
   public async newProject(name: string): Promise<Project> {
     this.debug && console.log("newProject");
     return await this.db.transaction("rw", this.db.projects, async () => {
@@ -339,6 +484,11 @@ class LocalStorage {
     });
   }
 
+  /* deleteProject(pid)
+    Deletes a project.
+
+    Args:
+     pid - project ID to delete */
   public async deleteProject(pid: ProjectID): Promise<void> {
     this.debug && console.log("deleteProject");
     return await this.db.transaction("rw", [this.db.files, this.db.projects], async () => {
@@ -348,6 +498,13 @@ class LocalStorage {
     });
   }
 
+  /* getProject(pid)
+    Fetches a Project object from the database.
+
+    Args:
+     pid - project ID to fetch
+    Returns:
+     Project object */
   public async getProject(pid: ProjectID): Promise<Project> {
     this.debug && console.log("getProject");
     return await this.db.transaction("r", this.db.projects, async () => {
@@ -359,6 +516,11 @@ class LocalStorage {
     });
   }
 
+  /* getProjects()
+    Gets a list of all projects.
+
+    Returns:
+     An array of Project objects */
   public async getProjects(): Promise<Project[]> {
     this.debug && console.log("getProjects");
     return await this.db.transaction("r", this.db.projects, async () => {
@@ -370,6 +532,11 @@ class LocalStorage {
     });
   }
 
+  /* updateLastUsed(pid)
+    Sets the last used time for a project to the current time.
+
+    Args:
+     pid - project ID to update */
   public updateLastUsed(pid: ProjectID): Promise<void> {
     this.debug && console.log("updateLastUsed");
     return this.db.transaction("rw", this.db.projects, () => {
@@ -377,6 +544,13 @@ class LocalStorage {
     });
   }
 
+  /* getAllFiles()
+    Gets a list of all files for all projects.
+
+    Args:
+     contents - (Optional) Set true to also fetch contents of all files. Default false.
+    Returns:
+     An array of File objects */
   public async getAllFiles(contents: boolean = false): Promise<File[]> {
     this.debug && console.log("getAllFiles");
     let tables = contents ? [this.db.files, this.db.contents] : [this.db.files];
@@ -390,10 +564,20 @@ class LocalStorage {
     });
   }
 
+  /* openFilesKey(question)
+    Returns the project setting key for the list of open files in the given question. */
   private openFilesKey(question: string): string {
     return `${question}_open_files`;
   }
 
+  /* getOpenFiles(pid, question)
+    Gets the currently open files in a question.
+
+    Args:
+     pid - project ID
+     question - question name
+    Returns:
+     Array of open filenames */
   public async getOpenFiles(pid: ProjectID, question: string): Promise<string[]> {
     this.debug && console.log("getOpenFiles");
     return this.db.transaction("r", this.db.projects, async () => {
@@ -401,6 +585,13 @@ class LocalStorage {
     });
   }
 
+  /* addOpenFile(pid, question, filename)
+    Adds a file to the list of open files for a question.
+
+    Args:
+     pid - project ID
+     question - question name
+     filename - filename to add to the list */
   public async addOpenFile(pid: ProjectID, question: string, filename: string): Promise<void> {
     this.debug && console.log("addOpenFile");
     return this.db.transaction("rw", this.db.projects, async () => {
@@ -412,6 +603,13 @@ class LocalStorage {
     });
   }
 
+  /* removeOpenFile(pid, question, filename)
+    Removes a file from the list of open files for a question (ie. closes the file)
+
+    Args:
+     pid - project ID
+     question - question name
+     filename - name of file to remove from the list */
   public async removeOpenFile(pid: ProjectID, question: string, filename: string): Promise<void> {
     this.debug && console.log("removeOpenFile");
     return this.db.transaction("rw", this.db.projects, async () => {
@@ -425,23 +623,42 @@ class LocalStorage {
     });
   }
 
+  /* waitForSync()
+    Triggers a sync with the backend server if we are connected.
+    Promise resolves when the sync is complete. */
   public waitForSync(): Promise<void> {
     return this.db.waitForSync();
   }
 
+  /* exportAsZip(pid, question)
+    Exports Seashell files as a .zip file.
+
+    Args:
+     pid - (Optional) project ID to export. If undefined, will export all projects.
+     question - (Optional) question name to export. If undefined, will export all questions for the given project.
+    Returns:
+     JSZip object representing the result */
   public async exportAsZip(pid: ProjectID | undefined = undefined, question: string | undefined = undefined): Promise<JSZip> {
     return this.db.transaction("r", [this.db.projects, this.db.files, this.db.contents], async () => {
-      let files = await (pid ? this.getFiles(pid, question, true) : this.getAllFiles(true));
       let result = new JSZip();
+      let files = await (pid ? this.getFiles(pid, question, true) : this.getAllFiles(true));
+      // export the files themselves
       await Promise.all(files.map(async (file: File) => {
         result.file(pid ? file.name : ((await this.getProject(file.project_id)).name) + "/" + file.name,
                     file.contents === false ? "" : file.contents.contents);
       }));
+      // create the metadata file if we are exporting a single project
+      if (pid) {
+        let psettings: any = (await this.getProject(pid)).settings;
+        psettings.flags = files.map((file: File) => [file.name, file.flags ? file.flags : 0]);
+        result.file(".metadata", JSON.stringify(psettings));
+      }
       return result;
     });
   }
 }
 
+/* Class defining database schema and initializing the sync protocol */
 class StorageDB extends Dexie {
   public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
@@ -450,6 +667,11 @@ class StorageDB extends Dexie {
 
   private isConnected: Function;
 
+  /* StorageDB(dbName, options, isConnected)
+    Args:
+     dbName - name of the IndexedDB database
+     options - Dexie options
+     isConnected - predicate function that determines if the websocket is connected */
   public constructor(dbName: string, options: DBOptions, isConnected: Function) {
     super(dbName, options);
     this.version(1).stores({
@@ -463,7 +685,9 @@ class StorageDB extends Dexie {
     this.syncable.connect("seashell", "http://no-host.org");
   }
 
-  // Returns a promise that resolves when the database changes to ONLINE.
+  /* waitForSync()
+    Triggers a sync by disconnecting & reconnecting, then teturns a promise
+    that resolves when the database changes to ONLINE. */
   public async waitForSync() {
     if (this.isConnected()) {
       try {
