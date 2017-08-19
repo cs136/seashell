@@ -6,14 +6,14 @@ import {AbstractCompiler,
         CompilerDiagnostic,
         CompilerError} from "./Interface";
 import {OfflineCompiler} from "./OfflineCompiler";
-import {AbstractStorage,
-        ProjectID,
-        FileID,
-        OfflineMode} from "../Storage/Interface";
+import {ProjectID,
+        FileID} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {DispatchFunction} from "../Services";
 import {appStateActions} from "../../reducers/appStateReducer";
-export {OnlineCompiler};
 import {RequestError} from "../Errors";
+
+export {OnlineCompiler};
 
 class OnlineCompiler extends AbstractCompiler {
 
@@ -21,46 +21,48 @@ class OnlineCompiler extends AbstractCompiler {
   private offlineCompiler: OfflineCompiler;
   private activePIDs: number[];
 
-  private syncAll: () => Promise<void>;
-  private getOfflineMode: () => OfflineMode;
-
-  constructor(socket: SeashellWebsocket, storage: AbstractStorage, offComp: OfflineCompiler,
-      dispatch: DispatchFunction, syncAll: () => Promise<void>, getOfflineMode: () => OfflineMode) {
+  constructor(socket: SeashellWebsocket, storage: LocalStorage, offComp: OfflineCompiler,
+      dispatch: DispatchFunction) {
     super(storage, dispatch);
     this.socket = socket;
     this.offlineCompiler = offComp;
     this.activePIDs = [];
-    this.syncAll = syncAll;
-    this.getOfflineMode = getOfflineMode;
 
     this.socket.register_callback("io", this.handleIO());
     this.socket.register_callback("test", this.handleTest());
   }
 
-  public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
-    const mode = this.getOfflineMode();
-    if (!this.socket.isConnected() && mode === OfflineMode.On || mode === OfflineMode.Forced) {
-      return this.offlineCompiler.compileAndRunProject(proj, question, file, runTests);
+  public async compileAndRunProject(pid: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
+    console.log("Compiling project -- connection status: %s", this.socket.isConnected() ? "connected" : "not connected");
+    try {
+      await this.storage.waitForSync();
+    } catch (e) {
+      // If the socket's disconnected we simply try the offline compiler.
+      if (this.socket.isConnected()) {
+        throw e;
+      }
+    }
+
+    if (!this.socket.isConnected()) {
+      return this.offlineCompiler.compileAndRunProject(pid, question, file, runTests);
     } else if (this.activePIDs.length > 0) {
       throw new CompilerError("Cannot run a program while a program is already running.");
     }
 
-    await this.syncAll();
 
     let tests: TestBrief[] = [];
     if (runTests) {
-      tests = await this.getTestsForQuestion(proj, question);
+      tests = await this.getTestsForQuestion(pid, question);
       if (tests.length < 1) {
         throw new CompilerError("There are no tests to run for this question.");
       }
     }
 
-    let project = await this.storage.getProject(proj);
     let result: any = null;
     try {
       result = await this.socket.sendMessage({
         type: "compileAndRunProject",
-        project: project.name,
+        project: pid,
         question: question,
         tests: tests.map((tst: TestBrief) => { return tst.name; })
       });
@@ -94,11 +96,11 @@ class OnlineCompiler extends AbstractCompiler {
     if (result.status === "running") {
       const pids = runTests ? result.pids : [result.pid];
       this.activePIDs = this.activePIDs.concat(pids);
-      pids.map((pid: number) => {
+      pids.map((procid: number) => {
         this.socket.sendMessage({
           type: "startIO",
-          project: project.name,
-          pid: pid
+          project: pid,
+          pid: procid
         });
       });
     }

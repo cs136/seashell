@@ -22,7 +22,7 @@ class Splash extends React.Component<SplashProps & actionsInterface, SplashState
         return (<div className={styles.splashContainer}>
             <h4>{project.name + (question ? "/" + question.name : "")}</h4>
             <p>Select a {question ? "file" : "question" } to get started</p>
-            {question ? <FileList question={question} /> : <QuestionList />}
+            {question ? <FileList /> : <QuestionList />}
         </div>);
     }
 }

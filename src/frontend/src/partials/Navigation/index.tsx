@@ -1,12 +1,13 @@
 import * as React from "react";
 import {map, actionsInterface} from "../../actions";
 import {Link} from "react-router-dom";
-import {Menu, MenuItem, Dialog, Popover, Position} from "@blueprintjs/core";
+import {Menu, MenuItem, MenuDivider, Dialog, Popover, Position} from "@blueprintjs/core";
 import {HelpDialog} from "./Dialogs";
 import SettingsDialog from "./Dialogs";
 import * as R from "ramda";
 import AddProjectWindow from "./AddProject";
 import ResetWindow from "./Reset";
+import Confirm from "../../views/Project/Prompt/Confirm";
 
 const logo = require("../../assets/logo.svg");
 const styles = require("./index.scss");
@@ -40,13 +41,14 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
             content={
               <Menu>
                   <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
-                  <MenuItem iconName="refresh" text="Sync All" onClick={() => this.props.dispatch.storage.syncAll().then(() => {
-                    this.props.dispatch.project.getAllProjects();
-                    this.props.dispatch.settings.initSettings();
-                  })}/>
                   <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
                   <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
                     this.props.dispatch.dialog.toggleResetOpen(); }}/>
+                  <MenuDivider />
+                  <MenuItem iconName="box" text="Archive Projects" onClick={this.props.dispatch.dialog.toggleArchive} />
+                  <MenuItem onClick={() => { this.props.dispatch.project.downloadAll(); }}
+                    iconName="download" text="Download Projects" />
+                  <MenuDivider />
                   <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
               </Menu>
             }
@@ -78,6 +80,13 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
                 }
               }}>
               <ResetWindow closefunc={this.props.dispatch.dialog.toggleResetOpen} />
+            </Dialog>
+            <Dialog isCloseButtonShown={false} className={styles.dialogStyle}
+                title="Archive All Projects" isOpen={this.props.dialog.archive_open}
+                onClose={this.props.dispatch.dialog.toggleArchive}>
+              <Confirm submitText="Archive Projects" bodyText="Are you sure you want to archive all projects? You will no longer be able to access them through Seashell. You will have to SSH to the student Linux environment to access your archived projects."
+                submitfunc={() => this.props.dispatch.project.archiveProjects()}
+                closefunc={this.props.dispatch.dialog.toggleArchive} />
             </Dialog>
           </div>
         </div>

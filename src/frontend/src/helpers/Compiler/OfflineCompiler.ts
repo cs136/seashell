@@ -4,14 +4,14 @@ import {AbstractCompiler,
         CompilerResult,
         IOMessage,
         TestMessage} from "./Interface";
-import {AbstractStorage,
-        ProjectID,
+import {ProjectID,
         FileID,
-        File,
-        FileBrief} from "../Storage/Interface";
+        File} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
 import {appStateActions} from "../../reducers/appStateReducer";
+
 export {OfflineCompiler};
 
 const CompilerWorker = (() => {
@@ -52,7 +52,7 @@ interface TesterWorkerResult {
 
 class OfflineCompiler extends AbstractCompiler {
 
-  constructor(storage: AbstractStorage, dispatch: DispatchFunction) {
+  constructor(storage: LocalStorage, dispatch: DispatchFunction) {
     super(storage, dispatch);
 
     this.freePID = 0;
@@ -64,12 +64,7 @@ class OfflineCompiler extends AbstractCompiler {
 
   // For now we will just grab all files for the question as the dependencies.
   private async getDependencies(proj: ProjectID, question: string): Promise<File[]> {
-    return Promise.all((await this.storage.getProjectFiles(proj)).filter((f: FileBrief) => {
-      const q = f.question();
-      return q === question || q === "common";
-    }).map((f: FileBrief) => {
-      return this.storage.readFile(f.id);
-    }));
+    return await this.storage.getFiles(proj, question, true);
   }
 
   private initTest(test: Test): PID {
@@ -94,14 +89,6 @@ class OfflineCompiler extends AbstractCompiler {
     };
   }
 
-  private async getFullTest(tst: TestBrief): Promise<Test> {
-    return {
-      name: tst.name,
-      in: tst.in ? await this.storage.readFile(tst.in.id) : undefined,
-      expect: tst.expect ? await this.storage.readFile(tst.expect.id) : undefined
-    };
-  }
-
   public async compileAndRunProject(proj: ProjectID, question: string, file: FileID, runTests: boolean): Promise<CompilerResult> {
     return new Promise<CompilerResult>(async (resolve, reject) => {
       let compiler = new CompilerWorker();
@@ -110,7 +97,6 @@ class OfflineCompiler extends AbstractCompiler {
           throw new CompilerError(result.data.err || "Unknown error");
         } else {
           this.buffer.outputDiagnostics(result.data.messages);
-          resolve(result.data);
         }
         if (result.data.status === "running") {
           if (!runTests) {
@@ -124,12 +110,13 @@ class OfflineCompiler extends AbstractCompiler {
               id: pid,
               runner: runner
             });
-            runner.postMessage(result.data.obj);
+            runner.postMessage({
+              obj: result.data.obj,
+              pid: pid
+            });
           } else {
             // run all the tests
-            let tests: Test[] = await Promise.all(
-              (await this.getTestsForQuestion(proj, question))
-                .map(this.getFullTest));
+            let tests: Test[] = await this.getTestsForQuestion(proj, question);
             if (tests.length < 2) {
               throw new CompilerError("There are no tests to run for this question.");
             }
@@ -139,6 +126,9 @@ class OfflineCompiler extends AbstractCompiler {
               tester.runner.postMessage(result.data.obj);
             }
           }
+        }
+        if (result.data.status !== "error") {
+          resolve(result.data);
         }
       };
       compiler.postMessage({

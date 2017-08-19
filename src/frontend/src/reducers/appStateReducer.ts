@@ -3,26 +3,34 @@ import {CompilerDiagnostic} from "../helpers/Services";
 import {reject, equals, find, propEq} from "ramda";
 import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
+import {Action} from "redux";
+import {showInfo} from "../partials/Errors";
 
-class CurrentFile extends S.File {
+class CurrentFile extends S.FileEntry {
   public unwrittenContent?: string;
   public target?: S.FileID;
   public flusher?: number;
+  public versions: S.Contents[];
 
-  constructor(other: CurrentFile | S.File) {
+  constructor(other: CurrentFile | S.FileEntry, versions: S.Contents[]) {
     super(other);
+    if (versions) {
+      this.versions = versions;
+    }
     if (other instanceof CurrentFile) {
       this.unwrittenContent = other.unwrittenContent;
       this.target = other.target;
       this.flusher = other.flusher;
+      this.versions = other.versions;
     }
   }
 
   public clone(): CurrentFile {
-    let result: CurrentFile = new CurrentFile(this);
+    let result: CurrentFile = new CurrentFile(this, []);
     return result;
   }
 }
+
 export interface appStateReducerProjectState {
   termWrite?: Function;
   termClear?: Function;
@@ -32,22 +40,28 @@ export interface appStateReducerProjectState {
   questions: string[];
   currentQuestion?: {
     name: string;
-    files: S.FileBrief[];
+    files: string[];
     runFile: string;
-    openFiles: S.FileBrief[];
+    openFiles: string[];
     diags: CompilerDiagnostic[];
     currentFile?: CurrentFile;
   };
 };
-export interface appStateReducerState {[key: string]: any;
-  fileOpTarget?: S.FileBrief;
-  projects: S.ProjectBrief[];
+
+export interface appStateReducerState {
+  [key: string]: any;
+  fileOpTarget?: string;
+  conflictContents: S.Contents[];
+  projects: S.Project[];
+  marmosetProjects?: S.MarmosetProject[];
+  marmosetInterval: number;
   runState?: number;
   currentProject?: appStateReducerProjectState;
   connected: boolean;
+  inconsistent: boolean;
 };
 
-export interface appStateReducerAction {
+export interface appStateReducerAction extends Action {
   type: appStateActions;
   payload: any;
 };
@@ -70,6 +84,9 @@ export enum appStateActions {
   setRunFile,
   copyFile,
   getProjects,
+  setMarmosetProjects,
+  setMarmosetInterval,
+  clearMarmosetInterval,
   invalidateFile,
   setFileOpTarget,
   setRunning,
@@ -79,33 +96,44 @@ export enum appStateActions {
   writeConsole,
   clearConsole,
   setDiags,
-  updateCurrentFileIfIdEquals,
+  updateCurrentFileIfNameEquals,
   connected,
-  disconnected
+  disconnected,
+  applyServerChanges,
+  conflictOccurred,
+  conflictResolved,
+  redirectHome,
+  makeConsistent
 };
 
 export default function appStateReducer(state: appStateReducerState = {
     fileOpTarget: undefined,
+    conflictContents: [],
     projects: [],
+    marmosetProjects: undefined,
+    marmosetInterval: 0,
     runState: 0,
     currentProject: undefined,
-    connected: false
+    connected: false,
+    inconsistent: false
   }, action: appStateReducerAction) {
   switch (action.type) {
     // This updates the current file if we're renaming
-    // the current file or otherwise changing it's id.
-    case appStateActions.updateCurrentFileIfIdEquals:
-      let {oldFid, newFileBrief} = <{oldFid: S.FileID,
-                                     newFileBrief: S.FileBrief}>action.payload;
+    // the current file or otherwise changing its name.
+    case appStateActions.updateCurrentFileIfNameEquals:
+      let {oldName, newFile} = <{oldName: string,
+                                 newFile: S.FileEntry}>action.payload;
       state = clone(state);
       if (state.currentProject &&
           state.currentProject.currentQuestion &&
           state.currentProject.currentQuestion.currentFile &&
-          state.currentProject.currentQuestion.currentFile.id === oldFid) {
-            state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFileBrief);
+          state.currentProject.currentQuestion.currentFile.name === oldName) {
+            state.currentProject.currentQuestion.currentFile.mergeIdFrom(newFile);
           }
-      else
+      else {
         console.warn("Inconsistent state reached -- currentFile is undefined in updateCurrentFile...");
+        state.inconsistent = true;
+      }
       return state;
     case appStateActions.setTerm:
       state = clone(state);
@@ -114,7 +142,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.termClear = action.payload.termClear;
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in setTerm");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in setTerm");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.writeConsole:
@@ -125,7 +153,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in writeConsole");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in writeConsole");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.clearConsole:
@@ -136,7 +164,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Inconsistent state reached -- currentProject is undefined in clearConsole");
-        // throw new Error("Inconsistent state reached -- currentProject is undefined in clearConsole");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.setRunning:
@@ -159,22 +187,28 @@ export default function appStateReducer(state: appStateReducerState = {
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
         state.currentProject.currentQuestion.currentFile = undefined;
-      } else {
-        console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in invalidateFile");
-        // throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in invalidateFile");
       }
       return state;
     case appStateActions.getProjects:
       state = clone(state);
       state.projects = action.payload.projects;
       return state;
+    case appStateActions.setMarmosetProjects:
+      state = clone(state);
+      state.marmosetProjects = action.payload;
+      return state;
+    case appStateActions.setMarmosetInterval:
+      state = clone(state);
+      state.marmosetInterval = action.payload;
+      return state;
     case appStateActions.switchFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (action.payload instanceof S.File) {
-          state.currentProject.currentQuestion.currentFile = new CurrentFile(action.payload);
+        if (action.payload.file instanceof S.FileEntry) {
+          state.currentProject.currentQuestion.currentFile =
+            new CurrentFile(action.payload.file, action.payload.versions);
         } else {
-          console.error("switchFile was not passed a file:", action.payload);
+          console.error("switchFile was not passed a file entry:", action.payload);
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
@@ -212,11 +246,11 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      let removeFile = <S.FileBrief>action.payload;
+      let removeFile = <S.File>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
-          reject((file) => file.id === removeFile.id, files);
+          reject((file) => file === removeFile.name, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
         // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
@@ -232,7 +266,7 @@ export default function appStateReducer(state: appStateReducerState = {
       }
       return state;
     case appStateActions.addProject:
-      // TODO: make sure projectbrief is passed in
+      // TODO: make sure project is passed in
       state = clone(state);
       if (state.projects) {
         state.projects.push(action.payload);
@@ -244,10 +278,10 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.addFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.files.push(action.payload);
+        state.currentProject.currentQuestion.files.push(action.payload.name);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in addFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.changeFileBufferedContent:
@@ -266,38 +300,46 @@ export default function appStateReducer(state: appStateReducerState = {
                 flusher: setTimeout(flusher, 2500)}}}});
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question/File is undefined in updateFile");
+        state.inconsistent = true;
       }
     case appStateActions.changeFileContent:
-      return mergeBetter(state,
-      {currentProject:
-        {currentQuestion:
-          {currentFile:
-            {contents: action.payload,
+      return mergeBetter(state, {
+        currentProject: {
+          currentQuestion: {
+            currentFile: {
+              id: action.payload.id,
+              contents: {
+                contents: action.payload.contents
+              },
               target: undefined,
               flusher: undefined,
-              unwrittenContent: undefined}}}});
+              unwrittenContent: undefined
+            }
+          }
+        }
+      });
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (find(propEq("name", action.payload.name), state.currentProject.currentQuestion.openFiles) !== undefined) {
+        if (state.currentProject.currentQuestion.openFiles.find((ofile) =>
+              ofile === action.payload) !== undefined) {
           return state; // don't duplicate files
         }
         state.currentProject.currentQuestion.openFiles.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.closeFile:
       state = clone(state);
-      let oldFile = <S.FileBrief>action.payload;
+      let oldFile = action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         state.currentProject.currentQuestion.openFiles =
-          reject((file) => file.id === oldFile.id, state.currentProject.currentQuestion.openFiles);
+          reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in openFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.setRunFile:
@@ -309,7 +351,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion.diags = action.payload;
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
-        // throw new Error("Inconsistent state reached -- currentProject/Question is undefined in setDiags");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.connected:
@@ -318,6 +360,83 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.disconnected:
       state = clone(state);
       return mergeBetter(state, {connected: false});
+    case appStateActions.conflictOccurred:
+      state = clone(state);
+      state.conflictContents = action.payload;
+      return state;
+    case appStateActions.conflictResolved:
+      state = clone(state);
+      state.conflictContents = [];
+      return state;
+    case appStateActions.applyServerChanges:
+      state = clone(state);
+      const findIndex = <T>(arr: T[], pred: (x: T) => boolean): number => {
+        for (let i in arr) {
+          if (pred(arr[i]))
+            return parseInt(i);
+        }
+        return -1;
+      };
+      let chgs = action.payload;
+      let pchgs = chgs.filter((chg: any) => chg.table === "projects");
+      // update the state's project list
+      for (let i in pchgs) {
+        if (pchgs[i].type === S.ChangeType.UPDATE) {
+          let cur = findIndex(state.projects, (proj) => pchgs[i].key === proj.id);
+          if (cur !== -1) {
+            state.projects[cur] = mergeBetter(state.projects[cur], pchgs[i].mods);
+          }
+        } else if (pchgs[i].type === S.ChangeType.DELETE) {
+          state.projects = state.projects.filter((proj) => proj.id !== pchgs[i].key);
+        } else if (pchgs[i].type === S.ChangeType.CREATE) {
+          state.projects.push(new S.Project(mergeBetter(pchgs[i].obj, {id: pchgs[i].key}) as S.ProjectStored));
+        }
+      }
+      if (state.currentProject) {
+        const currentProject = state.currentProject;
+        // update the current project
+        let pchg = pchgs.find((p: any) => currentProject.id === p.key);
+        if (pchg !== undefined) {
+          if (pchg.type === S.ChangeType.UPDATE) {
+            state.currentProject = mergeBetter(state.currentProject, pchg.mods);
+          } else if (pchg.type === S.ChangeType.DELETE) {
+            state.currentProject = undefined;
+          } else {
+            throw new Error("Something bad happened when applying server changes to the current project.");
+          }
+        }
+        if (currentProject.currentQuestion) {
+          const question = currentProject.currentQuestion;
+          // TODO: Do something to update the list of questions, runFile, openFile
+          if (question.currentFile) {
+            const file = question.currentFile;
+            // update the current file
+            let fchg = chgs.find((chg: any) => chg.table === "files"
+              && chg.key === file.id);
+            if (fchg !== undefined) {
+              // if this file entry has been deleted, just jump out of the file
+              if (fchg.type === S.ChangeType.DELETE) {
+                showInfo("The current file was modified on the server. Open it again to edit it.");
+                if (state.currentProject
+                    && state.currentProject.currentQuestion) {
+                  state.currentProject.currentQuestion.currentFile = undefined;
+                }
+              } else {
+                throw new Error("Something bad happened when applying server changes to the current file.");
+              }
+            }
+          }
+        }
+      }
+      return state;
+    case appStateActions.redirectHome:
+      state = clone(state);
+      state.inconsistent = true;
+      return state;
+    case appStateActions.makeConsistent:
+      state = clone(state);
+      state.inconsistent = false;
+      return state;
     default:
       return state;
   }

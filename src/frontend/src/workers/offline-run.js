@@ -6,12 +6,13 @@
 
 var initialized = false;
 var toRun = null;
+var pid = null;
 var testcase_data = null;
 
 // TODO: Make sure the runtime is initialized before running code.
 function onInit() {
   initialized = true;
-  if(toRun !== null) {
+  if (toRun !== null) {
     runObj(toRun);
   }
 }
@@ -49,38 +50,43 @@ function runObj(obj) {
   var running = true;
   
   self.onmessage = function(obj) {
-    if(typeof obj.data === "string") {
+    if (typeof obj.data === "string") {
       Module._RT_stdin_buffer += obj.data;
       stdout += obj.data;
     }
     else
       Module._RT_stdin_buffer = null;
-    if(!running)
+    if (!running)
       run_loop();
   };
 
   function run_loop() {
     running = true;
-    var loop = runner.run();
+    try {
+      var loop = runner.run();
+    } catch (e) {
+      postMessage({message: e.toString(), type: "stderr"});
+    }
 
     // send stdout contents
-    if(testcase_data === null) {
-      postMessage({message: stdout, type: 'stdout'});
+    if (testcase_data === null) {
+      postMessage({message: stdout, type: "stdout"});
       stdout = "";
 
       // send stderr contents
-      postMessage({message: stderr, type: 'stderr'});
+      postMessage({message: stderr, type: "stderr"});
       stderr = "";
     }
 
 
-    if(loop) {
+    if (loop) {
       running = false;
     }
-    if(!loop) {
-      if(testcase_data === null) {
+    if (!loop) {
+      if (testcase_data === null) {
         postMessage({status: runner.result(),
-                    type: 'done'});
+                     pid: pid,
+                     type: "done"});
       } else {
         var result;
         if (runner.result() !== 0) {
@@ -105,26 +111,29 @@ function runObj(obj) {
     }
   }
 
-  if(testcase_data === null) {
+  if (testcase_data === null) {
     run_loop();
   } else {
     run_loop();
     Module._RT_stdin_buffer += testcase_data.in;
-    if(!running) { run_loop(); }
+    if (!running) { run_loop(); }
     Module._RT_stdin_buffer = null;
-    if(!running) { run_loop(); }
+    if (!running) { run_loop(); }
   }
 }
 
-self.onmessage = function(obj) {
-  obj = obj.data;
-  if(typeof obj === 'object' && ('type' in obj) && obj.type === 'testdata') {
-    testcase_data = obj;
+self.onmessage = function(msg) {
+  data = msg.data;
+  if ("pid" in data) {
+    pid = data.pid;
+  }
+  if (typeof data === "object" && ("type" in data) && data.type === "testdata") {
+    testcase_data = data;
   } else {
-    if(initialized) {
-      runObj(obj);
+    if (initialized) {
+      runObj(data.obj);
     } else {
-      toRun = obj;
+      toRun = data.obj;
     }
   }
 };

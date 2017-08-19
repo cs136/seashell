@@ -18,6 +18,10 @@ class Home extends React.Component<HomeProps&actionsInterface, HomeState> {
     super(props);
   }
 
+  componentDidMount() {
+    this.props.dispatch.project.makeConsistent();
+  }
+
   render() {
     const projects = this.props.appState.projects;
     const assns = projects.filter((project) => project.name.toUpperCase().match(/^A[0-9]+$/));

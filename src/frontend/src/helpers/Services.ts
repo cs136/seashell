@@ -2,11 +2,10 @@ import * as $ from "jquery";
 import {SeashellWebsocket} from "./Websocket/WebsocketClient";
 import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
-import {AbstractStorage,
-        File, FileID, FileBrief,
-        Project, ProjectID, ProjectBrief,
-        Settings,
-        OfflineMode} from "./Storage/Interface";
+import {File, FileID,
+        Project, ProjectID,
+        Settings} from "./Storage/Interface";
+import {SyncProtocol} from "./Storage/SyncProtocol";
 import {OnlineCompiler} from "./Compiler/OnlineCompiler";
 import {OfflineCompiler} from "./Compiler/OfflineCompiler";
 import {Connection} from "./Websocket/Interface";
@@ -16,13 +15,21 @@ import {AbstractCompiler,
         CompilerDiagnostic} from "./Compiler/Interface";
 import {LoginError, LoginRequired} from "./Errors";
 import {appStateActions} from "../reducers/appStateReducer";
+import Dexie from "dexie";
+import "dexie-observable";
+import {storeCredentials,
+        checkCredentials} from "./Crypto";
+import "dexie-syncable";
 export * from "./Storage/Interface";
+export * from "./Storage/WebStorage";
 export * from "./Compiler/Interface";
 export {Services, DispatchFunction};
 
 type DispatchFunction = (act: Object) => Object;
 
 namespace Services {
+  const SEASHELL_DB_VERSION_NUMBER = 12;
+
   let connection: Connection;
   let dispatch: DispatchFunction | null = null;
   let socketClient: SeashellWebsocket | null = null;
@@ -47,12 +54,16 @@ namespace Services {
     debug    = options.debugService || false;
 
     socketClient    = new SeashellWebsocket(options.debugWebSocket);
-    localStorage    = new LocalStorage(options.debugLocalStorage);
-    webStorage      = new WebStorage(socketClient, localStorage, getOfflineMode(),
-      options.debugWebStorage);
+    localStorage    = new LocalStorage(options.debugLocalStorage,
+                                      () => (socketClient as SeashellWebsocket).isConnected());
+    webStorage      = new WebStorage(socketClient, localStorage, options.debugWebStorage);
+
+    Dexie.Syncable.registerSyncProtocol("seashell",
+      new SyncProtocol(socketClient, disp, options.debugLocalStorage));
+
     offlineCompiler = new OfflineCompiler(localStorage, dispatch);
-    onlineCompiler  = new OnlineCompiler(socketClient, webStorage, offlineCompiler,
-      dispatch, webStorage.syncAll.bind(webStorage, false), getOfflineMode);
+    onlineCompiler  = new OnlineCompiler(socketClient, localStorage, offlineCompiler,
+      dispatch);
 
     if (disp !== null) {
       socketClient.register_callback("connected", () => disp({
@@ -66,8 +77,15 @@ namespace Services {
     }
   }
 
-  export function storage(): WebStorage {
-    if (webStorage === null) {
+  export function getStorage(): LocalStorage {
+    if (localStorage === null) {
+      throw new Error("Must call Services.init() before Services.storage().");
+    }
+    return localStorage;
+  }
+
+  export function getWebStorage(): WebStorage {
+    if (webStorage == null) {
       throw new Error("Must call Services.init() before Services.storage().");
     }
     return webStorage;
@@ -103,31 +121,56 @@ namespace Services {
       });
       debug && console.log("Login succeeded.");
       response.user = user; // Save user so that we can log in later.
+      try {
+        await storeCredentials(user, password);
+      } catch (err) {
+        console.warn("Could not cache credentials for offline usage! -- %s", err);
+      }
       window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
     } catch (ajax) {
+      let tryOffline = false;
+      let msg = "";
+      let status = 0;
+      let code = ajax.status;
+      let statusText = undefined;
       if (ajax.status === 0) {
-        if (ajax.statusText === "timeout") {
-          throw new LoginError("Something bad happened - Login timed out :(");
+        // If there is no internet connection we will usually end up here
+        tryOffline = true;
+      } else {
+        status     = ajax.status;
+        code       = ajax.responseJSON.error.code;
+        msg        = ajax.responseJSON.error.message;
+        statusText = ajax.statusText;
+        if (code === 5) {
+          msg = "Username and password don't match.";
+        } else if (status === 404) {
+          // if there is no internet, we could get a 404.
+          tryOffline = true;
         }
-        throw new LoginError("Something bad happened - The Internet might be down :(");
       }
-      const status     = ajax.status;
-      const code       = ajax.responseJSON.error.code;
-      const msg        = ajax.responseJSON.error.message;
-      const statusText = ajax.statusText;
-      if (code === 5) {
-        throw new LoginError("Username and password don't match.");
+      if (tryOffline) {
+        try {
+          await checkCredentials(user, password);
+        } catch (e) {
+          throw new LoginError(e);
+        }
+      } else {
+        throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
       }
-      throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
     }
 
-    // login successful
-    await connectWith(new Connection(user,
-                                     response.key,
-                                     response.host,
-                                     response.port,
-                                     response.pingPort),
-                      ! rebootBackend);
+    if (response !== undefined) {
+      // login successful
+      await connectWith(new Connection(user,
+                                       false,
+                                       response.key,
+                                       response.host,
+                                       response.port,
+                                       response.pingPort));
+    } else {
+      // successful offline login
+      await connectWith(new Connection(user, true));
+    }
   }
 
   export async function logout(deleteDB: boolean = false): Promise<void> {
@@ -150,37 +193,29 @@ namespace Services {
     const credstring = window.localStorage.getItem("seashell-credentials");
     if (credstring) {
       const credentials = JSON.parse(credstring);
-      // login successful --- we sync after we connect so the UI is still responsive
+      // login successful
       return await connectWith(new Connection(credentials.user,
+                                              false,
                                               credentials.key,
                                               credentials.host,
                                               credentials.port,
-                                              credentials.pingPort),
-                               false);
+                                              credentials.pingPort));
     } else {
       throw new LoginRequired();
     }
   }
 
-  async function connectWith(cnn: Connection, sync: boolean = true): Promise<void> {
+  async function connectWith(cnn: Connection): Promise<void> {
     if (!localStorage || !socketClient || !webStorage) {
       throw new Error("Must call Services.init() before Services.login()");
     }
 
-    await localStorage.connect(`seashell8-${cnn.username}`);
-    await socketClient.connect(cnn);
-    connection = cnn;
-    if (sync) {
-      await webStorage.syncAll();
+    try {
+      await socketClient.connect(cnn);
+      await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
+      connection = cnn;
+    } catch (e) {
+      throw new Error("Failed to connect");
     }
-  }
-
-  export function getOfflineMode(): OfflineMode {
-    const offlineSetting = window.localStorage.getItem("offline-mode-enabled");
-    return offlineSetting ? JSON.parse(offlineSetting) : OfflineMode.Off;
-  }
-
-  export function setOfflineMode(mode: OfflineMode): void {
-    window.localStorage.setItem("offline-mode-enabled", JSON.stringify(mode));
   }
 }

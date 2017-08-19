@@ -99,5 +99,7 @@
             #f))
 
         ;; Drop to the real dispatch function.
-        (dispatch ws-conn state)
+        (parameterize
+          ([current-custodian (make-custodian)])
+          (dispatch ws-conn state))
         (void)])))

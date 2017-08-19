@@ -1,4 +1,4 @@
-import {AbstractCoder, Coder} from "./Crypto";
+import {AbstractCoder, Coder} from "../Crypto";
 import {Connection} from "./Interface";
 import * as R from "ramda";
 import * as E from "../Errors";
@@ -15,19 +15,21 @@ enum OnCloseCode {
   PingTimedOut = 4001
 };
 
+const RESPONSE_TIMEOUT = 5000;
+
 class SeashellWebsocket {
   public connection?: Connection;
   private coder: AbstractCoder;
   private websocket?: WebSocket;
   private lastMsgID: number;
   public requests: {[index: number]: Request<any>};
-  private failed: boolean; // not used?
   private closes: () => void;
   private failures: () => void;
   public debug: boolean; // toggle console.log for tests
   private pingLoop: any;
-  private callbacks: Callback[];
+  private callbacks: {[index: number]: Callback};
   private lastPong: number = 0;
+  private lastCB: number = 0;
 
   constructor(debug?: boolean) {
     this.debug = debug || false;
@@ -38,6 +40,12 @@ class SeashellWebsocket {
   // Pass a new Connection object to overwrite the previously held one
   // It must be safe to call this function consecutively many times
   public async connect(cnn: Connection): Promise<void> {
+    if (cnn.offline) {
+      // if offline, set the offline connection and exit
+      this.connection = cnn;
+      return;
+    }
+
     const firstTime: () => boolean = () => ! this.connection;
     console.log("Connecting to websocket...");
     this.lastMsgID = 0;
@@ -46,10 +54,12 @@ class SeashellWebsocket {
     this.requests[-2] = new Request({id: -2}); // reply challenge
     this.requests[-3] = new Request({id: -3});
     this.requests[-4] = new Request({id: -4});
-    this.requests[-3].callback = this.io_cb();
-    this.requests[-4].callback = this.test_cb();
-    // if there's an exisitng websocket,
-    // if it's connection or open: do nothing
+    this.requests[-5] = new Request({id: -5});
+    this.requests[-3].callback = this.gen_cb("io");
+    this.requests[-4].callback = this.gen_cb("test");
+    this.requests[-5].callback = this.gen_cb("changes");
+    // if there's an existing websocket,
+    // if it's connecting or open: do nothing
     // if it's closing or closed: schedule to open a new connection
     if (this.websocket) {
       const websocket = this.websocket;
@@ -75,9 +85,9 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.CLOSING: {
-          console.log(`Existing websocket is closing. Wait to reopen new connection.`);
+          console.log("Existing websocket is closing. Wait to reopen new connection.");
           const promise = new Promise<void>((accept, reject) => {
-            // wait for a graceful shotdown then reconnect
+            // wait for a graceful shutdown then reconnect
             websocket.onclose = () => {
               this.connect(cnn).then(accept).catch(reject);
             };
@@ -85,7 +95,7 @@ class SeashellWebsocket {
           return promise;
         }
         case websocket.CLOSED: {
-          console.log(`Existing websocket is closed. Reopening new connection.`);
+          console.log("Existing websocket is closed. Reopening new connection.");
           // pass through to continue connection
         }
       }
@@ -99,13 +109,16 @@ class SeashellWebsocket {
       failed = reject;
     });
 
-    this.coder = new Coder(cnn.key);
+    this.coder = new Coder(cnn.key as number[]);
     try {
       this.websocket = new WebSocket(cnn.wsURI);
-      this.websocket.onerror = failed;
+      this.websocket.onerror = (err) => {
+        firstTime() && failed(err);
+      };
     } catch (err) {
       console.error(`Could not create WebSocket connection to ${cnn.wsURI}:\n${err}`);
-      throw new E.LoginRequired(); // simply ask user to retry
+      firstTime() && failed();
+      return;
     }
 
     // Websocket.onclose should race against authentication
@@ -114,18 +127,22 @@ class SeashellWebsocket {
       console.warn("Websocket lost connection.");
       clearInterval(this.pingLoop);
       for (const i in this.requests) {
-        if (evt.code === OnCloseCode.Unknown) {
-          this.requests[i].reject(new E.WebsocketError(evt.reason));
-        } else {
-          this.requests[i].reject(new E.RequestAborted("RequestAborted: Websocket disconnected."));
+        if (parseInt(i) >= -2) {
+          if (evt.code === OnCloseCode.Unknown) {
+            this.requests[i].reject(new E.WebsocketError(evt.reason));
+          } else {
+            this.requests[i].reject(new E.RequestAborted("RequestAborted: Websocket disconnected."));
+          }
         }
-        delete this.requests[i];
+        if (parseInt(i) >= 0) {
+          delete this.requests[i];
+        }
       }
       // exited abnormally,
-      // coule be internet disruption, handshake timeout, connection refused
-      // if this.connection exists, then we have succefully connected automatically reconnect after 3s
+      // could be internet disruption, handshake timeout, connection refused
+      // if this.connection exists, then we have successfully connected automatically reconnect after 3s
       if (evt.code === OnCloseCode.Abnormal && firstTime()) {
-        failed(new E.LoginRequired());
+        firstTime() && failed();
         return;
       }
       // all other onclose codes:
@@ -134,11 +151,12 @@ class SeashellWebsocket {
         // when user logs out,
         // this.disconnect must clear this.connection
         if (this.connection) {
-          this.connect(cnn);
+          // ignore a failure, we will attempt to reconnect anyway
+          this.connect(cnn).catch((err) => { });
         } else {
           console.warn("Gave up reconnection. User probably logged out.");
         }
-      }, 5000);
+      }, RESPONSE_TIMEOUT);
     };
 
     this.websocket.onopen = () => {
@@ -157,7 +175,7 @@ class SeashellWebsocket {
         }
         await this.ping();
         timeoutCount = 0;
-      }, 5000);
+      }, RESPONSE_TIMEOUT);
     };
 
     this.websocket.onmessage = async (message: MessageEvent) => {
@@ -174,17 +192,24 @@ class SeashellWebsocket {
       }
     };
 
-    this.debug && console.log("Waiting for server response...");
+    this.debug && console.log("Waiting for server response -- setting timeout for %d seconds...", RESPONSE_TIMEOUT);
     // if the server doesn't response in 5s
     // the default chrome's handshake timeout is too long
-    const responseTimeout = setTimeout(() => {
+    let responseTimeout = setTimeout(() => {
       if (this.websocket) {
         this.websocket.close();
         // will close with 1006
         // fall back to websocket.onclose()
       }
-    }, 10000);
-    const serverChallenge = await this.requests[-1].received;
+    }, RESPONSE_TIMEOUT);
+    let serverChallenge: any;
+    try {
+      serverChallenge = await this.requests[-1].received;
+    } catch (err) {
+      console.warn("Invalid server response -- timeout cleared.");
+      clearTimeout(responseTimeout);
+      throw err;
+    }
     clearTimeout(responseTimeout);
 
     try {
@@ -208,7 +233,8 @@ class SeashellWebsocket {
       this.invoke_cb("connected");
     } catch (err) {
       if (err instanceof E.RequestError) {
-        throw new E.LoginRequired();
+        firstTime() && failed();
+        return;
       } else {
         throw err;
       }
@@ -267,34 +293,31 @@ class SeashellWebsocket {
     this.websocket = undefined;
   }
 
-  public register_callback(type: string, cb: (message?: any) => any, now?: boolean): void {
-    this.callbacks.push(new Callback(type, cb, now || false));
+  public register_callback(type: string, cb: (message?: any) => any, now?: boolean): number {
+    this.callbacks[this.lastCB++] = new Callback(type, cb, now || false);
 
     if (type === "disconnected" && ! this.isConnected() && now) {
       cb();
     } else if (type === "connected" && this.isConnected() && now) {
       cb();
-    } else if (type === "failed" && this.failed && now) {
-      cb();
     }
+    return this.lastCB - 1;
+  }
+
+  public unregister_callback(key: number) {
+    delete this.callbacks[key];
   }
 
   public async invoke_cb(type: string, message?: any): Promise<Array<any>> {
-    return this.callbacks.filter(
+    return (<any>Object).values(this.callbacks).filter(
       (x: Callback) => { return x && x.type === type; }).map(
         async (x: Callback) => { return x.cb(message); });
   }
 
   // Helper function to invoke the I/O callback.
-  private io_cb = () => {
+  private gen_cb = (type: string) => {
     return async (message: any) => {
-      return this.invoke_cb("io", message);
-    };
-  }
-
-  private test_cb = () => {
-    return async (message: any) => {
-      return this.invoke_cb("test", message);
+      return this.invoke_cb(type, message);
     };
   }
 

@@ -1,117 +1,125 @@
 import * as R from "ramda";
 
-export {AbstractStorage, AbstractWebStorage,
-        File, FileID, FileBrief, FileStored,
-        Project, ProjectID, ProjectBrief, ProjectStored,
-        Settings, SettingsStored,
-        OfflineMode}
+export * from "./WebStorage";
+export {Contents, ContentsStored, ContentsID,
+        File, FileID, FileEntry, FileStored,
+        Project, ProjectID, ProjectStored,
+        Settings, SettingsStored, ChangeType,
+        FlagMask}
 
-enum OfflineMode { Off, On, Forced }
+type UUID = string;
+type ContentsID = UUID;
+type FileID = UUID;
+type ProjectID = UUID;
 
-abstract class AbstractStorage {
-  // projects
-  public abstract async newProject(name: string): Promise<ProjectBrief>;
-  public abstract async getProject(proj: ProjectID): Promise<Project>;
-  public abstract async getProjects(): Promise<ProjectBrief[]>;
-  public abstract async deleteProject(proj: ProjectID): Promise<void>;
-  public abstract async getProjectFiles(proj: ProjectID): Promise<FileBrief[]>;
-  // files
-  public abstract async newFile(proj: ProjectID, filename: string, contents?: string): Promise<FileBrief>;
-  public abstract async readFile(file: FileID): Promise<File>;
-  public abstract async writeFile(file: FileID, contents: string|undefined): Promise<void>;
-  public abstract async renameFile(file: FileID, newName: string): Promise<FileBrief>;
-  public abstract async deleteFile(file: FileID): Promise<void>;
-  // questions
-  public abstract async setFileToRun(proj: ProjectID, question: string, filename: string): Promise<void>;
-  public abstract async getFileToRun(proj: ProjectID, question: string): Promise<string|false>;
-  public abstract async addOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async removeOpenFile(proj: ProjectID, question: string, file: FileID): Promise<void>;
-  public abstract async getOpenFiles(proj: ProjectID, question: string): Promise<FileBrief[]>;
-
-  // settings
-  public abstract async setSettings(settings: Settings): Promise<void>;
-  public abstract async getSettings(): Promise<Settings>;
-  // table dump
-  public abstract async getAllFiles(): Promise<FileBrief[]>;
+/* enum of the 3 change types used by Dexie.Syncable */
+enum ChangeType {
+  CREATE = 1,
+  UPDATE = 2,
+  DELETE = 3
 }
 
-abstract class AbstractWebStorage {
-  public abstract async syncAll(): Promise<void>;
+/* Stores data for one file contents row */
+class Contents implements ContentsStored {
+  id: ContentsID;
+  project_id: ProjectID;
+  filename: string;
+  contents: string;
+  time: number;
+
+  constructor(id: ContentsID, obj: ContentsStored) {
+    this.id = id;
+    this.project_id = obj.project_id;
+    this.filename = obj.filename;
+    this.contents = obj.contents;
+    this.time = obj.time;
+  }
 }
 
-type FileID = string; // compound key
-type ProjectID = string; // alias of name for now
+/* Bitmasks for the flags we store in File.flags */
+enum FlagMask {
+  READONLY = 1
+}
 
+/* File class stores data associated with a file.
+   May or may not have contents stored, depending on how it was constructed. */
 // NOTE: File objects may not necessarily have a valid
 // prototype chain.  Do _NOT_ use instanceof to test
 // if something's a File object.
-class File implements FileStored {
-  public id: FileID;
-  public name: string; // a file name is (test|q*|common)/name
-  public last_modified: number;
-  public project: ProjectID;
-  public checksum: string;
-  public open: boolean;
-  public contents: string | undefined; // undefined ==> unavailable offline / unreadable
+class File {
+  public name: string; // a file name is (question|common)(/tests)?/name
+  public project_id: ProjectID;
+  public contents_id: ContentsID | false; // false => directory
+  public contents: Contents | false; // false => directory or contents not loaded
+  public flags: number;
 
   constructor(obj: FileStored | File) {
-    this.id = obj.id;
     this.name = obj.name;
-    this.last_modified = obj.last_modified;
-    this.project = obj.project;
-    this.checksum = obj.checksum;
-    this.contents = obj.contents;
+    this.project_id = obj.project_id;
+    this.flags = obj.flags;
+    this.contents_id = obj.contents_id;
+    this.contents = false;
+    if (obj instanceof File) {
+      this.contents = obj.contents;
+    }
   }
 
-  public mergeIdFrom(target: FileBrief) {
-    this.id = target.id;
-    this.name = target.name;
-  }
   public basename() {
     let arr = this.name.split("/");
     arr = arr[arr.length - 1].split(".");
     arr.pop();
     return arr.join(".");
   }
+
   public extension() {
     return this.name.split(".").pop();
   }
+
   public question() {
     return this.name.split("/")[0];
   }
+
   public clone() {
     return new File(this);
   }
-}
 
-class FileBrief extends File {
-  public contents: string | undefined = undefined;
-  constructor(obj: FileStored) {
-    super(obj);
-    this.contents = undefined;
+  public hasFlag(f: FlagMask): boolean {
+    return !!(this.flags & f);
   }
 }
 
+/* Extends File to include an ID, so FileEntry corresponds
+   to exactly one entry in the files table. */
+class FileEntry extends File {
+  public id: FileID;
+
+  constructor(obj: FileStored) {
+    super(obj);
+    this.id = obj.id as string;
+  }
+
+  public mergeIdFrom(target: FileEntry) {
+    this.id = target.id;
+    this.name = target.name;
+  }
+}
+
+/* Stores data for a project */
 class Project implements ProjectStored {
   public id: ProjectID;
   public name: string;
-  public last_modified: number;
-  public settings?: {[index: string]: string}; // Read-only copy of settings
+  public last_used: number;
+  public settings: {[index: string]: string}; // Read-only copy of settings
+
   constructor(obj: ProjectStored) {
-    this.id = obj.id;
+    this.id = obj.id as ProjectID;
     this.name = obj.name;
-    this.last_modified = obj.last_modified;
+    this.last_used = obj.last_used;
     this.settings = obj.settings;
   }
 }
 
-class ProjectBrief extends Project {
-  constructor(obj: ProjectStored) {
-    super(obj);
-    this.settings = {};
-  }
-};
-
+/* Stores data for the global Seashell settings */
 class Settings implements SettingsStored {
   public id: 0 = 0;
   public editor_mode: string = "standard";
@@ -143,24 +151,33 @@ class Settings implements SettingsStored {
   }
 }
 
+/* How contents are stored in the database */
+interface ContentsStored {
+  id?: ContentsID;
+  project_id: ProjectID;
+  filename: FileID;
+  contents: string;
+  time: number;
+}
+
+/* How files are stored in the database */
 interface FileStored {
-  id: FileID;
+  id?: FileID;
+  project_id: ProjectID;
   name: string; // a file name is (test|q*|common)/name
-  last_modified: number;
-  project: ProjectID;
-  checksum: string;
-  // indexed db does not support boolean index key, so use 0 | 1 when saving/reading data
-  // and very carefully convert it to boolean in File constructor!
-  contents: string | undefined; // undefined ==> unavailable offline / unreadable
+  contents_id: ContentsID | false; // false => directory
+  flags: number;
 }
 
+/* How projects are stored in the database */
 interface ProjectStored {
-  id: ProjectID;
+  id?: ProjectID;
   name: string;
-  last_modified: number;
-  settings?: {[index: string]: string};
+  settings: {[index: string]: string};
+  last_used: number;
 }
 
+/* How Seashell settings are stored in the database */
 interface SettingsStored {
   id: 0;
   editor_mode: string;

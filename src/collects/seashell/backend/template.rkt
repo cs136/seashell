@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -17,62 +17,58 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require seashell/log
-         seashell/seashell-config
+         (submod seashell/seashell-config typed)
          seashell/compiler
          seashell/backend/runner
-         net/url
-         net/head
-         json
-         file/zip
-         file/unzip
-         racket/contract
-         racket/file
-         racket/path
-         racket/match
-         racket/string
-         racket/list
-         racket/port)
+         typed/net/url
+         typed/json)
+
+;; need to do this because typed/net/head contract for extract-field is wrong
+(require/typed net/head
+  [extract-field (-> (U String Bytes) (U String Bytes) (U String Bytes False))])
+
 (provide call-with-template url-string?)
 
 ;; (url-string? str) -> bool?
 ;; Predicate for testing if a string is a valid URL
-(define/contract (url-string? str)
-  (-> string? boolean?)
+(: url-string? (-> String Boolean))
+(define (url-string? str)
   (with-handlers
     ([url-exception? (lambda (exn) #f)])
     (define res (string->url str))
     (not (not (url-scheme res)))))
 
 ;; (call-with-template source thunk)
-;; Calls thunk, passing an input-port refering to the template located at source.
+;; Calls thunk, passing an input-port referring to the template located at source.
 ;;
 ;; Arguments:
 ;;  source - Path to template, or URL to template.
 ;;  thunk - Procedure, taking an input-port referring to source.
-(define/contract (call-with-template source thunk)
-  (-> (or/c path-string? url-string?) procedure? any/c)
+(: call-with-template (All (A) (-> String (-> Input-Port A) A)))
+(define (call-with-template source thunk)
   (cond
     [(url-string? source)
      (define surl (string->url source))
      (cond
-       [(string=? (url-scheme surl) "file")
-         (call/input-url surl get-pure-port thunk)]
-       [(string=? (url-scheme surl) "ssh")
+       [(string=? (assert (url-scheme surl)) "file")
+         (call/input-url (assert surl) get-pure-port thunk)]
+       [(string=? (assert (url-scheme surl)) "ssh")
          (match-define (list _ host file) (regexp-match #rx"//(.*@[^:]*):(.*)" source))
          (define-values (sshproc sshout sshin ssherr)
-           (subprocess #f #f #f (read-config 'ssh-binary)
-             "-o" "PasswordAuthentication=no" host (string-append "cat " file)))
+           (subprocess #f #f #f (read-config-string 'ssh-binary)
+             "-o" "PasswordAuthentication=no" (assert host) (string-append "cat " (assert file))))
          (close-output-port sshin)
          (dynamic-wind
            void
            (lambda () (let ([err (read-line ssherr)])
                         (if (eof-object? err)
                             (thunk sshout)
-                            (raise (exn:fail (format "Error when fetching template: ~a" err))))))
+                            (raise (exn:fail (format "Error when fetching template: ~a" err)
+                                             (current-continuation-marks))))))
            (lambda () (close-input-port sshout)
                       (close-input-port ssherr)))]
        [else
-         (define-values (port hdrs) (get-pure-port/headers surl #:status? #t #:redirections 10))
+         (define-values (port hdrs) (get-pure-port/headers (assert surl) #:status? #t #:redirections 10))
          (dynamic-wind
            (lambda () #f)
            (lambda ()
@@ -80,7 +76,8 @@
              (when (not (equal? status "200"))
                (raise (exn:fail (format "Error when fetching template ~a: ~a ~a." source status text)
                                 (current-continuation-marks))))
-             (when (not (equal? (string-trim (extract-field "Content-Type" headers)) "application/zip"))
+             (when (not (equal? (string-trim (cast (extract-field "Content-Type" (assert headers)) String))
+                                "application/zip"))
                (raise (exn:fail (format "Error when fetching template ~a: template was not a ZIP file." source)
                                 (current-continuation-marks))))
              (thunk port))

@@ -9,6 +9,10 @@ before_install:
 - sudo apt-add-repository -y ppa:plt/racket
 - sudo apt-get update
 - sudo apt-get install racket -y
+- cd /usr/lib/x86_64-linux-gnu
+- sudo wget http://launchpadlibrarian.net/241463272/libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
+- sudo dpkg -i libsqlite3-0_3.11.0-1ubuntu1_amd64.deb
+- cd -
 - nvm install node
 - nvm use node
 - sudo ln -s `which ccache` /usr/lib/ccache/clang

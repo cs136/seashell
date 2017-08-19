@@ -1,8 +1,7 @@
-import {AbstractStorage,
-        ProjectID,
+import {ProjectID,
         FileID,
-        FileBrief,
         File} from "../Storage/Interface";
+import {LocalStorage} from "../Storage/LocalStorage";
 import {groupBy} from "../utils";
 import {DispatchFunction} from "../Services";
 import {CompilerError} from "../Errors";
@@ -21,7 +20,7 @@ export {AbstractCompiler,
 
 abstract class AbstractCompiler {
 
-  constructor(protected storage: AbstractStorage, protected dispatch: DispatchFunction) {
+  constructor(protected storage: LocalStorage, protected dispatch: DispatchFunction) {
     this.buffer = new OutputBuffer(dispatch);
   }
 
@@ -33,18 +32,17 @@ abstract class AbstractCompiler {
   public abstract programDone(pid: number): void;
   // End public interface
 
-
   protected buffer: OutputBuffer;
 
   // Function used by both compilers to group the test files appropriately
   //  to send to their respective backends
   protected async getTestsForQuestion(project: ProjectID, question: string): Promise<TestBrief[]> {
-    const files = await this.storage.getProjectFiles(project);
-    return groupBy(files.filter((f: FileBrief) => {
+    const files = await this.storage.getFiles(project, question, true);
+    return groupBy(files.filter((f: File) => {
       return f.name.startsWith(question + "/tests/");
-    }), (f: FileBrief) => {
+    }), (f: File) => {
       return f.basename();
-    }).map((t: FileBrief[]) => {
+    }).map((t: File[]) => {
       let test: TestBrief = {
         name: t[0].basename(),
         in: undefined,
@@ -81,8 +79,8 @@ abstract class AbstractCompiler {
 
 interface TestBrief extends Test  {
   name: string;
-  in?: FileBrief;
-  expect?: FileBrief;
+  in?: File;
+  expect?: File;
 }
 
 interface Test {

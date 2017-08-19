@@ -3,7 +3,7 @@ import {merge} from "ramda";
 import * as Blueprint from "@blueprintjs/core";
 import {map, actionsInterface} from "../../actions";
 import {withRouter, RouteComponentProps} from "react-router";
-import {ProjectBrief} from "../../helpers/Services";
+import {Project} from "../../helpers/Services";
 
 interface AddProjectWindowProps extends RouteComponentProps<{}> {
   closefunc: Function;
@@ -44,7 +44,7 @@ class AddProjectWindow extends React.Component<AddProjectWindowProps&actionsInte
                 this.props.closefunc();
                 }}>Cancel</button>
         <button type="button" className="pt-button pt-intent-primary" disabled = {this.state.proj === ""} onClick={() => {
-          this.props.dispatch.project.addProject(this.state.proj).then((proj: ProjectBrief) =>
+          this.props.dispatch.project.addProject(this.state.proj).then((proj: Project) =>
             this.props.dispatch.project.getAllProjects().then(() => {
               this.props.closefunc();
               this.props.history.push(`/project/${proj.id}/${proj.name}`);

@@ -202,6 +202,10 @@
     display:none !important;
 }
 
+.conflictText {
+  min-height: 420px;
+}
+
 @media(max-width: $mobile-break){
     .openFiles{
         padding-left:0 !important;

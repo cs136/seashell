@@ -65,8 +65,8 @@ export default class Xterm extends React.PureComponent<ConsoleProps, ConsoleStat
   }
 
   componentDidMount() {
-    this.term.open(this.container);
-    if (this.props.consoleText) this.term.write(this.props.consoleText + "\r");
+    this.term.open(this.container, false);
+    if (this.props.consoleText) this.term.write(this.props.consoleText.replace(/\r?\n/g, "\r\n"));
     this.setState({ input: true, line: 1, currString: "" });
     if (this.container) { // Always reachable
       const consoleElement: HTMLElement = this.container;
