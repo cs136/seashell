@@ -1,4 +1,4 @@
-#lang typed/racket/base
+#lang typed/racket
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -21,15 +21,7 @@
          seashell/compiler
          seashell/backend/runner
          typed/net/url
-         typed/json
-         file/zip
-         file/unzip
-         racket/file
-         racket/path
-         racket/match
-         racket/string
-         racket/list
-         racket/port)
+         typed/json)
 
 ;; need to do this because typed/net/head contract for extract-field is wrong
 (require/typed net/head
@@ -47,7 +39,7 @@
     (not (not (url-scheme res)))))
 
 ;; (call-with-template source thunk)
-;; Calls thunk, passing an input-port refering to the template located at source.
+;; Calls thunk, passing an input-port referring to the template located at source.
 ;;
 ;; Arguments:
 ;;  source - Path to template, or URL to template.
