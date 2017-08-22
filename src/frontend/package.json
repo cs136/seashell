@@ -42,7 +42,7 @@
     "redux-thunk": "^2.1.0",
     "redux-logger": "^2.6.1",
     "sjcl": "^1.0.6",
-    "webcrypto-shim": "0.1.1",
+    "webcrypto-shim": "^0.1.1",
     "ws": "^2.2.1",
     "xterm": "^2.3.2",
     "seashell-clang-js": "https://bintray.com/cs136/seashell-clang-js/download_file?file_path=seashell-clang-js-master.tar.gz",
