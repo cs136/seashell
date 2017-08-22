@@ -14,6 +14,7 @@ import thunk from "redux-thunk";
 import {LoginRequired} from "./helpers/Errors";
 import {getDispatch} from "./actions";
 import {composeWithDevTools} from "redux-devtools-extension";
+import * as Raven from "raven-js";
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
 console.log(`Seashell ${VERSION} starting up.`);
@@ -21,6 +22,8 @@ console.log(`Seashell ${VERSION} starting up.`);
 if (PRODUCTION && "serviceWorker" in navigator) {
   require("offline-plugin/runtime").install();
 }
+
+Raven.config("https://33e85fb4bc9341f492534ab43a80a463@sentry.io/189114").install();
 
 const store = createStore(reducers, composeWithDevTools(
   applyMiddleware(thunk)));

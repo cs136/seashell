@@ -20,6 +20,7 @@ import "dexie-observable";
 import {storeCredentials,
         checkCredentials} from "./Crypto";
 import "dexie-syncable";
+import * as Raven from "raven-js";
 export * from "./Storage/Interface";
 export * from "./Storage/WebStorage";
 export * from "./Compiler/Interface";
@@ -214,6 +215,7 @@ namespace Services {
       await socketClient.connect(cnn);
       await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
+      Raven.setUserContext({email: cnn.username + "@uwaterloo.ca"});
     } catch (e) {
       throw new Error("Failed to connect");
     }
