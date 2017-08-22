@@ -13,6 +13,7 @@ import {Services} from "./helpers/Services";
 import thunk from "redux-thunk";
 import {LoginRequired} from "./helpers/Errors";
 import {getDispatch} from "./actions";
+import {composeWithDevTools} from "redux-devtools-extension";
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
 console.log(`Seashell ${VERSION} starting up.`);
@@ -21,8 +22,8 @@ if (PRODUCTION && "serviceWorker" in navigator) {
   require("offline-plugin/runtime").install();
 }
 
-const createStoreWithMiddleware = applyMiddleware(thunk)(createStore);
-const store = createStoreWithMiddleware(reducers);
+const store = createStore(reducers, composeWithDevTools(
+  applyMiddleware(thunk)));
 
 const rootEl = document.getElementById("root");
 render(<HashRouter><Provider store={store}><App /></Provider></HashRouter>, rootEl);
