@@ -6,7 +6,7 @@ const CleanWebpackPlugin = require('clean-webpack-plugin');
 const OfflinePlugin = require('offline-plugin');
 const ArchivePlugin = require('webpack-archive-plugin');
 
-module.exports = {
+module.exports = function(env) {return {
   devtool: 'source-map',
   entry: './src/index.tsx',
   output: {
@@ -51,6 +51,7 @@ module.exports = {
     new webpack.DefinePlugin({
       IS_BROWSER: true,
       PRODUCTION: true,
+      VERSION: JSON.stringify(env.version) || "'manual'"
     }),
     new OfflinePlugin({
       ServiceWorker:{
@@ -93,4 +94,4 @@ module.exports = {
       }
     ],
   },
-};
+};};

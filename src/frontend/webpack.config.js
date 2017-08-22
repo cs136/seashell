@@ -33,7 +33,8 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       IS_BROWSER: true,
-      PRODUCTION: false
+      PRODUCTION: false,
+      VERSION: "'local'"
     })
   ],
   devtool: "source-map",
