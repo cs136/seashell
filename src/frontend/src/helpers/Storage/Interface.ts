@@ -121,7 +121,7 @@ class Project implements ProjectStored {
 
 /* Stores data for the global Seashell settings */
 class Settings implements SettingsStored {
-  public id: 0 = 0;
+  public id: "settings-key" = "settings-key";
   public editor_mode: string = "standard";
   public font_size: number = 12;
   public font: string = "Consolas";
@@ -140,7 +140,7 @@ class Settings implements SettingsStored {
   }
   public toJSON(): SettingsStored {
     return {
-        id          : 0
+        id          : "settings-key"
       , editor_mode : this.editor_mode
       , font_size   : this.font_size
       , font        : this.font
@@ -179,7 +179,7 @@ interface ProjectStored {
 
 /* How Seashell settings are stored in the database */
 interface SettingsStored {
-  id: 0;
+  id: "settings-key";
   editor_mode: string;
   font_size: number;
   font: string;

@@ -359,7 +359,7 @@ class LocalStorage {
     this.debug && console.log("getSettings");
     return await this.db.transaction("r", this.db.settings, async () => {
       this.debug && console.log(`getSettings`);
-      const settings = await this.db.settings.get(0);
+      const settings = await this.db.settings.get("settings-key");
       return settings ? Settings.fromJSON(settings) : new Settings();
     });
   }
@@ -371,7 +371,7 @@ class LocalStorage {
     return await this.db.transaction("rw", this.db.settings, async () => {
       this.debug && console.log(`setSettings`);
       await this.db.settings.put({
-        id: 0,
+        id: "settings-key",
         editor_mode: settings.editor_mode,
         font_size: settings.font_size,
         font: settings.font,
@@ -663,7 +663,7 @@ class StorageDB extends Dexie {
   public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
-  public settings: Dexie.Table<SettingsStored, number>;
+  public settings: Dexie.Table<SettingsStored, string>;
 
   private isConnected: Function;
 
