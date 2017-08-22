@@ -391,7 +391,8 @@
         (delete-directory/files tmpdir)]
       [else
         (when (directory-exists? target) (delete-directory/files target))
-        (copy-directory/files tmpdir target)]))))
+        (copy-directory/files tmpdir target)
+        (delete-directory/files tmpdir)]))))
 
 ;; (export-project-name name zip? target)
 ;; Exports the project with the given name from the database to the filesystem.
