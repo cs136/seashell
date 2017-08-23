@@ -196,6 +196,12 @@ class HelpDialog extends React.Component<DialogProps, DialogState> {
             <Blueprint.Tag>Ctrl-r or Cmd-r</Blueprint.Tag> Run.
           </p>
           <p>
+            <Blueprint.Tag>Ctrl-Shift-r or Cmd-Shift-r</Blueprint.Tag> Set current file as runner file and run.
+          </p>
+          <p>
+            <Blueprint.Tag>Ctrl-e or Cmd-e</Blueprint.Tag> Test.
+          </p>
+          <p>
             <Blueprint.Tag>Ctrl-, and Ctrl-.</Blueprint.Tag> Change font size.
           </p>
           <p>
