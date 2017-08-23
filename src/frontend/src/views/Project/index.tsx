@@ -136,7 +136,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
           }});
         }).bind(this, project.name, project.currentQuestion.name);
         return (<Tooltip key="project-submit-marmoset" content="Submit to Marmoset" position={Position.BOTTOM_RIGHT}>
-                <button className="pt-button pt-minimal pt-icon-publish-function" onClick={marmosetDispatch}>
+                <button className="pt-button pt-minimal pt-icon-share" onClick={marmosetDispatch}>
                 </button>
             </Tooltip>);
       }
