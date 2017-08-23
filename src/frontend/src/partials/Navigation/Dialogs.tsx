@@ -193,10 +193,7 @@ class HelpDialog extends React.Component<DialogProps, DialogState> {
             <Blueprint.Tag>Ctrl-y or Cmd-y</Blueprint.Tag> Redo.
           </p>
           <p>
-            <Blueprint.Tag>Ctrl-i</Blueprint.Tag> Indent all.
-          </p>
-          <p>
-            <Blueprint.Tag>Ctrl-Enter</Blueprint.Tag> Fullscreen Editor.
+            <Blueprint.Tag>Ctrl-r or Cmd-r</Blueprint.Tag> Run.
           </p>
           <p>
             <Blueprint.Tag>Ctrl-, and Ctrl-.</Blueprint.Tag> Change font size.
