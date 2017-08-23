@@ -141,15 +141,18 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       return (<div className={styles.filePanel}>
         <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
           <MonacoEditor
-            dirty={!!currentFile.unwrittenContent}
-            value={(currentFile.contents === false ||
-                    currentFile.contents === undefined) ? "Unavailable in browser!" :
-                      currentFile.contents.contents}
-            language={lang}
-            diags={currentQuestion.diags}
-            onChange={this.onChange.bind(this)}
-            editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
-            readOnly={!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)} />
+            dirty = {!!currentFile.unwrittenContent}
+            value = {(currentFile.contents === false ||
+                     currentFile.contents === undefined) ? "Unavailable in browser!" :
+                     currentFile.contents.contents}
+            language = {lang}
+            diags = {currentQuestion.diags}
+            onChange = {this.onChange.bind(this)}
+            editorDidMount = {this.editorDidMount.bind(this)} requireConfig={loaderOptions}
+            readOnly = {!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)}
+            options = {{lineNumbersMinChars: 2,
+                        minimap: {enabled: false},
+                        rulers: [0]}} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
             <div ref="resizeHandle" className={styles.resizeHandle} />
           </Draggable>

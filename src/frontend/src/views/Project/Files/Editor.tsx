@@ -38,7 +38,7 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     defaultValue: "",
     language: "javascript",
     theme: "vs",
-    options: {glyphMargin: true},
+    options: {},
     editorDidMount: undefined,
     editorWillMount: undefined,
     onChange: undefined,
@@ -173,6 +173,11 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
             }
           };
         }));
+      if (this.decorations.length > 0) {
+        this.editor.updateOptions({glyphMargin: true});
+      } else {
+        this.editor.updateOptions({glyphMargin: false});
+      }
     }
   }
 

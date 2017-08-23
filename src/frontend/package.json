@@ -26,7 +26,7 @@
     "js-cookie": "^2.1.3",
     "localstorage-memory": "^1.0.2",
     "md5": "^2.2.1",
-    "monaco-editor": "~0.8.0",
+    "monaco-editor": "~0.10.0",
     "mousetrap": "^1.6.0",
     "node-webcrypto-ossl": "^1.0.20",
     "ramda": "^0.23.0",
