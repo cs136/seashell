@@ -46,7 +46,7 @@ const keyMap = {
   "increaseFont": ["ctrl+.", "command+."],
   "decreaseFont": ["ctrl+,", "command+,"],
   "run": ["ctrl+r", "command+r"],
-  "runAndSet": ["ctrl+shift+r", "command+shift+r"],
+  "setAndRun": ["ctrl+shift+r", "command+shift+r"],
   "test": ["ctrl+e", "command+e"],
   "kill": ["ctrl+k", "command+k"]
 };
@@ -67,7 +67,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     this.handlers = {
       "run": (e) => { e.preventDefault(); this.runFile(); },
       "kill": (e) => { e.preventDefault(); this.stopProgram(); },
-      "runAndSet": (e) => { e.preventDefault(); this.runAndSet(); },
+      "setAndRun": (e) => { e.preventDefault(); this.setAndRun(); },
       "increaseFont": (e) => { e.preventDefault(); this.adjustFont(1); },
       "decreaseFont": (e) => { e.preventDefault(); this.adjustFont(-1); }
     };
@@ -87,7 +87,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     }
   }
 
-  private async runAndSet() {
+  private async setAndRun() {
     const project = this.props.appState.currentProject;
     if (project) {
       const question = project.currentQuestion;
@@ -216,28 +216,38 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                   </button>
                 }
               </Tooltip>,
-              !question.runFile ?
-                <Tooltip key="project-run-file-set" content="Please set a run file"
-                    position={Position.BOTTOM_RIGHT}>
-                  <button className="pt-button pt-minimal pt-disabled pt-icon-play"></button>
-                </Tooltip> :
-                this.props.appState.runState === 0 ?
-                  <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}>
-                    <button className="pt-button pt-minimal pt-icon-play"
-                      onClick={() => this.runFile()}>
+              this.props.appState.runState === 0 ?
+                <div>
+                  {!question.runFile ?
+                    <Tooltip key="project-run-file-set" content="Please set a run file"
+                        position={Position.BOTTOM_RIGHT}>
+                      <button className="pt-button pt-minimal pt-disabled pt-icon-play"></button>
+                    </Tooltip> :
+                    <Tooltip key="project-run-file" content="Run" position={Position.BOTTOM_RIGHT}>
+                      <button className="pt-button pt-minimal pt-icon-play"
+                        onClick={() => this.runFile()}>
+                      </button>
+                    </Tooltip>
+                  }
+                  <Tooltip key="project-set-and-run-file" content="Set and Run" position={Position.BOTTOM_RIGHT}>
+                    {question.currentFile ?
+                      <button className="pt-button pt-minimal pt-icon-fast-forward"
+                        onClick={() => this.setAndRun()} /> :
+                      <button className="pt-button pt-minimal pt-icon-fast-forward pt-disabled"/>
+                    }
+                  </Tooltip>
+                </div> :
+                this.props.appState.runState === 1 ?
+                  <Tooltip key="project-run-file" content="Compiling"
+                      position={Position.BOTTOM_RIGHT}>
+                    <button className="pt-button pt-minimal pt-disabled pt-icon-build">
                     </button>
                   </Tooltip> :
-                  this.props.appState.runState === 1 ?
-                    <Tooltip key="project-run-file" content="Compiling"
-                        position={Position.BOTTOM_RIGHT}>
-                      <button className="pt-button pt-minimal pt-disabled pt-icon-build">
-                      </button>
-                    </Tooltip> :
-                    <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
-                      <button className="pt-button pt-minimal pt-icon-stop"
-                          onClick={() => this.stopProgram()}>
-                      </button>
-                    </Tooltip>,
+                  <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
+                    <button className="pt-button pt-minimal pt-icon-stop"
+                        onClick={() => this.stopProgram()}>
+                    </button>
+                  </Tooltip>,
               this.generateMarmosetButton(project)].map((item, index) => <div key={index}>{item}</div>)
             }/>
           {question && question.currentFile ?
