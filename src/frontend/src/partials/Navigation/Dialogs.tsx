@@ -20,7 +20,6 @@ interface SettingsDialogState {
   editorMode?: number;
   tabWidth?: number;
   theme?: number;
-  offlineMode?: number;
 }
 
 interface FontTextBoxProps {
@@ -88,7 +87,6 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
       editorMode: this.props.settings.editorMode,
       tabWidth: this.props.settings.tabWidth,
       theme: this.props.settings.theme,
-      offlineMode: this.props.settings.offlineMode
     };
   }
 
@@ -137,23 +135,6 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
               </div>
             </div>
           </label>
-          <label className="pt-label">
-            Offline Mode:<br/><br/>
-            <div className="pt-control-group">
-              <Blueprint.RadioGroup onChange={() => {}}
-                  selectedValue={String(this.state.offlineMode)}>
-                <Blueprint.Radio label="Disabled" value="0" onClick={() =>
-                  this.setState(merge(this.state, {offlineMode: 0}))
-                }/>
-                <Blueprint.Radio label="Enabled" value="1" onClick={() =>
-                  this.setState(merge(this.state, {offlineMode: 1}))
-                }/>
-                <Blueprint.Radio label="Forced" value="2" onClick={() =>
-                  this.setState(merge(this.state, {offlineMode: 2}))
-                }/>
-              </Blueprint.RadioGroup>
-            </div>
-          </label>
           <div className="pt-button-group">
             <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();
@@ -164,8 +145,7 @@ class SettingsDialog extends React.Component<DialogProps&actionsInterface&Settin
                   fontSize: this.state.fontSize,
                   editorMode: this.state.editorMode,
                   tabWidth: this.state.tabWidth,
-                  theme: this.state.theme,
-                  offlineMode: this.state.offlineMode
+                  theme: this.state.theme
                 });
                 this.props.closefunc();
               }}>
