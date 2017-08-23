@@ -15,6 +15,9 @@ export interface DisplayState { editorLastUpdated: number; }
 class Display extends React.Component<DisplayProps & actionsInterface, DisplayState> {
   editor: any;
   monaco: any;
+  editorContainer: HTMLElement | null;
+  resizeHandle: HTMLElement | null;
+  terminal: Console | null;
 
   constructor(props: DisplayProps & actionsInterface) {
     super(props);
@@ -27,17 +30,18 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     this.editor = null;
   }
   onResize() {
-    if (!("terminal" in this.refs) || this.editor == null) return; // ignore if not mounted properly yet
-    const newHeight = (window.innerHeight - this.editor.domElement.getBoundingClientRect().top);
-    const newHeightPx = newHeight + "px";
-    this.editor.domElement.style.height = newHeightPx;
-    (this.refs.resizeHandle as HTMLElement).style.height = newHeightPx;
-    (this.refs.editorContainer as HTMLElement).style.height = newHeightPx;
-    this.editor.domElement.style.flex = this.props.settings.editorRatio;
-    (this.refs.terminal as Console).setFlex(1 - this.props.settings.editorRatio);
-    (this.refs.terminal as Console).setHeight(newHeight);
-    this.editor.layout();
-    (this.refs.terminal as Console).updateLayout();
+    if (this.editor && this.terminal && this.resizeHandle && this.editorContainer) {
+      const newHeight = (window.innerHeight - this.editor.domElement.getBoundingClientRect().top);
+      const newHeightPx = newHeight + "px";
+      this.editor.domElement.style.height = newHeightPx;
+      this.resizeHandle.style.height = newHeightPx;
+      this.editorContainer.style.height = newHeightPx;
+      this.editor.domElement.style.flex = this.props.settings.editorRatio;
+      this.terminal.setFlex(1 - this.props.settings.editorRatio);
+      this.terminal.setHeight(newHeight);
+      this.editor.layout();
+      this.terminal.updateLayout();
+    }
   }
   updateEditorOptions() {
     const editorOptions = {
@@ -64,14 +68,14 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     }
   }
   updateConsoleOptions() {
-    if (!this.refs.terminal)
+    if (!this.terminal)
       return;
     if (this.props.settings.theme) {
-      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-light");
-      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-default");
+      (this.terminal as Console).term.element.classList.add("xterm-theme-light");
+      (this.terminal as Console).term.element.classList.remove("xterm-theme-default");
     } else {
-      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-light");
-      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-default");
+      (this.terminal as Console).term.element.classList.remove("xterm-theme-light");
+      (this.terminal as Console).term.element.classList.add("xterm-theme-default");
     }
   }
   editorDidMount(editor: any, monaco: any) {
@@ -115,7 +119,8 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.editor.domElement.style.flex = percent;
-    (this.refs.terminal as Console).setFlex(1 - percent);
+    if (this.terminal)
+      this.terminal.setFlex(1 - percent);
   }
   render() {
     const loaderOptions = {
@@ -139,7 +144,8 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       });
       const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
       return (<div className={styles.filePanel}>
-        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
+        <div className = {styles.editorContainer + " " + this.props.className}
+             ref = {(elem : HTMLElement | null) => { this.editorContainer = elem; }}>
           <MonacoEditor
             dirty = {!!currentFile.unwrittenContent}
             value = {(currentFile.contents === false ||
@@ -154,12 +160,13 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
                         minimap: {enabled: false},
                         rulers: [0]}} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-            <div ref="resizeHandle" className={styles.resizeHandle} />
+            <div ref = {(elem : HTMLElement | null) => { this.resizeHandle = elem; }}
+              className = {styles.resizeHandle} />
           </Draggable>
-          <Console ref="terminal"
-            className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
-            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}
-            consoleText={(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}/>
+          <Console ref = {(elem : Console | null) => { this.terminal = elem; }}
+            className = {this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
+            readOnly = {this.props.appState.runState !== 2} dispatch = {this.props.dispatch}
+            consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}/>
         </div>
       </div>);
     } else
