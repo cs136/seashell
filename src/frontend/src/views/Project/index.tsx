@@ -67,6 +67,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     this.handlers = {
       "run": (e) => {e.preventDefault(); this.runFile()},
       "kill": (e) => {e.preventDefault(); this.stopProgram()},
+      "runAndSet": (e) => {e.preventDefault(); this.runAndSet()}
     };
   }
 
@@ -76,6 +77,20 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
       const question = project.currentQuestion;
       if (question) {
         this.props.dispatch.compile.compileAndRun(project.id, question.name, question.runFile, false);
+      }
+    }
+  }
+
+  private async runAndSet() {
+    const project = this.props.appState.currentProject;
+    if (project) {
+      const question = project.currentQuestion;
+      if (question) {
+        const file = question.currentFile;
+        if (file) {
+          await this.props.dispatch.file.setRunFile(project.id, question.name, file.name);
+          this.runFile();
+        }
       }
     }
   }
