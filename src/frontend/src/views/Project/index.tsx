@@ -49,7 +49,7 @@ const keyMap = {
   "runAndSet": ["ctrl+shift+r", "command+shift+r"],
   "test": ["ctrl+e", "command+e"],
   "kill": ["ctrl+k", "command+k"]
-}
+};
 
 class Project extends React.Component<ProjectProps&actionsInterface, ProjectState> {
   private handlers: { [index: string]: (event: Event) => any } = {};
@@ -65,10 +65,16 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     };
 
     this.handlers = {
-      "run": (e) => {e.preventDefault(); this.runFile()},
-      "kill": (e) => {e.preventDefault(); this.stopProgram()},
-      "runAndSet": (e) => {e.preventDefault(); this.runAndSet()}
+      "run": (e) => { e.preventDefault(); this.runFile(); },
+      "kill": (e) => { e.preventDefault(); this.stopProgram(); },
+      "runAndSet": (e) => { e.preventDefault(); this.runAndSet(); },
+      "increaseFont": (e) => { e.preventDefault(); this.adjustFont(1); },
+      "decreaseFont": (e) => { e.preventDefault(); this.adjustFont(-1); }
     };
+  }
+
+  private adjustFont(size: number) {
+    this.props.dispatch.settings.adjustFont(size);
   }
 
   private runFile() {

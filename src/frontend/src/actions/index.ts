@@ -150,6 +150,10 @@ const mapDispatchToProps = (dispatch: Function) => {
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
           payload: ratio
+        }),
+        adjustFont: (toAdd: number) => dispatch({
+          type: settingsActions.adjustFont,
+          payload: toAdd
         })
       },
       // other than openFile and closeFile, the file name parameter should always

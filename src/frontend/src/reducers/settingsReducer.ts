@@ -21,14 +21,15 @@ export interface settingsReducerState extends settingsReducerStateNullable {[key
   updated: number;
 };
 
-export const settingsActions = {
-  updateSettings: "settings_update",
-  updateEditorRatio: "settings_editor_ratio_update"
+export enum settingsActions {
+  updateSettings =  "settings_update",
+  updateEditorRatio =  "settings_editor_ratio_update",
+  adjustFont = "adjust_font"
 };
 
 export interface settingsReducerAction extends Action {
   type: string;
-  payload?: settingsReducerStateNullable;
+  payload?: settingsReducerStateNullable | number;
 };
 
 
@@ -42,12 +43,30 @@ export default function settingsReducer(
     updated: 0},
   action: settingsReducerAction) {
   switch (action.type) {
-    case settingsActions.updateSettings:
-      state.updated = (new Date()).getTime();
-      return mergeBetter(state, action.payload);
-    case settingsActions.updateEditorRatio:
-      state.updated = (new Date()).getTime();
-      return mergeBetter(state, {editorRatio: action.payload});
+    case settingsActions.updateSettings: {
+      if (typeof action.payload !== "number") {
+        let newState = mergeBetter(state, action.payload);
+        newState.updated = (new Date()).getTime();
+        if (newState.fontSize < 8) newState.fontSize = 8;
+        return newState;
+      } else {
+        throw new Error("updateSettings was called with a number!");
+      }
+    }
+    case settingsActions.updateEditorRatio: {
+      let newState = mergeBetter(state, {editorRatio: action.payload});
+      newState.updated = (new Date()).getTime();
+      return newState;
+    }
+    case settingsActions.adjustFont: {
+      if (typeof action.payload === "number") {
+        let newState = mergeBetter(state, {fontSize: (state.fontSize || 0) + (action.payload || 0)});
+        newState.updated = (new Date()).getTime();
+        if (newState.fontSize < 8) newState.fontSize = 8;
+        return newState;
+      } else
+        throw new Error("adjustFont was not passed a number!");
+    }
     default:
       return state;
   }
