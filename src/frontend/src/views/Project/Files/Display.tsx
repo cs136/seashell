@@ -68,14 +68,15 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     }
   }
   updateConsoleOptions() {
-    if (!this.terminal)
-      return;
-    if (this.props.settings.theme) {
-      (this.terminal as Console).term.element.classList.add("xterm-theme-light");
-      (this.terminal as Console).term.element.classList.remove("xterm-theme-default");
-    } else {
-      (this.terminal as Console).term.element.classList.remove("xterm-theme-light");
-      (this.terminal as Console).term.element.classList.add("xterm-theme-default");
+    if (this.terminal) {
+      if (this.props.settings.theme) {
+        this.terminal.term.element.classList.add("xterm-theme-light");
+        this.terminal.term.element.classList.remove("xterm-theme-default");
+      } else {
+        this.terminal.term.element.classList.remove("xterm-theme-light");
+        this.terminal.term.element.classList.add("xterm-theme-default");
+      }
+      this.terminal.updateLayout();
     }
   }
   editorDidMount(editor: any, monaco: any) {
@@ -85,6 +86,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     editor.focus();
     this.updateEditorOptions();
   }
+
   onChange(newValue: string, e: any) {
     let state = this.props.appState;
     if (state.currentProject &&
@@ -94,16 +96,19 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     else
       throw new Error("Updating undefined file?!");
   }
+
   componentDidUpdate() {
     if (this.state.editorLastUpdated !== this.props.settings.updated) {
       this.updateEditorOptions();
       this.updateConsoleOptions();
     }
   }
+
   componentWillUnmount() {
     window.removeEventListener("resize", this.onResize);
     this.editor = null;
   }
+
   componentDidMount() {
       window.removeEventListener("resize", this.onResize);
       this.onResize = this.onResize.bind(this);
@@ -111,17 +116,20 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       this.onResize();
       this.updateConsoleOptions();
   }
+
   stopDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.props.dispatch.settings.updateEditorRatio(percent);
     this.onResize();
   }
+
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.editor.domElement.style.flex = percent;
     if (this.terminal)
       this.terminal.setFlex(1 - percent);
   }
+
   render() {
     const loaderOptions = {
         url: "vs/loader.js",
@@ -166,7 +174,8 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
           <Console ref = {(elem : Console | null) => { this.terminal = elem; }}
             className = {this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
             readOnly = {this.props.appState.runState !== 2} dispatch = {this.props.dispatch}
-            consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}/>
+            consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}
+            style = {{"font-size": this.props.settings.fontSize}} />
         </div>
       </div>);
     } else
