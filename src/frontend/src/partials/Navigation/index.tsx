@@ -37,6 +37,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
         <div className="pt-navbar-group pt-align-right">
           {this.props.navRight}
           <Popover
+            popoverClassName="pt-minimal"
             className={styles.options}
             content={
               <Menu>

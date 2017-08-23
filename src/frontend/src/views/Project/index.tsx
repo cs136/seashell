@@ -172,13 +172,13 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
         <HotKeys keyMap={keyMap} handlers={this.handlers}>
           <Navigation
             navLeft={[
-              <Popover content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
+              <Popover popoverClassName="pt-minimal" content={<ProjectMenu />} position={Position.BOTTOM_LEFT}>
                 <button className="pt-button" key="project-name">
                   <span className="pt-icon-standard pt-icon-caret-down" />
                   {project.name}
                 </button>
               </Popover>,
-              <Popover content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
+              <Popover popoverClassName="pt-minimal" content={<QuestionList />} key="project-question" position={Position.BOTTOM}>
                 <button className="pt-button pt-intent-primary">
                   <span className="pt-icon-standard pt-icon-caret-down" />
                   {question ? question.name : "Select a Question"}
@@ -188,7 +188,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 <span className="pt-navbar-divider" key="project-divider" /> :
                 <span key="empty-project-divider" />,
               question ?
-                <Popover content={<ListFiles />}
+                <Popover popoverClassName="pt-minimal" content={<ListFiles />}
                     position={Position.BOTTOM} key="project-open-file">
                   <button className="pt-button">
                     <span className="pt-icon-standard pt-icon-caret-down" />
@@ -299,7 +299,12 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
     } else if (this.props.appState.inconsistent) {
       return <Redirect to="/" />;
     } else {
-      return <Loading/>;
+      return (
+        <div>
+          <Navigation navLeft={[]} navRight={[]} />
+          <Loading/>
+        </div>
+      );
     }
   }
 }
