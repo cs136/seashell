@@ -19,7 +19,9 @@
 (require seashell/log
          (submod seashell/seashell-config typed)
          seashell/diff
-         seashell/utils/pty)
+         seashell/utils/pty
+         seashell/backend/exception)
+
 (require/typed racket/serialize
                [serialize (-> Any Any)])
 (require/typed racket/base
@@ -42,7 +44,7 @@
                  [source-dir : Path-String]
                  [asan : Bytes]
                  [pty : (U False PTY)]) #:transparent #:mutable #:type-name Program)
-(struct exn:program:run exn:fail:user ())
+(struct exn:program:run exn:seashell:backend ())
 
 (: program-table (HashTable Integer Program))
 (define program-table (make-hash))

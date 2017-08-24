@@ -16,8 +16,6 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct exn:project exn:fail:user ())
-
 (provide init-projects
          new-project
          delete-project
@@ -43,7 +41,10 @@
          net/head
          typed/json
          file/zip
-         file/unzip)
+         file/unzip
+         seashell/backend/exception)
+
+(struct exn:project exn:seashell:backend ())
 
 (require/typed file/zip
   [zip (-> (U String Path) (U String Path) Void)])
@@ -250,7 +251,7 @@
 
   (define (flatten-racket-files)
     ;; Create a temporary directory
-    (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
+    (define temp-dir (make-temporary-file "seashell-racket-runner-temp-~a" 'directory))
     ;; Copy the common folder to the temp dir -- for backward compatibility this term
     (when (directory-exists? project-common)
       (copy-directory/files project-common (build-path temp-dir (read-config-string 'common-subdirectory))))
@@ -291,7 +292,6 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
-      (eprintf "about to test\n")
       (define pids (map
                      (lambda ([test : String])
                        (run-program target (cast base Path) project-base-str lang test real-test-location))
@@ -331,9 +331,7 @@
         (export-project pid #f tmpdir)
         (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
               (string->symbol (string-append question "_runner_file"))))))
-      (printf "run file: ~a\n" run-file)
       (define path (build-path tmpdir run-file))
-      (printf "path: ~a\nexists: ~a\n" path (file-exists? path))
       (define-values (res hsh)
         (compile-and-run-project (path->string tmpdir) run-file question tests))
       (cons res hsh))
@@ -365,7 +363,7 @@
 (define (export-project pid zip? target)
   (call-with-read-transaction (thunk
     (define files (select-files-for-project pid))
-    (define tmpdir (make-temporary-file "rkttmp~a" 'directory))
+    (define tmpdir (make-temporary-file "seashell-export-~a" 'directory))
     ;; export-file will ensure that the necessary directories are created
     ;; create all the regular files
     ;; compile a list of flags as we go
@@ -453,7 +451,7 @@
       (close-output-port in)
       (close-input-port out)
       (close-input-port err)
-      
+
       ;; Report errors
       (unless (zero? exit-status)
         (raise (exn:project (format "Could not submit project - marmoset_submit returned ~a: (~a) (~a)"
