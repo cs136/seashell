@@ -5,8 +5,14 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const OfflinePlugin = require('offline-plugin');
 const ArchivePlugin = require('webpack-archive-plugin');
+const EmptyPlugin = function() {
+  return {apply: function() {}};
+}
 
-module.exports = function(env) {return {
+module.exports = function(env) {
+  let debug = !!(env ? env.debug : true);
+
+  return {
   devtool: 'source-map',
   entry: './src/index.tsx',
   output: {
@@ -30,16 +36,15 @@ module.exports = function(env) {return {
         from: '*.mem', to: './' },
       { context: './node_modules/seashell-clang-js/bin/',
         from: '*.data', to: './' },
-  ]),
-/*
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false,
-      },
-      sourceMap: true,
-      minimize: true
-    }),
-*/
+    ]),
+    debug ? EmptyPlugin() :
+      new webpack.optimize.UglifyJsPlugin({
+        compress: {
+          warnings: false,
+        },
+        sourceMap: true,
+        minimize: true
+      }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production')
     }),

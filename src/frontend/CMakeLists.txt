@@ -37,7 +37,7 @@ add_custom_target(seashell-frontend-configure
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS seashell-frontend-src-copy)
 add_custom_command(OUTPUT dist.tar.gz
-    COMMAND ${SEASHELL_NPM} run build -- --env.version=\"${SEASHELL_VERSION}-${GIT_COMMIT_HASH}\"
+    COMMAND ${SEASHELL_NPM} run build -- --env.version=\"${SEASHELL_VERSION}-${GIT_COMMIT_HASH}\" --env.debug=${SEASHELL_DEBUG}
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS seashell-frontend-configure ${seashell_frontend_src} webpack.config.prod.js tsconfig.json tslint.json package.json manifest.json)
 # This is _really_ a dummy target (used for incremental builds).
