@@ -130,18 +130,10 @@
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))
                                                            (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
-           [(list pid test-name "failed" diff stderr stdout asan-output)
+           [(list pid test-name "failed" expected stderr stdout asan-output)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
-                                                           (diff . ,(map
-                                                              (lambda (x)
-                                                                (if (list? x)
-                                                                  (map (lambda (y)
-                                                                         (if (bytes? y) (bytes->string/utf-8 y #\?)
-                                                                           y))
-                                                                       x)
-                                                                  (bytes->string/utf-8 x #\?)))
-                                                              diff))
+                                                           (expected . ,(bytes->string/utf-8 expected #\?))
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))
                                                            (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]

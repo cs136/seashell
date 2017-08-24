@@ -150,7 +150,7 @@
                       (define output-lines (regexp-split #rx"\n" stdout))
                       (define expected-lines (regexp-split #rx"\n" expected))
                       ;; hotfix: diff with empty because it's slow
-                      (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
+                      (write (serialize `(,pid ,test-name "failed" ,expected ,stderr ,stdout ,asan-output)) out-stdout)])]
                    [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,stdout ,asan-output)) out-stdout)])
             (logf 'debug "Done sending test results for program PID ~a." pid)
             (close)]

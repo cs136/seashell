@@ -130,21 +130,7 @@ class OutputBuffer {
     }
     if (result.result === "failed") {
       output += "Expected output (stdout):\n";
-      const diffStr = (ln: DiffLine): string => {
-        if (typeof ln === "string") {
-          return ln;
-        } else {
-          return ln[1];
-        }
-      };
-      if (result.diff) {
-        if (result.diff.length > 0) {
-          output += diffStr(result.diff[0]);
-        }
-        for (let i = 1; i < result.diff.length; i++) {
-          output += "\n" + diffStr(result.diff[i]);
-        }
-      }
+      output += result.expected || "";
     }
     if (result.stderr !== "") {
       output += "Produced errors (stderr):\n";

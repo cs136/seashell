@@ -117,13 +117,13 @@ class OfflineCompiler extends AbstractCompiler {
           } else {
             // run all the tests
             let tests: Test[] = await this.getTestsForQuestion(proj, question);
-            if (tests.length < 2) {
-              throw new CompilerError("There are no tests to run for this question.");
+            if (tests.length === 0) {
+              reject(new CompilerError("There are no tests to run for this question."));
             }
             for (let i = 0; i < tests.length; i++) {
               const tester = this.initTest(tests[i]);
               this.activePIDs.push(tester);
-              tester.runner.postMessage(result.data.obj);
+              tester.runner.postMessage({obj: result.data.obj});
             }
           }
         }
