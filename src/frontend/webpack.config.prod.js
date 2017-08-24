@@ -37,6 +37,24 @@ module.exports = function(env) {
       { context: './node_modules/seashell-clang-js/bin/',
         from: '*.data', to: './' },
     ]),
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify('production')
+    }),
+    new webpack.DefinePlugin({
+      IS_BROWSER: true,
+      PRODUCTION: true,
+      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
+    }),
+    new HtmlWebpackPlugin ({
+      inject: true,
+      template: './src/index.html'
+    }),
+    new ArchivePlugin(),
+    new OfflinePlugin({
+      ServiceWorker:{
+        navigateFallbackURL: '/'
+      }
+    }),
     debug ? EmptyPlugin() :
       new webpack.optimize.UglifyJsPlugin({
         compress: {
@@ -45,24 +63,6 @@ module.exports = function(env) {
         sourceMap: true,
         minimize: true
       }),
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production')
-    }),
-    new HtmlWebpackPlugin ({
-      inject: true,
-      template: './src/index.html'
-    }),
-    new ArchivePlugin(),
-    new webpack.DefinePlugin({
-      IS_BROWSER: true,
-      PRODUCTION: true,
-      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
-    }),
-    new OfflinePlugin({
-      ServiceWorker:{
-        navigateFallbackURL: '/'
-      }
-    }),
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.

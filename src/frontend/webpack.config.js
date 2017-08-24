@@ -27,15 +27,15 @@ module.exports = {
       { context: './node_modules/seashell-clang-js/bin/',
         from: '*.data', to: './' },
     ]),
-    new HtmlWebpackPlugin ({
-      inject: true,
-      template: './src/index.html'
-    }),
     new webpack.DefinePlugin({
       IS_BROWSER: true,
       PRODUCTION: false,
       VERSION: "'local'"
-    })
+    }),
+    new HtmlWebpackPlugin ({
+      inject: true,
+      template: './src/index.html'
+    }),
   ],
   devtool: "source-map",
   resolve: {
