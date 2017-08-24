@@ -6,7 +6,7 @@
         "module": "commonjs",
         "target": "es5",
         "jsx": "react",
-        "lib": ["dom", "es2015"],
+        "lib": ["dom", "es6"],
         "strictNullChecks": true,
         "alwaysStrict": true
     },

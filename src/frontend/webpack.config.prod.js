@@ -38,9 +38,7 @@ module.exports = function(env) {
         from: '*.data', to: './' },
     ]),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production')
-    }),
-    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify('production'),
       IS_BROWSER: true,
       PRODUCTION: true,
       VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
@@ -58,7 +56,7 @@ module.exports = function(env) {
     debug ? EmptyPlugin() :
       new webpack.optimize.UglifyJsPlugin({
         compress: {
-          warnings: false,
+          warnings: true,
         },
         sourceMap: true,
         minimize: true
