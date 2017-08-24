@@ -51,7 +51,7 @@ module.exports = function(env) {return {
     new webpack.DefinePlugin({
       IS_BROWSER: true,
       PRODUCTION: true,
-      VERSION: JSON.stringify(env.version) || "'manual'"
+      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
     }),
     new OfflinePlugin({
       ServiceWorker:{
@@ -74,9 +74,6 @@ module.exports = function(env) {return {
           'style-loader?sourceMap',
           'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
           'sass-loader?sourceMap'
-          // { loader: "style-loader", query: { sourceMap: true }},
-          // { loader: "css-loader", query: {modules: true, importLoaders: 1, localIdentName: "[path]___[name]__[local]___[hash:base64:5]" }},
-          // { loader: "sass-loader", query: { sourceMap: true }}
         ]
       }, {
         test: /\.css$/,
@@ -89,7 +86,7 @@ module.exports = function(env) {return {
         test: /\.(jpe?g|png|gif|svg)$/i,
         use: [
           'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
-          'image-webpack-loader?bypassOnDebug&optimizationLevel=7&interlaced=false'
+          'image-webpack-loader?{bypassOnDebug: true, optipng: {optimizationLevel: 7}, gifsicle: {interlaced: false}}'
         ]
       }
     ],
