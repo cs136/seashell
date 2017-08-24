@@ -81,6 +81,11 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     if (this.props.language !== previous.language) {
       this.monacoContext.monaco.editor.setModelLanguage(this.editor.getModel(), this.props.language);
     }
+
+    if (this.props.theme !== previous.theme) {
+      if (this.monacoContext)
+        this.monacoContext.monaco.editor.setTheme(this.props.theme);
+    }
   }
   public editorWillMount() {
     this.props.editorWillMount && this.props.editorWillMount(this.monacoContext.monaco);

@@ -118,11 +118,11 @@ class OutputBuffer {
     } else if (result.result === "error") {
       output += this.wrapColour(`Test "${result.test_name}" caused an error!\n`, ColourCode.RED);
     } else if (result.result === "no-expect") {
-      output += this.wrapColour(`Test "${result.test_name}" completed.\n`, ColourCode.BLACK);
+      output += this.wrapColour(`Test "${result.test_name}" completed.\n`, ColourCode.CYAN);
     } else if (result.result === "timeout") {
       output += this.wrapColour(`Test "${result.test_name}" timed out.\n`, ColourCode.RED);
     } else if (result.result === "killed") {
-      output += this.wrapColour(`Test "${result.test_name}" was killed.\n`, ColourCode.BLACK);
+      output += this.wrapColour(`Test "${result.test_name}" was killed.\n`, ColourCode.YELLOW);
     };
     if (result.result !== "passed") {
       output += "Produced output (stdout):\n";

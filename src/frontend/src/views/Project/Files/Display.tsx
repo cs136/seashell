@@ -56,7 +56,6 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             vertical: "visible",
         },
         selectOnLineNumbers: true,
-        theme: (this.props.settings.theme) ? "vs" : "vs-dark",
         wrappingColumn: 0,
         fontFamily: this.props.settings.font + ", monospace",
         fontSize: this.props.settings.fontSize
@@ -159,6 +158,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             value = {(currentFile.contents === false ||
                      currentFile.contents === undefined) ? "Unavailable in browser!" :
                      currentFile.contents.contents}
+            theme = {this.props.settings.theme ? "vs" : "vs-dark"}
             language = {lang}
             diags = {currentQuestion.diags}
             onChange = {this.onChange.bind(this)}
