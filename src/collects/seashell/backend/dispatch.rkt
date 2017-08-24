@@ -33,6 +33,7 @@
          racket/port
          racket/string
          racket/class
+         seashell/backend/exception
          json)
 
 (provide conn-dispatch)
@@ -483,24 +484,27 @@
     (cond
       [(or (not (hash? message)) (not (hash-has-key? message 'id)))
        (logf 'error "Got bad message!")
+       (capture-exception (exn:seashell:backend (format "Bad message: ~s" message) (current-continuation-marks)))
        `#hash((id . -2) (result . ,(format "Bad message: ~s" message)))]
       [else
        (define id (hash-ref message 'id))
        (when (not SEASHELL_DEBUG)
-         (logf 'info "Handling message  id=~a, type=~a. Message: ~a"
-             id (hash-ref message 'type "unknown") (any->short-str message 100)))
+         (tracef 'info "Handling message  id=~a, type=~a. Message: ~a"
+                  id (hash-ref message 'type "unknown") (any->short-str message 100)))
        (with-handlers
            ([exn:fail:contract?
              (lambda (exn)
-               (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
+               (logf 'error "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
                      (format-stack-trace (exn-continuation-marks exn)))
+               (capture-exception exn)
                `#hash((id . ,id)
                       (success . #f)
                       (result . ,(format "Bad argument: ~a." (exn-message exn)))))]
             [exn?
              (lambda (exn)
-               (logf 'debug "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
+               (logf 'error "Internal server error: ~a.~n***Stacktrace follows:***~n~a~n***End Stacktrace.***~n" (exn-message exn)
                      (format-stack-trace (exn-continuation-marks exn)))
+               (capture-exception exn)
                `#hash((id . ,id)
                       (success . #f)
                       (result .
@@ -530,11 +534,13 @@
         (lambda ()
           (with-handlers
             ([exn:fail:resource? (lambda (exn)
-                                   (logf 'error "Memory limits exceeded while processing request!")
+                                   (logf 'error "Memory limits exceeded while processing request: ~a" (exn-message exn))
+                                   (capture-exception exn)
                                    (send-message connection `#hash((id . -2)
                                                                    (result . "Request exceeded memory limits."))))]
              [exn:fail? (lambda (exn)
-                          (logf 'error "Could not process request!")
+                          (logf 'error "Could not process request: ~a" (exn-message exn))
+                          (capture-exception exn)
                           (send-message connection `#hash((id . -2)
                                                           (result . "Could not process request!"))))])
           (call-with-limits #f (read-config 'request-memory-limit)
@@ -543,8 +549,8 @@
               (semaphore-post keepalive-sema)
               (define result (handle-message message))
               (when (not SEASHELL_DEBUG)
-                (logf 'info "Responding to msg id=~a. Response: ~a"
-                      (hash-ref result 'id "no_id")
+                (tracef 'info "Responding to msg id=~a. Response: ~a"
+                        (hash-ref result 'id "no_id")
                     (any->short-str (hash-ref result 'result "no_results") 100)))
               (send-message connection result))))))
        (main-loop)]))

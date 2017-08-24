@@ -91,11 +91,23 @@
   ;; report-error
   ;; Wraps report-error/X
   (: report-error (->* (Integer String) (String) Nothing))
-  (define (report-error code message [traceback ""])
+  (: report-error-nocapture (->* (Integer String) (String) Nothing))
+  (define (report-error-nocapture code message [traceback ""])
     (if (equal? (get-cgi-method) "POST")
       (report-error/json code message)
       (report-error/html code message traceback)))
+  (define (report-error code message [traceback ""])
+    (capture-exception (exn:fail (format "seashell-login: ~a: ~a~n~a" code message traceback) (current-continuation-marks)))
+    (report-error-nocapture code message traceback))
 
+  ;; report-exception
+  ;; Reports an exception
+  (: report-exception (-> Integer exn Any))
+  (define (report-exception code exn)
+    (capture-exception exn)
+    (report-error-nocapture code (exn-message exn)
+                            (format-stack-trace
+                              (exn-continuation-marks exn))))
 
   ;; password-based-login/ajax
   ;; AJAX-based password login.
@@ -269,10 +281,7 @@
       (report-error 1 "Requires SSL."))
 
     (with-handlers
-      ([exn:fail? (lambda ([exn : exn]) (report-error 1
-                                                      (exn-message exn)
-                                                      (format-stack-trace
-                                                       (exn-continuation-marks exn))))])
+      ([exn:fail? (lambda ([exn : exn]) (report-exception 1 exn))])
       ;; Install configuration.
       (config-refresh!)
 

@@ -129,8 +129,8 @@
             #{`#hasheq((filename . ,source) (function . ,name) (module . ,source)
                        (lineno . ,line) (colno . ,column)) :: (HashTable Symbol JSExpr)}))))
 
-    (: send-packet (-> String String (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) Any))
-    (define (send-packet culprit message packet local-tags)
+    (: send-packet (-> String String (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) Boolean Any))
+    (define (send-packet culprit message packet local-tags block?)
       (define id (uuid-generate))
       (define timestamp
         (parameterize ([date-display-format 'iso-8601])
@@ -142,12 +142,15 @@
                    (message . ,message)) :: (HashTable Symbol JSExpr)})
       (define full-packet (hash-union partial-packet packet))
       (define header (make-header))
-      (thread
-       (thunk
-        (close-input-port (post-impure-port target (jsexpr->bytes full-packet) `(,header "Content-Type: application/json"))))))
+      ;; Block if we have to
+      (define result
+        (thread
+         (thunk
+          (close-input-port (post-impure-port target (jsexpr->bytes full-packet) `(,header "Content-Type: application/json"))))))
+      (when block? (sync result)))
 
-    (: report-exception (-> exn (HashTable Symbol JSExpr) Any))
-    (define/public (report-exception exn local-tags)
+    (: report-exception (->* (exn (HashTable Symbol JSExpr)) (Boolean) Any))
+    (define/public (report-exception exn local-tags [block #f])
       (when _dsn
         (define ctx
           (let ([_ctx (continuation-mark-set->context (exn-continuation-marks exn))])
@@ -167,5 +170,5 @@
                        (value . ,(exn-message exn))
                        (module . ,module)
                        (stacktrace . ,(generate-stack-trace exn))) :: JSExpr}) :: JSExpr})) :: JSExpr})))
-        (send-packet to-blame (exn-message exn) exception-packet local-tags)))
+        (send-packet to-blame (exn-message exn) exception-packet local-tags block)))
 ))

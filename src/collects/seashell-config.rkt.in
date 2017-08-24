@@ -292,6 +292,7 @@
       (cons 'compiler-ttl                  60)
       ;; Sentry logging endpoint (default #f -- disabled)
       (cons 'sentry-target                 #f)
+      (cons 'sentry-delay                  1.0)
       ;; whoami binary (used for CLI)
       (cons 'whoami                        "/usr/bin/whoami")
       )))
