@@ -291,8 +291,11 @@
       ;; This needs to be long enough for a file to compile.
       (cons 'compiler-ttl                  60)
       ;; Sentry logging endpoint (default #f -- disabled)
+      ;; Origin is required if secret key is not provided -- note that as Seashell
+      ;; drops permissions, the secret key should not be provided.
       (cons 'sentry-target                 #f)
       (cons 'sentry-delay                  1.0)
+      (cons 'sentry-origin                 "https://www.student.cs.uwaterloo.ca/")
       ;; whoami binary (used for CLI)
       (cons 'whoami                        "/usr/bin/whoami")
       )))

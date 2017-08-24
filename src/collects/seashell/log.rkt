@@ -169,7 +169,8 @@
      ,#{`#hasheq((id . ,userid)
                  (email . ,userid))
         :: JSExpr})) :: (HashTable Symbol JSExpr)})
-  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
+  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]
+                                       [origin (read-config-optional-string 'sentry-origin)]))
   (send reporter set-context! context)
   (if (read-config-boolean 'debug)
     (make-port-logger 'debug (current-error-port))
