@@ -33,9 +33,6 @@ add_custom_target(seashell-racket-tests-copy
 # Install the configuration.
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in"
   "${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt")
-# Old copy of login.cgi (for backwards compatibility with UWaterloo CAS)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/login.cgi")
 # New version of login.cgi (to enable resets on any environment)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/login.cgi.in"
   "${CMAKE_CURRENT_BINARY_DIR}/login2.cgi")
