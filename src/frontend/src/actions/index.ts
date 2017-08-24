@@ -15,6 +15,7 @@ import * as C from "../helpers/Compiler/Interface";
 import { dialogActions } from "../reducers/dialogReducer";
 import { saveAs } from "file-saver";
 import JSZip = require("jszip");
+import * as Raven from "raven-js";
 
 interface Func<T> {
   ([...args]: any): T;
@@ -42,14 +43,18 @@ const mapDispatchToProps = (dispatch: Function) => {
         await actions.dispatch.dialog.toggleResolveConflict();
         throw e;
       }
-      console.error(e);
-      if (e.message) {
-        showError(e.message);
-      }
-      if (e instanceof LoginError) {
+      // if it's a login error, just redirect to the login screen
+      else if (e instanceof LoginError) {
         dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
+        // Display the error
+        if (e && e.message) {
+          showError(e.message);
+        }
+        // Report exception to Sentry
+        Raven.captureException(e);
+        console.error(e);
         throw e;
       }
     }
