@@ -135,7 +135,7 @@
       (define id (string-replace (uuid-generate) "-" ""))
       (define timestamp
         (parameterize ([date-display-format 'iso-8601])
-          (date->string (current-date) #t)))
+          (date->string (seconds->date (current-seconds) #f) #t)))
       (define partial-packet
         #{`#hasheq((event_id . ,id)
                    (culprit . ,culprit)
