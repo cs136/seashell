@@ -94,7 +94,7 @@ class OfflineCompiler extends AbstractCompiler {
       let compiler = new CompilerWorker();
       compiler.onmessage = async (result: CompilerWorkerResult) => {
         if (result.data.status === "error") {
-          throw new CompilerError(result.data.err || "Unknown error");
+          reject(new CompilerError(result.data.err || "Unknown error"));
         } else {
           this.buffer.outputDiagnostics(result.data.messages);
         }

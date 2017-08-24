@@ -153,7 +153,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
       return (<div className={styles.filePanel}>
         <div className = {styles.editorContainer + " " + this.props.className}
-             ref = {(elem : HTMLElement | null) => { this.editorContainer = elem; }}>
+             ref = {(elem: HTMLElement | null) => { this.editorContainer = elem; }}>
           <MonacoEditor
             dirty = {!!currentFile.unwrittenContent}
             value = {(currentFile.contents === false ||
@@ -168,10 +168,10 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
                         minimap: {enabled: false},
                         rulers: [0]}} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-            <div ref = {(elem : HTMLElement | null) => { this.resizeHandle = elem; }}
+            <div ref = {(elem: HTMLElement | null) => { this.resizeHandle = elem; }}
               className = {styles.resizeHandle} />
           </Draggable>
-          <Console ref = {(elem : Console | null) => { this.terminal = elem; }}
+          <Console ref = {(elem: Console | null) => { this.terminal = elem; }}
             className = {this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
             readOnly = {this.props.appState.runState !== 2} dispatch = {this.props.dispatch}
             consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}

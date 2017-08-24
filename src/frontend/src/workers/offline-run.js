@@ -1,3 +1,4 @@
+"use strict";
 /*
   Web worker called by the offline compiler worker to actually run the compiled
     object files. Initialized as a shared worker in the main thread for Chrome
@@ -17,7 +18,7 @@ function onInit() {
   }
 }
 
-Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
+self.Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
 self.importScripts(require("file-loader!seashell-clang-js/bin/seashell-runner"));
 
 var stdout = "";
