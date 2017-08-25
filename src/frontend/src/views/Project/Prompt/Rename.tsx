@@ -51,10 +51,10 @@ class Rename extends React.Component<RenameProps&actionsInterface, RenameState> 
       return this.props.dispatch.file.renameFile(project.id, question, this.state.target,
           `${this.state.commonOrQuestion}/${this.state.file}`)
         .then((target) =>
-          this.props.dispatch.question.switchQuestion(project.id, this.state.commonOrQuestion)
+          this.props.dispatch.question.switchQuestion(project.id, question)
           .then(() => {
-            this.props.dispatch.file.openFile(project.id, this.state.commonOrQuestion, target.name);
-            this.props.dispatch.file.switchFile(project.id, this.state.commonOrQuestion, target.name);
+            this.props.dispatch.file.openFile(project.id, question, target.name);
+            this.props.dispatch.file.switchFile(project.id, question, target.name);
             })
         ).catch((error: any) => {
           if (error !== null) {
