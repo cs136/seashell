@@ -166,7 +166,10 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
 
   render() {
     const project = this.props.appState.currentProject;
-    if (project) {
+    // Inconsistent state --> go home.
+    if (this.props.appState.inconsistent) {
+      return <Redirect to="/" />;
+    } else if (project) {
       const question = project.currentQuestion;
       return (
         <HotKeys keyMap={keyMap} handlers={this.handlers}>
@@ -306,8 +309,6 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                   <MarmosetResultPrompt result={this.state.marmosetResults.result} />
           </Dialog>
       </HotKeys>);
-    } else if (this.props.appState.inconsistent) {
-      return <Redirect to="/" />;
     } else {
       return (
         <div>
