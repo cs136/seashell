@@ -250,7 +250,7 @@ export default function appStateReducer(state: appStateReducerState = {
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
-          reject((file) => file === removeFile.name, files);
+          reject((file) => file === removeFile, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
         // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
