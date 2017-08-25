@@ -124,6 +124,7 @@ export default function appStateReducer(state: appStateReducerState = {
                                  newFile: S.FileEntry}>action.payload;
       state = clone(state);
       if (state.currentProject &&
+          state.currentProject.id === action.payload.project &&
           state.currentProject.currentQuestion &&
           state.currentProject.currentQuestion.currentFile &&
           state.currentProject.currentQuestion.currentFile.name === oldName) {
@@ -203,11 +204,15 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.switchFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (action.payload.file instanceof S.FileEntry) {
-          state.currentProject.currentQuestion.currentFile =
-            new CurrentFile(action.payload.file, action.payload.versions);
+        if (state.currentProject.id === action.payload.project) {
+          if (action.payload.file instanceof S.FileEntry) {
+            state.currentProject.currentQuestion.currentFile =
+              new CurrentFile(action.payload.file, action.payload.versions);
+          } else {
+            console.error("switchFile was not passed a file entry:", action.payload);
+          }
         } else {
-          console.error("switchFile was not passed a file entry:", action.payload);
+          console.error("Invalid state reached -- trying to switch to a file in another project");
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
@@ -216,10 +221,10 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.switchQuestion:
       state = clone(state);
-      if (state.currentProject) {
+      if (state.currentProject && state.currentProject.id === action.payload.project) {
         state.currentProject.currentQuestion = action.payload.question;
       } else {
-        console.warn("Invalid state reached -- currentProject is undefined in switchQuestion");
+        console.warn("Invalid state reached -- currentProject is undefined or invalid in switchQuestion");
         state.inconsistent = true;
       }
       return state;
@@ -230,10 +235,10 @@ export default function appStateReducer(state: appStateReducerState = {
     // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       state = clone(state);
-      if (state.currentProject) {
+      if (state.currentProject && state.currentProject.id === action.payload.project) {
         state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
       } else {
-        console.warn("Invalid state reached -- currentProject is undefined in removeQuestion");
+        console.warn("Invalid state reached -- currentProject is undefined or invalid in removeQuestion");
         state.inconsistent = true;
       }
       return state;
@@ -257,7 +262,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.addQuestion:
       state = clone(state);
-      if (state.currentProject) {
+      if (state.currentProject && state.currentProject.id === action.payload.project) {
         state.currentProject.questions.push(action.payload.name);
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in addQuestion");
@@ -277,7 +282,9 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.addFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.files.push(action.payload.name);
+        if (state.currentProject.id === action.payload.project) {
+          state.currentProject.currentQuestion.files.push(action.payload.file);
+        }
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
         state.inconsistent = true;
@@ -320,11 +327,13 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.currentQuestion.openFiles.find((ofile) =>
-              ofile === action.payload) !== undefined) {
-          return state; // don't duplicate files
+        if (state.currentProject.id === action.payload.project) {
+          if (state.currentProject.currentQuestion.openFiles.find((ofile) =>
+                ofile === action.payload.file) !== undefined) {
+            return state; // don't duplicate files
+          }
+          state.currentProject.currentQuestion.openFiles.push(action.payload.file);
         }
-        state.currentProject.currentQuestion.openFiles.push(action.payload);
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
         state.inconsistent = true;
@@ -332,10 +341,12 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.closeFile:
       state = clone(state);
-      let oldFile = action.payload;
+      let oldFile = action.payload.file;
       if (state.currentProject && state.currentProject.currentQuestion) {
-        state.currentProject.currentQuestion.openFiles =
-          reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
+        if (state.currentProject.id === action.payload.project) {
+          state.currentProject.currentQuestion.openFiles =
+            reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
+        }
       } else {
         console.warn("Inconsistent state reached -- currentProject/Question is undefined in openFile");
         state.inconsistent = true;
@@ -343,7 +354,11 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.setRunFile:
       state = clone(state);
-      return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload}}});
+      if (state.currentProject && state.currentProject.id === action.payload.project) {
+        return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload.file}}});
+      } else {
+        return state;
+      }
     case appStateActions.setDiags:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
