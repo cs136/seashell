@@ -246,7 +246,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      let removeFile = <S.File>action.payload;
+      let removeFile = <string>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
