@@ -195,7 +195,7 @@
 
     (: fetch-changes (-> Integer String (Listof (Vectorof SQL-Datum))))
     (define/public (fetch-changes revision client)
-      (query-rows database "SELECT type, client, target_table, target_key, data FROM _changes WHERE revision >= $1 AND client != $2" revision client))
+      (query-rows database "SELECT type, client, target_table, target_key, data FROM _changes WHERE revision > $1 AND client != $2" revision client))
 
     (: apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
