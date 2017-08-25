@@ -75,17 +75,6 @@ describe("Testing LocalStorage interface functions", () => {
     expect(lsp).toEqual(expect.arrayContaining(["personal", "A0", "A10", "T10"]));
   });
 
-  it(`updateLastUsed`, async () => {
-    const ls = ["personal", "A0", "T0", "A10", "T10"];
-    const projs = [];
-    for (let n of ls) {
-      projs.push(await store.newProject(n));
-    };
-    await store.updateLastUsed(projs[2].id);
-    const lsp = (await store.getProjects()).map((o) => o.name);
-    expect(lsp[0]).toEqual("T0");
-  });
-
   it(`newFile`, async () => {
     const p = await store.newProject("project");
     const f = await store.newFile(p.id, "file");
