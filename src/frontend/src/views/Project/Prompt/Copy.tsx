@@ -10,10 +10,11 @@ interface CopyProps {
 };
 
 interface CopyState {
-  question: string;
+  commonOrQuestion: string;
   file: string;
   prevFile: string;
   disabled: boolean;
+  sourceQuestion: string;
 };
 
 class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
@@ -21,23 +22,28 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
   constructor(props: CopyProps&actionsInterface) {
     super(props);
     let filename = this.props.appState.fileOpTarget;
-    if (filename) {
+    if (filename &&
+        this.props.appState.currentProject &&
+        this.props.appState.currentProject.currentQuestion) {
+      let source = filename.split("/")[0];
       this.state = {
-        question: this.props.questions[0],
+        commonOrQuestion: source,
         file: filename.split("/").pop() || "", // Both of these are unreachable
         prevFile: filename.split("/").pop() || "", // As above ^ ^
-        disabled: false
+        disabled: false,
+        sourceQuestion: this.props.appState.currentProject.currentQuestion.name
       };
     } else {
-      throw new Error("CopyWindow invoked on undefined file!");
+      throw new Error("CopyWindow invoked on undefined file or project or question!");
     }
   }
 
   private submitForm(): Promise<any> {
     let source = this.props.appState.fileOpTarget;
     let project = this.props.appState.currentProject;
+    let question = this.state.commonOrQuestion === "common" ? this.state.sourceQuestion : this.state.commonOrQuestion;
     if (source && project)
-      return this.props.dispatch.file.copyFile(project.id, this.state.question, source, `${this.state.question}/${this.state.file}`);
+      return this.props.dispatch.file.copyFile(project.id, question, source, `${this.state.commonOrQuestion}/${this.state.file}`);
     else
       return Promise.reject(new Error("Could not copy file -- invalid state reached.!"));
   }
@@ -49,10 +55,11 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
       <p>Where would you like to copy this file?</p>
       <div>
         <div className="pt-select pt-fill">
-          <select id="question" value={this.state.question}
-            onChange={(e) => this.setState(merge(this.state, {question: e.currentTarget.value}))}>
+          <select id="question" value={this.state.commonOrQuestion}
+            onChange={(e) => this.setState(merge(this.state, {commonOrQuestion: e.currentTarget.value}))}>
             {this.props.questions.map((question: string) =>
               (<option value={question}>{question}</option>))}
+            <option value="common">common</option>
           </select>
         </div>
         <input className="pt-input pt-fill" required type="text" value={this.state.file}
