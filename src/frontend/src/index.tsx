@@ -19,7 +19,7 @@ import * as Raven from "raven-js";
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
 DebugLogs.enable();
-console.log(`Seashell ${VERSION} starting up.`);
+console.log(`Seashell ${VERSION} starting up in ${DEBUG ? "debug": "release"} mode.`);
 
 
 if (PRODUCTION && "serviceWorker" in navigator) {
@@ -35,10 +35,10 @@ const rootEl = document.getElementById("root");
 render(<HashRouter><Provider store={store}><App /></Provider></HashRouter>, rootEl);
 
 Services.init(store.dispatch, {
-  debugService: true,
-  debugWebSocket: true,
-  debugLocalStorage: true,
-  debugWebStorage: true
+  debugService: DEBUG,
+  debugWebSocket: DEBUG,
+  debugLocalStorage: DEBUG,
+  debugWebStorage: DEBUG
 });
 
 

@@ -41,6 +41,7 @@ module.exports = function(env) {
       'process.env.NODE_ENV': JSON.stringify('production'),
       IS_BROWSER: true,
       PRODUCTION: true,
+      DEBUG: debug,
       VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
     }),
     new HtmlWebpackPlugin ({

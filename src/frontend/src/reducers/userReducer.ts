@@ -1,5 +1,4 @@
 import {evolve} from "ramda";
-import {projectRef, fileRef} from "../types";
 import {Action} from "redux";
 
 export interface userReducerState {

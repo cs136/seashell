@@ -1,7 +1,6 @@
 import { connect } from "react-redux";
 import { ComponentClass } from "react";
 import { globalState } from "../reducers/";
-import { projectRef, fileRef } from "../types";
 import { appStateActions } from "../reducers/appStateReducer";
 import { userActions } from "../reducers/userReducer";
 import { Services } from "../helpers/Services";

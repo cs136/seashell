@@ -28,6 +28,7 @@ module.exports = {
         from: '*.data', to: './' },
     ]),
     new webpack.DefinePlugin({
+      DEBUG: true,
       IS_BROWSER: true,
       PRODUCTION: false,
       VERSION: "'local'"

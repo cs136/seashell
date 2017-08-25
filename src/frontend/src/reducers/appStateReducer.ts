@@ -1,7 +1,6 @@
 import {cloneBetter as clone, mergeBetter} from "../helpers/utils";
 import {CompilerDiagnostic} from "../helpers/Services";
 import {reject, equals, find, propEq} from "ramda";
-import {projectRef, fileRef} from "../types";
 import * as S from "../helpers/Storage/Interface";
 import {Action} from "redux";
 import {showInfo} from "../partials/Errors";
