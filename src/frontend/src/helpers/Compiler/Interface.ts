@@ -121,7 +121,7 @@ interface TestMessage {
   stderr: string;
   stdout: string;
   test_name: string;
-  diff?: DiffLine[];
+  expected?: string;
   asan_output?: string;
 }
 

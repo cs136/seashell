@@ -29,7 +29,7 @@ class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
                   {filename === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
                   {filename.substring(index === -1 ? 0 : index + question.name.length + 1)}
                 </button>
-                <Popover content={<FileActions filename={filename}/>}
+                <Popover popoverClassName="pt-minimal" content={<FileActions filename={filename}/>}
                         position={Position.BOTTOM}>
                   <button className={"pt-button pt-minimal pt-icon-caret-down " + styles.openFilesTabAction}>
                   </button>

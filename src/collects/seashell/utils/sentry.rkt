@@ -41,7 +41,8 @@
 (define sentry-reporter%
   (class object%
     (init [opt-dsn : (U False String) #f]
-          [tags : (HashTable Symbol JSExpr) (make-immutable-hash)])
+          [tags : (HashTable Symbol JSExpr) (make-immutable-hash)]
+          [origin : (U False String) #f])
 
     (: _dsn (Option String))
     (define _dsn opt-dsn)
@@ -129,12 +130,12 @@
             #{`#hasheq((filename . ,source) (function . ,name) (module . ,source)
                        (lineno . ,line) (colno . ,column)) :: (HashTable Symbol JSExpr)}))))
 
-    (: send-packet (-> String String (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) Any))
-    (define (send-packet culprit message packet local-tags)
-      (define id (uuid-generate))
+    (: send-packet (-> String String (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) Boolean Any))
+    (define (send-packet culprit message packet local-tags block?)
+      (define id (string-replace (uuid-generate) "-" ""))
       (define timestamp
         (parameterize ([date-display-format 'iso-8601])
-          (date->string (current-date) #t)))
+          (date->string (seconds->date (current-seconds) #f) #t)))
       (define partial-packet
         #{`#hasheq((event_id . ,id)
                    (culprit . ,culprit)
@@ -142,12 +143,26 @@
                    (message . ,message)) :: (HashTable Symbol JSExpr)})
       (define full-packet (hash-union partial-packet packet))
       (define header (make-header))
-      (thread
-       (thunk
-        (close-input-port (post-impure-port target (jsexpr->bytes full-packet) `(,header "Content-Type: application/json"))))))
+      (define headers `(,header
+                        "Content-Type: application/json"
+                        ,@(if origin (list (format "Referer: ~a" origin)
+                                           (format "Origin: ~a" origin)) '())))
+      ;; Block if we have to
+      (define report
+         (thunk
+          (define port (post-impure-port target (jsexpr->bytes full-packet) headers))
+          (define result-headers (purify-port port))
+          (define result (regexp-match #rx"HTTP/(?:[0-9.]*) ([0-9]*)" result-headers))
+          (cond
+            [(not result) (raise (exn:fail "Could not read Sentry response!" (current-continuation-marks)))]
+            [(not (equal? "200" (second result)))
+             (raise (exn:fail (format "Sentry response failed: ~a!" (port->string port))
+                              (current-continuation-marks)))])
+          (close-input-port port)))
+      (if block? (report) (thread report)))
 
-    (: report-exception (-> exn (HashTable Symbol JSExpr) Any))
-    (define/public (report-exception exn local-tags)
+    (: report-exception (->* (exn (HashTable Symbol JSExpr)) (Boolean) Any))
+    (define/public (report-exception exn local-tags [block #f])
       (when _dsn
         (define ctx
           (let ([_ctx (continuation-mark-set->context (exn-continuation-marks exn))])
@@ -167,5 +182,5 @@
                        (value . ,(exn-message exn))
                        (module . ,module)
                        (stacktrace . ,(generate-stack-trace exn))) :: JSExpr}) :: JSExpr})) :: JSExpr})))
-        (send-packet to-blame (exn-message exn) exception-packet local-tags)))
+        (send-packet to-blame (exn-message exn) exception-packet local-tags block)))
 ))

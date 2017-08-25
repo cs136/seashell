@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 2.6)
 # Variable needed for backend and collects.
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(SEASHELL_DEBUG 1)
-else(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+else() # Release build
   set(SEASHELL_DEBUG 0)
 endif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 

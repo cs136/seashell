@@ -20,7 +20,8 @@
          "utils/sentry.rkt"
          "support-native.rkt"
          typed/json)
-(provide logf make-port-logger standard-logger-setup format-stack-trace)
+(provide logf make-port-logger standard-logger-setup format-stack-trace
+         tracef capture-exception)
 
 (define logger (make-logger 'seashell-all))
 (define trace-logger (make-logger 'seashell-api-trace logger))
@@ -79,11 +80,20 @@
 ;; Raises an exception, logging to Sentry and to the trace logger.
 (: traced-raise (-> exn Any))
 (define (traced-raise exn)
-  (thread
-    (thunk
-      (tracef 'error "An exception was raised: ~a" (exn-message exn))
-      (send reporter report-exception exn #{`#hasheq() :: (HashTable Symbol JSExpr)})))
+  (tracef 'error "An exception was raised: ~a" (exn-message exn))
+  (capture-exception exn)
   (raise exn))
+
+;; capture-exception exn -> Any
+;; Captures an exception, sending it to Sentry
+(: capture-exception (-> exn Any))
+(define (capture-exception exception)
+  (sync/timeout (read-config-nonnegative-real 'sentry-delay)
+    (thread
+      (thunk
+        (with-handlers ([exn? (lambda ([e : exn]) (logf 'warning "Error sending exception: ~a." (exn-message e)))])
+          ;; We block on the reporter here
+          (send reporter report-exception exception #{`#hasheq() :: (HashTable Symbol JSExpr)} #t))))))
 
 ;; make-log-reader: level -> log-receiver
 ;; Creates a log receiver that receives all messages at level or higher.
@@ -159,7 +169,8 @@
      ,#{`#hasheq((id . ,userid)
                  (email . ,userid))
         :: JSExpr})) :: (HashTable Symbol JSExpr)})
-  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]))
+  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]
+                                       [origin (read-config-optional-string 'sentry-origin)]))
   (send reporter set-context! context)
   (if (read-config-boolean 'debug)
     (make-port-logger 'debug (current-error-port))

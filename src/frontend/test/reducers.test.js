@@ -9,7 +9,7 @@ describe("App States", () => {
     const expectedData = {currentProject:
       {currentQuestion:
         {currentFile:
-          {contents: outputString,
+          {contents: {contents: outputString},
             flusher: undefined,
             target: undefined,
             unwrittenContent: undefined}}}};
@@ -19,7 +19,7 @@ describe("App States", () => {
           {contents: "fail",
             flusher: 15,
             target: ["A","B"],
-            unwrittenContent: "fail"}}}}, action(appStateReducer.appStateActions.changeFileContent, outputString))
+            unwrittenContent: "fail"}}}}, action(appStateReducer.appStateActions.changeFileContent, {contents: outputString}))
     ).toEqual(expectedData);
   });
 });

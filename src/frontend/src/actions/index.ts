@@ -15,6 +15,7 @@ import * as C from "../helpers/Compiler/Interface";
 import { dialogActions } from "../reducers/dialogReducer";
 import { saveAs } from "file-saver";
 import JSZip = require("jszip");
+import * as Raven from "raven-js";
 
 interface Func<T> {
   ([...args]: any): T;
@@ -42,14 +43,19 @@ const mapDispatchToProps = (dispatch: Function) => {
         await actions.dispatch.dialog.toggleResolveConflict();
         throw e;
       }
-      console.error(e);
-      if (e.message) {
-        showError(e.message);
-      }
-      if (e instanceof LoginError) {
+      // if it's a login error, just redirect to the login screen
+      else if (e instanceof LoginError) {
         dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
+        // Display the error
+        if (e && e.message && !e.shown) {
+          showError(e.message);
+          e.shown = true;
+        }
+        // Report exception to Sentry
+        Raven.captureException(e);
+        console.error(e);
         throw e;
       }
     }
@@ -58,6 +64,9 @@ const mapDispatchToProps = (dispatch: Function) => {
   const storage = Services.getStorage;
   const webStorage = Services.getWebStorage;
 
+  // FIXME: A lot of the actions implicitly assume that any project/question parameter passed in
+  // refers to the current question. This is probably not true in all cases, and should be fixed
+  // eventually.
   const actions =  {
     dispatch: {
       dialog: {
@@ -150,6 +159,10 @@ const mapDispatchToProps = (dispatch: Function) => {
         updateEditorRatio: (ratio: number) => dispatch({
           type: settingsActions.updateEditorRatio,
           payload: ratio
+        }),
+        adjustFont: (toAdd: number) => dispatch({
+          type: settingsActions.adjustFont,
+          payload: toAdd
         })
       },
       // other than openFile and closeFile, the file name parameter should always
@@ -163,16 +176,15 @@ const mapDispatchToProps = (dispatch: Function) => {
           type: appStateActions.invalidateFile,
           payload: {}
         }),
-        copyFile: (targetName: string) => {
-          // TODO: hook up to storage() once we get a proper copy function
-          dispatch({
-            type: appStateActions.copyFile,
-            payload: {
-              question: { name: "question", files: ["file1.txt"] },
-              newName: targetName.split("/").pop()
-            }
-          });
-          return Promise.resolve();
+        copyFile: async (project: S.ProjectID, question: string, source: string, target: string) => {
+          let file = await asyncAction(storage().getFileByName(project, source));
+          if (file && file.contents) {
+            return actions.dispatch.file.addFile(project, question, target, file.contents.contents);
+          }
+          else {
+            let error = new Error(`Can not copy file ${source} as it has no contents!`);
+            return asyncAction(Promise.reject(error));
+          }
         },
         updateFile: (file: S.FileEntry, newFileContent: string) => {
           dispatch({
@@ -238,30 +250,36 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         addFile: (project: string, question: string, filename: string, newFileContent: string) => {
-          // writes a new file, returns a promise the caller can use when finished
-          //  to do other stuff (i.e. switch to the file)
-          return asyncAction(storage().newFile(project, filename, newFileContent))
-            .then((file) => {
-              dispatch({
-                type: appStateActions.addFile,
-                payload: file
-              });
-              return asyncAction(storage().addOpenFile(file.project_id, question, filename))
-                .then(async () => {
-                  // file needs to be read here to obtain the default contents
-                  let entry = await storage().getFileByName(file.project_id, file.name);
-                  if (entry) {
-                    dispatch({
-                      type: appStateActions.openFile,
-                      payload: entry.name
-                    });
-                    dispatch({
-                      type: appStateActions.switchFile,
-                      payload: {file: entry}
-                    });
-                  }
+          return dispatch((dispatch: Function, getState: () => globalState) => {
+            let state = getState();
+            // writes a new file, returns a promise the caller can use when finished
+            //  to do other stuff (i.e. switch to the file)
+            return asyncAction(storage().newFile(project, filename, newFileContent))
+              .then((file) => {
+                dispatch({
+                  type: appStateActions.addFile,
+                  payload: file
                 });
-            });
+                return asyncAction(storage().addOpenFile(file.project_id, question, filename))
+                  .then(async () => {
+                    if (state.appState.currentProject && state.appState.currentProject.currentQuestion &&
+                        state.appState.currentProject.id === project && state.appState.currentProject.currentQuestion.name === question) {
+                      // file needs to be read here to obtain the default contents
+                      let entry = await storage().getFileByName(file.project_id, file.name);
+                      if (entry) {
+                        dispatch({
+                          type: appStateActions.openFile,
+                          payload: entry.name
+                        });
+                        dispatch({
+                          type: appStateActions.switchFile,
+                          payload: {file: entry}
+                        });
+                      }
+                    }
+                  });
+              });
+          });
         },
         deleteFile: (project: S.ProjectID, question: string, filename: string) => {
           return asyncAction(storage().deleteFile(project, filename))

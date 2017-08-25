@@ -32,14 +32,15 @@ import * as LS from "localstorage-memory";
 describe("Testing LocalStorage interface functions", () => {
 
   let store;
+  let idx = 0;
 
   beforeEach(async () => {
     store = new LocalStorage(false, () => false);
-    await store.connect("LocalStorage.test.ts");
+    await store.connect(`LocalStorage.test.ts${idx++}`);
   });
 
   afterEach(async () => {
-    await store.deleteDB();
+    // await store.deleteDB();
   });
 
   it(`newProject`, async () => {

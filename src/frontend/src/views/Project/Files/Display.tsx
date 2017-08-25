@@ -15,6 +15,9 @@ export interface DisplayState { editorLastUpdated: number; }
 class Display extends React.Component<DisplayProps & actionsInterface, DisplayState> {
   editor: any;
   monaco: any;
+  editorContainer: HTMLElement | null;
+  resizeHandle: HTMLElement | null;
+  terminal: Console | null;
 
   constructor(props: DisplayProps & actionsInterface) {
     super(props);
@@ -27,17 +30,18 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     this.editor = null;
   }
   onResize() {
-    if (!("terminal" in this.refs) || this.editor == null) return; // ignore if not mounted properly yet
-    const newHeight = (window.innerHeight - this.editor.domElement.getBoundingClientRect().top);
-    const newHeightPx = newHeight + "px";
-    this.editor.domElement.style.height = newHeightPx;
-    (this.refs.resizeHandle as HTMLElement).style.height = newHeightPx;
-    (this.refs.editorContainer as HTMLElement).style.height = newHeightPx;
-    this.editor.domElement.style.flex = this.props.settings.editorRatio;
-    (this.refs.terminal as Console).setFlex(1 - this.props.settings.editorRatio);
-    (this.refs.terminal as Console).setHeight(newHeight);
-    this.editor.layout();
-    (this.refs.terminal as Console).updateLayout();
+    if (this.editor && this.terminal && this.resizeHandle && this.editorContainer) {
+      const newHeight = (window.innerHeight - this.editor.domElement.getBoundingClientRect().top);
+      const newHeightPx = newHeight + "px";
+      this.editor.domElement.style.height = newHeightPx;
+      this.resizeHandle.style.height = newHeightPx;
+      this.editorContainer.style.height = newHeightPx;
+      this.editor.domElement.style.flex = this.props.settings.editorRatio;
+      this.terminal.setFlex(1 - this.props.settings.editorRatio);
+      this.terminal.setHeight(newHeight);
+      this.editor.layout();
+      this.terminal.updateLayout();
+    }
   }
   updateEditorOptions() {
     const editorOptions = {
@@ -52,7 +56,6 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             vertical: "visible",
         },
         selectOnLineNumbers: true,
-        theme: (this.props.settings.theme) ? "vs" : "vs-dark",
         wrappingColumn: 0,
         fontFamily: this.props.settings.font + ", monospace",
         fontSize: this.props.settings.fontSize
@@ -64,14 +67,15 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     }
   }
   updateConsoleOptions() {
-    if (!this.refs.terminal)
-      return;
-    if (this.props.settings.theme) {
-      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-light");
-      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-default");
-    } else {
-      (this.refs.terminal as Console).term.element.classList.remove("xterm-theme-light");
-      (this.refs.terminal as Console).term.element.classList.add("xterm-theme-default");
+    if (this.terminal) {
+      if (this.props.settings.theme) {
+        this.terminal.term.element.classList.add("xterm-theme-light");
+        this.terminal.term.element.classList.remove("xterm-theme-default");
+      } else {
+        this.terminal.term.element.classList.remove("xterm-theme-light");
+        this.terminal.term.element.classList.add("xterm-theme-default");
+      }
+      this.terminal.updateLayout();
     }
   }
   editorDidMount(editor: any, monaco: any) {
@@ -81,6 +85,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     editor.focus();
     this.updateEditorOptions();
   }
+
   onChange(newValue: string, e: any) {
     let state = this.props.appState;
     if (state.currentProject &&
@@ -90,16 +95,19 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
     else
       throw new Error("Updating undefined file?!");
   }
+
   componentDidUpdate() {
     if (this.state.editorLastUpdated !== this.props.settings.updated) {
       this.updateEditorOptions();
       this.updateConsoleOptions();
     }
   }
+
   componentWillUnmount() {
     window.removeEventListener("resize", this.onResize);
     this.editor = null;
   }
+
   componentDidMount() {
       window.removeEventListener("resize", this.onResize);
       this.onResize = this.onResize.bind(this);
@@ -107,16 +115,20 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       this.onResize();
       this.updateConsoleOptions();
   }
+
   stopDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.props.dispatch.settings.updateEditorRatio(percent);
     this.onResize();
   }
+
   handleDrag(e: any) {
     const percent = e.clientX / window.innerWidth;
     this.editor.domElement.style.flex = percent;
-    (this.refs.terminal as Console).setFlex(1 - percent);
+    if (this.terminal)
+      this.terminal.setFlex(1 - percent);
   }
+
   render() {
     const loaderOptions = {
         url: "vs/loader.js",
@@ -139,24 +151,31 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
       });
       const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
       return (<div className={styles.filePanel}>
-        <div className={styles.editorContainer + " " + this.props.className} ref="editorContainer">
+        <div className = {styles.editorContainer + " " + this.props.className}
+             ref = {(elem: HTMLElement | null) => { this.editorContainer = elem; }}>
           <MonacoEditor
-            dirty={!!currentFile.unwrittenContent}
-            value={(currentFile.contents === false ||
-                    currentFile.contents === undefined) ? "Unavailable in browser!" :
-                      currentFile.contents.contents}
-            language={lang}
-            diags={currentQuestion.diags}
-            onChange={this.onChange.bind(this)}
-            editorDidMount={this.editorDidMount.bind(this)} requireConfig={loaderOptions}
-            readOnly={!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)} />
+            dirty = {!!currentFile.unwrittenContent}
+            value = {(currentFile.contents === false ||
+                     currentFile.contents === undefined) ? "Unavailable in browser!" :
+                     currentFile.contents.contents}
+            theme = {this.props.settings.theme ? "vs" : "vs-dark"}
+            language = {lang}
+            diags = {currentQuestion.diags}
+            onChange = {this.onChange.bind(this)}
+            editorDidMount = {this.editorDidMount.bind(this)} requireConfig={loaderOptions}
+            readOnly = {!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)}
+            options = {{lineNumbersMinChars: 2,
+                        minimap: {enabled: false},
+                        rulers: [0]}} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
-            <div ref="resizeHandle" className={styles.resizeHandle} />
+            <div ref = {(elem: HTMLElement | null) => { this.resizeHandle = elem; }}
+              className = {styles.resizeHandle} />
           </Draggable>
-          <Console ref="terminal"
-            className={this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
-            readOnly={this.props.appState.runState !== 2} dispatch={this.props.dispatch}
-            consoleText={(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}/>
+          <Console ref = {(elem: Console | null) => { this.terminal = elem; }}
+            className = {this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
+            readOnly = {this.props.appState.runState !== 2} dispatch = {this.props.dispatch}
+            consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}
+            style = {{"font-size": this.props.settings.fontSize}} />
         </div>
       </div>);
     } else
