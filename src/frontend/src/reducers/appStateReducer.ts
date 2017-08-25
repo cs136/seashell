@@ -212,7 +212,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
-        // throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.switchQuestion:
@@ -221,7 +221,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion = action.payload.question;
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in switchQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in switchQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.switchProject:
@@ -235,7 +235,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in removeQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in removeQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.removeProject:
@@ -253,7 +253,7 @@ export default function appStateReducer(state: appStateReducerState = {
           reject((file) => file === removeFile, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
-        // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.addQuestion:
@@ -262,7 +262,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.questions.push(action.payload.name);
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in addQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in addQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.addProject:
