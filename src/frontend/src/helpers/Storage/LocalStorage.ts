@@ -171,9 +171,10 @@ class LocalStorage {
      contents - (Optional) Set false if you do not need the file contents. Default true.
     Returns:
      If a file with that name exists, returns the corresponding FileEntry.
-     If no such file exists, returns false.
+     If a file with that name does not exist, throws a StorageError.
+     If the contents for that file does not exist, returns undefined.
      If there are multiple rows in the files table matching that filename, throws a ConflictError. */
-  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
+  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|undefined> {
     this.debug && console.log("getFileByName");
     return this.db.transaction("r", this.db.files, this.db.contents, async () => {
       let result = await this.db.files.where("[name+project_id]")
@@ -194,13 +195,13 @@ class LocalStorage {
         }));
         throw new E.ConflictError(filename, conflictContents);
       } else if (result.length === 0) { // file does not exist
-        return false;
+        throw new E.StorageError(`File ${filename} does not exist.`);
       } else { // file exists, and no conflict
         let file = new FileEntry(result[0]);
         if (contents && file.contents_id) {
           let cnts = await this.db.contents.get(file.contents_id);
           if (cnts === undefined) {
-            throw new E.StorageError(`File contents for ${filename} does not exist.`);
+            return undefined;
           } else {
             file.contents = new Contents(file.contents_id, cnts);
           }
