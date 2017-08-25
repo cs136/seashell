@@ -339,6 +339,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
+        // Only add open file to current list of open files if project/question match.
         if (state.currentProject.id === action.payload.project &&
             state.currentProject.currentQuestion.name === action.payload.question) {
           if (state.currentProject.currentQuestion.openFiles.find((ofile) =>

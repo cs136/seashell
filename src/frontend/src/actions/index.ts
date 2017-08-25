@@ -260,33 +260,40 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         addFile: (project: S.ProjectID, question: string, filename: string, newFileContent: string) => {
-          return asyncAction(storage().newFile(project, filename, newFileContent))
-            .then((file) => {
-              dispatch({
-                type: appStateActions.addFile,
-                payload: {
-                  file: filename,
-                  project: project,
-                  question: question
-                }
-              });
-              return asyncAction(storage().addOpenFile(file.project_id, question, file.name))
-                .then(async () => {
-                  let entry = await asyncAction(storage().getFileByName(file.project_id, file.name));
-                  dispatch({
-                    type: appStateActions.openFile,
-                    payload: {
-                      file: entry.name,
-                      project: project,
-                      question: question
-                    }
-                  });
-                  dispatch({
-                    type: appStateActions.switchFile,
-                    payload: {
-                      file: entry,
-                      project: project,
-                      question: question
+          return dispatch((dispatch: Function, getState: () => globalState) => {
+            return asyncAction(storage().newFile(project, filename, newFileContent))
+              .then((file) => {
+                dispatch({
+                  type: appStateActions.addFile,
+                  payload: {
+                    file: filename,
+                    project: project,
+                    question: question
+                  }
+                });
+                return asyncAction(storage().addOpenFile(file.project_id, question, file.name))
+                  .then(async () => {
+                    let entry = await asyncAction(storage().getFileByName(file.project_id, file.name));
+                    let state = getState().appState;
+                    dispatch({
+                      type: appStateActions.openFile,
+                      payload: {
+                        file: entry.name,
+                        project: project,
+                        question: question
+                      }
+                    });
+                    if (state.currentProject && state.currentProject.currentQuestion &&
+                        state.currentProject.id === project &&
+                        state.currentProject.currentQuestion.name === question) {
+                      dispatch({
+                        type: appStateActions.switchFile,
+                        payload: {
+                          file: entry,
+                          project: project,
+                          question: question
+                        }
+                      });
                     }
                   });
                 });
