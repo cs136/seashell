@@ -25,7 +25,7 @@ class Open extends React.Component<OpenProps & actionsInterface, OpenState> {
             const index = filename.indexOf(question.name);
             return (<div className={styles.openFilesTab} key={"file-tab-" + filename}>
               <div className={`pt-button-group ${styles.openFilesTab} ${(question.currentFile && filename === question.currentFile.name) ? styles.active : ""}`}>
-                <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={switchFile.bind(null, project.id, filename)}>
+                <button className={"pt-button pt-minimal " + styles.openFilesTabFile} onClick={() => switchFile(project.id, question.name, filename)}>
                   {filename === question.runFile ? <span className="pt-icon-standard pt-icon-play" /> : null}
                   {filename.substring(index === -1 ? 0 : index + question.name.length + 1)}
                 </button>
