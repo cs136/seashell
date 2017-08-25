@@ -43,7 +43,7 @@ class Rename extends React.Component<RenameProps&actionsInterface, RenameState> 
   private submitForm(): Promise<void> {
     const project = this.props.appState.currentProject;
     if (project) {
-      return this.props.dispatch.file.renameFile(project.id, this.state.target,
+      return this.props.dispatch.file.renameFile(project.id, this.state.question, this.state.target,
           `${this.state.question}/${this.state.file}`)
         .then((target) =>
           this.props.dispatch.question.switchQuestion(project.id, this.state.question)
