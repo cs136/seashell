@@ -151,7 +151,12 @@
 
     (: update-subscribers (-> Void))
     (define/private (update-subscribers)
-      (map (lambda ([sub : (Pair String (-> Void))]) ((cdr sub))) subscribers)
+      (map (lambda ([sub : (Pair String (-> Void))])
+             (with-handlers
+               ([exn? (lambda ([e : exn])
+                        (logf 'error "Exception reported while updating subscribers: ~a" (exn-message e))
+                        (capture-exception e))])
+                ((cdr sub)))) subscribers)
       (void))
 
     (: create-client (->* () (String) String))
@@ -195,11 +200,12 @@
     (: apply-create (->* (String String (U String DBExpr)) ((Option String) Boolean) Any))
     (define/public (apply-create table key object [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string object))
+      (define client (or _client SERVER_CLIENT_KEY))
       (define todo (thunk
                     (query-exec database (format "CREATE TABLE IF NOT EXISTS '~a' (id TEXT PRIMARY KEY, data TEXT)" table))
                     (query-exec database (format "INSERT OR REPLACE INTO '~a' (id, data) VALUES ($1, $2)" table) key data)
                     (query-exec database "INSERT INTO _changes (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
-                                (or _client SERVER_CLIENT_KEY)
+                                client
                                 CREATE
                                 table
                                 key
@@ -209,6 +215,7 @@
     (: apply-partial-create (->* (String String (U String DBExpr)) ((Option String)) Any))
     (define/public (apply-partial-create table key object [_client #f])
       (define data (string-or-jsexpr->string object))
+      (define client (or _client SERVER_CLIENT_KEY))
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
                   (or _client SERVER_CLIENT_KEY)
                   CREATE
@@ -219,6 +226,7 @@
     (: apply-update (->* (String String DBExpr) ((Option String) Boolean) Any))
     (define/public (apply-update table key updates [_client #f] [_transaction #t])
       (define data (string-or-jsexpr->string updates))
+      (define client (or _client SERVER_CLIENT_KEY))
       (define todo (thunk
                     (define exists? (query-maybe-value database "SELECT 1 FROM sqlite_master WHERE type = $1 AND name = $2" "table" table))
                     (when exists?
@@ -228,7 +236,7 @@
                                        (define update (jsexpr->string _value))
                                        (query-exec database (format "UPDATE ~a SET data = json_set(json(data), $1, json($2)) WHERE id=$3" table) key-path update key)))
                       (query-exec database "INSERT INTO _changes (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
-                                  (or _client SERVER_CLIENT_KEY)
+                                  client
                                   UPDATE
                                   table
                                   key
@@ -238,8 +246,9 @@
     (: apply-partial-update (->* (String String DBExpr) ((Option String)) Any))
     (define/public (apply-partial-update table key updates [_client #f])
       (define data (string-or-jsexpr->string updates))
+      (define client (or _client SERVER_CLIENT_KEY))
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key, data) VALUES ($1, $2, $3, $4, json($5))"
-                  (or _client SERVER_CLIENT_KEY)
+                  client
                   UPDATE
                   table
                   key
@@ -248,12 +257,13 @@
     (: apply-delete (->* (String String) ((Option String) Boolean) Any))
     (define/public (apply-delete table key [_client #f] [_transaction #t])
       (logf 'info (format "delete ~a ~a ~a" table key _client))
+      (define client (or _client SERVER_CLIENT_KEY))
       (define todo (thunk
                     (define exists? (query-maybe-value database "SELECT 1 FROM sqlite_master WHERE type = $1 AND name = $2" "table" table))
                     (when exists?
                       (query-exec database (format "DELETE FROM ~a WHERE id = $1" table) key)
                       (query-exec database "INSERT INTO _changes (client, type, target_table, target_key) VALUES ($1, $2, $3, $4)"
-                                  (or _client SERVER_CLIENT_KEY)
+                                  client
                                   DELETE
                                   table
                                   key))))
@@ -261,8 +271,9 @@
 
     (: apply-partial-delete (->* (String String) ((Option String)) Any))
     (define/public (apply-partial-delete table key [_client #f])
+      (define client (or _client SERVER_CLIENT_KEY))
       (query-exec database "INSERT INTO _partials (client, type, target_table, target_key) VALUES ($1, $2, $3, $4)"
-                  (or _client SERVER_CLIENT_KEY)
+                  client
                   DELETE
                   table
                   key))
