@@ -204,7 +204,8 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.switchFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.id === action.payload.project) {
+        if (state.currentProject.id === action.payload.project
+            && state.currentProject.currentQuestion.name === action.payload.question) {
           if (action.payload.file instanceof S.FileEntry) {
             state.currentProject.currentQuestion.currentFile =
               new CurrentFile(action.payload.file, action.payload.versions);
@@ -212,7 +213,8 @@ export default function appStateReducer(state: appStateReducerState = {
             console.error("switchFile was not passed a file entry:", action.payload);
           }
         } else {
-          console.error("Invalid state reached -- trying to switch to a file in another project");
+          console.error("Invalid state reached -- trying to switch to a file in another project/question");
+          state.inconsistent = true;
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
@@ -235,6 +237,7 @@ export default function appStateReducer(state: appStateReducerState = {
     // we will leave switching to a new project/question/file on deletion if necessary to the UI
     case appStateActions.removeQuestion:
       state = clone(state);
+      // Should never be able to delete a question from outside the current project ...
       if (state.currentProject && state.currentProject.id === action.payload.project) {
         state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
       } else {
@@ -252,9 +255,13 @@ export default function appStateReducer(state: appStateReducerState = {
       state = clone(state);
       let removeFile = <string>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
-        let files = state.currentProject.currentQuestion.files;
-        state.currentProject.currentQuestion.files =
-          reject((file) => file === removeFile, files);
+        /** Only update if project/question match. */
+        if (state.currentProject.id === action.payload.project &&
+            state.currentProject.currentQuestion.name === action.payload.question) {
+          let files = state.currentProject.currentQuestion.files;
+          state.currentProject.currentQuestion.files =
+            reject((file) => file === removeFile, files);
+        }
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
         state.inconsistent = true;
@@ -282,11 +289,13 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.addFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.id === action.payload.project) {
+        /** Only update if project/question match, as we can move files outside the current question. */
+        if (state.currentProject.id === action.payload.project &&
+            state.currentProject.currentQuestion.name === action.payload.question) {
           state.currentProject.currentQuestion.files.push(action.payload.file);
         }
       } else {
-        console.warn("Inconsistent state reached -- currentProject/Question is undefined in addFile");
+        console.warn("Inconsistent state reached -- currentProject/currentQuestion is undefined in addFile");
         state.inconsistent = true;
       }
       return state;
@@ -327,7 +336,8 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.openFile:
       state = clone(state);
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.id === action.payload.project) {
+        if (state.currentProject.id === action.payload.project &&
+            state.currentProject.currentQuestion.name === action.payload.question) {
           if (state.currentProject.currentQuestion.openFiles.find((ofile) =>
                 ofile === action.payload.file) !== undefined) {
             return state; // don't duplicate files
@@ -343,7 +353,8 @@ export default function appStateReducer(state: appStateReducerState = {
       state = clone(state);
       let oldFile = action.payload.file;
       if (state.currentProject && state.currentProject.currentQuestion) {
-        if (state.currentProject.id === action.payload.project) {
+        if (state.currentProject.id === action.payload.project &&
+            state.currentProject.currentQuestion.name === action.payload.question) {
           state.currentProject.currentQuestion.openFiles =
             reject((file) => file === oldFile, state.currentProject.currentQuestion.openFiles);
         }
@@ -354,7 +365,8 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.setRunFile:
       state = clone(state);
-      if (state.currentProject && state.currentProject.id === action.payload.project) {
+      if (state.currentProject && state.currentProject.id === action.payload.project &&
+          state.currentProject.currentQuestion && state.currentProject.currentQuestion.name === action.payload.question) {
         return mergeBetter(state, {currentProject: {currentQuestion: {runFile: action.payload.file}}});
       } else {
         return state;

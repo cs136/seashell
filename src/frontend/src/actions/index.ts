@@ -259,45 +259,37 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
         },
         addFile: (project: S.ProjectID, question: string, filename: string, newFileContent: string) => {
-          return dispatch((dispatch: Function, getState: () => globalState) => {
-            let state = getState();
-            // writes a new file, returns a promise the caller can use when finished
-            //  to do other stuff (i.e. switch to the file)
-            return asyncAction(storage().newFile(project, filename, newFileContent))
-              .then((file) => {
-                dispatch({
-                  type: appStateActions.addFile,
-                  payload: {
-                    file: filename,
-                    project: project
-                  }
-                });
-                return asyncAction(storage().addOpenFile(file.project_id, question, filename))
-                  .then(async () => {
-                    if (state.appState.currentProject && state.appState.currentProject.currentQuestion &&
-                        state.appState.currentProject.id === project && state.appState.currentProject.currentQuestion.name === question) {
-                      // file needs to be read here to obtain the default contents
-                      let entry = await storage().getFileByName(file.project_id, file.name);
-                      if (entry) {
-                        dispatch({
-                          type: appStateActions.openFile,
-                          payload: {
-                            file: entry.name,
-                            project: project
-                          }
-                        });
-                        dispatch({
-                          type: appStateActions.switchFile,
-                          payload: {
-                            file: entry,
-                            project: project
-                          }
-                        });
-                      }
+          return asyncAction(storage().newFile(project, filename, newFileContent))
+            .then((file) => {
+              dispatch({
+                type: appStateActions.addFile,
+                payload: {
+                  file: filename,
+                  project: project,
+                  question: question
+                }
+              });
+              return asyncAction(storage().addOpenFile(file.project_id, question, file.name))
+                .then(async () => {
+                  let entry = await asyncAction(storage().getFileByName(file.project_id, file.name));
+                  dispatch({
+                    type: appStateActions.openFile,
+                    payload: {
+                      file: entry.name,
+                      project: project,
+                      question: question
                     }
                   });
-              });
-          });
+                  dispatch({
+                    type: appStateActions.switchFile,
+                    payload: {
+                      file: entry,
+                      project: project,
+                      question: question
+                    }
+                  });
+                });
+            });
         },
         deleteFile: (project: S.ProjectID, question: string, filename: string) => {
           return asyncAction(storage().deleteFile(project, filename))
@@ -307,14 +299,16 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.closeFile,
                 payload: {
                   file: filename,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               dispatch({
                 type: appStateActions.removeFile,
                 payload: {
                   file: filename,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               try {
@@ -331,21 +325,24 @@ const mapDispatchToProps = (dispatch: Function) => {
                 type: appStateActions.closeFile,
                 payload: {
                   file: currentName,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               dispatch({
                 type: appStateActions.removeFile,
                 payload: {
                   file: currentName,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               dispatch({
                 type: appStateActions.addFile,
                 payload: {
                   file: targetName,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               dispatch({
@@ -353,7 +350,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                 payload: {
                   oldName: currentName,
                   newFile: newFile,
-                  project: project
+                  project: project,
+                  question: question
                 }
               });
               await storage().removeOpenFile(project, question, currentName);
@@ -368,7 +366,8 @@ const mapDispatchToProps = (dispatch: Function) => {
               type: appStateActions.openFile,
               payload: {
                 file: filename,
-                project: project
+                project: project,
+                question: question
               }
             }));
         },
@@ -378,7 +377,8 @@ const mapDispatchToProps = (dispatch: Function) => {
               type: appStateActions.closeFile,
               payload: {
                 file: filename,
-                project: project
+                project: project,
+                question: question
               }
             }));
         },
@@ -387,7 +387,8 @@ const mapDispatchToProps = (dispatch: Function) => {
             type: appStateActions.setRunFile,
             payload: {
               file: filename,
-              project: project
+              project: project,
+              question: question
             }
           }));
         },
