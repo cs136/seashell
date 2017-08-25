@@ -107,5 +107,4 @@ endif(NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
 
 add_test(seashell-racket-test "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test")
 # Install step.
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/login.cgi" DESTINATION cgi-bin)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/login2.cgi" DESTINATION cgi-bin)
