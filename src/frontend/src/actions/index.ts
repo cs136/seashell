@@ -47,15 +47,27 @@ const mapDispatchToProps = (dispatch: Function) => {
         dispatch({ type: userActions.INVALIDATE });
         throw null;
       } else {
-        // Display the error
-        if (e && e.message && !e.shown) {
-          showError(e.message);
-          e.shown = true;
+        // Suppress handling null (LoginError) messages
+        if (e) {
+          // Display the error
+          if (typeof e === "object" && e.message && !e._asyncAction_shown) {
+            showError(e.message);
+          }
+          // Log and Report exception to Sentry, if not shown
+          if (typeof e === "object" && !e._asyncAction_shown) {
+            Raven.captureException(e);
+            console.error(e);
+          }
+          // Wrap e in a Error if it's not an object
+          if (typeof e !== "object") {
+            e = new Error(e);
+            (<any>e)._asyncAction_shown = true;
+          }
+          // Rethrow error (with _asyncAction_shown set to true so we don't log the error twice)
+          throw e;
+        } else {
+          throw e;
         }
-        // Report exception to Sentry
-        Raven.captureException(e);
-        console.error(e);
-        throw e;
       }
     }
   }
