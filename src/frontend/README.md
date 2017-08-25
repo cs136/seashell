@@ -9,11 +9,4 @@ Resources get built to /dist while the index.html file is built to /index.html.
 
 All source files (including uncompiled index.html) are located in /src.
 
-Major plugins:
-- React
-- Redux (with React Connector)
-- Blueprint.JS
-- TypeScript 
-- SCSS
-- React-Router
-- Redux-Socket.IO (docs at https://www.npmjs.com/package/redux-socket.io)
+TODO: Point dexie-syncable at upstream source once github.com/dfahlander/Dexie.js/pull/570 is resolved.

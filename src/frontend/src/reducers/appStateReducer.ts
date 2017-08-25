@@ -212,7 +212,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       } else {
         console.warn("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
-        // throw new Error("Invalid state reached -- currentProject or currentQuestion is undefined in switchFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.switchQuestion:
@@ -221,7 +221,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.currentQuestion = action.payload.question;
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in switchQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in switchQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.switchProject:
@@ -235,7 +235,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.questions.splice(state.currentProject.questions.indexOf(action.payload.name), 1);
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in removeQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in removeQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.removeProject:
@@ -246,14 +246,14 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      let removeFile = <S.File>action.payload;
+      let removeFile = <string>action.payload;
       if (state.currentProject && state.currentProject.currentQuestion) {
         let files = state.currentProject.currentQuestion.files;
         state.currentProject.currentQuestion.files =
-          reject((file) => file === removeFile.name, files);
+          reject((file) => file === removeFile, files);
       } else {
         console.warn("Invalid state reached -- currentProject/Question is undefined in removeFile");
-        // throw new Error("Invalid state reached -- currentProject/Question is undefined in removeFile");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.addQuestion:
@@ -262,7 +262,7 @@ export default function appStateReducer(state: appStateReducerState = {
         state.currentProject.questions.push(action.payload.name);
       } else {
         console.warn("Invalid state reached -- currentProject is undefined in addQuestion");
-        // throw new Error("Invalid state reached -- currentProject is undefined in addQuestion");
+        state.inconsistent = true;
       }
       return state;
     case appStateActions.addProject:
@@ -393,40 +393,52 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       }
       if (state.currentProject) {
-        const currentProject = state.currentProject;
-        // update the current project
-        let pchg = pchgs.find((p: any) => currentProject.id === p.key);
-        if (pchg !== undefined) {
-          if (pchg.type === S.ChangeType.UPDATE) {
-            state.currentProject = mergeBetter(state.currentProject, pchg.mods);
-          } else if (pchg.type === S.ChangeType.DELETE) {
-            state.currentProject = undefined;
-          } else {
-            throw new Error("Something bad happened when applying server changes to the current project.");
+        // The following bit of code doesn't update the:
+        //   - current runner file
+        //   - current file contents
+        //   - current question [if it still exists]
+        //   - etc...
+        // It would be nice to do all of this, but currently we don't have time.
+        // TODO: properly update the UI state when the server sends changes
+        // FIXME: showInfo really shouldn't be in a reducer
+        showInfo("Your Seashell instance was updated on another computer.  Open your project again to edit it.");
+        state.inconsistent = true;
+        /**
+          const currentProject = state.currentProject;
+          // update the current project
+          let pchg = pchgs.find((p: any) => currentProject.id === p.key);
+          if (pchg !== undefined) {
+            if (pchg.type === S.ChangeType.UPDATE) {
+              // FIXME: Update project settings [runner file, ...]
+            } else if (pchg.type === S.ChangeType.DELETE) {
+              state.currentProject = undefined;
+            } else {
+              throw new Error("Something bad happened when applying server changes to the current project.");
+            }
           }
-        }
-        if (currentProject.currentQuestion) {
-          const question = currentProject.currentQuestion;
-          // TODO: Do something to update the list of questions, runFile, openFile
-          if (question.currentFile) {
-            const file = question.currentFile;
-            // update the current file
-            let fchg = chgs.find((chg: any) => chg.table === "files"
-              && chg.key === file.id);
-            if (fchg !== undefined) {
-              // if this file entry has been deleted, just jump out of the file
-              if (fchg.type === S.ChangeType.DELETE) {
-                showInfo("The current file was modified on the server. Open it again to edit it.");
-                if (state.currentProject
-                    && state.currentProject.currentQuestion) {
-                  state.currentProject.currentQuestion.currentFile = undefined;
+          if (currentProject.currentQuestion) {
+            const question = currentProject.currentQuestion;
+            // FIXME: Do something to update the list of questions, runFile, openFile
+            if (question.currentFile) {
+              const file = question.currentFile;
+              // update the current file
+              let fchg = chgs.find((chg: any) => chg.table === "files"
+                && chg.key === file.id);
+              if (fchg !== undefined) {
+                // if this file entry has been deleted, just jump out of the file
+                if (fchg.type === S.ChangeType.DELETE) {
+                  showInfo("The current file was modified on the server. Open it again to edit it.");
+                  if (state.currentProject
+                      && state.currentProject.currentQuestion) {
+                    state.currentProject.currentQuestion.currentFile = undefined;
+                  }
+                } else {
+                  throw new Error("Something bad happened when applying server changes to the current file.");
                 }
-              } else {
-                throw new Error("Something bad happened when applying server changes to the current file.");
               }
             }
           }
-        }
+        **/
       }
       return state;
     case appStateActions.redirectHome:
@@ -436,6 +448,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.makeConsistent:
       state = clone(state);
       state.inconsistent = false;
+      state.currentProject = undefined;
       return state;
     default:
       return state;

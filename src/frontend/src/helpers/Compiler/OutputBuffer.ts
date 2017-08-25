@@ -118,11 +118,11 @@ class OutputBuffer {
     } else if (result.result === "error") {
       output += this.wrapColour(`Test "${result.test_name}" caused an error!\n`, ColourCode.RED);
     } else if (result.result === "no-expect") {
-      output += this.wrapColour(`Test "${result.test_name}" completed.\n`, ColourCode.BLACK);
+      output += this.wrapColour(`Test "${result.test_name}" completed.\n`, ColourCode.CYAN);
     } else if (result.result === "timeout") {
       output += this.wrapColour(`Test "${result.test_name}" timed out.\n`, ColourCode.RED);
     } else if (result.result === "killed") {
-      output += this.wrapColour(`Test "${result.test_name}" was killed.\n`, ColourCode.BLACK);
+      output += this.wrapColour(`Test "${result.test_name}" was killed.\n`, ColourCode.YELLOW);
     };
     if (result.result !== "passed") {
       output += "Produced output (stdout):\n";
@@ -130,21 +130,7 @@ class OutputBuffer {
     }
     if (result.result === "failed") {
       output += "Expected output (stdout):\n";
-      const diffStr = (ln: DiffLine): string => {
-        if (typeof ln === "string") {
-          return ln;
-        } else {
-          return ln[1];
-        }
-      };
-      if (result.diff) {
-        if (result.diff.length > 0) {
-          output += diffStr(result.diff[0]);
-        }
-        for (let i = 1; i < result.diff.length; i++) {
-          output += "\n" + diffStr(result.diff[i]);
-        }
-      }
+      output += result.expected || "";
     }
     if (result.stderr !== "") {
       output += "Produced errors (stderr):\n";

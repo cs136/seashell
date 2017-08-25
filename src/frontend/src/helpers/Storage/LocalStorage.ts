@@ -171,9 +171,10 @@ class LocalStorage {
      contents - (Optional) Set false if you do not need the file contents. Default true.
     Returns:
      If a file with that name exists, returns the corresponding FileEntry.
-     If no such file exists, returns false.
+     If a file with that name does not exist, throws a StorageError.
+     If the contents for that file does not exist, throws a StorageError.
      If there are multiple rows in the files table matching that filename, throws a ConflictError. */
-  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry|false> {
+  public async getFileByName(pid: ProjectID, filename: string, contents: boolean = true): Promise<FileEntry> {
     this.debug && console.log("getFileByName");
     return this.db.transaction("r", this.db.files, this.db.contents, async () => {
       let result = await this.db.files.where("[name+project_id]")
@@ -194,13 +195,13 @@ class LocalStorage {
         }));
         throw new E.ConflictError(filename, conflictContents);
       } else if (result.length === 0) { // file does not exist
-        return false;
+        throw new E.StorageError(`File ${filename} does not exist.`);
       } else { // file exists, and no conflict
         let file = new FileEntry(result[0]);
         if (contents && file.contents_id) {
           let cnts = await this.db.contents.get(file.contents_id);
           if (cnts === undefined) {
-            throw new E.StorageError(`File contents for ${filename} does not exist.`);
+            throw new E.StorageError(`File ${filename} has no contents!`);
           } else {
             file.contents = new Contents(file.contents_id, cnts);
           }
@@ -359,7 +360,7 @@ class LocalStorage {
     this.debug && console.log("getSettings");
     return await this.db.transaction("r", this.db.settings, async () => {
       this.debug && console.log(`getSettings`);
-      const settings = await this.db.settings.get(0);
+      const settings = await this.db.settings.get("settings-key");
       return settings ? Settings.fromJSON(settings) : new Settings();
     });
   }
@@ -371,7 +372,7 @@ class LocalStorage {
     return await this.db.transaction("rw", this.db.settings, async () => {
       this.debug && console.log(`setSettings`);
       await this.db.settings.put({
-        id: 0,
+        id: "settings-key",
         editor_mode: settings.editor_mode,
         font_size: settings.font_size,
         font: settings.font,
@@ -663,7 +664,7 @@ class StorageDB extends Dexie {
   public contents: Dexie.Table<ContentsStored, ContentsID>;
   public files: Dexie.Table<FileStored, FileID>;
   public projects: Dexie.Table<ProjectStored, ProjectID>;
-  public settings: Dexie.Table<SettingsStored, number>;
+  public settings: Dexie.Table<SettingsStored, string>;
 
   private isConnected: Function;
 

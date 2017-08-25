@@ -21,7 +21,9 @@
          seashell/compiler
          seashell/backend/runner
          typed/net/url
-         typed/json)
+         typed/json
+         seashell/backend/exception)
+(struct exn:template exn:seashell:backend () #:transparent)
 
 ;; need to do this because typed/net/head contract for extract-field is wrong
 (require/typed net/head
@@ -63,7 +65,7 @@
            (lambda () (let ([err (read-line ssherr)])
                         (if (eof-object? err)
                             (thunk sshout)
-                            (raise (exn:fail (format "Error when fetching template: ~a" err)
+                            (raise (exn:template (format "Error when fetching template: ~a" err)
                                              (current-continuation-marks))))))
            (lambda () (close-input-port sshout)
                       (close-input-port ssherr)))]
@@ -74,11 +76,11 @@
            (lambda ()
              (match-define (list _ status text headers) (regexp-match #rx"^HTTP/1\\.1 ([0-9][0-9][0-9]) ([^\n\r]*)(.*)" hdrs))
              (when (not (equal? status "200"))
-               (raise (exn:fail (format "Error when fetching template ~a: ~a ~a." source status text)
+               (raise (exn:template (format "Error when fetching template ~a: ~a ~a." source status text)
                                 (current-continuation-marks))))
              (when (not (equal? (string-trim (cast (extract-field "Content-Type" (assert headers)) String))
                                 "application/zip"))
-               (raise (exn:fail (format "Error when fetching template ~a: template was not a ZIP file." source)
+               (raise (exn:template (format "Error when fetching template ~a: template was not a ZIP file." source)
                                 (current-continuation-marks))))
              (thunk port))
            (lambda () (close-input-port port)))])]

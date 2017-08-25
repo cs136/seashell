@@ -42,7 +42,8 @@
          ffi/unsafe/atomic
          mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
-         (prefix-in filter: web-server/dispatchers/dispatch-filter))
+         (prefix-in filter: web-server/dispatchers/dispatch-filter)
+         seashell/backend/exception)
 
 (provide backend-main dump-creds)
 
@@ -265,6 +266,7 @@
       ([exn:fail?
         (lambda (exn)
           (logf 'error "Exception raised in Seashell: ~a~n" (exn-message exn))
+          (capture-exception exn)
           (exit-from-seashell 3))])
 
     (logf 'info "Starting up.")
@@ -289,6 +291,7 @@
                 (let loop ([tries 0])
                   (when (> tries 5)
                     (logf 'error "Error opening credentials file - aborting!")
+                    (capture-exception (exn:seashell:backend "Error opening credentials file - aborting!" (current-continuation-marks)))
                     (exit-from-seashell 4))
                   (define repeat (make-continuation-prompt-tag))
                   (call-with-continuation-prompt

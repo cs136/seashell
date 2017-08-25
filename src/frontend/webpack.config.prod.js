@@ -5,8 +5,14 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const OfflinePlugin = require('offline-plugin');
 const ArchivePlugin = require('webpack-archive-plugin');
+const EmptyPlugin = function() {
+  return {apply: function() {}};
+}
 
-module.exports = {
+module.exports = function(env) {
+  let debug = !!(env ? env.debug : true);
+
+  return {
   devtool: 'source-map',
   entry: './src/index.tsx',
   output: {
@@ -30,33 +36,31 @@ module.exports = {
         from: '*.mem', to: './' },
       { context: './node_modules/seashell-clang-js/bin/',
         from: '*.data', to: './' },
-  ]),
-/*
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false,
-      },
-      sourceMap: true,
-      minimize: true
-    }),
-*/
+    ]),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production')
+      'process.env.NODE_ENV': JSON.stringify('production'),
+      IS_BROWSER: true,
+      PRODUCTION: true,
+      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
     }),
     new HtmlWebpackPlugin ({
       inject: true,
       template: './src/index.html'
     }),
     new ArchivePlugin(),
-    new webpack.DefinePlugin({
-      IS_BROWSER: true,
-      PRODUCTION: true,
-    }),
     new OfflinePlugin({
       ServiceWorker:{
         navigateFallbackURL: '/'
       }
     }),
+    debug ? EmptyPlugin() :
+      new webpack.optimize.UglifyJsPlugin({
+        compress: {
+          warnings: true,
+        },
+        sourceMap: true,
+        minimize: true
+      }),
   ],
   resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.
@@ -73,9 +77,6 @@ module.exports = {
           'style-loader?sourceMap',
           'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
           'sass-loader?sourceMap'
-          // { loader: "style-loader", query: { sourceMap: true }},
-          // { loader: "css-loader", query: {modules: true, importLoaders: 1, localIdentName: "[path]___[name]__[local]___[hash:base64:5]" }},
-          // { loader: "sass-loader", query: { sourceMap: true }}
         ]
       }, {
         test: /\.css$/,
@@ -88,9 +89,9 @@ module.exports = {
         test: /\.(jpe?g|png|gif|svg)$/i,
         use: [
           'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
-          'image-webpack-loader?bypassOnDebug&optimizationLevel=7&interlaced=false'
+          'image-webpack-loader?{bypassOnDebug: true, optipng: {optimizationLevel: 7}, gifsicle: {interlaced: false}}'
         ]
       }
     ],
   },
-};
+};};

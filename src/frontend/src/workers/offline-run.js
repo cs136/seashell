@@ -1,3 +1,4 @@
+"use strict";
 /*
   Web worker called by the offline compiler worker to actually run the compiled
     object files. Initialized as a shared worker in the main thread for Chrome
@@ -9,7 +10,6 @@ var toRun = null;
 var pid = null;
 var testcase_data = null;
 
-// TODO: Make sure the runtime is initialized before running code.
 function onInit() {
   initialized = true;
   if (toRun !== null) {
@@ -17,7 +17,7 @@ function onInit() {
   }
 }
 
-Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
+self.Module = {setStatus: function (s) {console.log(s);}, onRuntimeInitialized: onInit};
 self.importScripts(require("file-loader!seashell-clang-js/bin/seashell-runner"));
 
 var stdout = "";
@@ -89,11 +89,12 @@ function runObj(obj) {
                      type: "done"});
       } else {
         var result;
+        var expect = testcase_data.expect && testcase_data.expect.contents || undefined;
         if (runner.result() !== 0) {
           result = "error";
-        } else if (!testcase_data.expect) {
+        } else if (!expect) {
           result = "no-expect";
-        } else if (testcase_data.expect == stdout) {
+        } else if (expect === stdout) {
           result = "passed";
         } else {
           result = "failed";
@@ -104,7 +105,7 @@ function runObj(obj) {
           stderr: stderr,
           stdout: stdout,
           test_name: testcase_data.test_name,
-          diff: testcase_data.expect ? testcase_data.expect.split("\n") : undefined
+          expected: expect
         });
       }
       close();
@@ -124,10 +125,16 @@ function runObj(obj) {
 
 self.onmessage = function(msg) {
   data = msg.data;
+
+  // Extract the PID field if present.
   if ("pid" in data) {
     pid = data.pid;
   }
-  if (typeof data === "object" && ("type" in data) && data.type === "testdata") {
+
+  // There are two types of messages:
+  // test data messages -- data.type === testdata
+  // object file messages -- data.obj present
+  if (data.type === "testdata") {
     testcase_data = data;
   } else {
     if (initialized) {

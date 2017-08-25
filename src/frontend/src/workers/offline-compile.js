@@ -1,3 +1,4 @@
+"use strict";
 /*
   This file will be run as a web worker to compile and run code offline.
 */
@@ -27,7 +28,6 @@ function block_for_libraries(callback) {
   }
 }
 
-// TODO: should block everything until the runtime is loaded.
 function onInit() {
   init = true;
   for(var i=0; i<init_queue.length; i++) {
@@ -36,7 +36,7 @@ function onInit() {
   init_queue = [];
 }
 
-Module = {
+self.Module = {
   onRuntimeInitialized:onInit,
   setStatus:(function (s) {console.log(s);}),
   noExitRuntime: true,
@@ -70,6 +70,7 @@ self.onmessage = function(msg) {
   }
 
   function compile(runnerFile, source_dirs) {
+    console.log("Attempting to compile " + runnerFile + ".");
     var cc = Module.seashell_compiler_make();
     Module.seashell_compiler_set_main_file(cc, runnerFile);
     for(var i=0; i<source_dirs.length; i++) {
@@ -88,7 +89,7 @@ self.onmessage = function(msg) {
 
     var cres = Module.seashell_compiler_run(cc, false);
     var diags = diagnostics(cc);
-    
+
     // check for use of .o files
     if(Module.seashell_compiler_get_object_dep_count(cc) > 0) {
       diags = [[false,
@@ -127,31 +128,34 @@ self.onmessage = function(msg) {
   } catch(e) { }
   var rf = "/seashell/"+data.project+"/"+data.runnerFile;
   try {
-  for (var i=0; i<data.files.length; i++) {
-    console.log("file: ", data.files[i]);
-    var contents = "";
-    if (data.files[i].contents.contents) contents = data.files[i].contents.contents;
-    var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
-    var len = lengthBytesUTF8(contents)+1;
-    var arr = new Uint8Array(len);
-    var copied = stringToUTF8Array(contents, arr, 0, len);
-    FS.write(file, arr, 0, copied);
-    FS.close(file);
-  }
+    for (var i=0; i<data.files.length; i++) {
+      console.log("Compiler: Adding file: ", data.files[i]);
+      var contents = "";
+      if (data.files[i].contents.contents) contents = data.files[i].contents.contents;
+      var file = FS.open("/seashell/"+data.project+"/"+data.files[i].name, 'w');
+      var len = lengthBytesUTF8(contents)+1;
+      var arr = new Uint8Array(len);
+      var copied = stringToUTF8Array(contents, arr, 0, len);
+      FS.write(file, arr, 0, copied);
+      FS.close(file);
+    }
   } catch (e) {
+    console.error("Compiler: Error caught while adding file", e);
     postMessage({
       status: "error",
       err: e.message + "\n" + e.stack
     });
     close();
   }
-
+  console.log("Compiler: Done adding files");
   if(init) {
+    console.log("Compiler ready, compiling.");
     var res = compile(rf, source_dirs);
     postMessage(res);
     close();
   }
   else {
+    console.log("Compiler not ready, waiting for header files.");
     init_queue.push(function() {
       var res = compile(rf, source_dirs);
       postMessage(res);

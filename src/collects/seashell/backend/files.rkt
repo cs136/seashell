@@ -19,7 +19,8 @@
 
 (require typed/json
          seashell/db/tools
-         seashell/utils/uuid)
+         seashell/utils/uuid
+         seashell/backend/exception)
 
 (require/typed file/unzip
   [unzip (-> (U String Input-Port) (-> Bytes Boolean Input-Port Any) Void)])
@@ -32,6 +33,8 @@
          restore-file-from-template
          export-file
          export-directory)
+
+(struct exn:file exn:seashell:backend () #:transparent)
 
 ;; (new-file pid name contents flags)
 ;; Creates a new file with the given name, contents, and flags
@@ -47,7 +50,8 @@
 (define (new-file pid name contents flags)
   (define result (call-with-write-transaction (thunk
     (when (filename-exists? pid name)
-      (error (format "A file with the name '~a' already exists." name)))
+      (raise (exn:file (format "A file with the name '~a' already exists." name)
+                         (current-continuation-marks))))
     (define contents-id (if contents (uuid-generate) #f))
     (define file-id (insert-new "files"
       `#hasheq((project_id . ,pid)
@@ -100,7 +104,7 @@
                       0)
             (set! ok #t))))))
   (unless ok
-    (raise (exn:fail (format "File ~a not found in template ~a." file template)
+    (raise (exn:file (format "File ~a not found in template ~a." file template)
       (current-continuation-marks)))))
 
 ;; (export-file file proj-dir)
@@ -118,7 +122,8 @@
     ;; first ensure the directory exists
     (make-parent-directory* path)
     (with-output-to-file path
-      (thunk (printf "~a" (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))))))
+      (thunk (write-string (cast (hash-ref (cast contents (HashTable Symbol JSExpr)) 'contents) String))
+             (void)))))
 
 ;; (export-directory dir proj-dir)
 ;; Exports a single directory to the given project path. Called by export-project.
