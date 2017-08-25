@@ -119,7 +119,6 @@ export namespace DebugLogs {
   window.addEventListener("error", function (evt) {
       console.log("Caught[via 'error' event]:  '" + evt.message + "' from " + evt.filename + ":" + evt.lineno);
       console.log(evt); // has srcElement / target / etc
-      evt.preventDefault();
   });
 
   (window as any).logs = () => { db.dumpNewWindow(); };
