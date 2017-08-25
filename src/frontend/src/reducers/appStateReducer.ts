@@ -393,40 +393,52 @@ export default function appStateReducer(state: appStateReducerState = {
         }
       }
       if (state.currentProject) {
-        const currentProject = state.currentProject;
-        // update the current project
-        let pchg = pchgs.find((p: any) => currentProject.id === p.key);
-        if (pchg !== undefined) {
-          if (pchg.type === S.ChangeType.UPDATE) {
-            // FIXME: Update project settings [runner file, ...]
-          } else if (pchg.type === S.ChangeType.DELETE) {
-            state.currentProject = undefined;
-          } else {
-            throw new Error("Something bad happened when applying server changes to the current project.");
+        // The following bit of code doesn't update the:
+        //   - current runner file
+        //   - current file contents
+        //   - current question [if it still exists]
+        //   - etc...
+        // It would be nice to do all of this, but currently we don't have time.
+        // TODO: properly update the UI state when the server sends changes
+        // FIXME: showInfo really shouldn't be in a reducer
+        showInfo("Your Seashell instance was updated on another computer.  Open your project again to edit it.");
+        state.inconsistent = true;
+        /**
+          const currentProject = state.currentProject;
+          // update the current project
+          let pchg = pchgs.find((p: any) => currentProject.id === p.key);
+          if (pchg !== undefined) {
+            if (pchg.type === S.ChangeType.UPDATE) {
+              // FIXME: Update project settings [runner file, ...]
+            } else if (pchg.type === S.ChangeType.DELETE) {
+              state.currentProject = undefined;
+            } else {
+              throw new Error("Something bad happened when applying server changes to the current project.");
+            }
           }
-        }
-        if (currentProject.currentQuestion) {
-          const question = currentProject.currentQuestion;
-          // FIXME: Do something to update the list of questions, runFile, openFile
-          if (question.currentFile) {
-            const file = question.currentFile;
-            // update the current file
-            let fchg = chgs.find((chg: any) => chg.table === "files"
-              && chg.key === file.id);
-            if (fchg !== undefined) {
-              // if this file entry has been deleted, just jump out of the file
-              if (fchg.type === S.ChangeType.DELETE) {
-                showInfo("The current file was modified on the server. Open it again to edit it.");
-                if (state.currentProject
-                    && state.currentProject.currentQuestion) {
-                  state.currentProject.currentQuestion.currentFile = undefined;
+          if (currentProject.currentQuestion) {
+            const question = currentProject.currentQuestion;
+            // FIXME: Do something to update the list of questions, runFile, openFile
+            if (question.currentFile) {
+              const file = question.currentFile;
+              // update the current file
+              let fchg = chgs.find((chg: any) => chg.table === "files"
+                && chg.key === file.id);
+              if (fchg !== undefined) {
+                // if this file entry has been deleted, just jump out of the file
+                if (fchg.type === S.ChangeType.DELETE) {
+                  showInfo("The current file was modified on the server. Open it again to edit it.");
+                  if (state.currentProject
+                      && state.currentProject.currentQuestion) {
+                    state.currentProject.currentQuestion.currentFile = undefined;
+                  }
+                } else {
+                  throw new Error("Something bad happened when applying server changes to the current file.");
                 }
-              } else {
-                throw new Error("Something bad happened when applying server changes to the current file.");
               }
             }
           }
-        }
+        **/
       }
       return state;
     case appStateActions.redirectHome:
@@ -436,6 +448,7 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.makeConsistent:
       state = clone(state);
       state.inconsistent = false;
+      state.currentProject = undefined;
       return state;
     default:
       return state;

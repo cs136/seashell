@@ -28,7 +28,6 @@ function block_for_libraries(callback) {
   }
 }
 
-// TODO: should block everything until the runtime is loaded.
 function onInit() {
   init = true;
   for(var i=0; i<init_queue.length; i++) {

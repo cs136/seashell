@@ -10,7 +10,6 @@ var toRun = null;
 var pid = null;
 var testcase_data = null;
 
-// TODO: Make sure the runtime is initialized before running code.
 function onInit() {
   initialized = true;
   if (toRun !== null) {
