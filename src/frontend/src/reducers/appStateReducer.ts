@@ -398,7 +398,7 @@ export default function appStateReducer(state: appStateReducerState = {
         let pchg = pchgs.find((p: any) => currentProject.id === p.key);
         if (pchg !== undefined) {
           if (pchg.type === S.ChangeType.UPDATE) {
-            state.currentProject = mergeBetter(state.currentProject, pchg.mods);
+            // FIXME: Update project settings [runner file, ...]
           } else if (pchg.type === S.ChangeType.DELETE) {
             state.currentProject = undefined;
           } else {
@@ -407,7 +407,7 @@ export default function appStateReducer(state: appStateReducerState = {
         }
         if (currentProject.currentQuestion) {
           const question = currentProject.currentQuestion;
-          // TODO: Do something to update the list of questions, runFile, openFile
+          // FIXME: Do something to update the list of questions, runFile, openFile
           if (question.currentFile) {
             const file = question.currentFile;
             // update the current file
