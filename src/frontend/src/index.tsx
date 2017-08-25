@@ -13,11 +13,14 @@ import {Services} from "./helpers/Services";
 import thunk from "redux-thunk";
 import {LoginRequired} from "./helpers/Errors";
 import {getDispatch} from "./actions";
+import {DebugLogs} from "./helpers/DebugLogs";
 import {composeWithDevTools} from "redux-devtools-extension";
 import * as Raven from "raven-js";
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
+DebugLogs.enable();
 console.log(`Seashell ${VERSION} starting up.`);
+
 
 if (PRODUCTION && "serviceWorker" in navigator) {
   require("offline-plugin/runtime").install();
