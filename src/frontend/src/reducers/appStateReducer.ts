@@ -224,7 +224,10 @@ export default function appStateReducer(state: appStateReducerState = {
     case appStateActions.switchQuestion:
       state = clone(state);
       if (state.currentProject && state.currentProject.id === action.payload.project) {
-        state.currentProject.currentQuestion = action.payload.question;
+        // Switch question only if we have to.
+        if (!state.currentProject.currentQuestion ||
+            state.currentProject.currentQuestion.name !== action.payload.question.name)
+          state.currentProject.currentQuestion = action.payload.question;
       } else {
         console.warn("Invalid state reached -- currentProject is undefined or invalid in switchQuestion");
         state.inconsistent = true;
