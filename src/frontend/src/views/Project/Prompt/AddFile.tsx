@@ -83,7 +83,7 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
           this.props.dispatch.file.addFile(
               this.project, this.question, `${this.state.folder}/${file.name}`, reader.result)
             .then(() => resolve())
-            .catch(() => reject(file.name));
+            .catch(() => resolve()); // Error handling is handled in addFile (with asyncAction)
         };
         reader.onerror = () => {
           reject(file.name);
