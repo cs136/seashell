@@ -23,6 +23,7 @@ class DeleteFile extends React.Component<DeleteProps&actionsInterface, {}> {
             && this.props.appState.currentProject.currentQuestion.openFiles.length > 0) {
           this.props.dispatch.file.switchFile(
             project.id,
+            this.props.appState.currentProject.currentQuestion.name,
             this.props.appState.currentProject.currentQuestion.openFiles[0]);
         }
         else {

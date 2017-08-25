@@ -74,6 +74,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
         if (state.currentProject && state.currentProject && state.currentProject.currentQuestion) {
           if (state.currentProject.currentQuestion.openFiles.length > 0) {
             this.props.dispatch.file.switchFile(state.currentProject.id,
+              state.currentProject.currentQuestion.name,
               state.currentProject.currentQuestion.openFiles[0]);
           }
           else {

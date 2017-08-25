@@ -239,7 +239,7 @@ const mapDispatchToProps = (dispatch: Function) => {
             });
           });
         },
-        switchFile: (project: S.ProjectID, filename: string) => {
+        switchFile: (project: S.ProjectID, question: string, filename: string) => {
           return actions.dispatch.file.flushFileBuffer()
             .then(() => {
               return asyncAction(storage().getFileByName(project, filename)).then((fullfile) => {
@@ -250,7 +250,8 @@ const mapDispatchToProps = (dispatch: Function) => {
                       payload: {
                         file: fullfile,
                         versions: versions,
-                        project: project
+                        project: project,
+                        question: question
                       }
                     });
                   }
