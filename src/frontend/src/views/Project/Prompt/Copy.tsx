@@ -33,8 +33,13 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
     }
   }
 
-  private submitForm(): Promise<void> {
-    return this.props.dispatch.file.copyFile(`${this.state.question}/${this.state.file}`);
+  private submitForm(): Promise<any> {
+    let source = this.props.appState.fileOpTarget;
+    let project = this.props.appState.currentProject;
+    if (source && project)
+      return this.props.dispatch.file.copyFile(project.id, this.state.question, source, `${this.state.question}/${this.state.file}`);
+    else
+      return Promise.reject(new Error("Could not copy file -- invalid state reached.!"));
   }
 
   render() {
