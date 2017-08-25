@@ -1,4 +1,4 @@
-import {Coder, ShittyCoder} from "../../src/helpers/Websocket/Crypto";
+import {Coder} from "../../src/helpers/Crypto";
 
 describe("Testing crypto.ts", () => {
   it("Coder.encrypt", async () => {

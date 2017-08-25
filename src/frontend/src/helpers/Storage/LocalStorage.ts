@@ -56,7 +56,7 @@ class LocalStorage {
   /* deleteDB()
     Deletes the entire IndexedDB database. */
   public async deleteDB(): Promise<void> {
-    return this.db.delete();
+    // return this.db.delete();
   }
 
   /* writeFile(fid, contents)
