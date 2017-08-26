@@ -298,6 +298,8 @@
       (cons 'sentry-origin                 "https://www.student.cs.uwaterloo.ca/")
       ;; whoami binary (used for CLI)
       (cons 'whoami                        "/usr/bin/whoami")
+      ;; Default domain for Sentry users
+      (cons 'domain                        "uwaterloo.ca")
       )))
   config-hash)
 

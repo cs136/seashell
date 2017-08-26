@@ -22,7 +22,7 @@
          "typed-json-struct.rkt"
          "uuid.rkt")
 (require/typed racket/hash
-               [hash-union (-> (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) (HashTable Symbol JSExpr))])
+               [hash-union (->* ((HashTable Symbol JSExpr) (HashTable Symbol JSExpr)) (#:combine (-> Any Any Any)) (HashTable Symbol JSExpr))])
 (provide sentry-reporter%)
 
 (struct exn:fail:sentry exn:fail ())
@@ -38,11 +38,40 @@
 (define sentry-auth-without-secret
   "X-Sentry-Auth: Sentry sentry_version=7, sentry_client=seashell-sentry/1.0, sentry_timestamp=~a, sentry_key=~a")
 
+(json-struct log-entry ([category : String] [message : String] [timestamp : Integer]) #:transparent)
+
+;; sentry-reporter%
+;; Class representing a connection to Sentry
+;;
+;; Construction Arguments:
+;;  opt-dsn: Sentry authentication URI
+;;  origin: Origin to use (if using public key only)
+;;  tags: Tags to tag each message with
+;;  log-buffer-size: Length of log buffer (default 100)
 (define sentry-reporter%
   (class object%
     (init [opt-dsn : (U False String) #f]
           [tags : (HashTable Symbol JSExpr) (make-immutable-hash)]
-          [origin : (U False String) #f])
+          [origin : (U False String) #f]
+          [log-buffer-size : Integer 100])
+
+    ;; logs -- Last 100 log entries, in reverse order.
+    (: logs (Listof log-entry))
+    (define logs '())
+    (: _log-buffer-size Integer)
+    (define _log-buffer-size log-buffer-size)
+
+    ;; capture-log-entry -- Captures a log entry.
+    ;; Arguments:
+    ;;  level -- log level.
+    ;;  message -- log message.
+    ;;  timestamp -- log timestamp.
+    (: capture-log-entry (-> Symbol String Integer Any))
+    (define/public (capture-log-entry level message timestamp)
+      (set! logs (cons (log-entry (symbol->string level) message timestamp) logs))
+      ;; Keep only the last 100 log entries
+      (when ((length logs) . > . _log-buffer-size)
+        (set! logs (take logs _log-buffer-size))))
 
     (: _dsn (Option String))
     (define _dsn opt-dsn)
@@ -104,13 +133,24 @@
     (: context (Thread-Cellof JSExpr))
     (define context (make-thread-cell #{(make-immutable-hash) :: JSExpr} #t))
 
-    (: set-context! (-> JSExpr Any))
-    (define/public (set-context! ctx)
-      (thread-cell-set! context ctx))
-
-    (: get-context (-> JSExpr))
-    (define/public (get-context)
-      (thread-cell-ref context))
+    ;; get/set-{user/email}!
+    ;; Gets/sets Sentry user.
+    ;; Handled on a per-thread (inherited) basis.
+    ;;
+    ;; Arguments:
+    ;;  user -- Context to set (JSExpr)
+    (define user (make-thread-cell "unknown user" #t))
+    (define email (make-thread-cell "unknown@no-user.net" #t))
+    (: get-user (-> String))
+    (define/public (get-user) (thread-cell-ref user))
+    (: set-user! (-> String Any))
+    (define/public (set-user! _user)
+      (thread-cell-set! user _user))
+    (: get-email (-> String))
+    (define/public (get-email) (thread-cell-ref email))
+    (: set-email! (-> String Any))
+    (define/public (set-email! _email)
+      (thread-cell-set! email _email))
 
     (: generate-stack-trace (-> exn JSExpr))
     (define (generate-stack-trace exn)
@@ -136,10 +176,15 @@
       (define timestamp
         (parameterize ([date-display-format 'iso-8601])
           (date->string (seconds->date (current-seconds) #f) #t)))
+      (define all-tags (hash-union tags local-tags #:combine (lambda (t l) l)))
       (define partial-packet
         #{`#hasheq((event_id . ,id)
+                   (sentry.interfaces.User .
+                    ,#{`#hasheq((id . ,(get-user)) (email . ,(get-email))) :: (HashTable Symbol JSExpr)})
                    (culprit . ,culprit)
                    (timestamp . ,timestamp)
+                   (tags . ,(hash-map all-tags (lambda ([k : Symbol] [v : JSExpr]) #{(list (symbol->string k) v) :: JSExpr})))
+                   (breadcrumbs . ,((->json (Listof log-entry)) (reverse logs)))
                    (message . ,message)) :: (HashTable Symbol JSExpr)})
       (define full-packet (hash-union partial-packet packet))
       (define header (make-header))
@@ -161,6 +206,13 @@
           (close-input-port port)))
       (if block? (report) (thread report)))
 
+    ;; report-exception
+    ;; Reports an exception to Sentry
+    ;;
+    ;; Arguments:
+    ;;  exception - Exception to send
+    ;;  local-tags -- Tags to tag message with
+    ;;  block -- Block on Sentry I/O?
     (: report-exception (->* (exn (HashTable Symbol JSExpr)) (Boolean) Any))
     (define/public (report-exception exn local-tags [block #f])
       (when _dsn

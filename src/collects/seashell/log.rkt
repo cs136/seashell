@@ -157,22 +157,33 @@
            (fprintf port "warning: unknown message ~a~n" anything)])
         (loop)))))
 
+;; make-sentry-logger
+;; Creates a thread that receives events from the log (not trace) logger and forwards them to Sentry
+(: make-sentry-logger (-> Log-Level Thread))
+(define (make-sentry-logger level)
+  (define reader (make-log-receiver message-logger level))
+  (thread
+    (lambda ()
+      (let loop ()
+        (match (sync reader)
+          [(vector level message (list marks block) _)
+           (send reporter capture-log-entry level message (current-seconds))]
+          [_ #f])
+        (loop)))))
+
 ;; standard-logger-setup
 ;; Sets up the logger in a standard fashion - writing to standard error
 ;; all messages at >debug in regular mode, all messages at >=debug when
 ;; debugging.
 (: standard-logger-setup (-> Void))
 (define (standard-logger-setup)
-  (define userid (format "~a@uwaterloo.ca" (seashell_get_username)))
-  (define context
-    #{`#hasheq((user .
-     ,#{`#hasheq((id . ,userid)
-                 (email . ,userid))
-        :: JSExpr})) :: (HashTable Symbol JSExpr)})
+  (define user (seashell_get_username))
+  (define userid (format "~a@~a" user (read-config-string 'domain)))
   (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]
                                        [origin (read-config-optional-string 'sentry-origin)]))
-  (send reporter set-context! context)
+  (send reporter set-user! user)
+  (send reporter set-email! userid)
   (if (read-config-boolean 'debug)
-    (make-port-logger 'debug (current-error-port))
-    (make-port-logger 'debug (current-error-port)))
+    (begin (make-port-logger 'debug (current-error-port)) (make-sentry-logger 'debug))
+    (begin (make-port-logger 'debug (current-error-port)) (make-sentry-logger 'debug)))
   (void))
