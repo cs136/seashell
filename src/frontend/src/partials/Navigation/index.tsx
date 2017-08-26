@@ -43,7 +43,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               <Menu>
                   <MenuItem iconName="help" text="Help" onClick={this.props.dispatch.dialog.toggleHelp}/>
                   <MenuItem iconName="cog" text="Settings" onClick={this.props.dispatch.dialog.toggleSettings} />
-                  <MenuItem iconName="changes" text="Reset Seashell" onClick={() => {
+                  <MenuItem iconName="changes" text="Reconnect / Reset Seashell" onClick={() => {
                     this.props.dispatch.dialog.toggleResetOpen(); }}/>
                   <MenuDivider />
                   <MenuItem iconName="box" text="Archive Projects" onClick={this.props.dispatch.dialog.toggleArchive} />
@@ -73,7 +73,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
               onClose={this.props.dispatch.dialog.toggleAddProject}>
               <AddProjectWindow closefunc={this.props.dispatch.dialog.toggleAddProject}/>
             </Dialog>
-            <Dialog isCloseButtonShown={false} className={styles.dialogStyle} title="Reset Seashell / Log in again"
+            <Dialog isCloseButtonShown={false} className={styles.dialogStyle} title="Reconnect / Reset Seashell"
               isOpen={this.props.dialog.reset_open}
               onClose={() => {
                 if (! this.props.user.busy) {

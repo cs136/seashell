@@ -52,7 +52,7 @@ class ResetWindow extends React.Component<ResetWindowProps & actionsInterface, {
                 </div>
                 <div className="pt-control-group pt-large">
                     <label className="pt-control pt-checkbox">
-                        <input type="checkbox" ref="reset" defaultChecked />
+                        <input type="checkbox" ref="reset" />
                         <span className="pt-control-indicator"></span>
                         Reset
                     </label>
