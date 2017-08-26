@@ -156,19 +156,20 @@
     (define (generate-stack-trace exn)
       (define ctx (continuation-mark-set->context (exn-continuation-marks exn)))
       `#hasheq((frames .
-         ,(for/list : (Listof (HashTable Symbol JSExpr))
-            ([item : (Pairof (U False Symbol) Any) (in-list ctx)])
-            (define name (symbol->string (or (car item) '|<unknown procedure>|)))
-            (define-values (source line column)
-              (let ([loc (cdr item)])
-                (cond
-                  [(srcloc? loc)
-                   (values (format "~a" (or (srcloc-source loc) "<unknown file>"))
-                           (or (srcloc-line loc) 0)
-                           (or (srcloc-column loc) 0))]
-                  [else (values "<unknown file>" 0 0)])))
-            #{`#hasheq((filename . ,source) (function . ,name) (module . ,source)
-                       (lineno . ,line) (colno . ,column)) :: (HashTable Symbol JSExpr)}))))
+         ,(reverse
+            (for/list : (Listof (HashTable Symbol JSExpr))
+              ([item : (Pairof (U False Symbol) Any) (in-list ctx)])
+              (define name (symbol->string (or (car item) '|<unknown procedure>|)))
+              (define-values (source line column)
+                (let ([loc (cdr item)])
+                  (cond
+                    [(srcloc? loc)
+                     (values (format "~a" (or (srcloc-source loc) "<unknown file>"))
+                             (or (srcloc-line loc) 0)
+                             (or (srcloc-column loc) 0))]
+                    [else (values "<unknown file>" 0 0)])))
+              #{`#hasheq((filename . ,source) (function . ,name) (module . ,source)
+                         (lineno . ,line) (colno . ,column)) :: (HashTable Symbol JSExpr)})))))
 
     (: send-packet (-> String String (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) Boolean Any))
     (define (send-packet culprit message packet local-tags block?)
