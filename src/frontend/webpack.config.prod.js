@@ -42,7 +42,8 @@ module.exports = function(env) {
       IS_BROWSER: true,
       PRODUCTION: true,
       DEBUG: debug,
-      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'"
+      VERSION: env && env.version && JSON.stringify(env.version) || "'manual'",
+      DOMAIN: env && env.version && JSON.stringify(env.domain) || "'uwaterloo.ca'"
     }),
     new HtmlWebpackPlugin ({
       inject: true,

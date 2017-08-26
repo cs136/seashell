@@ -19,7 +19,7 @@ import * as Raven from "raven-js";
 require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
 
 DebugLogs.enable();
-console.log(`Seashell ${VERSION} starting up in ${DEBUG ? "debug" : "release"} mode.`);
+console.log(`Seashell ${VERSION} starting up in ${DEBUG ? "debug" : "release"} mode for ${DOMAIN}.`);
 
 
 if (PRODUCTION && "serviceWorker" in navigator) {

@@ -64,6 +64,11 @@ else ()
   set(SEASHELL_LIGHTWEIGHT_LAUNCHERS 0)
 endif (ENABLE_LIGHTWEIGHT_LAUNCHERS)
 
+# Default Domain Name for Error Reporting
+if(NOT DEFINED SEASHELL_DOMAIN)
+  set(SEASHELL_DOMAIN "uwaterloo.ca")
+endif()
+
 # Components
 add_subdirectory(backend)
 add_subdirectory(collects)

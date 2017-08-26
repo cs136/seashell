@@ -28,6 +28,7 @@ module.exports = {
         from: '*.data', to: './' },
     ]),
     new webpack.DefinePlugin({
+      DOMAIN: "'uwaterloo.ca'",
       DEBUG: true,
       IS_BROWSER: true,
       PRODUCTION: false,

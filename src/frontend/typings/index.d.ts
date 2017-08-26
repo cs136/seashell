@@ -12,3 +12,4 @@ declare const IS_BROWSER: boolean;
 declare const PRODUCTION: boolean;
 declare const VERSION: string;
 declare const DEBUG: boolean;
+declare const DOMAIN: string;
