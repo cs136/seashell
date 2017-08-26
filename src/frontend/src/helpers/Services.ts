@@ -215,7 +215,7 @@ namespace Services {
       await socketClient.connect(cnn);
       await localStorage.connect(`seashell${SEASHELL_DB_VERSION_NUMBER}-${cnn.username}`);
       connection = cnn;
-      Raven.setUserContext({id: cnn.username, email: cnn.username + DOMAIN});
+      Raven.setUserContext({id: cnn.username, email: `${cnn.username}@${DOMAIN}`});
     } catch (e) {
       throw new Error("Failed to connect");
     }

@@ -20,7 +20,7 @@ require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyf
 
 DebugLogs.enable();
 console.log(`Seashell ${VERSION} starting up in ${DEBUG ? "debug" : "release"} mode for ${DOMAIN}.`);
-
+console.log(`Type logs() into the JavaScript console to get frontend logs.`);
 
 if (PRODUCTION && "serviceWorker" in navigator) {
   require("offline-plugin/runtime").install();

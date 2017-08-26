@@ -11,7 +11,8 @@ export {LoginError,
         RequestError,
         NoInternet,
         RequestAborted,
-        RequestTimedOut};
+        RequestTimedOut,
+        UserReportError};
 
 class GenericError extends Error {
     constructor(message?: string) {
@@ -95,3 +96,11 @@ class ConflictError extends GenericError {
     console.log("ConflictError", results);
   }
 }
+
+class UserReportError extends GenericError {
+  constructor(message: string = "UserReportError",
+              public data?: Object) {
+    super(message);
+  }
+}
+

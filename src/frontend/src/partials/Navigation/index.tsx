@@ -8,6 +8,8 @@ import * as R from "ramda";
 import AddProjectWindow from "./AddProject";
 import ResetWindow from "./Reset";
 import Confirm from "../../views/Project/Prompt/Confirm";
+import * as Raven from "raven-js";
+import * as E from "../../helpers/Errors";
 
 const logo = require("../../assets/logo.svg");
 const styles = require("./index.scss");
@@ -50,7 +52,15 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
                   <MenuItem onClick={() => { this.props.dispatch.project.downloadAll(); }}
                     iconName="download" text="Download Projects" />
                   <MenuDivider />
-                  <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout}/>
+                  <MenuItem iconName="log-out" text="Sign Out" onClick={this.props.dispatch.user.signout} />
+                  <MenuDivider />
+                  <MenuItem iconName="warning-sign" text="Report Issue" onClick={(evt) => {
+                    // Fake a error if we have to.
+                    if (!Raven.lastEventId()) {
+                      Raven.captureException(new E.UserReportError("User-facing Error Report"));
+                    }
+                    Raven.showReportDialog({});
+                  }} />
               </Menu>
             }
             position={Position.BOTTOM_RIGHT}>
