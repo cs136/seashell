@@ -334,8 +334,19 @@
       (define path (build-path tmpdir run-file))
       (define-values (res hsh)
         (compile-and-run-project (path->string tmpdir) run-file question tests))
+      (when res
+        (define pids (cast (hash-ref hsh 'pids
+                                     (thunk (list (cast (hash-ref hsh 'pid) Integer))))
+                           (Listof Integer)))
+        ;; Wait until the program finishes to kill test.
+        (thread
+          (lambda ()
+            (let loop ([evts (map program-wait-evt pids)])
+              (unless (empty? evts)
+                (loop (remove (apply sync evts) evts))))
+            (delete-directory/files tmpdir))))
       (cons res hsh))
-    (thunk (delete-directory/files tmpdir))))
+    void))
   (values res hsh))
 
 ;; (zip-from-dir target dir)

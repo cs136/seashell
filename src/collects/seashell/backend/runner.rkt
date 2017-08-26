@@ -356,7 +356,13 @@
                                 (current-continuation-marks)))))]
                     (if test
                         (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
-                      (logf 'info "Running file ~a with language ~a" binary lang))
+                        (logf 'info "Running file ~a with language ~a" binary lang))
+                    (define test-in
+                      (if test (file->bytes (build-path test-path (string-append test ".in"))) #""))
+                    (define test-expect
+                      (if test (with-handlers
+                                ([exn:fail:filesystem? (lambda (exn) #f)])
+                                 (file->bytes (build-path test-path (string-append test ".expect")))) #f))
                     (define-values (handle pty raw-stdout raw-stdin raw-stderr)
                       (parameterize
                        ([current-directory directory]
@@ -414,10 +420,8 @@
                          (if test
                              (program-control-test-thread result
                                                           test
-                                                          (file->bytes (build-path test-path (string-append test ".in")))
-                                                          (with-handlers
-                                                           ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                           (file->bytes (build-path test-path (string-append test ".expect")))))
+                                                          test-in
+                                                          test-expect)
                            (program-control-thread result)))))
                     (set-program-control! result control-thread)
                     ;; Install it in the hash-table

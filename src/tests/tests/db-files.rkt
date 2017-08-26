@@ -5,6 +5,8 @@
          seashell/backend/files
          seashell/backend/project
          seashell/seashell-config
+         seashell/backend/runner
+         racket/serialize
          rackunit)
 
 (define/provide-test-suite db-files-suite
@@ -67,4 +69,14 @@
       (new-file pid "q1/tests/simple.expect" "Hello world!\n" 0)
       (define-values (res hsh) (compile-and-run-project/db pid "q1" '("simple")))
       (check-true res))
+
+    (test-case "Import and run a project with tests"
+      (define pid (new-project "test-template"
+        (format "file://~a/src/tests/test-template.zip" SEASHELL_SOURCE_PATH)))
+      (define-values (res hsh) (compile-and-run-project/db pid "Test" '("Test")))
+      (check-true res)
+      (for ([pid (hash-ref hsh 'pids)]
+            [exp-result '("passed")])
+        (sync (program-wait-evt pid))
+        (check-equal? exp-result (third (deserialize (read (program-stdout pid)))))))
     ))
