@@ -62,6 +62,7 @@ class Navigation extends React.Component<NavigationProps&actionsInterface, Navig
                     Raven.showReportDialog({});
                   }} />
                   <MenuItem iconName="fork" text="Contribute" href="https://github.com/cs136/seashell" target="_blank" />
+                  <MenuItem disabled={true} text={`Seashell ${VERSION}-${(DEBUG ? "debug" : "release")}`} />
               </Menu>
             }
             position={Position.BOTTOM_RIGHT}>
