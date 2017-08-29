@@ -1,4 +1,3 @@
-import * as $ from "jquery";
 import {SeashellWebsocket} from "./Websocket/WebsocketClient";
 import {WebStorage} from "./Storage/WebStorage";
 import {LocalStorage} from "./Storage/LocalStorage";
@@ -109,54 +108,43 @@ namespace Services {
     let response;
     try {
       debug && console.log(`Logging in at ${uri} ...`);
-      response = await <PromiseLike<any>>$.ajax({
-        url: uri,
-        type: "POST",
-        data: {
-          "u": user,
-          "p": password,
-          "reset": rebootBackend
-        },
-        dataType: "json",
-        timeout: 10000
-      });
-      debug && console.log("Login succeeded.");
-      response.user = user; // Save user so that we can log in later.
-      try {
-        await storeCredentials(user, password);
-      } catch (err) {
-        console.warn("Could not cache credentials for offline usage! -- %s", err);
-      }
-      window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
-    } catch (ajax) {
-      let tryOffline = false;
-      let msg = "";
-      let status = 0;
-      let code = ajax.status;
-      let statusText = undefined;
-      if (ajax.status === 0) {
-        // If there is no internet connection we will usually end up here
-        tryOffline = true;
+      let data = new URLSearchParams();
+      data.append("u", user);
+      data.append("p", password);
+      data.append("reset", rebootBackend ? "true" : "false");
+      let body = await fetch(uri, {
+        method: "POST",
+        body: data});
+      debug && console.log("Request succeeded.");
+
+      if (body.ok) {
+        response = await body.json();
+        response.user = user; // Save user so that we can log in later.
+        try {
+          await storeCredentials(user, password);
+        } catch (err) {
+          console.warn("Could not cache credentials for offline usage! -- %s", err);
+        }
+        window.localStorage.setItem("seashell-credentials", JSON.stringify(response));
       } else {
-        status     = ajax.status;
-        code       = ajax.responseJSON.error.code;
-        msg        = ajax.responseJSON.error.message;
-        statusText = ajax.statusText;
-        if (code === 5) {
-          msg = "Username and password don't match.";
-        } else if (status === 404) {
-          // if there is no internet, we could get a 404.
-          tryOffline = true;
+        let error = (await body.json()).error;
+        if (error.code === 5) {
+          throw new LoginError(`Invalid credentials for ${user}.`, user, error.code, error.message);
+        } else {
+          throw new LoginError(`Login failure (${error.code}): ${error.message}`, user, error.code, error.message);
         }
       }
-      if (tryOffline) {
+    } catch (error) {
+      if (error instanceof TypeError) {
         try {
           await checkCredentials(user, password);
         } catch (e) {
-          throw new LoginError(e);
+          console.warn(`Error logging in offline: ${e}`);
+          throw e;
         }
       } else {
-        throw new LoginError(`Login failure (${code}): ${msg}`, user, status, statusText);
+        console.warn(`Error logging in: ${error}`);
+        throw error;
       }
     }
 

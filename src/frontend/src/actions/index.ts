@@ -41,11 +41,6 @@ const mapDispatchToProps = (dispatch: Function) => {
         });
         await actions.dispatch.dialog.toggleResolveConflict();
         throw e;
-      }
-      // if it's a login error, just redirect to the login screen
-      else if (e instanceof LoginError) {
-        dispatch({ type: userActions.INVALIDATE });
-        throw null;
       } else {
         // Suppress handling null (LoginError) messages
         if (e) {
@@ -57,6 +52,11 @@ const mapDispatchToProps = (dispatch: Function) => {
           if (typeof e === "object" && !e._asyncAction_shown) {
             Raven.captureException(e);
             console.error(e);
+          }
+          // if it's a login error, just redirect to the login screen
+          if (e instanceof LoginError) {
+            dispatch({ type: userActions.INVALIDATE });
+            throw null;
           }
           // Wrap e in a Error if it's not an object
           if (typeof e !== "object") {
