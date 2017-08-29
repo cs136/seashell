@@ -102,8 +102,8 @@ async function hashCredentials(salt: Uint8Array, password: string) {
   let key = await webcrypto.subtle.deriveKey({
     "name": "PBKDF2",
     "salt": salt,
-    "iterations": 100,
-    "hash": "SHA-256"},
+    "iterations": 10000,
+    "hash": "SHA-512"},
     rawKey,
     { "name": "AES-CBC", "length": 256},
     true,
