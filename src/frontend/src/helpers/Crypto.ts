@@ -93,7 +93,7 @@ class Coder extends AbstractCoder {
 
 async function hashCredentials(salt: Uint8Array, password: string) {
   let bytes = Buffer.from(password, "utf8");
-  let rawKey = await window.crypto.subtle.importKey(
+  let rawKey = await webcrypto.subtle.importKey(
     "raw",
     bytes,
     {name: "PBKDF2"},
