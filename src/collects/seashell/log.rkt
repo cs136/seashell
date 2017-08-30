@@ -16,10 +16,20 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require (submod seashell/seashell-config typed))
-(provide logf make-port-logger standard-logger-setup format-stack-trace)
+(require (submod seashell/seashell-config typed)
+         "utils/sentry.rkt"
+         "support-native.rkt"
+         typed/json)
+(provide logf make-port-logger standard-logger-setup format-stack-trace
+         tracef capture-exception)
 
-(define logger (make-logger 'seashell))
+(define logger (make-logger 'seashell-all))
+(define trace-logger (make-logger 'seashell-api-trace logger))
+(define message-logger (make-logger 'seashell logger))
+(define reporter (new sentry-reporter% [opt-dsn #f])) ;; -- default uninitialized, we set it up properly
+                                                      ;; in standard-logger-setup as the configuration
+                                                      ;; hasn't been loaded yet.
+
 (define log-ts-str "[~a-~a-~a ~a:~a:~a ~a]")
 
 ;; log-ts-args
@@ -41,10 +51,10 @@
       (string-append (number->string (quotient (date-time-zone-offset dt) 3600))
                     (pad-left 2 (remainder (date-time-zone-offset dt) 3600))))))
 
-;; logf: category format args... -> void?
-;; Writes an entry into the logger.
-(: logf (-> Log-Level String Any * Void))
-(define (logf category format-string . args)
+;; logf/tracef: category format args... -> void?
+;; Writes an entry into the message/tracer logger.
+(: logf-to (-> Logger Log-Level String (Listof Any) Void))
+(define (logf-to logger category format-string args)
   (unless (read-config-boolean 'test-mode)
     (define block (make-semaphore))
     (log-message logger
@@ -59,6 +69,31 @@
     (unless (and (eq? category 'debug) (not (read-config-boolean 'debug)))
       (semaphore-wait block)))
   (void))
+(: logf (-> Log-Level String Any * Void))
+(define (logf category format-string . args)
+  (logf-to message-logger category format-string args))
+(: tracef (-> Log-Level String Any * Void))
+(define (tracef category format-string . args)
+  (logf-to trace-logger category format-string args))
+
+;; traced-raise exn -> Any
+;; Raises an exception, logging to Sentry and to the trace logger.
+(: traced-raise (-> exn Any))
+(define (traced-raise exn)
+  (tracef 'error "An exception was raised: ~a" (exn-message exn))
+  (capture-exception exn)
+  (raise exn))
+
+;; capture-exception exn -> Any
+;; Captures an exception, sending it to Sentry
+(: capture-exception (-> exn Any))
+(define (capture-exception exception)
+  (sync/timeout (read-config-nonnegative-real 'sentry-delay)
+    (thread
+      (thunk
+        (with-handlers ([exn? (lambda ([e : exn]) (logf 'warning "Error sending exception: ~a." (exn-message e)))])
+          ;; We block on the reporter here
+          (send reporter report-exception exception #{`#hasheq() :: (HashTable Symbol JSExpr)} #t))))))
 
 ;; make-log-reader: level -> log-receiver
 ;; Creates a log receiver that receives all messages at level or higher.
@@ -122,13 +157,33 @@
            (fprintf port "warning: unknown message ~a~n" anything)])
         (loop)))))
 
+;; make-sentry-logger
+;; Creates a thread that receives events from the log (not trace) logger and forwards them to Sentry
+(: make-sentry-logger (-> Log-Level Thread))
+(define (make-sentry-logger level)
+  (define reader (make-log-receiver message-logger level))
+  (thread
+    (lambda ()
+      (let loop ()
+        (match (sync reader)
+          [(vector level message (list marks block) _)
+           (send reporter capture-log-entry level message (current-seconds))]
+          [_ #f])
+        (loop)))))
+
 ;; standard-logger-setup
 ;; Sets up the logger in a standard fashion - writing to standard error
 ;; all messages at >debug in regular mode, all messages at >=debug when
 ;; debugging.
 (: standard-logger-setup (-> Void))
 (define (standard-logger-setup)
+  (define user (seashell_get_username))
+  (define userid (format "~a@~a" user (read-config-string 'domain)))
+  (set! reporter (new sentry-reporter% [opt-dsn (read-config-optional-string 'sentry-target)]
+                                       [origin (read-config-optional-string 'sentry-origin)]))
+  (send reporter set-user! user)
+  (send reporter set-email! userid)
   (if (read-config-boolean 'debug)
-    (make-port-logger 'debug (current-error-port))
-    (make-port-logger 'info (current-error-port)))
+    (begin (make-port-logger 'debug (current-error-port)) (make-sentry-logger 'debug))
+    (begin (make-port-logger 'debug (current-error-port)) (make-sentry-logger 'debug)))
   (void))

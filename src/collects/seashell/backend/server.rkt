@@ -17,6 +17,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require racket/contract
+         (only-in racket/file make-directory*)
          racket/async-channel
          racket/serialize
          racket/udp
@@ -31,14 +32,18 @@
          seashell/backend/project
          seashell/backend/http-dispatchers
          seashell/backend/authenticate
+         seashell/backend/files
          seashell/compiler
          seashell/crypto
+         seashell/db/database
+         seashell/db/tools
          web-server/web-server
          web-server/http/request-structs
          ffi/unsafe/atomic
          mzlib/os
          (prefix-in sequence: web-server/dispatchers/dispatch-sequencer)
-         (prefix-in filter: web-server/dispatchers/dispatch-filter))
+         (prefix-in filter: web-server/dispatchers/dispatch-filter)
+         seashell/backend/exception)
 
 (provide backend-main dump-creds)
 
@@ -146,7 +151,13 @@
 (define/contract (init-environment)
   (-> void?)
   (when (not (directory-exists? (read-config 'seashell)))
-    (make-directory (read-config 'seashell))))
+    (make-directory* (read-config 'seashell)))
+  ;; If old seashell folder (/u/userid/.seashell) doesn't exist, make it a symlink
+  ;; to the new seashell folder (/u/userid/cs136/seashell/)
+  (when (and (not (file-exists? (read-config 'old-seashell)))
+             (not (link-exists? (read-config 'old-seashell)))
+             (not (directory-exists? (read-config 'old-seashell))))
+    (make-file-or-directory-link (read-config 'seashell) (read-config 'old-seashell))))
 
 ;; exit-from-seashell return -> any/c
 ;; Seashell-specific exit function.
@@ -163,6 +174,15 @@
     (flush-output (current-output-port))
     (unless (= 0 (seashell_signal_detach))
       (exit-from-seashell 5)))))
+
+(define (garbage-collection-loop)
+  (define hour (* 60 60))
+  (seashell-collect-garbage)
+  (sleep hour)
+  (logf 'info "Exporting all projects.")
+  (export-all (read-config 'export-path))
+  (logf 'info "Export of all projects completed.")
+  (garbage-collection-loop))
 
 ;; make-udp-ping-listener our-port -> (values integer? custodian?)
 ;; Creates the UDP ping listener, and returns a custodian that can shut it down.
@@ -218,6 +238,12 @@
     ;; Directory setup.
     (init-environment)
     (init-projects)
+    (init-sync-database)
+
+    ;; Make sure the seashell.db file has group read and write permissions so that
+    ;; course accounts can use seashell-cli
+    (define db-file-path (build-path (read-config 'seashell) (read-config 'database-file)))
+    (when (file-exists? db-file-path) (file-or-directory-permissions db-file-path #o660))
 
     ;; Replace stderr with a new port that writes to a log file in the user's Seashell directory.
     (current-error-port (open-output-file (build-path (read-config 'seashell) "seashell.log")
@@ -240,6 +266,7 @@
       ([exn:fail?
         (lambda (exn)
           (logf 'error "Exception raised in Seashell: ~a~n" (exn-message exn))
+          (capture-exception exn)
           (exit-from-seashell 3))])
 
     (logf 'info "Starting up.")
@@ -264,6 +291,7 @@
                 (let loop ([tries 0])
                   (when (> tries 5)
                     (logf 'error "Error opening credentials file - aborting!")
+                    (capture-exception (exn:seashell:backend "Error opening credentials file - aborting!" (current-continuation-marks)))
                     (exit-from-seashell 4))
                   (define repeat (make-continuation-prompt-tag))
                   (call-with-continuation-prompt
@@ -307,8 +335,6 @@
                                       (conn-dispatch keepalive-sema conn state))
                                     #:conn-headers (lambda (method url headers)
                                                      (values #t '() #t))))
-             (filter:make #rx"^/export/" project-export-dispatcher)
-             (filter:make #rx"^/upload$" upload-file-dispatcher)
              standard-error-dispatcher))
 
           ;; Start the server.
@@ -318,7 +344,7 @@
                  #:dispatch seashell-dispatch
                  #:port 0
                  #:dispatch-server-connect@ ssl-unit
-                 #:listen-ip #f
+                 #:listen-ip (read-config 'listen-ip)
                  #:confirmation-channel conf-chan))
           (define start-result (async-channel-get conf-chan))
           (when (exn? start-result)
@@ -353,6 +379,9 @@
           ;; Detach from backend, and close the credentials port.
           (close-output-port credentials-port)
           (detach)
+
+          ;; TODO: this might not be the best place to start garbage collection
+          (thread garbage-collection-loop)
 
           ;; Write out the listening port
           (logf 'info "Listening on port ~a." start-result)

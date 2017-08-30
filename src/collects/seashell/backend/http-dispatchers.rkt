@@ -36,9 +36,7 @@
   (prefix-in log: web-server/dispatchers/dispatch-log))
 
 (provide request-logging-dispatcher
-         standard-error-dispatcher
-         project-export-dispatcher
-         upload-file-dispatcher)
+         standard-error-dispatcher)
 
 ;; Default headers.
 (define default-headers
@@ -150,43 +148,3 @@
     #:message #"Internal Server Error"
     #:headers (make-headers)
     #:preamble #"<!DOCTYPE HTML>"))
-
-;; (project-export-page request?) -> response?
-;; Downloads a project as a ZIP file.
-(define/contract (project-export-page request)
-  (-> request? response?)
-  (with-handlers
-    ([exn:project? (lambda (exn) (standard-error-page request))]
-     [exn:misc:match? (lambda (exn) (standard-server-error-page exn request))]
-     [exn:fail:contract? (lambda (exn) (standard-server-error-page exn request))]
-     [exn:authenticate? (lambda (exn) (standard-unauthorized-page exn request))]
-     [exn? (lambda (exn) (standard-server-error-page exn request))])
-    (define bindings (request-bindings/raw request))
-    (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
-    (define project (check-download-token (bytes->jsexpr raw-token)))
-    (response/full 200 #"OK"
-      (current-seconds)
-      #"application/zip"
-      (make-headers
-        #"Content-Disposition"
-        #"attachment")
-      `(,(export-project project)))))
-(define project-export-dispatcher (lift:make project-export-page))
-
-;; (upload-file-page request?) -> response?
-;; Uploads a file from the user to a project
-(define/contract (upload-file-page request)
-  (-> request? response?)
-  (with-handlers
-    ([exn:project? (lambda (exn) (standard-error-page request))]
-     [exn:misc:match? (lambda (exn) (standard-server-error-page exn request))]
-     [exn:fail:contract? (lambda (exn) (standard-server-error-page exn request))]
-     [exn:authenticate? (lambda (exn) (standard-unauthorized-page exn request))]
-     [exn? (lambda (exn) (standard-server-error-page exn request))])
-    (define bindings (request-bindings/raw request))
-    (match-define (binding:form _ raw-token) (bindings-assq #"token" bindings))
-    (match-define (binding:file _ _ _ content) (bindings-assq #"file-to-upload" bindings))
-    (match-define (list project filename) (check-upload-token (bytes->jsexpr raw-token)))
-    (new-file project filename content 'raw)
-    (standard-empty-response request)))
-(define upload-file-dispatcher (lift:make upload-file-page))

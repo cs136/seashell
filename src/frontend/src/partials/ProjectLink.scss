@@ -1,0 +1,34 @@
+@import '../Layout';
+.container{
+    padding:0;
+    margin:1em 0;
+    display:block;
+    text-decoration:none;
+    color:#222;
+    transition: all 250ms;
+    border-left:2px solid #CCC;
+}
+:global{
+    .pt-dark{
+        :local{
+            .container{
+                border-left-color:#555;
+            }
+        }
+    }
+}
+.container:hover{
+    text-decoration:none;
+    color:$theme;
+    background:rgba($theme, 0.15);
+    border-left-color:$theme;
+}
+.linkContainer{
+    padding:0.8em 1em;
+    transition: transform 250ms;
+    transform:translate3d(0,0,0);
+    display:block;
+}
+.container:hover .linkContainer{
+    transform:translate3d(5px, 0, 0);
+}

@@ -21,3 +21,6 @@ version of Seashell.
 @include-section["2.5.8.scrbl"]
 @include-section["3.0.0.scrbl"]
 @include-section["3.0.1.scrbl"]
+@include-section["3.0.2.scrbl"]
+@include-section["3.0.3.scrbl"]
+@include-section["4.0.0.scrbl"]
