@@ -129,14 +129,24 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
           </div>}>
         </Tab2>
         <Tab2 title="Upload Files" id="add-file-dialog-tabs-upload" panel={<div className="pt-form-group">
+          <div className="pt-control-group">
+            <div className="pt-select">
+              <select value={this.state.folder}
+                  onChange={(e) => this.setState(merge(this.state, {folder: e.currentTarget.value}))}>
+                <option value={this.question}>{this.question}</option>
+                <option value={`${this.question}/tests`}>{this.question}/tests</option>
+                <option value="common">common</option>
+              </select>
+            </div>
             <label className="pt-file-upload pt-fill">
               <input type="file" multiple disabled={this.state.disabled} onChange={
                 e => this.setState(merge(this.state, {
                   uploadFiles: this.filesToArray(e.currentTarget.files)
                 }))
               } />
-              <span className="pt-file-upload-input">{this.state.uploadFiles.length > 0 ? this.state.uploadFiles.length + " file"+(this.state.uploadFiles.length > 1 ? 's' : '')+" selected..." : 'Upload Files...'}</span>
+              <span className="pt-file-upload-input">{this.state.uploadFiles.length > 0 ? this.state.uploadFiles.length + " file"+(this.state.uploadFiles.length > 1 ? "s" : "") + " selected..." : "Upload Files..."}</span>
             </label>
+          </div>
           </div>}>
         </Tab2>
         <Tabs2.Expander />
