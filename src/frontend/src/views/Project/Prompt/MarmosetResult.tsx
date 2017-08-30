@@ -69,12 +69,14 @@ class MarmosetResult extends React.Component<MarmosetResultProps&actionsInterfac
     }
     return (<div className="pt-dialog-body">
       {message}
-      <select className="pt-select" disabled={this.state.disabled}
-          value={this.state.marmProject} onChange={e =>
-            this.setState(merge(this.state, {marmProject: e.currentTarget.value}))}>
-        {(this.props.appState.marmosetProjects || []).map((proj: S.MarmosetProject) =>
-          (<option value={proj.project}>{proj.project}</option>))}
-      </select>
+      <div className="pt-form-group">
+        <select className="pt-select" disabled={this.state.disabled}
+            value={this.state.marmProject} onChange={e =>
+              this.setState(merge(this.state, {marmProject: e.currentTarget.value}))}>
+          {(this.props.appState.marmosetProjects || []).map((proj: S.MarmosetProject) =>
+            (<option value={proj.project}>{proj.project}</option>))}
+        </select>
+      </div>
       <button type="button" className="pt-button" onClick={() => this.submit()}>
         Submit to Marmoset
       </button>

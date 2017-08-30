@@ -59,7 +59,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
       this.versions &&
         <MenuItem text="Old Versions">
           {this.versions.map((cnts: S.Contents) =>
-            (<MenuItem text={dateString(cnts.time)} onClick={() => {
+            (<MenuItem key={cnts.id} text={dateString(cnts.time)} onClick={() => {
               this.props.dispatch.file.revertFile(
                 this.currentFile ? this.currentFile.id : "" /* unreachable case, only to type check */, cnts);
             }}/>))

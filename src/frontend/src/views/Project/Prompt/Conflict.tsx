@@ -43,16 +43,18 @@ class Conflict extends React.Component<ConflictProps&actionsInterface, ConflictS
         closefunc={this.props.closefunc} disable={(val: boolean) =>
           this.setState(R.merge(this.state, {disabled: val}))}>
       <p>{`A merge conflict occurred on ${this.filename} while syncing. Choose a version below you want to keep:`}</p>
-      <div>
+      <div className="pt-form-group">
         <div className="pt-select pt-fill">
           <select value={this.state.selectedID} disabled={this.state.disabled} onChange={e => {
               let sel = this.props.appState.conflictContents.find((c: Contents) => c.id === e.currentTarget.value);
               this.setState(R.merge(this.state, {selectedID: e.currentTarget.value, selectedContents: sel}));
             }}>
             {this.props.appState.conflictContents.map((conts: Contents) =>
-              (<option value={conts.id}>{dateString(conts.time)}</option>))}
+              (<option key={conts.id} value={conts.id}>{dateString(conts.time)}</option>))}
           </select>
         </div>
+      </div>
+      <div className="pt-form-group">
         <textarea className={`pt-input pt-fill ${styles.conflictText}`} readOnly
           value={this.state.selectedContents.contents} />
       </div>
