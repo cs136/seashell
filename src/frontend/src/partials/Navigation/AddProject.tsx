@@ -28,17 +28,20 @@ class AddProjectWindow extends React.Component<AddProjectWindowProps&actionsInte
   render() {
     return (<div className="pt-dialog-body">
       <p>What would you like to call your new project?</p>
-      <div>
-        <input className="pt-input pt-fill" required type="text" value={this.state.proj}
-        onBlur={() => {
-          if (this.state.proj === "" || this.state.proj.includes("/")) {
-            this.setState(merge(this.state, {file: this.state.prevProj}));
-          }
-          else {
-            this.setState(merge(this.state, {prevFile: this.state.proj}));
-          }
-        }}
-        onChange={(e => this.setState(merge(this.state, {proj: e.currentTarget.value})))}/></div>
+      <div className="pt-form-group">
+        <div className="pt-form-content">
+          <input className="pt-input pt-fill" required type="text" value={this.state.proj}
+          onBlur={() => {
+            if (this.state.proj === "" || this.state.proj.includes("/")) {
+              this.setState(merge(this.state, {file: this.state.prevProj}));
+            }
+            else {
+              this.setState(merge(this.state, {prevFile: this.state.proj}));
+            }
+          }}
+          onChange={(e => this.setState(merge(this.state, {proj: e.currentTarget.value})))}/>
+        </div>
+      </div>
       <div className="pt-button-group">
         <button type="button" className="pt-button" onClick={() => {
                 this.props.closefunc();

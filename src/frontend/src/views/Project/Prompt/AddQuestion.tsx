@@ -41,9 +41,10 @@ class AddQuestion extends React.Component<AddQuestionProps&actionsInterface, Add
         submitfunc={() => this.submitForm()} disable={(val: boolean) =>
           this.setState(merge(this.state, {disabled: val}))}>
       <p>What would you like to call this question?</p>
-      <div>
-        <label>New Question:
+      <div className="pt-form-group">
+        <div className="pt-form-content">
           <input className="pt-input pt-fill" required disabled={this.state.disabled}
+            placeholder="New Question"
             type="text" value={this.state.question} ref={input => input && input.focus()}
           onBlur={() => {
             if (this.state.question === "" || this.state.question.includes("/")) {
@@ -54,7 +55,7 @@ class AddQuestion extends React.Component<AddQuestionProps&actionsInterface, Add
             }
           }}
           onChange={(e => this.setState(merge(this.state, {question: e.currentTarget.value})))}/>
-        </label>
+        </div>
       </div>
     </Prompt>
     );

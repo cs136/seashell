@@ -54,9 +54,10 @@ class AddTest extends React.Component<AddTestProps&actionsInterface, AddTestStat
         submitfunc={() => this.submitForm()} disable={(val: boolean) =>
           this.setState(merge(this.state, {disabled: val}))}>
       <p>What would you like to call this test?</p>
-      <div>
-        <label>New Test:
+      <div className="pt-form-group">
+        <div className="pt-form-content">
           <input className="pt-input pt-fill" required disabled={this.state.disabled}
+            placeholder="New Test"
             type="text" value={this.state.test} ref={input => input && input.focus()}
           onBlur={() => {
             if (this.state.test === "" || this.state.test.includes("/")) {
@@ -67,7 +68,7 @@ class AddTest extends React.Component<AddTestProps&actionsInterface, AddTestStat
             }
           }}
           onChange={(e => this.setState(merge(this.state, {test: e.currentTarget.value})))}/>
-        </label>
+        </div>
       </div>
     </Prompt>
     );

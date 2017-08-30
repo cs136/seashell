@@ -3,6 +3,7 @@ import {merge} from "ramda";
 import {map, actionsInterface} from "../../../actions";
 import {showError} from "../../../partials/Errors";
 import Prompt from "./Prompt";
+import { Tab2, Tabs2 } from "@blueprintjs/core";
 
 export interface AddFileProps {
   questions: string[];
@@ -99,35 +100,47 @@ class AddFile extends React.Component<AddFileProps&actionsInterface, AddFileStat
     return(<Prompt submitMessage="Add File" closefunc={this.props.closefunc}
         submitfunc={() => this.submitForm()} disable={(val: boolean) =>
           this.setState(merge(this.state, {disabled: val}))}>
-      <p>What would you like to call this file?</p>
-      <div>
-        <label>New File:
-          <select className="pt-select" value={this.state.folder}
-              onChange={(e) => this.setState(merge(this.state, {folder: e.currentTarget.value}))}>
-            <option value={this.question}>{this.question}</option>
-            <option value={`${this.question}/tests`}>{this.question}/tests</option>
-            <option value="common">common</option>
-          </select> / 
-          <input className="pt-input" required disabled={this.state.disabled}
-            type="text" value={this.state.file} ref={input => input && input.focus()}
-          onBlur={() => {
-            if (this.state.file === "" || this.state.file.includes("/")) {
-              this.setState(merge(this.state, {file: this.state.prevFile}));
-            }
-            else {
-              this.setState(merge(this.state, {prevFile: this.state.file}));
-            }
-          }}
-          onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
-        </label><br />
-        <label>Upload Files:
-          <input type="file" multiple disabled={this.state.disabled} onChange={
-            e => this.setState(merge(this.state, {
-              uploadFiles: this.filesToArray(e.currentTarget.files)
-            }))
-          } />
-        </label>
-      </div>
+      <Tabs2 id="add-file-dialog-tabs">
+        <Tab2 title="Empty File" id="add-file-dialog-tabs-empty" panel={
+          <div className="pt-form-group">
+            <div className="pt-control-group">
+              <div className="pt-select">
+                <select value={this.state.folder}
+                    onChange={(e) => this.setState(merge(this.state, {folder: e.currentTarget.value}))}>
+                  <option value={this.question}>{this.question}</option>
+                  <option value={`${this.question}/tests`}>{this.question}/tests</option>
+                  <option value="common">common</option>
+                </select>
+              </div>
+              <button className="pt-button" disabled>/</button>
+              <input className="pt-input pt-fill" required disabled={this.state.disabled}
+                placeholder="Filename"
+                type="text" value={this.state.file} ref={input => input && input.focus()}
+              onBlur={() => {
+                if (this.state.file === "" || this.state.file.includes("/")) {
+                  this.setState(merge(this.state, {file: this.state.prevFile}));
+                }
+                else {
+                  this.setState(merge(this.state, {prevFile: this.state.file}));
+                }
+              }}
+              onChange={(e => this.setState(merge(this.state, {file: e.currentTarget.value})))}/>
+            </div>
+          </div>}>
+        </Tab2>
+        <Tab2 title="Upload Files" id="add-file-dialog-tabs-upload" panel={<div className="pt-form-group">
+            <label className="pt-file-upload pt-fill">
+              <input type="file" multiple disabled={this.state.disabled} onChange={
+                e => this.setState(merge(this.state, {
+                  uploadFiles: this.filesToArray(e.currentTarget.files)
+                }))
+              } />
+              <span className="pt-file-upload-input">{this.state.uploadFiles.length > 0 ? this.state.uploadFiles.length + " file"+(this.state.uploadFiles.length > 1 ? 's' : '')+" selected..." : 'Upload Files...'}</span>
+            </label>
+          </div>}>
+        </Tab2>
+        <Tabs2.Expander />
+      </Tabs2>
     </Prompt>
     );
   }

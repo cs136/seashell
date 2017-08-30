@@ -70,15 +70,17 @@ class Rename extends React.Component<RenameProps&actionsInterface, RenameState> 
         closefunc={this.props.closefunc} disable={(val: boolean) =>
           this.setState(merge(this.state, {disabled: val}))}>
       <p>Where would you like to rename/move this file?</p>
-      <div>
+      <div classname="pt-form-group">
         <div className="pt-select pt-fill">
           <select value={this.state.commonOrQuestion} disabled={this.state.disabled} onChange={e =>
               this.setState(merge(this.state, {commonOrQuestion: e.currentTarget.value}))}>
             <option value="common">common</option>
             {this.props.questions.map((question: string) =>
-              (<option value={question}>{question}</option>))}
+              (<option key={question} value={question}>{question}</option>))}
           </select>
         </div>
+      </div>
+      <div className="pt-form-group">
         <input className="pt-input pt-fill" required type="text" value={this.state.file}
           disabled={this.state.disabled}
           onBlur={() => {

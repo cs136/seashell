@@ -53,15 +53,17 @@ class Copy extends React.Component<CopyProps&actionsInterface, CopyState> {
         closefunc={this.props.closefunc}
         disable={(val: boolean) => this.setState(merge(this.state, {disabled: val}))}>
       <p>Where would you like to copy this file?</p>
-      <div>
+      <div className="pt-form-group">
         <div className="pt-select pt-fill">
           <select id="question" value={this.state.commonOrQuestion}
             onChange={(e) => this.setState(merge(this.state, {commonOrQuestion: e.currentTarget.value}))}>
             {this.props.questions.map((question: string) =>
-              (<option value={question}>{question}</option>))}
+              (<option key={question} value={question}>{question}</option>))}
             <option value="common">common</option>
           </select>
         </div>
+      </div>
+      <div className="pt-form-group">
         <input className="pt-input pt-fill" required type="text" value={this.state.file}
           disabled={this.state.disabled} ref={input => input && input.focus()} onBlur={() => {
             if (this.state.file === "" || this.state.file.includes("/")) {

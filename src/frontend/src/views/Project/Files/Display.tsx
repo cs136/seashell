@@ -175,7 +175,7 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             className = {this.props.settings.theme ? "xterm-wrapper-light" : "xterm-wrapper-default"}
             readOnly = {this.props.appState.runState !== 2} dispatch = {this.props.dispatch}
             consoleText = {(this.props.appState.currentProject && this.props.appState.currentProject.consoleText) ? this.props.appState.currentProject.consoleText : ""}
-            style = {{"font-size": this.props.settings.fontSize}} />
+            style = {{fontSize: this.props.settings.fontSize}} />
         </div>
       </div>);
     } else
