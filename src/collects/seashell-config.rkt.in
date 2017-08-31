@@ -34,6 +34,8 @@
 (define SEASHELL_LIGHTWEIGHT_LAUNCHERS @SEASHELL_LIGHTWEIGHT_LAUNCHERS@)
 (define SEASHELL_RACKET "@SEASHELL_RACKET@")
 
+(define COURSE "cs136")
+
 ;; (read-config key) takes a symbol? key, and looks it up in the config hash;
 ;; produces the corresponding value, or dies with an error if the key was not
 ;; found
@@ -171,8 +173,15 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Location of the seashell-cli binary
+      (cons 'seashell-cli                  (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "seashell-cli")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "src/collects/seashell-cli/seashell-cli")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
       ;; Project settings filename.
-      (cons 'project-settings-filename     (string->path ".project-settings.txt"))
+      (cons 'project-settings-filename     (string->path ".metadata"))
 
       ;; These flags can be overridden by the configuration file.
       ;; Listen IP (default ::0)
@@ -210,9 +219,18 @@
       ;; via SSH.
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
-      (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      (cons 'seashell                      (build-path (find-system-path 'home-dir) COURSE "seashell"))
+      ;; Location of old per-user configuration directory, for backwards compatibility
+      (cons 'old-seashell                  (build-path (find-system-path 'home-dir) ".seashell"))
       ;; Location of the runtime-files directory.
-      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) COURSE "seashell" "runtime-files"))
+      ;; Location to store periodic database backups in filesystem
+      (cons 'export-path                   (build-path (find-system-path 'home-dir) COURSE "seashell" "projects"))
+      ;; Location of SQLite database file relative to the 'seashell directory
+      (cons 'database-file                 "seashell.db")
+      ;; Location of the Seashell database for a parameterized user. Used in seashell-cli.
+      ;; TODO make sure this is consistent with the above.
+      (cons 'database-file-format          (format "/u/~~a/~a/seashell/seashell.db" COURSE))
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
@@ -224,9 +242,11 @@
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
       ;; Location of the Marmoset test results script
-      (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
+      (cons 'test-results-tool              (format "/u/~a/marmoset-scripts/get-test-results/get-test-results" COURSE))
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
+      ;; File setting bitmasks
+      (cons 'read-only-mask                 1)
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
       (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having
@@ -257,6 +277,8 @@
       (cons 'racket-interpreter            (if (file-exists? "/usr/bin/racket")
                                              (string->path "/usr/bin/racket")
                                              (string->path SEASHELL_RACKET)))
+      ;; Location of the SQLite3 binary
+      (cons 'sqlite3                       "/usr/bin/sqlite3")
       ;; diff program
       (cons 'diff-program                  (string->path "/usr/bin/diff"))
       ;; Default system SSH binary
@@ -268,6 +290,16 @@
       ;; Default TTL for the compiler place.
       ;; This needs to be long enough for a file to compile.
       (cons 'compiler-ttl                  60)
+      ;; Sentry logging endpoint (default #f -- disabled)
+      ;; Origin is required if secret key is not provided -- note that as Seashell
+      ;; drops permissions, the secret key should not be provided.
+      (cons 'sentry-target                 #f)
+      (cons 'sentry-delay                  1.0)
+      (cons 'sentry-origin                 "https://www.student.cs.uwaterloo.ca/")
+      ;; whoami binary (used for CLI)
+      (cons 'whoami                        "/usr/bin/whoami")
+      ;; Default domain for Sentry users
+      (cons 'domain                        "@SEASHELL_DOMAIN@")
       )))
   config-hash)
 
@@ -303,6 +335,7 @@
   (require/typed (submod "." "..")
                  [config-refresh! (-> Void)]
                  [read-config (-> Symbol (U String (Listof String) Number Boolean Path-String))]
+                 [config-set! (-> Symbol (U String (Listof String) Number Boolean Path-String) Void)]
                  [SEASHELL_VERSION String]
                  [SEASHELL_BRANCH String]
                  [SEASHELL_COMMIT String]
@@ -313,7 +346,8 @@
                  [SEASHELL_INSTALLED Boolean]
                  [SEASHELL_INSTALL_PATH String])
   (provide config-refresh! read-config-string read-config-strings read-config-number read-config-boolean read-config-path
-           read-config-integer read-config-optional-path read-config-nonnegative-real
+           read-config-integer read-config-optional-path read-config-nonnegative-real read-config-optional-string
+           config-set!
            SEASHELL_VERSION SEASHELL_BRANCH SEASHELL_COMMIT SEASHELL_API_VERSION
            SEASHELL_SOURCE_PATH
            SEASHELL_BUILD_PATH SEASHELL_DEBUG SEASHELL_INSTALLED SEASHELL_INSTALL_PATH)
@@ -323,6 +357,11 @@
     (define result (read-config symbol))
     (cond [(path? result) (some-system-path->string result)]
           [else (cast result String)]))
+  (: read-config-optional-string (-> Symbol (Option String)))
+  (define (read-config-optional-string symbol)
+    (define result (read-config symbol))
+    (cond [(path? result) (some-system-path->string result)]
+          [else (cast result (Option String))]))
   (: read-config-strings (-> Symbol (Listof String)))
   (define (read-config-strings symbol)
     (define result (read-config symbol))

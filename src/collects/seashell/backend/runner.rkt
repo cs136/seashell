@@ -19,7 +19,9 @@
 (require seashell/log
          (submod seashell/seashell-config typed)
          seashell/diff
-         seashell/utils/pty)
+         seashell/utils/pty
+         seashell/backend/exception)
+
 (require/typed racket/serialize
                [serialize (-> Any Any)])
 (require/typed racket/base
@@ -42,7 +44,7 @@
                  [source-dir : Path-String]
                  [asan : Bytes]
                  [pty : (U False PTY)]) #:transparent #:mutable #:type-name Program)
-(struct exn:program:run exn:fail:user ())
+(struct exn:program:run exn:seashell:backend ())
 
 (: program-table (HashTable Integer Program))
 (define program-table (make-hash))
@@ -148,7 +150,7 @@
                       (define output-lines (regexp-split #rx"\n" stdout))
                       (define expected-lines (regexp-split #rx"\n" expected))
                       ;; hotfix: diff with empty because it's slow
-                      (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
+                      (write (serialize `(,pid ,test-name "failed" ,expected ,stderr ,stdout ,asan-output)) out-stdout)])]
                    [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,stdout ,asan-output)) out-stdout)])
             (logf 'debug "Done sending test results for program PID ~a." pid)
             (close)]
@@ -354,7 +356,13 @@
                                 (current-continuation-marks)))))]
                     (if test
                         (logf 'info "Running file ~a with language ~a using test ~a" binary lang test)
-                      (logf 'info "Running file ~a with language ~a" binary lang))
+                        (logf 'info "Running file ~a with language ~a" binary lang))
+                    (define test-in
+                      (if test (file->bytes (build-path test-path (string-append test ".in"))) #""))
+                    (define test-expect
+                      (if test (with-handlers
+                                ([exn:fail:filesystem? (lambda (exn) #f)])
+                                 (file->bytes (build-path test-path (string-append test ".expect")))) #f))
                     (define-values (handle pty raw-stdout raw-stdin raw-stderr)
                       (parameterize
                        ([current-directory directory]
@@ -412,10 +420,8 @@
                          (if test
                              (program-control-test-thread result
                                                           test
-                                                          (file->bytes (build-path test-path (string-append test ".in")))
-                                                          (with-handlers
-                                                           ([exn:fail:filesystem? (lambda (exn) #f)])
-                                                           (file->bytes (build-path test-path (string-append test ".expect")))))
+                                                          test-in
+                                                          test-expect)
                            (program-control-thread result)))))
                     (set-program-control! result control-thread)
                     ;; Install it in the hash-table

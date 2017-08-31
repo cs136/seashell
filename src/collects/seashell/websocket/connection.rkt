@@ -185,6 +185,7 @@
        ;; There's not much we can do.  We may as well log it and
        ;; quit.  Raising an exception here is probably a bad idea,
        ;; as we're running in a separate thread.
+       (capture-exception frame-or-exn)
        (logf 'error (format "WebSocket received exception: ~a" (exn-message frame-or-exn)))
        (thread (lambda () (ws-close! conn)))
        #f]

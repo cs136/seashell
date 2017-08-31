@@ -2,7 +2,8 @@
 
 (require seashell/seashell-config
          seashell/backend/project
-         seashell/compiler)
+         seashell/compiler
+         seashell/log)
 
 (provide setup-test-environment
          teardown-test-environment)
@@ -19,7 +20,8 @@
   (make-directory test-dir)
   (config-set! 'seashell test-dir)
   (config-set! 'test-mode #t)
-  (init-projects))
+  (init-projects)
+  (standard-logger-setup))
 
 (define (teardown-test-environment)
   (delete-directory/files (read-config 'seashell)))

@@ -10,7 +10,7 @@ while getopts b:a:l:t opts; do
 		b) BUILD_PATH=${OPTARG} ;;
 		a) MAKE_ARGS=${OPTARG} ;;
 		l) LOG_PATH=${OPTARG} ;;
-		t) TEST=${OPTARG} ;;
+		t) TEST="true" ;;
 	esac
 done
 
@@ -19,18 +19,20 @@ INSTALL_PATH=$(sed -ne "s/SET(CPACK_INSTALL_PREFIX \"\(.*\)\")/\1/p" "$BUILD_PAT
 if [ -d "$INSTALL_PATH" ]; then rm -r "$INSTALL_PATH"; fi
 mkdir "$INSTALL_PATH"
 [ -e "$LOG_PATH" ] && rm "$LOG_PATH"
-echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`"
+echo "Make_installing Seashell to \`$INSTALL_PATH\` with \`$MAKE_ARGS\`... logging to `$LOG_PATH`; testing: $TEST"
 
 if [ -z "$LOG_PATH" ]; then
-	cd "$BUILD_PATH" && eval make $MAKE_ARGS 
-	if [ "$TEST" == "true" ]; then 
+	cd "$BUILD_PATH" && eval make $MAKE_ARGS
+	if [ "$TEST" == "true" ]; then
+    echo "Testing Seashell..."
 		CTEST_OUTPUT_ON_FAILURE=true make test
 	fi
 	cd "$BUILD_PATH" && eval make install $MAKE_ARGS
-else 
+else
 	cd "$BUILD_PATH" && eval make $MAKE_ARGS > $LOG_PATH 2>&1 
-	if [ "$TEST" == "true" ]; then 
-		CTEST_OUTPUT_ON_FAILURE=true make test
+	if [ "$TEST" == "true" ]; then
+    echo "Testing Seashell..." > $LOG_PATH
+		CTEST_OUTPUT_ON_FAILURE=true make test > $LOG_PATH 2>&1
 	fi
 	cd "$BUILD_PATH" && eval make install $MAKE_ARGS > $LOG_PATH 2>&1 
 fi

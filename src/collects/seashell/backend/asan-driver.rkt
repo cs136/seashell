@@ -24,4 +24,4 @@
 
 (fprintf stderr "-------------- RESULT -----------------\n")
 
-(printf "~a" (asan->json file-contents (path->string (build-path (find-system-path 'home-dir) ".seashell"))))
+(printf "~a" (asan->json file-contents (path->string (build-path (find-system-path 'home-dir) "cs136" "seashell"))))

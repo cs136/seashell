@@ -16,97 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 project(seashell-frontend)
-cmake_minimum_required(VERSION 2.6)
-# Global Destinations
-set(SEASHELL_FRONTEND share/frontend)
-# Global Definitions
-find_program(SEASHELL_MZTEXT mztext)
-# Copy (JS/CSS) to build directory (for minification step).
-file(GLOB_RECURSE seashell_js *.js)
-file(GLOB_RECURSE seashell_css *.css)
-file(GLOB_RECURSE seashell_html *.html)
-add_custom_target(seashell-frontend-copy
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/frontend" "${CMAKE_CURRENT_BINARY_DIR}/frontend"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/index" "${CMAKE_CURRENT_BINARY_DIR}/index"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/js" "${CMAKE_CURRENT_BINARY_DIR}/js"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/lib/jslib" "${CMAKE_CURRENT_BINARY_DIR}/js/lib"
-  SOURCES ${seashell_js} ${seashell_html} ${seashell_css})
 
-find_program(JS_MINIFY uglifyjs)
-find_program(CSS_MINIFY uglifycss)
-
-if (JS_MINIFY)
-  message("JavaScript compressor found: ${JS_MINIFY}")
-  set(JSMIN_ARG "\"${JS_MINIFY}\"")
-else()
-  set(JSMIN_ARG "")
-endif()
-
-if (CSS_MINIFY)
-  message("CSS compressor found: ${CSS_MINIFY}")
-  set(CSSMIN_ARG "\"${CSS_MINIFY}\"")
-else()
-  set(CSSMIN_ARG "")
-endif()
-
-# Custom build rules
-function(html_compile filename)
-  get_filename_component(base ${filename} NAME_WE)
-  set(base_abs ${CMAKE_CURRENT_BINARY_DIR}/${base})
-  set(output ${base_abs}.html)
-  add_custom_target(
-    html_${base} ALL
-    COMMAND ${SEASHELL_MZTEXT}
-    -E '(require (file \"${CMAKE_CURRENT_SOURCE_DIR}/build/build-tools.rkt\"))'
-    -E '(define SEASHELL_API_VERSION ${SEASHELL_API_VERSION})'
-    -E '(define SEASHELL_VERSION \"${SEASHELL_VERSION}\")'
-    -E '(define SEASHELL_COMMIT \"${GIT_COMMIT_HASH}\")'
-    -E '(define SEASHELL_BRANCH \"${GIT_BRANCH}\")'
-    -E '(define SEASHELL_DEBUG (= 1 ${SEASHELL_DEBUG}))'
-    -E '(define-values (scripts styles) (prepare-compile-file \"${base}\"
-          \"${CMAKE_CURRENT_SOURCE_DIR}/build/js.${base}\"
-          \"${CMAKE_CURRENT_SOURCE_DIR}/build/style.${base}\"
-          \"${CMAKE_CURRENT_SOURCE_DIR}/build/extra.${base}\"
-          (not SEASHELL_DEBUG)
-          ${JSMIN_ARG} ${CSSMIN_ARG}))'
-    -o ${output} ${filename}
-    DEPENDS seashell-frontend-copy)
-  set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
-endfunction(html_compile filename)
-
-html_compile(${CMAKE_CURRENT_SOURCE_DIR}/frontend.html)
-html_compile(${CMAKE_CURRENT_SOURCE_DIR}/index.html)
-
-# Lint the source JavaScript
-find_program(JS_LINTER jshint)
-if (JS_LINTER)
-  message("JavaScript linter found: ${JS_LINTER}")
-  # add_custom_target(_lint ALL COMMAND ${JS_LINTER} --exclude "'(js/lib|dist|node_modules)/*'" . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif (JS_LINTER)
-
-# Files to install.
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.html
-  DESTINATION ${SEASHELL_FRONTEND})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.manifest
-  DESTINATION ${SEASHELL_FRONTEND})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.html
-  DESTINATION ${SEASHELL_FRONTEND})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.manifest
-  DESTINATION ${SEASHELL_FRONTEND})
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/js DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/index DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/frontend DESTINATION ${SEASHELL_FRONTEND} FILES_MATCHING PATTERN "*")
-if (NOT SEASHELL_DEBUG)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.js.map
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.js
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/index.min.css
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.js.map
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.js
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/frontend.min.css
-    DESTINATION ${SEASHELL_FRONTEND} OPTIONAL)
-endif (NOT SEASHELL_DEBUG)
+# This needs to get updated when the build setup changes.
+file(GLOB_RECURSE seashell_frontend_src src/*.*)
+add_custom_target(seashell-frontend-src-copy
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/typings" "${CMAKE_CURRENT_BINARY_DIR}/typings"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tsconfig.json" "${CMAKE_CURRENT_BINARY_DIR}/tsconfig.json"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tslint.json" "${CMAKE_CURRENT_BINARY_DIR}/tslint.json"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/package.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/webpack.config.prod.js" "${CMAKE_CURRENT_BINARY_DIR}/webpack.config.prod.js"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/manifest.json" "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/favicon.ico" "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/test" "${CMAKE_CURRENT_BINARY_DIR}/test"
+    SOURCES ${seashell_frontend_src} tsconfig.json tslint.json package.json webpack.config.prod.js manifest.json favicon.ico
+)
+find_program(SEASHELL_NPM npm)
+add_custom_target(seashell-frontend-configure
+    COMMAND ${SEASHELL_NPM} install
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    DEPENDS seashell-frontend-src-copy)
+add_custom_command(OUTPUT dist.tar.gz
+  COMMAND ${SEASHELL_NPM} run build -- --env.version=\"${SEASHELL_VERSION}-${GIT_COMMIT_HASH}\" --env.debug=${SEASHELL_DEBUG} --env.domain=\"${SEASHELL_DOMAIN}\"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    DEPENDS seashell-frontend-configure ${seashell_frontend_src} webpack.config.prod.js tsconfig.json tslint.json package.json manifest.json)
+# This is _really_ a dummy target (used for incremental builds).
+# During the install step, we copy dist/* -> frontend/*
+add_custom_target(seashell-frontend-binary ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dist.tar.gz)
+add_test(seashell-frontend-test ${SEASHELL_NPM} test)
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dist/" DESTINATION share/frontend)

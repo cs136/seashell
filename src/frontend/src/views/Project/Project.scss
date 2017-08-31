@@ -1,0 +1,251 @@
+@import '../../Layout';
+.filePanel {
+    display: block;
+    margin-top: 0;
+}
+
+
+.questionTabList>div[role="tablist"] {
+    padding: 0 1em;
+}
+
+.questionTabList>div[role="tablist"]>div {
+    padding: 0.5em 1em;
+    margin-right: 0;
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+.splashContainer{
+    max-width:800px;
+    margin:1em auto;
+    padding:0 2em;
+}
+
+.editorContainer {
+    display: flex;
+}
+
+.editorContainer>div {
+    overflow: hidden;
+    flex: 1;
+}
+
+.questionName {
+    margin-bottom: 0.75em;
+}
+
+.loading {
+    width: 100%;
+}
+
+.loading>div {
+    width: auto;
+    border-radius: 0;
+}
+
+.loading>div>div {
+    border-radius: 0 !important;
+}
+
+.tree {
+    min-width: 200px;
+}
+
+.openFiles {
+    display: block;
+    padding-left:0.45em;
+    flex:1;
+    overflow-x:auto;
+    white-space: nowrap;
+    line-height:normal;
+}
+
+.openFilesTab {
+    display:inline-block;
+    margin: 0px 0.25em 0 0em!important;
+    border-radius:3px;
+    border:1px solid transparent;
+    transition: border 250ms;
+    white-space: nowrap;
+    :global{
+        .pt-button{
+            border-radius:0;
+            min-height:26px;
+            height:26px;
+            line-height:26px;
+        }
+    }
+    &>span{
+        float:none !important;
+    }
+}
+
+.openFilesTabFile {
+    padding-right: 0.2em !important;
+}
+
+.openFilesTabAction {
+    min-width: 0 !important;
+    padding: 0 0.2em !important;
+}
+
+.openFilesTab.active {
+    border:1px solid $theme;
+}
+
+.openFilesTab.active>.openFilesTabFile {
+    color: $theme !important;
+}
+
+.openFilesTabFile:hover,
+.openFilesTabFile:focus {
+    background: transparent !important;
+    outline: none;
+    color: $theme !important;
+}
+
+.openFilesTabAction:hover,
+.openFilesTabAction:focus {
+    background: transparent !important;
+    outline: none;
+}
+
+.openFilesTabAction:hover::before {
+    color: $theme !important;
+}
+
+.openFilesTab button {
+    margin: 0 0 !important;
+}
+
+.resizeHandle {
+    z-index: 10;
+    width: 3px;
+    border-top-style: none;
+    border-bottom-style: none;
+    box-sizing: content-box;
+    cursor: ew-resize;
+    background: #DDD;
+    flex: none !important;
+    transform: none !important;
+    position: relative;
+    overflow: visible !important;
+}
+
+.resizeHandle:hover {
+    background: #BCBCBC;
+}
+
+:global{
+    .pt-dark{
+        :local{
+            .resizeHandle{
+                background:#333;
+            }
+            .resizeHandle:hover{
+                background:#666;
+            }
+            .resizeHandle:focus, .resizeHandle:active{
+                background:$theme;
+            }
+        }
+    }
+  
+  .monacoErrorGlyph {
+    background: rgb(186, 12, 0);
+  }
+
+  .monacoWarningGlyph {
+    background: rgb(211, 204, 0);
+  }
+
+  .monacoDiagnosticLineBackground {
+    background: lightblue;
+  }
+}
+
+.resizeHandle:focus,
+.resizeHandle:active {
+    background: $theme;
+    &:before,
+    &:after {
+        opacity: 1;
+    }
+}
+
+.resizeHandle:before,
+.resizeHandle:after {
+    position: absolute;
+    background: transparentize($theme, 0.5);
+    border-top-style: none;
+    border-bottom-style: none;
+    top: 0px;
+    opacity: 0;
+    transition: opacity 250ms;
+    content: '';
+    width: 3px;
+    height: 100%;
+}
+
+.resizeHandle:after {
+    left: 3px;
+}
+
+.resizeHandle:before {
+    right: 3px;
+}
+
+.toggleView{
+    display:none !important;
+}
+
+.conflictText {
+  min-height: 420px;
+}
+
+@media(max-width: $mobile-break){
+    .openFiles{
+        padding-left:0 !important;
+        display:block;
+        margin-top:0.5em;
+        width:100%;
+        flex: auto !important;
+        line-height:normal;
+    }
+    .resizeHandle{
+        display:none !important;
+    }
+    .toggleView{
+        display:block !important;
+    }
+    .editorContainer>div{
+        flex:1 !important;
+    }
+    .editorContainer.leftToggle>div:last-child{
+        display:none;
+    }
+    .editorContainer.rightToggle>div:first-child{
+        display:none;
+    }
+}
+
+.spinningImage {
+    -webkit-animation:spin 1.5s linear infinite;
+    -moz-animation:spin 1.5s linear infinite;
+    animation:spin 1.5s linear infinite;
+}
+@-moz-keyframes spin {
+    from { -moz-transform: rotate(0deg); }
+    to { -moz-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+    from {transform:rotate(0deg);}
+    to {transform:rotate(360deg);}
+}
