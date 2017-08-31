@@ -243,7 +243,7 @@ class Project extends React.Component<ProjectProps&actionsInterface, ProjectStat
                 this.props.appState.runState === 1 ?
                   <Tooltip key="project-run-file" content="Compiling"
                       position={Position.BOTTOM_RIGHT}>
-                    <button className="pt-button pt-minimal pt-disabled pt-icon-build">
+                    <button className={"pt-button pt-minimal pt-disabled pt-icon-cog " + styles.spinningImage}>
                     </button>
                   </Tooltip> :
                   <Tooltip key="project-run-file" content="Stop" position={Position.BOTTOM_RIGHT}>
