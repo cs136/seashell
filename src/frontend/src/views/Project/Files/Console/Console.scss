@@ -1,0 +1,43 @@
+@import '../../../../Layout';
+:global{
+    .terminal{
+        margin:0 1em;
+    }
+    .xterm-theme-default, .xterm-theme-default .xterm-viewport, .xterm-wrapper-default{
+        background-color:$darkTerminal;
+    }
+    .xterm-theme-light, .xterm-wrapper-light {
+        background-color: #fff;
+        color: #444;
+
+    }
+
+    .xterm-theme-light:not(.focus) .terminal-cursor {
+        outline: 1px solid #444;
+        background-color: #444;
+    }
+
+    .xterm-theme-light.focus .terminal-cursor {
+        background-color: #444;
+        color: #fff;
+    }
+
+    @keyframes :global(xterm-cursor-blink-light) {
+        0% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0;
+        }
+    }
+
+    .xterm-theme-light.terminal:not(.xterm-cursor-style-underline):not(.xterm-cursor-style-bar).focus.xterm-cursor-blink .terminal-cursor {
+        animation: xterm-cursor-blink-light 1.2s infinite step-end;
+    }
+
+
+    .xterm-theme-light *:not(.terminal-cursor) {
+        background-color: #fff;
+        color: #444;
+    }
+}

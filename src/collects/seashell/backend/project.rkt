@@ -1,4 +1,4 @@
-#lang racket/base
+#lang typed/racket
 ;; Seashell's backend server.
 ;; Copyright (C) 2013-2015 The Seashell Maintainers.
 ;;
@@ -16,306 +16,149 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(struct exn:project exn:fail:user ())
-
-(provide project-name?
-         url-string?
-         list-projects
-         is-project?
+(provide init-projects
          new-project
-         new-project-from
          delete-project
-         lock-project
-         force-lock-project
-         unlock-project
-         (struct-out exn:project)
-         check-path
-         init-projects
-         check-and-build-path
-         build-project-path
-         project-base-path
-         runtime-files-path
          compile-and-run-project
-         compile-and-run-project/use-runner
+         compile-and-run-project/db
+         export-project
+         export-project-name
+         export-all
          marmoset-submit
          marmoset-test-results
-         get-most-recently-used
-         update-most-recently-used
-         export-project
          archive-projects
-         get-file-to-run
-         set-file-to-run
-         read-project-settings 
-         write-project-settings
-         write-project-settings/key
-         )
+         zip-from-dir
+         (struct-out exn:project))
 
 (require seashell/log
-         seashell/seashell-config
+         (submod seashell/seashell-config typed)
          seashell/compiler
          seashell/backend/runner
-         seashell/backend/template
-         seashell/backend/lock
+         seashell/backend/files
+         seashell/db/tools
          seashell/utils/misc
          net/url
          net/head
-         json
+         typed/json
          file/zip
          file/unzip
-         racket/contract
-         racket/function
-         racket/file
-         racket/path
-         racket/match
-         racket/string
-         racket/list
-         racket/port
-         racket/set
-         racket/system)
+         seashell/backend/exception)
 
-;; Global variable, which is a set of currently locked projects
-(define locked-projects (make-hash))
-(define lock-semaphore (make-semaphore 1))
+(struct exn:project exn:seashell:backend ())
 
-;; (project-name? name) -> bool?
-;; Predicate for testing if a string is a valid project name.
-(define (project-name? name)
-  (cond
-    [(not (or (path-string? name) (string? name))) #f]
-    [(let-values ([(base suffix _) (split-path name)])
-      (and (equal? base 'relative) (path-for-some-system? suffix)))
-     #t]
-    [else #f]))
+(require/typed file/zip
+  [zip (-> (U String Path) (U String Path) Void)])
+(require/typed file/unzip
+  [unzip (-> (U String Input-Port) (-> Bytes Boolean Input-Port Any) Void)]
+  [call-with-unzip (All (A) (-> Input-Port (-> Path A) A))])
+(require/typed racket/hash
+  [hash-union (-> (HashTable Symbol JSExpr) (HashTable Symbol JSExpr) (HashTable Symbol JSExpr))])
 
-;; (is-project? name)
-;; Checks if name is a project that exists.
-;;
-;; Arguments:
-;;  name - Name of project.
-;; Returns: #t if it does, #f otherwise.
-(define/contract (is-project? name)
-  (-> project-name? boolean?)
-  (directory-exists? (build-project-path name)))
-
-;; (check-path path)
-;; Makes sure nothing funny is in a path.  Currently deals with .. ('up)
-;; This function should be called on any path that depends on user input.
-;;
-;; Arguments:
-;;  path - Path to check.
-;;
-;; Returns:
-;;  path if OK.
-;;
-;; Raises:
-;;  exn:project if a bad path is given.
-;;
-;; Notes:
-;;  Use the special form (check-and-build-path ...) to check the result of build-path.
-(define/contract (check-path path)
-  (-> path? path?)
-  (define/contract (check-path-recursive current)
-    (-> path? void?)
-    (define-values (base name _) (split-path current))
-    (when (equal? name 'up)
-          (raise (exn:project (format "Invalid path ~a!" path)
-                              (current-continuation-marks))))
-    (when (path? base) (check-path-recursive base)))
-  (check-path-recursive path)
-  path)
-(define-syntax-rule (check-and-build-path args ...)
-  (check-path (build-path args ...)))
-
-
-;; (project-base-path)
-;; Gets the base path where projects are located
-(define/contract (project-base-path)
-  (-> path?)
-  (build-path (read-config 'seashell) "projects"))
-
-;; (build-project-path project)
-;; Gets the path where project is stored
-(define/contract (build-project-path project)
-  (-> project-name? path?)
-  (check-and-build-path (project-base-path) project))
+(require/typed seashell/backend/template
+  [call-with-template (All (A) (-> String (-> Input-Port A) A))])
 
 ;; (runtime-files-path)
-;; Gets the path where runtime files are stored.
-(define/contract (runtime-files-path)
-  (-> path?)
-  (build-path (read-config 'runtime-files-path)))
+;; Returns the path where runtime files are stored.
+(: runtime-files-path (-> String))
+(define (runtime-files-path)
+  (path->string (build-path (read-config-string 'runtime-files-path))))
 
 ;; (init-projects)
-;; Creates the directories for projects
-(define/contract (init-projects)
-  (-> void?)
+;; Creates directories necessary to run Seashell
+(: init-projects (-> Void))
+(define (init-projects)
   (make-directory* (runtime-files-path))
-  (make-directory* (project-base-path))
   (void))
 
-;; list-projects -> (listof (listof project-name? number?))
-;; Lists existing Seashell projects.
-(define/contract (list-projects)
-  (-> (listof (list/c project-name? any/c)))
-  (map (lambda (proj) (list (some-system-path->string proj) (file-or-directory-modify-seconds (build-project-path proj))))
-       (filter (compose directory-exists? build-project-path)
-               (directory-list (project-base-path)))))
+;; (read-metadata file)
+;; Parses the .metadata file when importing a project from a template.
+;;
+;; Args:
+;;  file - path to the metadata file
+;; Returns:
+;;  Two values: a list of (list filename flags) and the project settings hash
+(: read-metadata (-> Path-String (Values (Listof (List String Integer)) (HashTable Symbol JSExpr))))
+(define (read-metadata file)
+  (match-define (cons flags settings)
+    (foldl (lambda ([pair : (Pairof Symbol JSExpr)] [res : (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))])
+      #{(match (car pair)
+        ['flags (cons (cast (cdr pair) (Listof (List String Integer))) (cdr res))]
+        [setting (cons (car res) (cons (cons setting (cdr pair)) (cdr res)))])
+          :: (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))})
+      #{(cons '() '()) :: (Pairof (Listof (List String Integer)) (Listof (Pairof Symbol JSExpr)))}
+      (hash->list (cast (string->jsexpr (file->string file)) (HashTable Symbol JSExpr)))))
+  (values flags (make-hash settings)))
 
-;; (new-project name) -> void?
+;; (new-project name template? settings?)
 ;; Creates a new project.
 ;;
-;; Arguments:
-;;  name - Name of the new project.
-;;
-;; Raises:
-;;  exn:project if the project already exists.
-(define/contract (new-project name)
-  (-> project-name? void?)
-  (with-handlers
-    ([exn:fail:filesystem?
-       (lambda (exn)
-         (raise (exn:project
-                  (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
-                  (current-continuation-marks))))])
-    (new-project-from name (read-config 'default-project-template)))
-  (void))
+;; Args:
+;;  name - name of the new project
+;;  template - (Optional) location of the project template zip file to clone.
+;;             If not provided, uses a default project template.
+;;  settings - (Optional) hash of project settings for new project.
+;;             Will be merged with the hash from the metadata file (if applicable)
+;; Returns:
+;;  New project ID
+(: new-project (->* (String) ((U String False) (HashTable Symbol JSExpr)) String))
+(define (new-project name [template #f] [settings #{(hash) :: (HashTable Symbol JSExpr)}])
+  (call-with-write-transaction (thunk
+    (when (project-exists? name)
+      (raise (exn:project (format "The project ~a already exists." name)
+        (current-continuation-marks))))
+    (call-with-template (if template template (read-config-string 'default-project-template))
+      (lambda ([port : Input-Port])
+        (call-with-unzip port
+          (lambda ([dir : Path])
+            (parameterize ([current-directory (build-path dir (first (directory-list dir)))])
+              (define-values (flags meta-settings)
+                (if (file-exists? (read-config-path 'project-settings-filename))
+                    (read-metadata (read-config-path 'project-settings-filename))
+                    (values '() #{(hash) :: (HashTable Symbol JSExpr)})))
+              (define pid (insert-new "projects"
+                #{`#hasheq((name . ,name)
+                           (settings . ,(cast (hash-union settings meta-settings) JSExpr))
+                           (last_used . ,(current-milliseconds))) :: (HashTable Symbol JSExpr)}))
+              (for-each (lambda ([p : Path])
+                (cond
+                  [(directory-exists? p)
+                    (new-directory pid (path->string p))]
+                  [(not (string=? (read-config-string 'project-settings-filename)
+                                  (path->string p)))
+                    (define stored-flags (filter (lambda ([fl : (List String Integer)])
+                      (string=? (first fl) (path->string p)))
+                      flags))
+                    (new-file pid
+                              (path->string p)
+                              (file->string p)
+                              (if (empty? stored-flags)
+                                  0
+                                  (second (first stored-flags))))
+                    (void)]))
+                (sequence->list (in-directory)))
+              pid))))))))
 
-;; (new-project-from name source)
-;; Creates a new project from a source.
-;;
-;; source is a string which can be the following:
-;;  * A old project, in which we clone it directly.
-;;  * A URL to a ZIP file.
-;;  * A path to a ZIP file.
-;;
-;; Arguments:
-;;  name - Name of the new project.
-;;  source - See above.
-;;
-;; Raises:
-;;  exn:project if the project already exists.
-(define/contract (new-project-from name source)
-  (-> project-name? (or/c project-name? url-string? path-string?) void?)
-  (with-handlers
-    ([exn:fail:filesystem?
-       (lambda (exn)
-         (raise (exn:project
-                  (format "Project already exists, or some other filesystem error occurred: ~a" (exn-message exn))
-                  (current-continuation-marks))))])
-    (call-with-write-lock (thunk
-      (cond
-        [(or (path-string? source) (url-string? source))
-          (make-directory (build-project-path name))
-          (with-handlers
-            ([exn:fail? (lambda (exn)
-              (delete-directory/files (build-project-path name) #:must-exist? #f)
-              (raise exn))])
-            (parameterize ([current-directory (build-project-path name)])
-              (call-with-template source
-                (lambda (port) (unzip port (make-filesystem-entry-reader #:strip-count 1))))))]
-        [(project-name? source)
-         (copy-directory/files (build-project-path source)
-                               (build-project-path name))]))))
-  (void))
-
-;; (delete-project name)
+;; (delete-project id)
 ;; Deletes a project.
 ;;
-;; Arguments:
-;;  name - Name of the project.
-;;
-;; Raises:
-;;  exn:project if the project does not exist.
-(define/contract (delete-project name)
-  (-> project-name? void?)
-  (with-handlers
-    ([exn:fail:filesystem?
-       (lambda (exn)
-         (raise (exn:project
-                  (format "Project does not exists, or some other filesystem error occurred: ~a" (exn-message exn))
-                  (current-continuation-marks))))])
-    (call-with-write-lock (thunk
-      (delete-directory/files (check-and-build-path (build-project-path name))))))
-  (void))
+;; Args:
+;;  id - project ID to delete
+(: delete-project (-> String Void))
+(define (delete-project id)
+  (call-with-write-transaction (thunk
+    (delete-id "projects" id)
+    (delete-files-for-project id))))
 
-;; (lock-project name)
-;; Locks a project.
-;;
-;; Arguments:
-;;  name - Name of the project.
-;;  thread-to-lock-on - Thread to lock on.
-;;
-;; Raises:
-;;  exn:project if the project does not exist.
-;;
-;; Returns:
-;;  #t if the project was successfully locked, #f otherwise.
-;; Notes:
-;;  Project is automatically unlocked if the thread dies.
-(define/contract (lock-project name thread-to-lock-on)
-  (-> (and/c project-name? is-project?) thread? boolean?)
-  (call-with-semaphore
-    lock-semaphore
-    (lambda ()
-      (when (thread-dead? (hash-ref! locked-projects name thread-to-lock-on))
-        (hash-remove! locked-projects name))
-      (define unlocked (eq? (hash-ref! locked-projects name thread-to-lock-on) thread-to-lock-on))
-      (when unlocked
-        (file-or-directory-modify-seconds (build-project-path name)
-                                          (current-seconds)))
-      unlocked)))
-
-;; (force-lock-project name)
-;; Forcibly locks a project, even if it is already locked
-;;
-;; Arguments:
-;;  name - Name of the project.
-;;  thread-to-lock-on - Thread to lock on.
-;;
-;; Raises:
-;;  exn:project if the project does not exist.
-;; Notes:
-;;  Project is automatically unlocked if the thread dies.
-(define/contract (force-lock-project name thread-to-lock-on)
-  (-> (and/c project-name? is-project?) thread? void?)
-  (call-with-semaphore
-    lock-semaphore
-    (lambda ()
-      (file-or-directory-modify-seconds (build-project-path name)
-                                        (current-seconds))
-      (hash-set! locked-projects name thread-to-lock-on))))
-
-;; (unlock-project name)
-;; Unlocks a project.
-;;
-;; Arguments:
-;;  name - Name of the project.
-;;
-;; Raises:
-;;  exn:project if the project does not exist, or an error occurred.
-(define/contract (unlock-project name)
-  (-> (and/c project-name? is-project?) boolean?)
-  (call-with-semaphore
-    lock-semaphore
-    (lambda ()
-      (cond
-        [(hash-has-key? locked-projects name)
-          (hash-remove! locked-projects name) #t]
-        [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
-
-;; (compile-and-run-project name file question-name tests full-path test-location)
+;; (compile-and-run-project location file question-name tests test-location)
 ;; Compiles and runs a project.
 ;;
 ;; Arguments:
-;;  name - Name of project.
+;;  location - directory where the project is located
 ;;  file - Full path and name of file we are compiling from
 ;;         When called from compile-and-run-project/use-runner below, looks like
 ;;         "q1/file.rkt" or "common/file.rkt"
 ;;  question-name - Name of the question we are running
 ;;  test - Name of test, or empty to denote no test.
-;;  full-path - If #f, looks for the project in the standard project location.
-;;                 #t, assumes name is the full path to the project directory.
-;;    By default, #f.
 ;;  test-location - One of:
 ;;    'tree - Look for the tests in <directory containing file>/test.
 ;;    'flat - Look for the tests in <directory containing file>.
@@ -330,20 +173,16 @@
 ;;    pid - Resulting PID
 ;; Raises:
 ;;  exn:project if project does not exist.
-(define/contract (compile-and-run-project name file question-name tests [full-path #f] [test-location 'tree])
-  (->* (path-string? (or/c #f path-string?) string? (listof path-string?))
-       (boolean? (or/c path-string? 'tree 'flat 'current-directory))
-       (values boolean? hash?))
-  (when (or (and (not full-path) (not (is-project? name)))
-            (and full-path (not (directory-exists? name))))
-    (raise (exn:project (format "Project ~a does not exist!" name)
+(: compile-and-run-project (->* (String String String (Listof String)) ((U 'tree 'flat 'current-directory String)) (Values Boolean (HashTable Symbol JSExpr))))
+(define (compile-and-run-project location file question-name tests [test-location 'tree])
+  (when (not (directory-exists? location))
+    (raise (exn:project (format "Project ~a does not exist!" location)
                         (current-continuation-marks))))
 
-  (define project-base (if full-path name (build-project-path name)))
+  (define project-base location)
   (define project-base-str (path->string (path->complete-path project-base)))
-  (define project-common (if full-path
-    (build-path project-base (read-config 'common-subdirectory))
-    (check-and-build-path project-base (read-config 'common-subdirectory))))
+  (define project-common
+    (build-path project-base (read-config-string 'common-subdirectory)))
   (define project-question (build-path project-base question-name))
 
   (define project-common-list
@@ -354,7 +193,7 @@
   (define real-test-location
     (cond
       [(path-string? test-location)
-       (check-and-build-path project-base test-location)]
+       (build-path project-base test-location)]
       [else test-location]))
   ;; Figure out which language to run with
   (define lang
@@ -362,25 +201,26 @@
       ;; TODO: allow students to run .o files as well?
       ['#"rkt" 'racket]
       ['#"c" 'C]
-      [_ (error "You can only run .c or .rkt files!")]))
+      [_ (raise (exn:project "You can only run .c or .rkt files!"
+            (current-continuation-marks)))]))
   ;; Base path, and basename of the file being run
   (match-define-values (base exe _)
-    (split-path (check-and-build-path project-base file)))
+    (split-path (build-path project-base file)))
   ;; Check if we're running a file in common folder
   (define running-common-file?
-    (let ([dlst (explode-path file)])
+    (let ([dlst (cast (explode-path file) (Listof Path))])
       (string=? "common" (path->string (first dlst)))))
 
   (define (compile-c-files)
     ;; Run the compiler - save the binary to (runtime-files-path) $name-$file-binary
     ;; if everything succeeds.
     (define-values (result messages)
-      (seashell-compile-files/place (read-config 'compiler-flags)
+      (seashell-compile-files/place (read-config-strings 'compiler-flags)
                                     '("-lm")
                                     `(,project-question
                                       ,@(if (directory-exists? project-common) (list project-common) empty))
-                                    (check-and-build-path project-base file)))
-    (define output-path (check-and-build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
+                                    (build-path project-base file)))
+    (define output-path (build-path (runtime-files-path) (format "~a-~a-binary" (file-name-from-path file) (gensym))))
     (when result
       (with-output-to-file output-path
                            #:exists 'replace
@@ -395,9 +235,9 @@
       (apply append
         (hash-map
           messages
-          (lambda (key diagnostics)
+          (lambda ([key : Path] [diagnostics : (Listof Seashell-Diagnostic)])
                   (map
-                    (lambda (diagnostic)
+                    (lambda ([diagnostic : Seashell-Diagnostic])
                       (list (seashell-diagnostic-error? diagnostic)
                             (some-system-path->string (find-relative-path (simple-form-path project-base)
                                                                           (if (path-string? (seashell-diagnostic-file diagnostic))
@@ -411,20 +251,20 @@
 
   (define (flatten-racket-files)
     ;; Create a temporary directory
-    (define temp-dir (make-temporary-file "seashell-racket-temp-~a" 'directory))
+    (define temp-dir (make-temporary-file "seashell-racket-runner-temp-~a" 'directory))
     ;; Copy the common folder to the temp dir -- for backward compatibility this term
     (when (directory-exists? project-common)
-      (copy-directory/files project-common (build-path temp-dir (read-config 'common-subdirectory))))
+      (copy-directory/files project-common (build-path temp-dir (read-config-string 'common-subdirectory))))
 
     (cond [running-common-file?
            ;; Copy the files over from the question into the common folder
-           (merge-directory/files (build-path project-base question-name) (build-path temp-dir (read-config 'common-subdirectory)))
+           (merge-directory/files (build-path project-base question-name) (build-path temp-dir (read-config-string 'common-subdirectory)))
            ;; In case students want to do (require "../qX/file.txt") from their common file
-           (merge-directory/files (build-path temp-dir (read-config 'common-subdirectory))
+           (merge-directory/files (build-path temp-dir (read-config-string 'common-subdirectory))
                                   (build-path temp-dir question-name))]
           [else
            ;; Copy the files over from the question
-           (merge-directory/files base (build-path temp-dir question-name))
+           (merge-directory/files (cast base Path) (build-path temp-dir question-name))
            ;; Copy all files in the common folder to the question folder
            (when (directory-exists? project-common)
              (merge-directory/files project-common (build-path temp-dir question-name)))])
@@ -439,11 +279,11 @@
   (define-values (result messages target)
     (match lang
       ['C (compile-c-files)]
-      ['racket (values #t '() (check-and-build-path racket-target-dir exe))]))
+      ['racket (values #t '() (build-path racket-target-dir exe))]))
 
   (cond
     [(and result (empty? tests))
-      (define pid (run-program target base project-base-str lang #f real-test-location))
+      (define pid (run-program target (cast base Path) project-base-str lang #f real-test-location))
       (thread
         (lambda ()
           (sync (program-wait-evt pid))
@@ -452,10 +292,9 @@
             ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
       (values #t `#hash((pid . ,pid) (messages . ,messages) (status . "running")))]
     [result
-      (eprintf "about to test\n")
       (define pids (map
-                     (lambda (test)
-                       (run-program target base project-base-str lang test real-test-location))
+                     (lambda ([test : String])
+                       (run-program target (cast base Path) project-base-str lang test real-test-location))
                      tests))
       (thread
         (lambda ()
@@ -469,140 +308,161 @@
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 
-
-;; (compile-and-run-project/use-runner name tests)
-;; is a wrapper around compile-and-run-project, supplying the file
-;; from the project settings file.
+;; (compile-and-run-project/db pid question tests)
+;; Exports the given project, then compiles and runs it with compile-and-run-project.
+;; Runner file is determined by the project settings in the database.
 ;;
-;; Arguments:
-;;  name: Name of project (eg. "A10")
-;;  question: Name of the question (eg. "q1")
-;;  tests: Tests for the project.
-(define/contract (compile-and-run-project/use-runner name question tests)
-  (-> project-name? string? (listof path-string?)
-      (values boolean?
-              hash?))
-  (define file-to-run (get-file-to-run name question))
-  (if (string=? file-to-run "")
-    (raise (exn:project (format "Question \"~a\" does not have a runner file." question)
-                        (current-continuation-marks)))
-    (compile-and-run-project name file-to-run question tests #f (build-path question (read-config 'tests-subdirectory)))))
-
-
-;; (export-project name) -> bytes?
-;; Exports a project to a ZIP file.
-;;
-;; Arguments:
-;;  name - Name of project.
+;; Args:
+;;  pid - project id we are running
+;;  question - question name we are running
+;;  tests - list of the names of tests to run (not suffixed with .in/.expect)
 ;; Returns:
-;;  zip - ZIP file as a bytestring.
-(define/contract (export-project name)
-  (-> project-name?
-      bytes?)
-  (when (not (is-project? name))
-    (raise (exn:project (format "Project ~a does not exist!" name)
-                        (current-continuation-marks))))
-  (parameterize
-    ([current-directory (project-base-path)])
-    (define output-port (open-output-bytes))
-    (parameterize
-      ([current-output-port output-port])
-      (zip->output (pathlist-closure (list name))))
-    (get-output-bytes output-port)))
+;;  Same as compile-and-run-project
+(: compile-and-run-project/db (-> String String (Listof String) (Values Boolean (HashTable Symbol JSExpr))))
+(define (compile-and-run-project/db pid question tests)
+  (define tmpdir (make-temporary-file "seashell-compile-tmp-~a" 'directory))
+  (match-define (cons res hsh) (dynamic-wind
+    void
+    (thunk (define run-file (call-with-read-transaction (thunk
+        (define proj (select-id "projects" pid))
+        (unless proj (raise (exn:fail (format "Project with id ~a does not exist." pid)
+                                      (current-continuation-marks))))
+        (define name (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'name) String))
+        (export-project pid #f tmpdir)
+        (hash-ref (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol String))
+              (string->symbol (string-append question "_runner_file"))))))
+      (define path (build-path tmpdir run-file))
+      (define-values (res hsh)
+        (compile-and-run-project (path->string tmpdir) run-file question tests))
+      (when res
+        (define pids (cast (hash-ref hsh 'pids
+                                     (thunk (list (cast (hash-ref hsh 'pid) Integer))))
+                           (Listof Integer)))
+        ;; Wait until the program finishes to kill test.
+        (thread
+          (lambda ()
+            (let loop ([evts (map program-wait-evt pids)])
+              (unless (empty? evts)
+                (loop (remove (apply sync evts) evts))))
+            (delete-directory/files tmpdir))))
+      (cons res hsh))
+    void))
+  (values res hsh))
 
-;; (marmoset-submit course assn project file) -> void
-;; Submits a file to marmoset
+;; (zip-from-dir target dir)
+;; Creates a .zip from the directory provided
 ;;
-;; Arguments:
-;;   course  - Name of the course, used in SQL query (i.e. "CS136")
-;;   assn    - Name of the assignment/project in marmoset
-;;   project - Name of the project (of the file to be submitted) in seashell
-;;   subdirectory - Name of subdirectory/question to submit, or #f
-;;                  to submit everything.
-(define/contract (marmoset-submit course assn project subdirectory)
-  (-> string? string? (and/c project-name? is-project?) (or/c #f path-string?) void?)
+;; Args:
+;;  target - path of .zip file to create
+;;  dir - directory we are zipping
+(: zip-from-dir (-> Path-String Path-String Void))
+(define (zip-from-dir target dir)
+  (define cur (current-directory))
+  (current-directory dir)
+  (zip (if (relative-path? target) (build-path cur target) target)
+       ".")
+  (current-directory cur))
 
+;; (export-project pid zip? target)
+;; Exports a project from the database to the filesystem
+;;
+;; Args:
+;;  pid - project ID to export
+;;  zip? - boolean, #t to export as a .zip, #f to export as a directory
+;;  target - path to .zip or directory to export to
+(: export-project (-> String Boolean Path-String Void))
+(define (export-project pid zip? target)
+  (call-with-read-transaction (thunk
+    (define files (select-files-for-project pid))
+    (define tmpdir (make-temporary-file "seashell-export-~a" 'directory))
+    ;; export-file will ensure that the necessary directories are created
+    ;; create all the regular files
+    ;; compile a list of flags as we go
+    (define flags (foldl (lambda ([f : JSExpr] [flags : (Listof (List String Integer))])
+        (export-file f tmpdir)
+        (define flg (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'flags) Integer))
+        (if (zero? flg)
+            flags
+            (cons (list (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'name) String) flg) flags)))
+      '()
+      (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
+              files)))
+    (define project (select-id "projects" pid))
+    (unless project
+      (raise (exn:project "The project being exported does not exist." (current-continuation-marks))))
+    (define psettings (cast (hash-ref (cast project (HashTable Symbol JSExpr)) 'settings) (HashTable Symbol JSExpr)))
+    (with-output-to-file (build-path tmpdir (read-config-path 'project-settings-filename))
+      (thunk (display (jsexpr->string (hash-set psettings 'flags flags)))))
+    (cond
+      [zip?
+        (when (file-exists? target) (delete-file target))
+        (zip-from-dir target tmpdir)
+        (delete-directory/files tmpdir)]
+      [else
+        (when (directory-exists? target) (delete-directory/files target))
+        (copy-directory/files tmpdir target)
+        (delete-directory/files tmpdir)]))))
+
+;; (export-project-name name zip? target)
+;; Exports the project with the given name from the database to the filesystem.
+;; Looks up the name in the projects table then calls export-project.
+;;
+;; Args:
+;;  name - name of project to export
+;;  zip?, target - same as export-project
+(: export-project-name (-> String Boolean String Void))
+(define (export-project-name name zip? target)
+  (call-with-read-transaction (thunk
+    (define proj (select-project-name name))
+    (export-project (cast (hash-ref (cast proj (HashTable Symbol JSExpr)) 'id) String) zip? target))))
+
+;; (export-all target)
+;; Exports all projects in the database to the filesystem.
+;;
+;; Args:
+;;  target - path of directory to export everything under
+(: export-all (-> String Void))
+(define (export-all target)
+  (unless (directory-exists? target)
+    (make-directory target))
+  (define projects (select-projects))
+  (map (lambda ([p : JSExpr])
+    (export-project (cast (hash-ref (cast p (HashTable Symbol JSExpr)) 'id) String)
+      #f (path->string (build-path target (cast (hash-ref (cast p (HashTable Symbol JSExpr)) 'name) String)))))
+    projects)
+  (void))
+
+;; (marmoset-submit course assn pid question)
+;; Submits a question to Marmoset.
+;;
+;; Args:
+;;  course - name of the course, used in SQL query (i.e. "CS136")
+;;  assn - name of the assignment/project in marmoset
+;;  pid - project ID
+;;  question - name of question to submit
+(: marmoset-submit (-> String String String (U False String) Void))
+(define (marmoset-submit course assn pid question)
+  (: tmpzip (U False Path))
   (define tmpzip #f)
-  (define tmpdir #f)
-
   (dynamic-wind
     (lambda ()
-      (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a"))
-      (set! tmpdir (make-temporary-file "seashell-marmoset-build-~a"
-                                         'directory)))
+      (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a")))
     (lambda ()
-      (cond
-        ;; Two cases - either we're submitting a subdirectory...
-        [subdirectory
-          ;; Here's what we do to ensure correct linkage.
-          ;;
-          ;; common/filesA*                 filesA
-          ;; question/filesB*          -->  filesB
-          ;; question/tests/tests*          tests/
-
-          ;; TODO what to do with duplicate file names in common/ and in question/?
-          ;; Right now we toss an exception.
-          (define project-dir
-            (build-project-path project))
-          (define question-dir
-            (check-and-build-path project-dir subdirectory))
-          (define common-dir
-            (build-path project-dir (read-config 'common-subdirectory)))
-          (parameterize ([current-directory tmpdir])
-            (define (copy-from! base include-hidden [dest #f])
-              (fold-files
-                (lambda (path type _)
-                  (define file (last (explode-path path)))
-                  (cond
-                    [(equal? path base) (values #t #t)]
-                    ;; do not submit hidden files to Marmoset
-                    [(and (not include-hidden) (string-prefix? (path->string file) "."))
-                      (values #t #t)]
-                    [else
-                      (match
-                        type
-                        ['dir
-                         (make-directory
-                           (find-relative-path base path))
-                         (values #t #t)]
-                        ['file
-                         (copy-file path
-                                    (if dest (build-path dest file)
-                                             (find-relative-path base path)))
-                         (values #t #t)]
-                        [_ (values #t #t)])]))
-                #t
-                base))
-            
-            (copy-from! question-dir #f)
-            (when (directory-exists? common-dir)
-              (define compath (check-and-build-path tmpdir "common"))
-              (make-directory compath)
-              (copy-from! common-dir #f compath))
-            (with-output-to-file
-              tmpzip
-              (lambda () (zip->output (pathlist-closure (directory-list))))
-              #:exists 'truncate))]
-        ;; Or we're submitting the entire project.
-        [else
-          (with-output-to-file
-            tmpzip
-            (lambda () (write-bytes (export-project project)))
-            #:exists 'truncate)])
+      (export-project pid #t (assert tmpzip))
 
       ;; Launch the submit process.
       (define-values (proc out in err)
-        (subprocess #f #f #f (read-config 'submit-tool) course assn tmpzip))
+        (subprocess #f #f #f (read-config-string 'submit-tool) course assn (assert tmpzip)))
 
       ;; Wait until it's done.
       (subprocess-wait proc)
       (define stderr-output (port->string err))
       (define stdout-output (port->string out))
-      (define exit-status (subprocess-status proc))
+      (define exit-status (cast (subprocess-status proc) Integer))
       (close-output-port in)
       (close-input-port out)
       (close-input-port err)
-      
+
       ;; Report errors
       (unless (zero? exit-status)
         (raise (exn:project (format "Could not submit project - marmoset_submit returned ~a: (~a) (~a)"
@@ -610,20 +470,26 @@
                                     stderr-output stdout-output)
                             (current-continuation-marks)))))
     (lambda ()
-      (delete-directory/files tmpzip #:must-exist? #f)
-      (delete-directory/files tmpdir #:must-exist? #f))))
+      (delete-directory/files (assert tmpzip) #:must-exist? #f))))
 
-;; (marmoset-test-results project)
-(define/contract (marmoset-test-results course project type)
-  (-> string? string? (or/c 'public 'secret) string?)
-
+;; (marmoset-test-results course project type)
+;; Retrieves the results for the given project from Marmoset.
+;;
+;; Args:
+;;  course - name of course in Marmoset
+;;  project - name of Marmoset project
+;;  type - 'public or 'secret tests
+;; Returns:
+;;  JSON string containing the Marmoset results
+(: marmoset-test-results (-> String String (U 'public 'secret) String))
+(define (marmoset-test-results course project type)
   ;; Run the script that gets test results
   (define-values (proc out in err)
-    (subprocess #f #f #f (read-config 'test-results-tool) (symbol->string type) project))
+    (subprocess #f #f #f (read-config-string 'test-results-tool) (symbol->string type) project))
   (subprocess-wait proc)
   (define stderr-output (port->string err))
   (define stdout-output (port->string out))
-  (define exit-status (subprocess-status proc))
+  (define exit-status (cast (subprocess-status proc) Number))
   (close-output-port in)
   (close-input-port out)
   (close-input-port err)
@@ -632,164 +498,22 @@
       (jsexpr->string (hash 'error #t 'result empty))
       stdout-output))
 
-;; (get-most-recently-used project question)
-;; Reads the most recently used information for the specified project/question.
+;; (archive-projects archive-name)
+;; Moves all existing project files into a directory called archive-name
 ;;
-;; Arguments:
-;;  project - the project to look in
-;;  question - the directory to check the information in, #f if at root.
-;; Returns:
-;;  Either the most recently used information, or #f if not set yet.
-(define/contract (get-most-recently-used project question)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) (or/c #f string?))
-  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
-  (define file (read-project-settings/key project key))
-  (define path (if file (check-and-build-path (build-project-path project) file) #f))
-  (if (and file (or (and question (file-exists? path))
-                    (and (not question) (directory-exists? path)))) file #f))
-
-;; (update-most-recently-used project question file)
-;; Updates the most recently used information for the specified question.
-;;
-;; Arguments:
-;;  project - the project to update.
-;;  question - the directory to update, or #f if at root.
-;;  file - The data to write.
-;; Returns:
-;;  Nothing.
-(define/contract (update-most-recently-used project question file)
-  (-> (and/c project-name? is-project?) (or/c #f path-string?) path-string? void?)
-  (define key (if question (string->symbol (string-append question "_most_recently_used")) 'most_recently_used))
-  (write-project-settings/key project key file))
-
-;; (archive-projects archive-name) moves all existing project files into a
-;;   directory called archive-name
-;;
-;; Params:
-;;   archive-name - name of new folder to archive to, or #f to use timestamp
-;;
-;; Returns:
-;;   Nothing
-(define/contract (archive-projects archive-name)
-  (-> (or/c #f path-string?) void?)
-  (define dir-path (check-and-build-path (read-config 'seashell) "archives"
-    (if archive-name archive-name (number->string (current-seconds)))))
-  (define arch-root (build-path (read-config 'seashell) "archives"))
-  (define proj-root (build-path (read-config 'seashell) "projects"))
+;; Args:
+;;  archive-name - name of new db file to archive to, or #f to use timestamp
+(: archive-projects (-> (U False String) Void))
+(define (archive-projects archive-name)
+  (define arch-file (build-path (read-config-string 'seashell) "archives"
+    (if archive-name archive-name (string-append (number->string (current-seconds)) ".db"))))
+  (define arch-root (build-path (read-config-string 'seashell) "archives"))
+  (define db-file (build-path (read-config-string 'seashell) (read-config-string 'database-file)))
   (unless (directory-exists? arch-root)
     (make-directory arch-root))
-  (rename-file-or-directory proj-root dir-path)
-  (make-directory proj-root))
-
-;; Lists the questions in a given project
-(define/contract (list-questions project)
-  (-> (and/c project-name? is-project?) (listof (and/c string? path-string?)))
-  (define start-path (build-project-path project))
-  (filter (lambda (q) (and (directory-exists? q) (not (equal? (build-path start-path "common") q))))
-    (directory-list (build-project-path project))))
-
-;; (read-project-settings project)
-;; Reads the project settings from the project root.
-;;
-;; For now, this fetches all of the most recently used files separately.
-;; As a result of this, most recently used data is stored redundantly
-;; in the project settings file.
-;; TODO: consolidate most recently used purely as a project setting
-;; 
-;; Returns:
-;;   settings - the project settings
-(define/contract (read-project-settings project)
-  (-> (and/c project-name? is-project?) hash-eq?)
-  (define filename (read-config 'project-settings-filename))
-  (cond 
-    [(file-exists? (build-path (build-project-path project) filename))
-     (define res (with-input-from-file 
-       (build-path (build-project-path project) filename) read))
-     (if (eof-object? res) (hasheq) res)]
-    [else (hasheq)]))
-
-;; (read-project-settings/key project key)
-;; Retrieves the value of a specific key in the project settings.
-;; Returns false if the key does not exist.
-(define/contract (read-project-settings/key project key)
-  (-> (and/c project-name? is-project?) symbol? (or/c #f string? number?))
-  (hash-ref (read-project-settings project) key #f))
-
-
-;; (write-project-settings project settings)
-;; Writes to the project settings in the project root.
-;;
-;; Arguments: settings, a hash of all the project settings
-;;
-;; Returns: nothing
-(define/contract (write-project-settings project settings)
-  (-> (and/c project-name? is-project?) hash-eq? void?)
-  (call-with-write-lock (thunk
-    (with-output-to-file
-      (build-path (build-project-path project) (read-config 'project-settings-filename))
-      (lambda () (write settings))
-      #:exists 'replace))))
-
-
-;; (write-project-settings/key project key val)
-;; Updates the (key, val) pair in the project settings hash.
-;; Equivalent to a hash-set.
-;; Returns: nothing
-(define/contract (write-project-settings/key project key val)
-  (-> (and/c project-name? is-project?) symbol? (or/c string? number?) void?)
-  (define old-settings (read-project-settings project)) 
-  (define new-settings 
-    (hash-set (if old-settings old-settings #hasheq())  key val))
-  (write-project-settings project new-settings))
-
-
-;; (get-file-to-run project question) attempts to read the 
-;;   runner settings file, that specifies which file to run.
-;;
-;; Params:
-;;   project - name of the project (eg. "A10")
-;;   question - basename of the question (eg. "q2")
-;;
-;; Returns:
-;;   A string indicating the file to run
-(define/contract (get-file-to-run project question)
-  (-> (and/c project-name? is-project?) path-string? (or/c path-string? ""))
-  (define file-to-run
-    (read-project-settings/key project
-              (string->symbol (string-append question "_runner_file"))))
-  (cond 
-    [file-to-run
-      (if (not (file-exists? (build-path (build-project-path project)
-                                          file-to-run)))
-        (raise (exn:project (format "File ~a does not exist." file-to-run)
-                            (current-continuation-marks)))
-        file-to-run)]
-    [else 
-      (raise (exn:project 
-               (format "Question \"~a\" does not have a runner file." question)
-               (current-continuation-marks)))]))
-
-  
-;; (set-file-to-run project question folder file) writes to the question
-;;   settings file, specifying which file to run.
-;; 
-;; Params:
-;;   project - the path of the project
-;;   question - the basename of the question (eg. "q2")
-;;   folder - the basename of the folder of the file (eg. "q2")
-;;            used to prevent people from setting a test as a runner
-;;   file - the basename of the file to run (eg. "main.c")
-;;
-;; Returns:
-;;   Nothing
-(define/contract (set-file-to-run project question folder file)
-  (-> (and/c project-name? is-project?) path-string? path-string? path-string? void)
-  (if (string=? folder (read-config 'tests-subdirectory))
-    (raise (exn:project (format "You cannot set a runner file in the ~a folder." folder) 
-                        (current-continuation-marks)))
-    (write-project-settings/key project
-                                (string->symbol (string-append question "_runner_file"))
-                                (path->string (build-path (if (string=? folder (read-config 'common-subdirectory))
-                                                              (read-config 'common-subdirectory)
-                                                              question)
-                                                          file)))))
+  (call-with-write-transaction (thunk
+    ;; copy the current database
+    (backup-database (path->string arch-file))
+    (logf 'info (format "Archived database to ~a" arch-file))
+    ;; delete everything from the database
+    (delete-everything))))

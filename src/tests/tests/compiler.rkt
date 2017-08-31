@@ -8,25 +8,29 @@
          seashell/seashell-config)
 
 (define (create-project-with-contents-and-run contents)
-  (when (is-project? "foo")
-    (delete-project "foo"))
-  (new-project "foo")
-  (make-directory (check-and-build-path (build-project-path "foo") "q1"))
-  (with-output-to-file (check-and-build-path (build-project-path "foo") "q1" "test.c")
-    (thunk (display contents)))
-  (compile-and-run-project "foo" "q1/test.c" "q1" '()))
-
+  (define tmpdir #f)
+  (dynamic-wind
+    (thunk (set! tmpdir (make-temporary-file "seashell-test-proejct-~a" 'directory)))
+    (thunk
+      (make-directory (build-path tmpdir "q1"))
+      (with-output-to-file (build-path tmpdir "q1" "test.c")
+        (thunk (write-string contents)))
+      (define-values (succ hsh) (compile-and-run-project (path->string tmpdir) "q1/test.c" "q1" '()))
+      (when succ (sync (program-wait-evt (hash-ref hsh 'pid))))
+      (values succ hsh))
+    (thunk (delete-directory/files tmpdir))))
 
 (define/provide-test-suite compiler-suite
   (test-suite "Compiler Tests"
 
     (test-case "ok-print-Hello."
       (define-values (success hsh) (create-project-with-contents-and-run 
-        "#include <stdio.h>\nint main() {\nprintf(\"Hello.\");\n}\n"))
+        "#include <stdio.h>\nint main() {\nprintf(\"Hello.\\n\");\n}\n"))
       (check-true success)
       (define pid (hash-ref hsh 'pid))
       (sync (program-wait-evt pid))
-      (check string=? (port->string (program-stdout pid)) "Hello."))
+      (eprintf ">>> ~a~n" (port->string (program-stderr pid)))
+      (check string=? (port->string (program-stdout pid)) "Hello.\r\n"))
 
     (test-case "ok-shutdown-compiler"
       (seashell-compile-place/shutdown)
@@ -84,6 +88,4 @@ int main() {
 EOF
         ))
       (check-false res))
-
-    (delete-project "foo")
     ))

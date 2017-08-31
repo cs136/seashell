@@ -112,6 +112,10 @@
 #error "Unsupported version of clang."
 #endif
 
+#ifndef NDEBUG
+#define NDEBUG
+#endif
+
 /** Data structure for compiler diagnostic messages.
  * Opaque to Racket - C accessor functions described below.
  */
@@ -1264,8 +1268,9 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
       compiler->source_paths.push_back(*src);
     }
   }
+#ifndef NDEBUG
   print_sources(compiler);
-
+#endif
   /* Success. */
   return 0;
   #undef PUSH_DIAGNOSTIC
