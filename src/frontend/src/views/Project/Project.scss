@@ -20,7 +20,7 @@
 
 .splashContainer{
     max-width:800px;
-    margin:2em auto;
+    margin:1em auto;
     padding:0 2em;
 }
 
@@ -230,4 +230,22 @@
     .editorContainer.rightToggle>div:first-child{
         display:none;
     }
+}
+
+.spinningImage {
+    -webkit-animation:spin 1.5s linear infinite;
+    -moz-animation:spin 1.5s linear infinite;
+    animation:spin 1.5s linear infinite;
+}
+@-moz-keyframes spin {
+    from { -moz-transform: rotate(0deg); }
+    to { -moz-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+    from {transform:rotate(0deg);}
+    to {transform:rotate(360deg);}
 }
