@@ -421,7 +421,7 @@
 ;;
 ;; Args:
 ;;  target - path of directory to export everything under
-(: export-all (-> String Void))
+(: export-all (-> Path-String Void))
 (define (export-all target)
   (unless (directory-exists? target)
     (make-directory target))

@@ -24,9 +24,9 @@
     "dexie-syncable": "https://www.student.cs.uwaterloo.ca/~cs136/Dexie-Syncable-1.0.0-beta3.patched.tar.gz",
     "file-saver": "^1.3.3",
     "js-cookie": "^2.1.3",
-    "moment": "^2.18.1",
     "jszip": "^3.1.3",
     "md5": "^2.2.1",
+    "moment": "^2.18.1",
     "monaco-editor": "~0.10.0",
     "mousetrap": "^1.6.0",
     "node-webcrypto-ossl": "^1.0.20",
@@ -48,6 +48,7 @@
     "redux-socket.io": "^1.3.1",
     "redux-thunk": "^2.1.0",
     "seashell-clang-js": "https://bintray.com/cs136/seashell-clang-js/download_file?file_path=seashell-clang-js-B43.tar.gz",
+    "typeface-overpass": "0.0.35",
     "webcrypto-shim": "^0.1.1",
     "ws": "^2.2.1",
     "xterm": "^2.3.2"
