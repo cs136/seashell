@@ -57,7 +57,7 @@ class Actions extends React.Component<ActionsProps & actionsInterface, ActionsSt
       this.currentFile &&
       this.props.filename === this.currentFile.name &&
       this.versions &&
-        <MenuItem text="Old Versions">
+        <MenuItem className={styles.scrollableSubmenu} text="Old Versions">
           {this.versions.map((cnts: S.Contents) =>
             (<MenuItem key={cnts.id} text={dateString(cnts.time)} onClick={() => {
               this.props.dispatch.file.revertFile(
