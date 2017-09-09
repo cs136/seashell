@@ -16,7 +16,8 @@ import {getDispatch} from "./actions";
 import {DebugLogs} from "./helpers/DebugLogs";
 import {composeWithDevTools} from "redux-devtools-extension";
 import * as Raven from "raven-js";
-require("imports-loader?this=>window!webcrypto-shim"); // inject webcrypto polyfill into window scope
+require("typeface-overpass");
+require("imports-loader?this=>window!webcrypto-shim"); // Inject webcrypto polyfill into window scope
 
 DebugLogs.enable();
 console.log(`Seashell ${VERSION} starting up in ${DEBUG ? "debug" : "release"} mode for ${DOMAIN}.`);
