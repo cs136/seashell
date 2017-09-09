@@ -177,11 +177,13 @@
 
 (define (garbage-collection-loop)
   (define hour (* 60 60))
+  (logf 'info "Compacting database.")
   (seashell-collect-garbage)
-  (sleep hour)
+  (logf 'info "Database compaction completed.")
   (logf 'info "Exporting all projects.")
   (export-all (read-config 'export-path))
   (logf 'info "Export of all projects completed.")
+  (sleep hour)
   (garbage-collection-loop))
 
 ;; make-udp-ping-listener our-port -> (values integer? custodian?)

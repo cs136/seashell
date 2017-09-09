@@ -27,7 +27,10 @@ class SignIn extends React.Component<SignInProps&actionsInterface, SignInState> 
     render() {
         const projects = this.props.appState.projects;
         return (<div className={styles.container}>
-                <img src={logo} className={styles.logo}/><h5>Sign in to Seashell</h5>
+                <img src={logo} className={styles.logo}/>
+                <h6>Sign in to Seashell with your <a href="https://www.student.cs.uwaterloo.ca/password/">student.cs credentials</a> using the
+                    latest <a href="https://www.google.com/chrome/">Google Chrome</a> or <a href="https://www.mozilla.org/firefox/">Firefox</a>.
+                </h6>
                 <form className="pt-control-group pt-vertical" onSubmit={this.signin}>
                     <div className="pt-input-group pt-large">
                         <span className="pt-icon pt-icon-person"></span>

@@ -1,6 +1,7 @@
 *.o
 *.a
 *.aux
+.*.swp
 .DS_Store
 ._.DS_Store
 _build/
