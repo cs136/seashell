@@ -374,10 +374,10 @@
       [(hash-table
         ('id id)
         ('type "restoreFileFrom")
-        ('project project)
+        ('project pid)
         ('file file)
         ('template template))
-       (restore-file-from-template project file template)
+       (restore-file-from-template pid file template)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
