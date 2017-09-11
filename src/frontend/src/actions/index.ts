@@ -476,7 +476,7 @@ const mapDispatchToProps = (dispatch: Function) => {
         marmosetSubmit: (project: S.ProjectID, question: string, marmosetProject: string) => {
           return asyncAction(actions.dispatch.file.flushFileBuffer())
                  .then(() => asyncAction(webStorage().marmosetSubmit(project,
-                        marmosetProject, question)));
+                        question, marmosetProject)));
         },
         getMarmosetResults: async (marmosetProject: string) => {
           const oldLength = JSON.parse(await asyncAction(webStorage().getTestResults(marmosetProject))).result.length;
