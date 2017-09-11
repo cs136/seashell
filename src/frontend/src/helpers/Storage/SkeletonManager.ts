@@ -244,7 +244,7 @@ class SkeletonManager {
       await Promise.all(missingFiles.map(async (f: string) =>
         this.socket.sendMessage({
           type: "restoreFileFrom",
-          project: project.name,
+          project: pid,
           file: f,
           template: await this.getSkeletonZipFileURL(project.name)
         }).catch((e) => {
