@@ -116,6 +116,7 @@ export default function appStateReducer(state: appStateReducerState = {
     connected: false,
     inconsistent: false
   }, action: appStateReducerAction) {
+  console.log("===>>> appStateReducerAction <<<===", state, action);
   switch (action.type) {
     // This updates the current file if we're renaming
     // the current file or otherwise changing its name.
@@ -256,7 +257,7 @@ export default function appStateReducer(state: appStateReducerState = {
       return state;
     case appStateActions.removeFile:
       state = clone(state);
-      let removeFile = <string>action.payload;
+      let removeFile = <string>action.payload.file;
       if (state.currentProject && state.currentProject.currentQuestion) {
         /** Only update if project/question match. */
         if (state.currentProject.id === action.payload.project &&
