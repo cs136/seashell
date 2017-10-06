@@ -21,6 +21,10 @@ class List extends React.Component<actionsInterface, {}> {
   }
 
   render() {
+    if (this.props.appState.currentProject) {
+        this.project = this.props.appState.currentProject.id;
+        this.question = this.props.appState.currentProject.currentQuestion;
+    }
     return (<Menu>
         <MenuItem iconName="plus" text="New File" onClick={() => this.props.dispatch.dialog.toggleAddFile()}/>
         <MenuItem iconName="plus" text="New Test" onClick={() => this.props.dispatch.dialog.toggleAddTest()}/>
