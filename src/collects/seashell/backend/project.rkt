@@ -370,8 +370,8 @@
 ;;  pid - project ID to export
 ;;  zip? - boolean, #t to export as a .zip, #f to export as a directory
 ;;  target - path to .zip or directory to export to
-(: export-project (-> String Boolean Path-String Void))
-(define (export-project pid zip? target)
+(: export-project (->* (String Boolean Path-String) ((U String False)) Void))
+(define (export-project pid zip? target [question #f])
   (call-with-read-transaction (thunk
     (define files (select-files-for-project pid))
     (define tmpdir (make-temporary-file "seashell-export-~a" 'directory))
@@ -379,11 +379,30 @@
     ;; create all the regular files
     ;; compile a list of flags as we go
     (define flags (foldl (lambda ([f : JSExpr] [flags : (Listof (List String Integer))])
-        (export-file f tmpdir)
-        (define flg (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'flags) Integer))
-        (if (zero? flg)
-            flags
-            (cons (list (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'name) String) flg) flags)))
+        (cond [(hash? f)
+               (define name (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'name) String))
+               (cond [(false? question)
+                      ; question is false => export everything
+                      (export-file f tmpdir)
+                      (define flg (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'flags) Integer))
+                      (if (zero? flg)
+                          flags
+                          (cons (list name flg) flags))]
+                     [(and (string? question)
+                           (or (string-prefix? name (read-config-string 'common-subdirectory))
+                               (string-prefix? name (read-config-string 'tests-subdirectory))
+                               (string-prefix? name (string-append question "/"))))
+                      ; question is string => export only the question's files, common/ and tests/
+                      (if (string-prefix? name (string-append question "/"))
+                          (export-file (cast ((inst hash-set Symbol JSExpr) f 'name (string-trim name (string-append question "/") #:right? #f)) JSExpr)
+                                       tmpdir)
+                          (export-file f tmpdir))
+                      (define flg (cast (hash-ref (cast f (HashTable Symbol JSExpr)) 'flags) Integer))
+                      (if (zero? flg)
+                          flags
+                          (cons (list name flg) flags))]
+                     [else flags])]
+              [else flags])) ; end foldl's lambda function
       '()
       (filter (lambda ([x : JSExpr]) (cast (hash-ref (cast x (HashTable Symbol JSExpr)) 'contents_id) (U String False)))
               files)))
@@ -442,13 +461,14 @@
 ;;  question - name of question to submit
 (: marmoset-submit (-> String String String (U False String) Void))
 (define (marmoset-submit course assn pid question)
+  (logf 'info (format "Called (marmoset-submit ~a ~a ~a ~a)" course assn pid question))
   (: tmpzip (U False Path))
   (define tmpzip #f)
   (dynamic-wind
     (lambda ()
       (set! tmpzip (make-temporary-file "seashell-marmoset-zip-~a")))
     (lambda ()
-      (export-project pid #t (assert tmpzip))
+      (export-project pid #t (assert tmpzip) question)
 
       ;; Launch the submit process.
       (define-values (proc out in err)
