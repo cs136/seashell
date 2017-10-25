@@ -432,8 +432,29 @@ export default function appStateReducer(state: appStateReducerState = {
         // It would be nice to do all of this, but currently we don't have time.
         // TODO: properly update the UI state when the server sends changes
         // FIXME: showInfo really shouldn't be in a reducer
-        showInfo("Your Seashell instance was updated on another computer.  Open your project again to edit it.");
-        state.inconsistent = true;
+
+        let newStateInconsistent = true;
+
+        // Handle the specific type of update that happens when users delete a skeleton file,
+        // and the backend fetches the file again
+
+        if(chgs.every((change : {type:number}) => change.type === S.ChangeType.CREATE)) {
+            chgs.forEach(function (change : {table:string, obj:{name:string}}) {
+                if(change.table === "files") {
+                    if(state.currentProject && state.currentProject.currentQuestion) {
+                        state.currentProject.currentQuestion.files.push(change.obj.name);
+                        state.currentProject.currentQuestion.openFiles.push(change.obj.name);
+                    }
+                    newStateInconsistent = false;
+                }
+            });
+        }
+
+        if(newStateInconsistent) {
+            showInfo("Your Seashell instance was updated on another computer.  Open your project again to edit it.");
+        }
+        state.inconsistent = newStateInconsistent;
+
         /**
           const currentProject = state.currentProject;
           // update the current project
