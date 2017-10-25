@@ -538,7 +538,7 @@ class LocalStorage {
 
     Args:
      pid - project ID to update */
-  public updateLastUsed(pid: ProjectID): Promise<void> {
+  public updateLastUsed(pid: ProjectID): Promise<number> {
     this.debug && console.log("updateLastUsed");
     return this.db.transaction("rw", this.db.projects, () => {
       return this.db.projects.update(pid, {last_used: Date.now()});
