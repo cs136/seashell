@@ -442,8 +442,12 @@ export default function appStateReducer(state: appStateReducerState = {
             chgs.forEach(function (change : {table:string, obj:{name:string}}) {
                 if(change.table === "files") {
                     if(state.currentProject && state.currentProject.currentQuestion) {
-                        state.currentProject.currentQuestion.files.push(change.obj.name);
-                        state.currentProject.currentQuestion.openFiles.push(change.obj.name);
+                        if(state.currentProject.currentQuestion.files.indexOf(change.obj.name) === -1) {
+                            state.currentProject.currentQuestion.files.push(change.obj.name);
+                        }
+                        if(state.currentProject.currentQuestion.openFiles.indexOf(change.obj.name) === -1) {
+                            state.currentProject.currentQuestion.openFiles.push(change.obj.name);
+                        }
                     }
                     newStateInconsistent = false;
                 }

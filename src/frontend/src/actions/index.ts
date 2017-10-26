@@ -320,6 +320,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 }
               });
               try {
+                console.log("=== getFiles ====", await storage().getFiles(project));
                 return await asyncAction(webStorage().pullMissingSkeletonFiles(project));
               } catch (e) {
                 console.warn("Could not load missing skeleton files after deleting %s -- %s", filename, e);
