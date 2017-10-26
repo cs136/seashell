@@ -218,7 +218,7 @@ const mapDispatchToProps = (dispatch: Function) => {
                 if (flusher) {
                   clearTimeout(flusher);
                 }
-                if (target && unwrittenContent) {
+                if (target && typeof unwrittenContent === 'string') {
                   asyncAction(storage().writeFile(target, unwrittenContent))
                     .then((fid: S.FileID) => {
                       dispatch({
