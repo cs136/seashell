@@ -49,16 +49,13 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
         cursorBlinking: "phase",
         cursorStyle: "line",
         parameterHints: true,
-        readOnly: false,
         roundedSelection: true,
         scrollBeyondLastLine: false,
         scrollbar: {
             vertical: "visible",
         },
         selectOnLineNumbers: true,
-        wrappingColumn: 0,
-        fontFamily: this.props.settings.font + ", monospace",
-        fontSize: this.props.settings.fontSize
+        wrappingColumn: 0
     };
     this.setState(merge(this.state, {editorLastUpdated: this.props.settings.updated}));
     if (this.editor) {
@@ -150,6 +147,13 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
         return d.file === currentFile.name;
       });
       const lang = currentFile.extension() === "rkt" ? "racket" : "cpp";
+      const isBinary = currentFile.extension() === "ll";
+      const fontOptions = isBinary ?
+        { lineNumbers: "off", fontSize: 25, fontFamily: "Arial" } :
+        { lineNumbers: "on",
+          fontSize: this.props.settings.fontSize,
+          fontFamily: this.props.settings.font + ", monospace"};
+
       return (<div className={styles.filePanel}>
         <div className = {styles.editorContainer + " " + this.props.className}
              ref = {(elem: HTMLElement | null) => { this.editorContainer = elem; }}>
@@ -157,16 +161,17 @@ class Display extends React.Component<DisplayProps & actionsInterface, DisplaySt
             dirty = {!!currentFile.unwrittenContent}
             value = {(currentFile.contents === false ||
                      currentFile.contents === undefined) ? "Unavailable in browser!" :
-                     currentFile.contents.contents}
+                     (isBinary ? "This is a binary file!" :
+                      currentFile.contents.contents)}
             theme = {this.props.settings.theme ? "vs" : "vs-dark"}
             language = {lang}
             diags = {currentQuestion.diags}
             onChange = {this.onChange.bind(this)}
             editorDidMount = {this.editorDidMount.bind(this)} requireConfig={loaderOptions}
-            readOnly = {!currentFile.contents || currentFile.hasFlag(FlagMask.READONLY)}
+            readOnly = {!currentFile.contents || isBinary || currentFile.hasFlag(FlagMask.READONLY)}
             options = {{lineNumbersMinChars: 2,
                         minimap: {enabled: false},
-                        rulers: [0]}} />
+                        rulers: [0], ...fontOptions}} />
           <Draggable axis="x" handle="div" onDrag={this.handleDrag} onStop={this.stopDrag}>
             <div ref = {(elem: HTMLElement | null) => { this.resizeHandle = elem; }}
               className = {styles.resizeHandle} />
