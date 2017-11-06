@@ -58,6 +58,9 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     this.decorations = [];
   }
   public componentDidUpdate(previous: MonacoEditorProps) {
+    if(this.editor) {
+        this.editor.updateOptions({readOnly: this.props.readOnly, ...this.props.options});
+    }
     // Update value if and only if it changed from previous prop OR
     // if dirty goes from true => false.
     if (this.props.value !== previous.value ||
@@ -204,12 +207,13 @@ export default class MonacoEditor extends React.PureComponent<MonacoEditorProps,
     monaco.languages.setMonarchTokensProvider("racket", Monarch.getRacketTokenizer());
 
     const value = this.props.value !== null ? this.props.value : this.props.defaultValue;
-    const { language, theme, options } = this.props;
+    const { language, theme, options, readOnly } = this.props;
 
     this.editor = monaco.editor.create(container, {
       value,
       language,
       theme,
+      readOnly,
       ...options,
     });
 
