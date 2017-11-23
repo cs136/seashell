@@ -19,13 +19,19 @@
         <link href="//fonts.googleapis.com/css?family=Unkempt:700" rel="stylesheet" type="text/css">
         <div id="seashell-logo" class="col-md-6 col-xs-6 text-left" style="padding: 0">
           <span style="font-family: 'Unkempt', cursive; font-size: 25px; color: #888">seashell</span>
-          <span style="font-size: 14px; color: black; font-variant: small-caps; color: #888; position: absolute">beta</span>
+          <span style="font-size: 14px; color: black; font-variant: small-caps; color: #888; position: absolute">3.0.4</span>
         </div>
       </div>
     </header>
     <div class="container" ng-controller="LoginController as login">
       <form class="form-signin" role="form" ng-submit="login.login()">
-        <h2 class="form-signing-heading">Please sign in with your student.cs credentials</h2>
+        <h2 class="form-signing-heading">Please sign in with your <a href="https://www.student.cs.uwaterloo.ca/password/">student.cs</a> credentials</h2>
+        <div>Supported browsers:
+          <ul>
+            <li><a href="https://www.mozilla.org/firefox/">Firefox 54 - 57</a></li>
+            <li><a href="https://www.google.com/chrome/">Google Chrome 60 - 62</a></li>
+          </ul>
+        </div>
 
         <input type="text" class="form-control" placeholder="Username" ng-model="login.user" id="user"
           ng-disabled="login.busy" />
@@ -38,7 +44,10 @@
           Logging in...
         </div>
         <div class="alert alert-danger" ng-show="login.error" ng-cloak>
-          {{login.error}}
+          Error message: <b>{{(login.error.responseJSON.error.message === "Invalid credentials." ||
+                               login.error.responseJSON.error.message === "Bad password provided.")
+                               ? "Invalid Username and/or Password" : login.error.responseJSON.error.message}}</b><br>
+          Extra info: {{login.error.status}} {{login.error.statusText}}
         </div>
       </form>
     </div>

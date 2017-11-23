@@ -111,7 +111,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             "Do you wish to logout?  Any unsaved data will be lost.")
             .then(function () {
               $cookies.remove(SEASHELL_CREDS_COOKIE);
-              $window.top.location = "https://cas.uwaterloo.ca/logout";
+              $window.top.location = "https://www.student.cs.uwaterloo.ca/~cs136/seashell-old/"; // "https://cas.uwaterloo.ca/logout";
             });
         };
         // Settings
