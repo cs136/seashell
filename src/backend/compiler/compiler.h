@@ -36,6 +36,7 @@ std::string seashell_compiler_get_diagnostic_message(struct seashell_compiler* c
 std::string seashell_compiler_object_arch(struct seashell_compiler* compiler);
 std::string seashell_compiler_object_os (struct seashell_compiler* compiler);
 std::string seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
+std::string seashell_compiler_get_dep_paths(struct seashell_compiler *compiler);
 #else
 extern "C" const char* seashell_clang_version();
 extern "C" void seashell_compiler_set_main_file(struct seashell_compiler *compiler, const char *file);
@@ -49,6 +50,7 @@ extern "C" const char * seashell_compiler_get_diagnostic_message (struct seashel
 extern "C" const char* seashell_compiler_object_arch (struct seashell_compiler* compiler);
 extern "C" const char* seashell_compiler_object_os (struct seashell_compiler* compiler);
 extern "C" const char *seashell_compiler_get_object_dep(struct seashell_compiler *compiler, int k);
+extern "C" const char *seashell_compiler_get_dep_paths(struct seashell_compiler *compiler);
 #endif
 extern "C" struct seashell_compiler* seashell_compiler_make (void);
 extern "C" void seashell_compiler_free (struct seashell_compiler* compiler);
