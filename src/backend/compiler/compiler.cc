@@ -163,6 +163,9 @@ struct seashell_compiler {
   /** Object files discovered by dependency resolution */
   std::vector<std::string> object_paths;
 
+  /** All source_paths and object_paths joined into one string */
+  std::string dep_paths;
+
   /** Module compilation messages. */
   std::vector<seashell_diag> messages;
 
@@ -541,6 +544,27 @@ extern "C" const char * seashell_compiler_get_object (struct seashell_compiler* 
 #else
 std::string seashell_compiler_get_object(struct seashell_compiler* compiler) {
   return std::string(compiler->output_object.begin(), compiler->output_object.end());
+#endif
+}
+
+#ifndef __EMSCRIPTEN__
+extern "C" const char *seashell_compiler_get_dep_paths(struct seashell_compiler *compiler) {
+#else
+std::string seashell_compiler_get_dep_paths(struct seashell_compiler *compiler) {
+#endif
+  compiler->dep_paths = "";
+  for(int i=0; i<compiler->source_paths.size(); i++) {
+    compiler->dep_paths += compiler->source_paths[i];
+    compiler->dep_paths += " ";
+  }
+  for(int i=0; i<compiler->object_paths.size(); i++) {
+    compiler->dep_paths += compiler->object_paths[i];
+    compiler->dep_paths += " ";
+  }
+#ifndef __EMSCRIPTEN__
+  return compiler->dep_paths.c_str();
+#else
+  return compiler->dep_paths;
 #endif
 }
 
