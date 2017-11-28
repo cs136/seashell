@@ -59,4 +59,4 @@ class AddProjectWindow extends React.Component<AddProjectWindowProps&actionsInte
   }
 }
 
-export default withRouter<{closefunc: Function}>(map<AddProjectWindowProps>(AddProjectWindow));
+export default withRouter<AddProjectWindowProps>(map<AddProjectWindowProps>(AddProjectWindow));

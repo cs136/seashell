@@ -40,6 +40,7 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
+           seashell_compiler_get_dep_paths
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os
@@ -99,6 +100,8 @@
                           (memcpy result address size)
                           result]
                         [else #f])))))
+  (define-clang seashell_compiler_get_dep_paths
+                (_fun _seashell_compiler-ptr -> _string/utf-8))
   (define-clang seashell_compiler_get_object_dep_count
                 (_fun _seashell_compiler-ptr -> _int))
   (define-clang seashell_compiler_get_object_dep
@@ -122,6 +125,7 @@
                [seashell_compiler_get_diagnostic_column (-> Seashell-Compiler-Ptr Nonnegative-Integer Index)]
                [seashell_compiler_get_diagnostic_file (-> Seashell-Compiler-Ptr Nonnegative-Integer String)]
                [seashell_compiler_get_diagnostic_message (-> Seashell-Compiler-Ptr Nonnegative-Integer String)]
+               [seashell_compiler_get_dep_paths (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_run (-> Seashell-Compiler-Ptr Boolean Fixnum)]
                [seashell_compiler_object_arch (-> Seashell-Compiler-Ptr String)]
                [seashell_compiler_object_os (-> Seashell-Compiler-Ptr String)]
@@ -146,6 +150,7 @@
            seashell_compiler_get_diagnostic_message
            seashell_compiler_run
            seashell_compiler_get_object
+           seashell_compiler_get_dep_paths
            seashell_clang_version
            seashell_compiler_object_arch
            seashell_compiler_object_os

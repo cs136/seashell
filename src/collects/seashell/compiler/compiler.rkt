@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/ffi
+(require seashell/compiler/ffi seashell/log
          (submod seashell/seashell-config typed))
 (require/typed racket/base
                [file-position (case-lambda
@@ -161,6 +161,40 @@
         (define linker-res (subprocess-status (sync linker)))
         ;; Remove the object file.
         (delete-file object-file)
+
+        ;;-------------------------------------------------------
+        ;;
+        ;; yc2lee's hack to use clang executable instead of
+        ;; custom Seashell clang/llvm wrapper
+        ;;
+
+        (define clang-binary-path (build-path SEASHELL_INSTALL_PATH "bin" "clang-3.9"))
+        (when (and (equal? 0 linker-res)
+                   (file-exists? clang-binary-path)
+                   (member 'execute (file-or-directory-permissions clang-binary-path)))
+          (define clang-binary-arguments
+            `("-std=c99"
+              "-fsanitize=address" "-fno-omit-frame-pointer" "-fno-common"
+              "-g" "-O0"
+              ,@(map (lambda ([dir : Path]) (string-append "-I" (path->string dir))) source-dirs)
+              "-lm"
+              "-o" ,result-file
+              ,@(string-split (seashell_compiler_get_dep_paths compiler))))
+             (logf 'info "Running clang compiler: ~a ~a" clang-binary-path clang-binary-arguments)
+             ;; Run the clang executable
+             (define-values (clang-result clang-stdout clang-stdin clang-stderr)
+               (apply subprocess #f #f #f clang-binary-path clang-binary-arguments))
+             (close-output-port clang-stdin)
+             ;; Get stdout and stderr contents
+             (logf 'info "clang compiler stdout: ~a" (port->string clang-stdout))
+             (close-input-port clang-stdout)
+             (logf 'info "clang compiler stderr: ~a" (port->string clang-stderr))
+             (close-input-port clang-stderr)
+             (define clang-binary-exit-code (subprocess-status (sync clang-result)))
+             (logf 'info "clang compiler exited with code ~a" clang-binary-exit-code))
+
+        ;;
+        ;;---------------------------------------------------
 
         ;; Read the result:
         (define linker-result

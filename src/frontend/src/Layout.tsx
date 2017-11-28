@@ -37,4 +37,4 @@ class Layout extends React.Component<LayoutProps & actionsInterface, LayoutState
   }
 }
 
-export default withRouter<{}>(map<LayoutProps>(Layout));
+export default withRouter<LayoutProps>(map<LayoutProps>(Layout));
