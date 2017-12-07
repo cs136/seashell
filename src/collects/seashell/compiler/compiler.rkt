@@ -168,7 +168,7 @@
         ;; custom Seashell clang/llvm wrapper
         ;;
 
-        (define clang-binary-path (build-path SEASHELL_INSTALL_PATH "bin" "clang-3.9"))
+        (define clang-binary-path (read-config-path 'clang-binary-path))
         (when (and (equal? 0 linker-res)
                    (file-exists? clang-binary-path)
                    (member 'execute (file-or-directory-permissions clang-binary-path)))
