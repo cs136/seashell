@@ -195,7 +195,12 @@
                                             ;; "-analyzer-checker=core.CallAndMessage,core.StackAddressEscape,core.UndefinedBinaryOperatorResult,unix"))
                                             ))
       ;; Path to the clang binary to use to compile the student's code
-      (cons 'clang-binary-path             (build-path SEASHELL_INSTALL_PATH "bin" "clang-3.9"))
+      (cons 'clang-binary-path             (let
+                                            ([install-path (build-path SEASHELL_INSTALL_PATH "bin" "clang-3.9")]
+                                             [build-path (build-path SEASHELL_BUILD_PATH "lib/llvm/bin/clang-3.9")])
+                                            (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
+                                              build-path
+                                              install-path)))
       ;; Depth of recursive .h search when compiling
       (cons 'header-search-depth           5)
       ;; Number of seconds a program can run without I/O before timing out

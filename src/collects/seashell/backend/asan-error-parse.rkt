@@ -146,6 +146,21 @@
                   #f ; global extra info
                   lines-left))))
 
+;; If the student does stack overflow caused by too much recursion, ASAN prints out a section containing the
+;; regexp below followed by a frame list
+(define stack-overflow-recursion-parser : SectionParser
+  (match-and-process
+   #px"^=+\\d+=+ERROR: AddressSanitizer: stack-overflow on address (0x[[:xdigit:]]+)"
+   (lambda ([error-type : String] [lines : (Listof String)] [source-dir : Path-String] [match-result : (Listof (U False String))])
+     (define mres (cast match-result (Listof String)))
+     (define extra-info (jsexpr `((description_of_this_framelist "Stack overflow framelist")
+                                  (address_of_memory_accessed ,(second mres)))))
+     (define-values (framelist lines-left) (try-parse-stack-frame lines source-dir))
+     (SectionData "stack-overflow" ; error type
+                  (jsexpr `((framelist ,framelist) (misc ,extra-info)))
+                  #f ; global extra info
+                  lines-left))))
+
 ;; When a stack overflow occurs, ASAN also seems to print out some information
 ;; about the function itself
 (define function-info : SectionParser
@@ -291,7 +306,7 @@
         (match-type #px"^=+\\d+=+ERROR: LeakSanitizer: detected memory leaks" "memory-leak")
         segfault-parser
         memory-leak-parser
-        stack-overflow-parser function-info array-parser
+        stack-overflow-parser stack-overflow-recursion-parser function-info array-parser
         heap-address-details global-address-details
         double-free double-free-first-free allocation-details
         free-non-malloc
