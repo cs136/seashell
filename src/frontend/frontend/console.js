@@ -197,6 +197,10 @@ angular.module('frontend-app')
       if(res.result==="passed") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
+        if(!!res.stderr) {
+          self.write('Produced errors (stderr):\n');
+          self.write(res.stderr);
+        }
       }
       else if(res.result==="failed") {
         self.write('----------------------------------\n');
