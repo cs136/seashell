@@ -1109,7 +1109,7 @@ public:
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
         if(result.length() >= 2 && result[result.length()-1] == 'c' && result[result.length()-2] == '.') {
           if(res.second) {
-            fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
+            //fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
             _wl.push_back(result);
           }
         }
