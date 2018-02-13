@@ -123,10 +123,9 @@ HERE
 )
       (define-values (exit-code stdout stderr)
         (cli-run "main.c" `(("main.c" ,main-contents))))
-      (check-equal? "" stderr))
-      ;(check-equal? exit-code 0)
-      ;(check-equal? stdout "Hello World 1 2 3")
-      ;(check-true (string-contains? stderr "Program finished with exit code 123.")))
+      (check-equal? exit-code 0)
+      (check-equal? stdout "Hello World 1 2 3")
+      (check-true (string-contains? stderr "Program finished with exit code 123.")))
 
     (test-case "[run] Compile and run a program using common folder"
       (define main.c #<<HERE
@@ -149,10 +148,9 @@ HERE
       (define-values (exit-code stdout stderr)
         (cli-run "main.c" `(("main.c" ,main.c) ("sqr.h" ,sqr.h) ("sqr.c" ,sqr.c))
                  `(("cube.c" ,cube.c) ("cube.h" ,cube.h))))
-      (check-equal? "" stderr))
-      ;(check-equal? exit-code 0)
-      ;(check-equal? stdout "sqr(5) = 25\ncube(5) = 125\n")
-      ;(check-true (string-contains? stderr "Program finished with exit code 42.")))
+      (check-equal? exit-code 0)
+      (check-equal? stdout "sqr(5) = 25\ncube(5) = 125\n")
+      (check-true (string-contains? stderr "Program finished with exit code 42.")))
 
     (test-case "[run] Compile and run a program that reads from stdin"
       (define main.c #<<HERE
@@ -168,18 +166,16 @@ HERE
 )
       (define-values (exit-code stdout stderr)
         (cli-run "main.c" `(("main.c" ,main.c)) '() "10 3"))
-      (check-equal? "" stderr))
-      ;(check-equal? exit-code 0)
-      ;(check-equal? stdout "10 + 3 = 13\n10 - 3 = 7\n")
-      ;(check-true (string-contains? stderr "Program finished with exit code 42.")))
+      (check-equal? exit-code 0)
+      (check-equal? stdout "10 + 3 = 13\n10 - 3 = 7\n")
+      (check-true (string-contains? stderr "Program finished with exit code 42.")))
 
     (test-case "[run] Program fails to compile"
       (define main-contents "int main() return 9;")
       (define-values (exit-code stdout stderr) (cli-run "main.c" `(("main.c" ,main-contents))))
-      (check-equal? "" stderr))
-      ;(check-equal? exit-code 1)
-      ;(check-equal? stdout "")
-      ;(check-true (string-contains? stderr "Your code did not compile (clang exit code: 1).")))
+      (check-equal? exit-code 1)
+      (check-equal? stdout "")
+      (check-true (string-contains? stderr "Your code did not compile (clang exit code: 1).")))
 
     ;; TODO: update this test to work with the new backend
     ;(test-case "Generate a .ll file and run a project with it"
