@@ -20,7 +20,6 @@
     (make-test-suite "all-tests"
       (list
         config-suite
-        asan-parser-suite
         compiler-suite
         file-suite
         project-suite
