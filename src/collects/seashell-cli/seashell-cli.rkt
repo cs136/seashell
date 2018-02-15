@@ -1,6 +1,7 @@
 #lang typed/racket
 
 (require seashell-cli/marmtest
+         seashell-cli/run
          seashell-cli/object
          seashell-cli/export
          seashell-cli/import
@@ -8,6 +9,7 @@
 
 (: tools (HashTable String (List (-> (Listof String) Void) String)))
 (define tools `#hash(("marmtest" . (,marmtest-main "Marmoset test runner."))
+                     ("run" . (,run-main "Like marmtest, but read input from keyboard and print to screen."))
                      ("object" . (,object-main "Generate object files for Seashell."))
                      ("export" . (,export-main "Export projects from a user's Seashell database."))
                      ("import" . (,import-main "Import a project into a user's Seashell database."))))

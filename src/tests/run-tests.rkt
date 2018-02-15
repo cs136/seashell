@@ -19,7 +19,6 @@
     (make-test-suite "all-tests"
       (list
         config-suite
-        asan-parser-suite
         compiler-suite
         crypto-suite
         asan-parser-suite
