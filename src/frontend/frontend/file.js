@@ -375,7 +375,9 @@ angular.module('frontend-app')
 
           if(settings.settings.editor_mode !== 'vim') {
             _.each(vim_disabled_hotkeys, function(hk) {
-              hotkeys.bindTo($scope.$parent).add(hk);
+              if($scope.$parent !== null) {
+                hotkeys.bindTo($scope.$parent).add(hk);
+              }
             });
           }
           else {
@@ -384,7 +386,9 @@ angular.module('frontend-app')
             });
           }
           _.each(main_hotkeys, function(hk) {
-            hotkeys.bindTo($scope.$parent).add(hk);
+            if($scope.$parent !== null) {
+              hotkeys.bindTo($scope.$parent).add(hk);
+            }
           });
 
           if (settings.settings.editor_mode === 'vim') {
