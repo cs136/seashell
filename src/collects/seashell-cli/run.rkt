@@ -28,6 +28,8 @@
        '("Directory of project being run"
          "File to run")))
 
+  (config-refresh!)
+
   ;; Run the Seashell custom clang/llvm wrapper so that we can get the dependency
   ;; paths. This is the only reason for running it.
   (define compiler (seashell_compiler_make))

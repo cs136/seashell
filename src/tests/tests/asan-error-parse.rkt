@@ -69,8 +69,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_my_var_size_in_bytes) "80"))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow")))
 
     (test-case "Stack Overflow Test 2"
       (define student-code #<<HERE
@@ -82,8 +81,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_carr_size_in_bytes) "30"))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow")))
 
     ;; This next test really should be an underflow, but ASAN for some reason thinks that
     ;; we're overflowing the parameter x (and it doesn't report the variable name).
@@ -118,11 +116,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow"))
-      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'array_emp_size_in_bytes))
-      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'underflow_distance_in_bytes_from_start_of_array_emp))
-      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'array_initials_size_in_bytes))
-      (check-true (hash-has-key? (hash-ref json-answer 'misc) 'underflow_distance_in_bytes_from_start_of_array_initials)))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-overflow")))
 
 ;; ---- STACK UNDERFLOW TESTS ---------------------------
     (test-case "Stack Underflow Test 1"
@@ -134,8 +128,7 @@ int main() {
 HERE
 )
       (define json-answer (compile-run-wait student-code))
-      (check-true (has-type-and-stack? json-answer "stack-buffer-underflow"))
-      (check-equal? (hash-ref (hash-ref json-answer 'misc) 'array_x_size_in_bytes) "80"))
+      (check-true (has-type-and-stack? json-answer "stack-buffer-underflow")))
 
 ;; ---- STACK USE AFTER RETURN TEST ---------------------------
     (test-case "Stack Use After Return"
