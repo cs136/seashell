@@ -123,18 +123,23 @@
             (logf 'info "Program with PID ~a quit with status ~a." pid (subprocess-status handle))
             (set-program-exit-status! pgrm (cast (subprocess-status handle) Exact-Nonnegative-Integer))
             ;; Wait for threads to finish copying
+            (logf 'info "Waiting for threads of PID ~a to finish copying." pid)
             (thread-wait stderr-thread)
             (thread-wait stdout-thread)
             ;; Read stdout, stderr.
+            (logf 'info "Closing ports for program with PID ~a." pid)
             (close-output-port cp-stderr)
             (close-output-port cp-stdout)
             ;; Read asan error message and convert it to json (stored as Bytes)
+            (logf 'info "Parsing ASAN messages for program with PID ~a." pid)
             (set-program-asan! pgrm (asan->json (delete-read-asan pid) source-dir))
 
+            (logf 'info "Converting port to bytes for program with PID ~a." pid)
             (define stdout (port->bytes buf-stdout))
             (define stderr (port->bytes buf-stderr))
             (define asan-output (program-asan pgrm))
 
+            (logf 'info "Writing test results to out-stdout for program with PID ~a." pid)
             (match (subprocess-status handle)
                    [0
                     ;; Three cases:
@@ -150,7 +155,7 @@
                       ;; hotfix: diff with empty because it's slow
                       (write (serialize `(,pid ,test-name "failed" ,(list-diff expected-lines '()) ,stderr ,stdout ,asan-output)) out-stdout)])]
                    [_ (write (serialize `(,pid ,test-name "error" ,(subprocess-status handle) ,stderr ,stdout ,asan-output)) out-stdout)])
-            (logf 'debug "Done sending test results for program PID ~a." pid)
+            (logf 'info "Done sending test results for program PID ~a." pid)
             (close)]
            [#f ;; Program timed out ('program-run-timeout seconds pass without any event)
             (logf 'info "Program with PID ~a timed out after ~a seconds." pid (read-config-nonnegative-real 'program-run-timeout))
@@ -374,7 +379,8 @@
                                  ;; Behaviour is inconsistent if we just exec directly.
                                  ;; This seems to work.  (why: who knows?)
                                  (putenv "ASAN_OPTIONS"
-                                         "allocator_may_return_null=1:detect_leaks=1:log_path='/tmp/seashell-asan':detect_stack_use_after_return=1")
+                                         (format "allocator_may_return_null=1:detect_leaks=1:log_path='/tmp/seashell-asan-~a':detect_stack_use_after_return=1"
+                                                 (ormap (lambda (x) x) (list (getenv "USER") (getenv "LOGNAME") ""))))
                                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
                                  (subprocess slave:stdout slave:stdin #f binary)]
                                 ['racket (subprocess slave:stdout slave:stdin #f
@@ -569,7 +575,7 @@
 ;;  this is set in "run-program"
 (: delete-read-asan (-> Integer Bytes))
 (define (delete-read-asan pid)
-  (define path (string->path (format "/tmp/seashell-asan.~a" pid)))
+  (define path (string->path (format "/tmp/seashell-asan-~a.~a" (ormap (lambda (x) x) (list (getenv "USER") (getenv "LOGNAME") "")) pid)))
   (cond [(file-exists? path)
          (define contents (file->bytes path))
          (delete-file path)
