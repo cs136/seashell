@@ -59,15 +59,17 @@
          (call/input-url surl get-pure-port thunk)]
        [(string=? (url-scheme surl) "ssh")
          (match-define (list _ host file) (regexp-match #rx"//(.*@[^:]*):(.*)" source))
+         (logf 'info "Doing subprocess ~a ~a ~a ~a ~a" (read-config 'ssh-binary) "-o" "PasswordAuthentication=no" host (string-append "cat " file))
          (define-values (sshproc sshout sshin ssherr)
            (subprocess #f #f #f (read-config 'ssh-binary)
              "-o" "PasswordAuthentication=no" host (string-append "cat " file)))
          (close-output-port sshin)
          (dynamic-wind
            void
-           (lambda () (let ([err (read-line ssherr)])
-                        (if (eof-object? err)
-                            (thunk sshout)
+           (lambda () (let ([out (port->bytes sshout)]
+                            [err (port->bytes ssherr)])
+                        (if (equal? (bytes-length err) 0)
+                            (thunk (open-input-bytes out))
                             (raise (exn:fail (format "Error when fetching template: ~a" err))))))
            (lambda () (close-input-port sshout)
                       (close-input-port ssherr)))]
