@@ -179,7 +179,7 @@
       (cons 'listen-ip                     "::0")
       ;; Default compiler flags.
       (cons 'compiler-flags               '(;; Warning flags.
-                                            "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic" "-Werror=incompatible-pointer-types"
+                                            "-Wall" "-Werror=int-conversion" "-Werror=int-to-pointer-cast" "-Werror=return-type" "-Werror=import-preprocessor-directive-pedantic" "-Werror=incompatible-pointer-types" "-Werror=vla"
                                             ;; Debugging Compilation flags.
                                             "-dwarf-column-info" "-debug-info-kind=limited" "-dwarf-version=4" "-debugger-tuning=gdb"
                                             ;; General compilation flags.
