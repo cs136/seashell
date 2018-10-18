@@ -14,8 +14,12 @@ used at the @(link "http://www.uwaterloo.ca/" "University of Waterloo")
 as the main development environment for students taking
 @link["https://www.student.cs.uwaterloo.ca/~cs136/" "CS 136"].
 
-The University of Waterloo's main Seashell instance can be found
-@link["https://www.student.cs.uwaterloo.ca/seashell" "here"].
+Each course that uses Seashell has its own Seashell instance. The link
+to Seashell for a course can be found on that course's website. As of
+Fall 2018, the only courses with a Seashell instance are
+@link["https://www.student.cs.uwaterloo.ca/~cs136/" "CS 136"]
+and
+@link["https://www.student.cs.uwaterloo.ca/~cs145/" "CS 145"].
 
 @margin-note{This documentation is current for version @vector-ref[(current-command-line-arguments) 0], and only
              describes API calls present in API version @vector-ref[(current-command-line-arguments) 1].}

@@ -169,6 +169,7 @@
         ;;
 
         (define clang-binary-path (read-config-path 'clang-binary-path))
+        (define clang-binary-extra-arguments (read-config-strings 'clang-binary-extra-arguments))
         (when (and (equal? 0 linker-res)
                    (file-exists? clang-binary-path)
                    (member 'execute (file-or-directory-permissions clang-binary-path)))
@@ -176,6 +177,7 @@
             `("-std=c99"
               "-fsanitize=address" "-fno-omit-frame-pointer" "-fno-common"
               "-g" "-O0"
+              ,@clang-binary-extra-arguments
               ,@(map (lambda ([dir : Path]) (string-append "-I" (path->string dir))) source-dirs)
               "-lm"
               "-o" ,result-file

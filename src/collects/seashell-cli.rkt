@@ -140,10 +140,12 @@
 
   ;; Create clang command line path and arguments
   (define clang-binary-path (read-config 'clang-binary-path))
+  (define clang-binary-extra-arguments (read-config 'clang-binary-extra-arguments))
   (define clang-binary-arguments
             `("-std=c99"
               "-fsanitize=address" "-fno-omit-frame-pointer" "-fno-common"
               "-g" "-O0"
+              ,@clang-binary-extra-arguments
               ,(string-append "-I" project-dir)
               ,(string-append "-I" (path->string (build-path project-dir 'up "common")))
               "-lm"

@@ -201,6 +201,8 @@
                                             (if (and (not SEASHELL_INSTALLED) (file-exists? build-path))
                                               build-path
                                               install-path)))
+      ;; Any extra arguments to pass to the clang binary
+      (cons 'clang-binary-extra-arguments  '())
       ;; Depth of recursive .h search when compiling
       (cons 'header-search-depth           5)
       ;; Number of seconds a program can run without I/O before timing out

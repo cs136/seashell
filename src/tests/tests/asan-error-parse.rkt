@@ -53,6 +53,28 @@ HERE
       (define json-answer (compile-run-wait student-code))
       (check-true (has-type-and-stack? json-answer "memory-leak" 3)))
 
+      (test-case "Memory Leak Test 3"
+        (define student-code #<<HERE
+#include <stdio.h>
+#include <stdlib.h>
+
+struct cat { int * ptr; };
+struct cat *test(void);
+
+struct cat *test(void) {
+  struct cat *s = malloc(sizeof(struct cat));
+  s->ptr = NULL;
+  return s;
+}
+
+int main(void) {
+  struct cat *s = test();
+}
+HERE
+)
+       (define json-answer (compile-run-wait student-code))
+       (check-true (has-type-and-stack? json-answer "memory-leak")))
+
 ;; ---- STACK OVERFLOW TESTS ---------------------------
     (test-case "Stack Overflow Test 1"
       (define student-code #<<HERE

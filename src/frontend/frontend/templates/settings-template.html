@@ -52,18 +52,18 @@
           <option value="dark">dark</option>
       </select>
     </div>
-    <div class="form-group">
+    <div style="display:none;">
       <label>Offline mode: </label>
       <label class="radio-inline">
-        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="0">
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="0" checked="true">
         Disabled
       </label>
       <label class="radio-inline">
-        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="1" disabled>
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="1" checked="false" disabled>
         Enabled
       </label>
       <label class="radio-inline">
-        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="2" disabled>
+        <input name="offline-mode" type="radio" ng-model="temp.offline_mode" ng-value="2" checked="false" disabled>
         Forced
       </label>
 </div>
