@@ -111,7 +111,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
             "Do you wish to logout?  Any unsaved data will be lost.")
             .then(function () {
               $cookies.remove(SEASHELL_CREDS_COOKIE);
-              $window.top.location = "https://www.student.cs.uwaterloo.ca/~cs136/seashell-old/"; // "https://cas.uwaterloo.ca/logout";
+              $window.top.location = SEASHELL_URL;
             });
         };
         // Settings
@@ -141,7 +141,7 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
           // if on production, redirect to login screen; else, display error and
           // login prompt
           if(SEASHELL_BRANCH === 'stable'){
-            window.location = 'https://www.student.cs.uwaterloo.ca/seashell';
+            window.location = SEASHELL_URL;
           }else {
             self.failed = true;
           }

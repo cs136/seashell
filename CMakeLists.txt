@@ -54,6 +54,15 @@ EXECUTE_PROCESS(
   OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
+# Set Seashell and course website URL, and the path to course account
+execute_process(
+  COMMAND whoami
+  COMMAND tr -d '\n'
+  OUTPUT_VARIABLE COURSE
+)
+set(COURSE_WEBSITE "https://www.student.cs.uwaterloo.ca/~${COURSE}/" CACHE STRING "URL of the course website")
+set(SEASHELL_URL "${COURSE_WEBSITE}/seashell" CACHE STRING "URL of the Seashell website")
+
 # Check if the tree is clean.
 IF(NOT GIT_DIFF_INDEX_RESULT AND NOT GIT_DIFF_INDEX_OUTPUT)
   SET(GIT_DIRTY False)
@@ -61,7 +70,7 @@ ELSE()
   SET(GIT_DIRTY True)
 ENDIF()
 
-set(SEASHELL_VERSION "3.0.4")
+set(SEASHELL_VERSION "3.0.6")
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()

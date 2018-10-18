@@ -12,6 +12,29 @@
       var SEASHELL_CREDS_COOKIE='seashell@(values SEASHELL_API_VERSION)-creds';
       var SEASHELL_BRANCH='@(values SEASHELL_BRANCH)';
       var SEASHELL_API_VERSION=@(values SEASHELL_API_VERSION);
+      var SEASHELL_URL='@(values SEASHELL_URL)';
+
+      // Students sometimes go to frontend.html directly (ex. by Google Search
+      // or they bookmarked it). If they aren't logged in, they will see a broken
+      // blank page. Here, we check if there's a SEASHELL_CREDS_COOKIE cookie and if
+      // it's not present, redirect user to login page.
+
+      // Taken from https://www.quirksmode.org/js/cookies.html
+      function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+          var c = ca[i];
+          while (c.charAt(0)==' ') { c = c.substring(1,c.length); }
+          if (c.indexOf(nameEQ) == 0) { return c.substring(nameEQ.length,c.length); }
+        }
+        return null;
+      }
+
+      if(readCookie(SEASHELL_CREDS_COOKIE) === null) {
+        window.location.replace(SEASHELL_URL);
+      }
+
     </script>
   </head>
   <body ng-controller="FrontendController as frontend">
