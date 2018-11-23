@@ -201,7 +201,9 @@
         ;; Read the result:
         (define linker-result
           (cond
-            [(equal? 0 linker-res)
+            [(and (equal? 0 linker-res)
+                  (file-exists? result-file)
+                  (member 'execute (file-or-directory-permissions result-file)))
               (call-with-input-file
                 result-file
                 (lambda ([port : Input-Port])
