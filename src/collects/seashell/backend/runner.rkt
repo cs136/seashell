@@ -382,6 +382,8 @@
                                          (format "allocator_may_return_null=1:detect_leaks=1:log_path='/tmp/seashell-asan-~a':detect_stack_use_after_return=1"
                                                  (ormap (lambda (x) x) (list (getenv "USER") (getenv "LOGNAME") ""))))
                                  (putenv "ASAN_SYMBOLIZER_PATH" (some-system-path->string (build-path (read-config-path 'llvm-symbolizer))))
+                                 (logf 'info (format "Running with env ASAN_OPTIONS=~a" (getenv "ASAN_OPTIONS")))
+                                 (logf 'info (format "Running with env ASAN_SYMBOLIZER_PATH=~a" (getenv "ASAN_SYMBOLIZER_PATH")))
                                  (subprocess slave:stdout slave:stdin #f binary)]
                                 ['racket (subprocess slave:stdout slave:stdin #f
                                                      (read-config-path 'racket-interpreter)
