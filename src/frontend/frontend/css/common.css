@@ -417,6 +417,14 @@ div.tooltip .tooltip-inner {
   #editor.console-narrow { width: 100%; }
 }
 
+.disconnect {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+}
+
 .alert {
   background-image: none;
 }
