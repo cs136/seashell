@@ -34,6 +34,7 @@
          racket/string
          racket/function
          file/unzip
+         file/gzip
          openssl/md5)
 
 (provide (struct-out exn:project:file)
@@ -191,13 +192,27 @@
 ;;  Contents of the file as a bytestring, and the MD5 checksum of the file, and the history.
 (define/contract (read-file project file)
   (-> (and/c project-name? is-project?) path-string? (values bytes? string? bytes?))
-  (define data (with-input-from-file (check-and-build-path (build-project-path project) file)
-                                      port->bytes))
-  (define history-path (get-history-path (check-and-build-path (build-project-path project) file)))
+  (define file-path (check-and-build-path (build-project-path project) file))
+  (define data (with-input-from-file file-path port->bytes))
+  (define history-path (get-history-path file-path))
   (define undo-history-data (if (file-exists? history-path)
                                 (with-input-from-file history-path port->bytes)
                                 #""))
-  (values data (call-with-input-bytes data md5) undo-history-data))
+  (define md5-hash (call-with-input-bytes data md5))
+
+  ;; write file contents to a log
+  (with-handlers ([exn:fail? (lambda (exn) (logf 'error "(read-file) Error occurred writing to gzip log: ~a" exn))])
+    (define log-separator (string->bytes/utf-8 (format "\n\n[~a] read-file ~a ~a\n" (date->string (current-date) #t) file-path md5-hash)))
+    (define input-bytes-port (open-input-bytes (bytes-append log-separator data)))
+    (define-values (base name _unused) (split-path file-path))
+    (define output-bytes-port (open-output-file (build-path base (string->path (string-append "." (path->string name) ".log")))
+                                                #:mode 'binary #:exists 'append))
+    (logf 'info "(read-file) Writing gzip log for ~a (md5 hash ~a)" file-path md5-hash)
+    (gzip-through-ports input-bytes-port output-bytes-port (path->string name) (date->seconds (current-date)))
+    (close-input-port input-bytes-port)
+    (close-output-port output-bytes-port))
+
+  (values data md5-hash undo-history-data))
 
 ;; (write-file project file contents) -> string?
 ;; Writes a file from a Racket bytestring.
@@ -238,7 +253,21 @@
                                    (raise (exn:project:file
                                             (format "Could not write to file ~a! (file locked)" (some-system-path->string file-to-write))
                                                     (current-continuation-marks)))))))
-  (call-with-input-bytes contents md5))
+  (define md5-hash (call-with-input-bytes contents md5))
+
+  ;; write file contents to a log
+  (with-handlers ([exn:fail? (lambda (exn) (logf 'error "(write-file) Error occurred writing to gzip log: ~a" exn))])
+    (define log-separator (string->bytes/utf-8 (format "\n\n[~a] write-file ~a ~a\n" (date->string (current-date) #t) file-to-write md5-hash)))
+    (define input-bytes-port (open-input-bytes (bytes-append log-separator contents)))
+    (define-values (base name _unused) (split-path file-to-write))
+    (define output-bytes-port (open-output-file (build-path base (string->path (string-append "." (path->string name) ".log")))
+                                                #:mode 'binary #:exists 'append))
+    (logf 'info "(write-file) Writing gzip log for ~a (md5 hash ~a)" file-to-write md5-hash)
+    (gzip-through-ports input-bytes-port output-bytes-port (path->string name) (date->seconds (current-date)))
+    (close-input-port input-bytes-port)
+    (close-output-port output-bytes-port))
+
+  md5-hash)
 
 ;; (get-history-path path) -> path
 ;; Given a file's path, returns the path to that file's corresponding .history file
