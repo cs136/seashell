@@ -194,11 +194,13 @@ angular.module('frontend-app')
       if(self.unfinished_tests > 0) { self.unfinished_tests -= 1; }
       if(self.unfinished_tests <= 0) { self.stopTestingProgressNote(); }
 
+      var stderr_output_label = 'Produced output from stderr (may include trace output, error messages, etc):\n';
+
       if(res.result==="passed") {
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" passed.\n", res.test_name));
         if(!!res.stderr) {
-          self.write('Produced errors (stderr):\n');
+          self.write(stderr_output_label);
           self.write(res.stderr);
         }
       }
@@ -215,7 +217,7 @@ angular.module('frontend-app')
             self.write(res.expect);
         }
         self.write('---\n');
-        self.write('Produced errors (stderr):\n');
+        self.write(stderr_output_label);
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
             self.write("AddressSanitizer Output:\n");
@@ -227,7 +229,7 @@ angular.module('frontend-app')
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('---\n');
-        self.write('Produced output (stderr):\n');
+        self.write(stderr_output_label);
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
@@ -238,7 +240,7 @@ angular.module('frontend-app')
         self.write('----------------------------------\n');
         self.write(sprintf("Test \"%s\" produced output (stdout):\n", res.test_name));
         self.write(res.stdout);
-        self.write('Produced output (stderr):\n');
+        self.write(stderr_output_label);
         self.write(res.stderr);
         if(parsedASAN.raw_message !== "") {
             // Parse the ASAN json string that the backend gives us.
@@ -251,7 +253,7 @@ angular.module('frontend-app')
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('---\n');
-        self.write('Produced output (stderr):\n');
+        self.write(stderr_output_label);
         self.write(res.stderr);
       }
       else if(res.result==="killed") {
@@ -260,7 +262,7 @@ angular.module('frontend-app')
         self.write('Produced output (stdout):\n');
         self.write(res.stdout);
         self.write('---\n');
-        self.write('Produced output (stderr):\n');
+        self.write(stderr_output_label);
         self.write(res.stderr);
       }
       self.flush();
