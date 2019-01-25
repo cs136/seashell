@@ -386,15 +386,21 @@ angular.module('frontend-app')
                   $scope.selected_project = res[1];
                   $scope.submit = function() {
                     $scope.$close();
-                    project.submit(question, $scope.selected_project)
-                       .catch(function (error) {
-                         var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
-                         errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
-                         notify(false, $scope.selected_project);
-                         return $q.reject(error);
-                       }).then(function () {
-                         notify(true, $scope.selected_project);
-                       });
+                    if($scope.selected_project === false) {
+                      // No project/question was selected in the drop-down menu
+                      var error_message = 'Please select the question you want to submit to.';
+                      errors.report(error_message, error_message);
+                    } else {
+                      project.submit(question, $scope.selected_project)
+                         .catch(function (error) {
+                           var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
+                           errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
+                           notify(false, $scope.selected_project);
+                           return $q.reject(error);
+                         }).then(function () {
+                           notify(true, $scope.selected_project);
+                         });
+                    }
                   };
                 });
             }]}).result;
