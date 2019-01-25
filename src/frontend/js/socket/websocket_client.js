@@ -444,7 +444,7 @@ SeashellWebsocket.prototype.marmosetSubmit = function(project, assn, subdir) {
   return this.sendMessage({
     type : "marmosetSubmit",
     project: project,
-    assn: assn,
+    assn: (assn !== false ? assn : ""),
     subdir: subdir ? subdir : false});
 };
 

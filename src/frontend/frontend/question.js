@@ -221,6 +221,7 @@ angular.module('frontend-app')
         var key = ws.register_callback('connected', function() {
           try {
             self.refresh();
+            self.console.errors = [];
             self.project.updateMostRecentlyUsed(self.question);
             self.project.mostRecentlyUsed(self.question)
               .then(function (recent) {
