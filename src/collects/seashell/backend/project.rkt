@@ -457,15 +457,16 @@
                      (lambda (test)
                        (run-program target base project-base-str lang test real-test-location))
                      tests))
-      (thread
-        (lambda ()
-          (let loop ([evts (map program-wait-evt pids)])
-            (unless (empty? evts)
-              (loop (remove (apply sync evts) evts))))
-          (match lang
-            ['C (delete-directory/files target #:must-exist? #f)]
-            ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)])))
-      (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running")))]
+      (define test-thread
+        (thread
+          (lambda ()
+            (let loop ([evts (map program-wait-evt pids)])
+              (unless (empty? evts)
+                (loop (remove (apply sync evts) evts))))
+            (match lang
+              ['C (delete-directory/files target #:must-exist? #f)]
+              ['racket (delete-directory/files racket-temp-dir #:must-exist? #f)]))))
+      (values #t `#hash((pids . ,pids) (messages . ,messages) (status . "running") (students-program-thread . ,test-thread)))]
     [else
       (values #f `#hash((messages . ,messages) (status . "compile-failed")))]))
 

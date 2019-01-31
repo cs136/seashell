@@ -69,13 +69,21 @@
       (eprintf compiler-errors)
       (write-outputs #f (string->bytes/utf-8 compiler-errors) #f)
       (exit 10)]
-    [(hash-table ('pids (list pid)) ('messages messages) ('status "running"))
+    [(hash-table ('pids (list pid)) ('messages messages) ('status "running") ('students-program-thread students-program-thread))
       (eprintf "Waiting for program to finish...~n")
       (sync (program-wait-evt pid))
 
       ;; TODO: separate this block into its own function?
       (define stdout (program-stdout pid))
       (define run-result (sync/timeout 0 (wrap-evt stdout (compose deserialize read))))
+
+      ;; Wait for the thread that runs the students program to finish. In addition to running the student's
+      ;; binary/program, the thread also deletes the binary afterwards. We must wait for that deletion to
+      ;; finish, or else we may end up deleting a file that's already deleted (see exit-handler above and
+      ;; documentation for delete-directory/files).
+      (eprintf "Waiting for the thread that runs the student's program to finish...~n")
+      (when (thread? students-program-thread) (thread-wait students-program-thread))
+
       (match run-result
        [(and result (list pid _ (and test-res (or "killed" "passed")) stdout stderr))
         (eprintf "Program passed the test.\n")
