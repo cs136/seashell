@@ -320,9 +320,14 @@
         ('tests test))
        (define-values (success? result)
          (compile-and-run-project/use-runner name question test))
+       ;; The front-end doesn't need/care about the thread.
+       (define result-without-thread
+         (if (hash? result)
+             (hash-remove result 'students-program-thread)
+             result))
        `#hash((id . ,id)
               (success . ,success?)
-              (result . ,result))]
+              (result . ,result-without-thread))]
       [(hash-table
          ('id id)
          ('type "startIO")
