@@ -16,7 +16,7 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require seashell/compiler/compiler seashell/log)
+(require seashell/compiler/compiler seashell/log (submod seashell/seashell-config typed))
 (provide seashell-compile-files/place seashell-compile-place/shutdown
          seashell-compile-place/alive?)
 
@@ -53,7 +53,9 @@
       (define dead-evt (place-dead-evt compiler-place))
       (place-channel-put compiler-place
                          (list write-end user-cflags user-ldflags source-dirs source))
-      (match (sync dead-evt (wrap-evt read-end deserialize))
+      (match (sync/timeout (read-config-nonnegative-real 'compiler-timeout) dead-evt (wrap-evt read-end deserialize))
+        [#f
+         (raise (exn:fail (format "Sorry, Seashell's compiler stopped responding. Please reset Seashell and try again. If this error keeps happening, please notify a course personnel") (current-continuation-marks)))]
         [(? (lambda (x) (eq? dead-evt x)))
          (cond
           [(retries . > . 0)
