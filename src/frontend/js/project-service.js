@@ -786,32 +786,21 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
          */
         SeashellProject.prototype.currentMarmosetProject = function(question) {
           var self = this;
-          // first test if the project/question is an assignment
-          if(/^a[0-9]+$/i.test(self.name) && /^(a\d)?(q|p)[0-9]+[a-z]*$/i.test(question)) {
-            var withoutA = self.name.substr(1);    // eg. "A5" -> "5"
-            var withoutQ = question.substr(1);     // eg. "q3b" -> "3b"
-
-            // construct two case-insensitive regexes
-            // match several possibilities:
-            // - A2p5b
-            // - A5q5b
-            var regexFormat = sprintf("^a%s(q|p)%s", withoutA, withoutQ);
-            var guess = new RegExp(regexFormat, "i");
-            var extended = new RegExp(regexFormat + "extended", "i");
-            return marmoset.projects().then(function(projects) {
-              return $q.when(
-                // search for extended first
-                _.find(projects, function(p) {
-                  return extended.test(p);
-                }) ||
-                // then search for non-extension
-                _.find(projects, function(p) {
-                  return guess.test(p);
-                })
-              );
-            });
-          }
-          return $q.when(false);
+          var open_seashell_question = self.name + question;
+          return marmoset.projects().then(function(projects) {
+            return $q.when(
+              // search for extended first
+              _.find(projects, function(marmoset_project) {
+                var extended = open_seashell_question + "extended";
+                var extended_with_dash = open_seashell_question + "-extended";
+                return (extended.toLowerCase() == marmoset_project.toLowerCase() || extended_with_dash.toLowerCase() == marmoset_project.toLowerCase());
+              }) ||
+              // then search for non-extension
+              _.find(projects, function(marmoset_project) {
+                return (open_seashell_question.toLowerCase() == marmoset_project.toLowerCase());
+              })
+            );
+          });
         };
 
         /**
