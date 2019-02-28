@@ -225,10 +225,12 @@ angular.module('frontend-app')
             self.project.updateMostRecentlyUsed(self.question);
             self.project.mostRecentlyUsed(self.question)
               .then(function (recent) {
-                if (recent && $state.is('edit-project.editor')) {
-                  $state.go("edit-project.editor.file",
-                            {part: recent.part, file: recent.file},
-                            {location: "replace"});
+                if($state.params.question === self.question) {
+                  if (recent && $state.is('edit-project.editor')) {
+                    $state.go("edit-project.editor.file",
+                              {part: recent.part, file: recent.file},
+                              {location: "replace"});
+                  }
                 }
               });
           } catch (e) {
