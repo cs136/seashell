@@ -4,7 +4,7 @@
     <span class="glyphicon glyphicon-export"></span>
     <span id="commit-project-title">Marmoset Results</span></h4>
 </div>
-<div class="modal-body marmoset-details-body">
+<div class="modal-body marmoset-details-body" style="max-height: calc(100vh - 190px); overflow:auto;">
   <span ng-show="results===null || results.length == 0">No Marmoset results to view.</span>
   <span ng-show="results.length > 0 && results[0].status !== 'complete'">Waiting on tests to finish.</span>
   <table border="0" id="marmoset-details-table" ng-show="results.length > 0 && results[0].status==='complete'">
@@ -18,7 +18,7 @@
       <td>{{result.name}}</td>
       <td>{{result.outcome}}</td>
       <td>{{result.short}}</td>
-      <td><pre>{{result.long}}</pre></td>
+      <td><pre style="white-space:pre;">{{result.long}}</pre></td>
     </tr>
   </table>
 </div>
