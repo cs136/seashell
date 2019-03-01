@@ -28,9 +28,21 @@
         <h2 class="form-signing-heading">Please sign in with your <a href="https://www.student.cs.uwaterloo.ca/password/">student.cs</a> credentials</h2>
         <div>Supported browsers:
           <ul>
-            <li><a href="https://www.mozilla.org/firefox/">Firefox 62 - 64</a></li>
-            <li><a href="https://www.google.com/chrome/">Google Chrome 69 - 71</a></li>
+            <li><a href="https://www.mozilla.org/firefox/">Firefox 62 - 65</a></li>
+            <li><a href="https://www.google.com/chrome/">Google Chrome 69 - 72</a></li>
           </ul>
+          <span id="browser_warning" style="color:red;"></span>
+          <script type='text/javascript'>
+            var usingOpera = (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+            var usingFirefox = typeof InstallTrigger !== 'undefined';
+            var usingChrome = !usingOpera && !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
+            if(!(usingFirefox || usingChrome)) {
+              var warning_span = document.getElementById('browser_warning');
+              if(warning_span !== null) {
+                warning_span.innerHTML = "Please use Seashell with Firefox or Google Chrome.";
+              }
+            }
+          </script>
         </div>
 
         <input type="text" class="form-control" placeholder="Username" ng-model="login.user" id="user"
