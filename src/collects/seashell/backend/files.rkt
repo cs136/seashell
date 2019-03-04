@@ -195,7 +195,7 @@
   (define file-path (check-and-build-path (build-project-path project) file))
   (define data (with-input-from-file file-path port->bytes))
   (define history-path (get-history-path file-path))
-  (define undo-history-data (if (file-exists? history-path)
+  (define undo-history-data (if (and #f (file-exists? history-path)) ; history file isn't used for anything right now
                                 (with-input-from-file history-path port->bytes)
                                 #""))
   (define md5-hash (call-with-input-bytes data md5))
@@ -288,7 +288,7 @@
                                                         (current-continuation-marks)))))
                                    (call-with-atomic-output-file-hidden (check-and-build-path (build-project-path project) file)
                                                                         (lambda (temp-file-output-port temp-file-path) (write-bytes contents temp-file-output-port)))
-                                   (when history
+                                   (when (and #f history) ; history file isn't used for anything at the moment
                                      (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                                                           (lambda () (write-bytes  history))
                                                           #:exists 'replace)))
