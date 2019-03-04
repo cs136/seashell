@@ -195,7 +195,7 @@
   (define file-path (check-and-build-path (build-project-path project) file))
   (define data (with-input-from-file file-path port->bytes))
   (define history-path (get-history-path file-path))
-  (define undo-history-data (if (file-exists? history-path)
+  (define undo-history-data (if (and #f (file-exists? history-path)) ; history file isn't used for anything right now
                                 (with-input-from-file history-path port->bytes)
                                 #""))
   (define md5-hash (call-with-input-bytes data md5))
@@ -230,6 +230,52 @@
   (->* ((and/c project-name? is-project?) path-string? bytes?)
        ((or/c #f bytes?) (or/c #f string?))
        string?)
+  ;; Helper function to atomically update a file. Same as the built-in call-with-atomic-output-file
+  ;; except this writes to a hidden temporary file so that students won't see it.
+  (define (call-with-atomic-output-file-hidden path
+                                        proc
+                                        #:security-guard [guard #f])
+    (unless (path-string? path)
+      (raise-argument-error 'call-with-atomic-output-file "path-string?" path))
+    (unless (and (procedure? proc)
+                 (procedure-arity-includes? proc 2))
+      (raise-argument-error 'call-with-atomic-output-file "(procedure-arity-includes/c 2)" proc))
+    (unless (or (not guard)
+                (security-guard? guard))
+      (raise-argument-error 'call-with-atomic-output-file "(or/c #f security-guard?)" guard))
+    (define (try-delete-file path [noisy? #t])
+      ;; Attempt to delete, but give up if it doesn't work:
+      (with-handlers ([exn:fail:filesystem? void])
+        (delete-file path)))
+    (let ([bp (current-break-parameterization)]
+          [tmp-path (parameterize ([current-security-guard (or guard (current-security-guard))])
+                      (make-temporary-file ".tmp~a" #f (or (path-only path) (current-directory))))]
+          [ok? #f])
+      (dynamic-wind
+       void
+       (lambda ()
+         (begin0
+           (let ([out (parameterize ([current-security-guard (or guard (current-security-guard))])
+                        (open-output-file tmp-path #:exists 'truncate/replace))])
+             (dynamic-wind
+              void
+              (lambda ()
+                (call-with-break-parameterization bp (lambda () (proc out tmp-path))))
+              (lambda ()
+                (close-output-port out))))
+           (set! ok? #t)))
+       (lambda ()
+         (parameterize ([current-security-guard (or guard (current-security-guard))])
+           (if ok?
+               (if (eq? (system-type) 'windows)
+                   (let ([tmp-path2 (make-temporary-file "tmp~a" #f (path-only path))])
+                     (with-handlers ([exn:fail:filesystem? void])
+                       (rename-file-or-directory path tmp-path2 #t))
+                     (rename-file-or-directory tmp-path path #t)
+                     (try-delete-file tmp-path2))
+                   (rename-file-or-directory tmp-path path #t))
+               (try-delete-file tmp-path)))))))
+
   (define file-to-write (check-and-build-path (build-project-path project) file))
   (call-with-write-lock (thunk
     (call-with-file-lock/delete-lock-file file-to-write 'exclusive
@@ -240,10 +286,9 @@
                                        (raise (exn:project:file:checksum
                                                 (format "Could not write to file ~a! (file changed on disk)" (some-system-path->string file-to-write))
                                                         (current-continuation-marks)))))
-                                   (with-output-to-file (check-and-build-path (build-project-path project) file)
-                                                        (lambda () (write-bytes contents))
-                                                        #:exists 'must-truncate)
-                                   (when history
+                                   (call-with-atomic-output-file-hidden (check-and-build-path (build-project-path project) file)
+                                                                        (lambda (temp-file-output-port temp-file-path) (write-bytes contents temp-file-output-port)))
+                                   (when (and #f history) ; history file isn't used for anything at the moment
                                      (with-output-to-file (get-history-path (check-and-build-path (build-project-path project) file))
                                                           (lambda () (write-bytes  history))
                                                           #:exists 'replace)))

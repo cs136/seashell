@@ -108,11 +108,13 @@
             (program-kill pid)
             (program-destroy-handle pid)]
            [(and result (list pid test-name (and test-res (or "timeout" "killed" "passed")) stdout stderr))
+            (program-destroy-handle pid)
             (send-message connection `#hash((id . -4) (success . #t)
                                             (result . #hash((pid . ,pid) (test_name . ,test-name) (result . ,test-res)
                                                                          (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                                          (stderr . ,(bytes->string/utf-8 stderr #\?))))))]
            [(list pid test-name "error" exit-code stderr stdout asan-output)
+            (program-destroy-handle pid)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "error")
                                                                         (status . ,exit-code)
@@ -120,12 +122,14 @@
                                                                         (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                                         (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
            [(list pid test-name "no-expect" stdout stderr asan-output)
+            (program-destroy-handle pid)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "no-expect")
                                                            (stdout . ,(bytes->string/utf-8 stdout #\?))
                                                            (stderr . ,(bytes->string/utf-8 stderr #\?))
                                                            (asan_output . ,(bytes->string/utf-8 asan-output #\?))))))]
            [(list pid test-name "failed" diff stderr stdout asan-output)
+            (program-destroy-handle pid)
             (send-message connection `#hash((id . -4) (success . #t)
                                            (result . #hash((pid . ,pid) (test_name . ,test-name) (result . "failed")
                                                            (diff . ,(map

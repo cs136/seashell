@@ -10,7 +10,7 @@
     <label class="col-sm-2 control-label" for="selected_project">Project:</label>
     <div class="col-sm-10">
       <select name="selected_project" ng-model="selected_project" id="selected_project" style="outline: none" class="form-control" required>
-        <option ng-repeat="project in marmoset_projects">{{project}}</option>
+        <option ng-repeat="project in marmoset_projects | orderBy:'valueOf()':true">{{project}}</option>
       </select>
       <span class="help-block" ng-show="submitMarmosetForm.selected_project.$invalid">Required</span>
     </div>

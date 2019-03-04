@@ -553,25 +553,26 @@
   (call-with-semaphore
    program-destroy-semaphore
    (lambda ()
-     (define pgrm (hash-ref program-table pid))
-     (match-define (program in-stdin in-stdout in-stderr
-                            out-stdin out-stdout out-stderr
-                            raw-stdin raw-stdout raw-stderr
-                            handle control exit-status
-                            destroyed-semaphore mode custodian
-                            source-dir asan pty)
-                   pgrm)
+     (define pgrm (hash-ref program-table pid #f))
+     (when (not (equal? pgrm #f))
+       (match-define (program in-stdin in-stdout in-stderr
+                              out-stdin out-stdout out-stderr
+                              raw-stdin raw-stdout raw-stderr
+                              handle control exit-status
+                              destroyed-semaphore mode custodian
+                              source-dir asan pty)
+                     pgrm)
 
-     ;; Note: ports are Racket pipes and therefore GC'd.
-     ;; We don't need to close them.  (Closing the input port
-     ;; cause a bit of a race condition with the dispatch code.
-     ;; We don't close out-stdout and out-stderr as clients
-     ;; may still be using them.  Note that in-stdout and in-stderr
-     ;; MUST be closed for EOF to be properly sent).
-     (hash-remove! program-table pid)
+       ;; Note: ports are Racket pipes and therefore GC'd.
+       ;; We don't need to close them.  (Closing the input port
+       ;; cause a bit of a race condition with the dispatch code.
+       ;; We don't close out-stdout and out-stderr as clients
+       ;; may still be using them.  Note that in-stdout and in-stderr
+       ;; MUST be closed for EOF to be properly sent).
+       (hash-remove! program-table pid)
 
-     ;; Post the destroyed semaphore
-     (semaphore-post destroyed-semaphore))))
+       ;; Post the destroyed semaphore
+       (semaphore-post destroyed-semaphore)))))
 
 ;; Retrieve asan error message at "/tmp/seashell-asan.{pid}"
 ;;  this is set in "run-program"

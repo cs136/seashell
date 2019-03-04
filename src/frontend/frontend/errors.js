@@ -20,8 +20,8 @@
 
 angular.module('frontend-app')
   // Error service.
-  .service('error-service', ['$rootScope', '$timeout', 
-    function ($rootScope, $timeout) {
+  .service('error-service', ['$rootScope', '$timeout', '$cookies',
+    function ($rootScope, $timeout, $cookies) {
       
     var self = this;
 
@@ -43,6 +43,21 @@ angular.module('frontend-app')
         Raven.captureException(error);
         console.error(error);
         self.errors.push({shorthand: shorthand, error: error, type: type});
+
+        // log front-end errors
+        try {
+          console.log("Preparing error report...");
+          var error_report = { username: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
+                               type: type, shorthand: shorthand, error: error,
+                               useragent:navigator.appVersion, version: SEASHELL_VERSION + " (" + SEASHELL_BRANCH + " at " + SEASHELL_COMMIT + ")",
+                               log: self.dumpLogs() };
+          console.log("Sending in error report...");
+          jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", error_report, function(data, status) {
+            console.log("Error report sent! status = ", status);
+          }).fail(function() {
+            console.log("Failed to send error report.");
+          });
+        } catch(err) { }
       }
     };
 

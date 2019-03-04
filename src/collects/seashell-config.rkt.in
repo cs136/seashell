@@ -277,6 +277,11 @@
       ;; Default TTL for the compiler place.
       ;; This needs to be long enough for a file to compile.
       (cons 'compiler-ttl                  60)
+      ;; Older versions of clang has a bug where it'll hang trying
+      ;; to compile certain code. This is a timeout on how long the
+      ;; compiler can run for before an error message is displayed to
+      ;; the student.
+      (cons 'compiler-timeout              7)
       )))
   config-hash)
 
