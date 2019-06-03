@@ -71,7 +71,7 @@ if (NOT SEASHELL_LIGHTWEIGHT_LAUNCHERS)
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt
                                      seashell-racket-compile)
   add_custom_command(OUTPUT seashell-racket-test
-                             COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l errortrace  -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test"
+                             COMMAND ${SEASHELL_RACKET} -S "${CMAKE_CURRENT_BINARY_DIR}" -l- raco/main exe -o "${CMAKE_CURRENT_BINARY_DIR}/seashell-racket-test"
                              ++lib seashell/compiler/place-main ++lib errortrace "${CMAKE_CURRENT_BINARY_DIR}/racket-tests-src/run-tests.rkt"
                              DEPENDS ${seashell_collects} ${CMAKE_CURRENT_SOURCE_DIR}/seashell-config.rkt.in ${CMAKE_SOURCE_DIR}/src/tests/run-tests.rkt
                                      ${CMAKE_CURRENT_BINARY_DIR}/seashell/seashell-config.rkt ${seashell_racket_tests}
