@@ -39,28 +39,36 @@
 
 (: merge-directory/files (->* (Path-String Path-String)
                               (#:keep-modify-seconds? Boolean
-                               #:preserve-links? Boolean)
+                               #:preserve-links? Boolean
+                               #:overwrite? Boolean)
                               Any))
 (define (merge-directory/files src dest
                               #:keep-modify-seconds? [keep-modify-seconds? #f]
-                              #:preserve-links? [preserve-links? #f])
+                              #:preserve-links? [preserve-links? #f]
+                              #:overwrite? [overwrite? #f])
   (let loop ([src src] [dest dest])
-    (cond [(and preserve-links?
-                (link-exists? src))
-           (make-file-or-directory-link
-            (resolve-path src)
-            dest)]
-          [(file-exists? src)
-           (copy-file src dest)
-           (when keep-modify-seconds?
-             (file-or-directory-modify-seconds
-              dest
-              (file-or-directory-modify-seconds src)))]
-          [(directory-exists? src)
-           (when (not (directory-exists? dest))
-            (make-directory dest))
-           (for-each (lambda ([e : Path])
-                       (loop (build-path src e)
-                             (build-path dest e)))
-                     (directory-list src))]
-          [else (raise-not-a-file-or-directory 'merge-directory/files src)])))
+    (begin
+      (when overwrite?
+        (cond [(or (file-exists? dest) (link-exists? dest))
+               (delete-file dest)]
+              [(directory-exists? dest) (delete-directory/files dest)]))
+      (when (not (or (file-exists? dest) (link-exists? dest) (directory-exists? dest)))
+        (cond [(and preserve-links?
+                    (link-exists? src))
+               (make-file-or-directory-link
+                (resolve-path src)
+                dest)]
+              [(file-exists? src)
+               (copy-file src dest)
+               (when keep-modify-seconds?
+                 (file-or-directory-modify-seconds
+                  dest
+                  (file-or-directory-modify-seconds src)))]
+              [(directory-exists? src)
+               (when (not (directory-exists? dest))
+                (make-directory dest))
+               (for-each (lambda ([e : Path])
+                           (loop (build-path src e)
+                                 (build-path dest e)))
+                         (directory-list src))]
+              [else (raise-not-a-file-or-directory 'merge-directory/files src)])))))
