@@ -71,10 +71,15 @@
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/CodeGen/CommandFlags.h>
+#if CLANG_VERSION_MAJOR == 6
+  #include <llvm/CodeGen/CommandFlags.def>
+#elif CLANG_VERSION_MAJOR == 5
+  #include <llvm/CodeGen/CommandFlags.h>
+#endif
 #include <llvm/CodeGen/LinkAllAsmWriterComponents.h>
 #include <llvm/CodeGen/LinkAllCodegenComponents.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
@@ -102,13 +107,13 @@
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/DiagnosticPrinter.h>
-#include <llvm/Target/TargetSubtargetInfo.h>
+#include <llvm/CodeGen/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if CLANG_VERSION_MAJOR == 5 && CLANG_VERSION_MINOR == 0
+#if CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
 #endif
@@ -870,7 +875,7 @@ static int compile_module (seashell_compiler* compiler,
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    std::shared_ptr<clang::CompilerInvocation> CI = std::make_shared<clang::CompilerInvocation>(); //new clang::CompilerInvocation);
+    std::shared_ptr<clang::CompilerInvocation> CI = std::make_shared<clang::CompilerInvocation>();
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -881,7 +886,7 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 5
+#if CLANG_VERSION_MAJOR >= 5
     Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
@@ -946,17 +951,17 @@ static int compile_module (seashell_compiler* compiler,
     }
 
 #ifndef __EMSCRIPTEN__
-    LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
-      compiler->context.getDiagnosticHandler();
+    DiagnosticHandler::DiagnosticHandlerTy OldDiagnosticHandler =
+      compiler->context.getDiagnosticHandlerCallBack();
     void *OldDiagnosticContext = compiler->context.getDiagnosticContext();
     std::string Message;
-    compiler->context.setDiagnosticHandler(StringDiagnosticHandler, &Message, true);
+    compiler->context.setDiagnosticHandlerCallBack(StringDiagnosticHandler, &Message, true);
 #else
     std::string Message = "Error linking modules!  Make sure there are no multiply-defined symbols!";
 #endif
     Success = !llvm::Linker::linkModules(*module, std::move(mod));
 #ifndef __EMSCRIPTEN__
-    compiler->context.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
+    compiler->context.setDiagnosticHandlerCallBack(OldDiagnosticHandler, OldDiagnosticContext, true);
 #endif
     if (!Success) {
       PUSH_DIAGNOSTIC(Message);
@@ -1235,7 +1240,7 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 5
+#if CLANG_VERSION_MAJOR >= 5
     Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
