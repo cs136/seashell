@@ -1,5 +1,5 @@
 #!/bin/bash -e
 SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
-cd "$SCRIPT_PATH/../" && git submodule init && git submodule update
+cd "$SCRIPT_PATH/../" && git submodule update --init --progress --jobs 4
 cd "$SCRIPT_PATH/../lib/compiler-rt" && git am < "$SCRIPT_PATH/../lib/compiler-rt-sigalstack.patch"
 
