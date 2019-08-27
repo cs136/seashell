@@ -36,7 +36,9 @@ angular.module('frontend-app')
         self.runnerFile = "";
         self.test_files = [];
         self.console = Console;
+        self.marmoset_short_results_style = "";
         self.marmoset_short_results = null;
+        self.marmoset_submission_warning_style = "color: white; background-color: red;";
         self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
         self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
@@ -62,6 +64,7 @@ angular.module('frontend-app')
           var data = result.result;
           if(result.error) {
             errors.report(result.result, sprintf("Failed to fetch Marmoset results for %s.", target), "marmoset");
+            self.marmoset_short_results_style = "";
             self.marmoset_short_results = null;
           }
           else if(data.length > 0 && data[0].status=="complete") {
@@ -81,6 +84,14 @@ angular.module('frontend-app')
             self.marmoset_short_results =
               sprintf("%s (%d/%d)", !failed ? "passed" : "failed",
                     total_passed, total);
+            if(!failed) {
+              self.marmoset_short_results_style = "";
+            } else {
+              self.marmoset_short_results_style = self.marmoset_submission_warning_style;
+            }
+          } else if(data.length == 0) {
+            self.marmoset_short_results_style = self.marmoset_submission_warning_style;
+            self.marmoset_short_results = "No Marmoset test results.";
           }
         };
 
@@ -188,6 +199,7 @@ angular.module('frontend-app')
         self.submit_question = function (){runWhenSaved(function(){
           submitMarmosetModal(self.project, self.question, function (success, target) {
             if (!success) {
+              self.marmoset_short_results_style = self.marmoset_submission_warning_style;
               self.marmoset_short_results = "failed to submit!";
             } else {
               var submitTime = new Date();
@@ -197,22 +209,26 @@ angular.module('frontend-app')
                   self.handleMarmosetResults(result, target);
                   var data = result.result;
                   if(data.length > 0 && data[0].status != "complete") {
+                    self.marmoset_short_results_style = "";
                     self.marmoset_short_results =
                       sprintf("received %s (waiting on tests)",
                               $.timeago(data[0].timestamp));
                   } else if(data.length === 0) {
+                    self.marmoset_short_results_style = "";
                     self.marmoset_short_results =
                       sprintf("submitted %s (waiting on receipt)",
                               $.timeago(submitTime));
                   }
                 }).catch(function (error) {
                   errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
+                  self.marmoset_short_results_style = self.marmoset_submission_warning_style;
                   self.marmoset_short_results = "could not fetch results...";
                   cancelMarmosetRefresh();
                 });
               }, self.marmoset_timeout);
             }
           }).then(function () {
+            self.marmoset_short_results_style = "";
             self.marmoset_short_results = "submitting...";
           });
         });};

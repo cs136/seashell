@@ -597,8 +597,9 @@
 
       ;; Wait until it's done.
       (subprocess-wait proc)
-      (define stderr-output (port->string err))
-      (define stdout-output (port->string out))
+      ;; Strip out ANSI colors from submit-tool's output
+      (define stderr-output (regexp-replace* #rx"\x1b\\[[0-9]+m" (port->string err) ""))
+      (define stdout-output (regexp-replace* #rx"\x1b\\[[0-9]+m" (port->string out) ""))
       (define exit-status (subprocess-status proc))
       (close-output-port in)
       (close-input-port out)
