@@ -1,12 +1,12 @@
 [submodule "lib/llvm"]
 	path = lib/llvm
-	url = http://llvm.org/git/llvm.git
+	url = https://github.com/llvm-mirror/llvm.git
 [submodule "lib/clang"]
 	path = lib/clang
-	url = http://llvm.org/git/clang.git
+	url = https://github.com/llvm-mirror/clang.git
 [submodule "lib/compiler-rt"]
 	path = lib/compiler-rt
-	url = http://llvm.org/git/compiler-rt.git
+	url = https://github.com/llvm-mirror/compiler-rt.git
 [submodule "lib/libgit2"]
 	path = lib/libgit2
 	url = https://github.com/libgit2/libgit2.git

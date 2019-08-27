@@ -1,4 +1,4 @@
-git submodule init && git submodule update
+git submodule update --init --progress --jobs 4
 mkdir _build
 cd _build
 cmake .. 
