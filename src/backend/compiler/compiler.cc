@@ -108,7 +108,7 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if CLANG_VERSION_MAJOR == 4 && CLANG_VERSION_MINOR == 0
+#if CLANG_VERSION_MAJOR == 5 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
 #endif
@@ -881,7 +881,7 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 4
+#if CLANG_VERSION_MAJOR == 5
     Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
@@ -1235,7 +1235,7 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 4
+#if CLANG_VERSION_MAJOR == 5
     Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
