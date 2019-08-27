@@ -99,7 +99,8 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/Target/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
@@ -107,7 +108,7 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 9
+#if CLANG_VERSION_MAJOR == 4 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
 #endif
@@ -582,7 +583,9 @@ std::string seashell_compiler_object_arch(struct seashell_compiler* compiler) {
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getArch() == llvm::Triple::UnknownArch)
     return NULL;
-  return llvm::Triple::getArchTypeName(TheTriple.getArch());
+  llvm::StringRef stringRef = llvm::Triple::getArchTypeName(TheTriple.getArch());
+  std::string stdString = stringRef.str();
+  return stdString.c_str();
 }
 
 /**
@@ -603,7 +606,9 @@ std::string seashell_compiler_object_os (struct seashell_compiler* compiler) {
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getOS() == llvm::Triple::UnknownOS)
     return NULL;
-  return llvm::Triple::getOSTypeName(TheTriple.getOS());
+  llvm::StringRef stringRef = llvm::Triple::getOSTypeName(TheTriple.getOS());
+  std::string stdString = stringRef.str();
+  return stdString.c_str();
 }
 
 static void printDiagnosticOptions(raw_ostream &OS,
@@ -679,8 +684,11 @@ public:
         clang::FileID FID = SM->getFileID(Loc);
         if( !FID.isInvalid()) {
           const clang::FileEntry * FE = SM->getFileEntryForID(FID);
-          if(FE && FE->getName()) {
-            messages.insert(seashell_diag(error, FE->getName(), OutStr.c_str()));
+          llvm::StringRef stringRef = FE->getName();
+          std::string stdString = stringRef.str();
+          const char * FEName = stdString.c_str();
+          if(FE && FEName) {
+            messages.insert(seashell_diag(error, FEName, OutStr.c_str()));
             return;
           } else {
             messages.insert(seashell_diag(error, "?", OutStr.c_str()));
@@ -862,7 +870,7 @@ static int compile_module (seashell_compiler* compiler,
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+    std::shared_ptr<clang::CompilerInvocation> CI = std::make_shared<clang::CompilerInvocation>(); //new clang::CompilerInvocation);
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -873,8 +881,8 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
-    Clang.setInvocation(CI.get());
+#if CLANG_VERSION_MAJOR == 4
+    Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
 #endif
@@ -1215,7 +1223,7 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+    std::shared_ptr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     worklist.pop_front();
@@ -1227,8 +1235,8 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
-    Clang.setInvocation(CI.get());
+#if CLANG_VERSION_MAJOR == 4
+    Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
 #endif
