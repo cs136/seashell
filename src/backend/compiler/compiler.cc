@@ -71,7 +71,7 @@
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
-#if CLANG_VERSION_MAJOR == 6
+#if CLANG_VERSION_MAJOR >= 6
   #include <llvm/CodeGen/CommandFlags.def>
 #elif CLANG_VERSION_MAJOR == 5
   #include <llvm/CodeGen/CommandFlags.h>
@@ -113,9 +113,13 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
+#if   CLANG_VERSION_MAJOR == 7 && CLANG_VERSION_MINOR == 1
+#elif CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
+#define STRING2(x) #x
+#define STRING(x) STRING2(x)
+#pragma message "Clang version is: " STRING(CLANG_VERSION_MAJOR) "." STRING(CLANG_VERSION_MINOR)
 #endif
 
 /** Data structure for compiler diagnostic messages.
@@ -771,7 +775,7 @@ static int final_link_step (struct seashell_compiler* compiler, bool gen_bytecod
     llvm::SmallString<128> result;
     llvm::raw_svector_ostream raw(result);
 
-    if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
+    if (Target.addPassesToEmitFile(PM, raw, nullptr, llvm::TargetMachine::CGFT_ObjectFile)) {
       compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
       return 1;
     }
@@ -1107,7 +1111,7 @@ public:
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
     clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
     const clang::FileEntry *File, clang::StringRef SearchPath, clang::StringRef RelativePath,
-    const clang::Module *Imported) {
+    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
@@ -1118,7 +1122,7 @@ public:
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
         if(result.length() >= 2 && result[result.length()-1] == 'c' && result[result.length()-2] == '.') {
           if(res.second) {
-            //fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
+            fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
             _wl.push_back(result);
           }
         }
