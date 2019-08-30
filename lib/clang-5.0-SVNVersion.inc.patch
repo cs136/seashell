@@ -1,0 +1,63 @@
+This patch is to fix a compilation error that looks like:
+
+  make[2]: *** No rule to make target '/home/.../seashell/lib/llvm/.git/modules/lib/clang/logs/HEAD', needed by 'lib/llvm/tools/clang/lib/Basic/SVNVersion.inc'.  Stop.
+  CMakeFiles/Makefile2:23618: recipe for target 'lib/llvm/tools/clang/lib/Basic/CMakeFiles/clangBasic.dir/all' failed
+  make[1]: *** [lib/llvm/tools/clang/lib/Basic/CMakeFiles/clangBasic.dir/all] Error 2
+  make[1]: *** Waiting for unfinished jobs....
+
+This patch is from https://reviews.llvm.org/D38033
+
+diff --git a/lib/Basic/CMakeLists.txt b/lib/Basic/CMakeLists.txt
+index e971b55e85..6f030758dc 100644
+--- a/lib/Basic/CMakeLists.txt
++++ b/lib/Basic/CMakeLists.txt
+@@ -17,24 +17,33 @@ endfunction()
+ macro(find_first_existing_vc_file out_var path)
+   set(git_path "${path}/.git")
+ 
+-  # Normally '.git' is a directory that contains a 'logs/HEAD' file that
+-  # is updated as modifications are made to the repository. In case the
+-  # repository is a Git submodule, '.git' is a file that contains text that
+-  # indicates where the repository's Git directory exists.
+-  if (EXISTS "${git_path}" AND NOT IS_DIRECTORY "${git_path}")
+-    FILE(READ "${git_path}" file_contents)
+-    if("${file_contents}" MATCHES "^gitdir: ([^\n]+)")
+-      # '.git' is indeed a link to the submodule's Git directory.
+-      # Use the path to that Git directory.
+-      set(git_path "${path}/${CMAKE_MATCH_1}")
++  # if a .git-file or path is found, determine the real .git-path,
++  # which could be anywhere when this repo is a submodule, or ln'd
++  # into tools/, so we use git rev-parse.
++  #
++  # Code is borrowed from llvm/include/llvm/Support/CMakeLists.txt
++  if (EXISTS "${git_path}")
++    find_program(git_executable NAMES git git.exe git.cmd)
++    # Run from a subdirectory to force git to print an absolute path.
++    execute_process(COMMAND ${git_executable} rev-parse --git-dir
++      WORKING_DIRECTORY ${path}/cmake
++      RESULT_VARIABLE git_result
++      OUTPUT_VARIABLE git_dir
++      ERROR_QUIET)
++    if(git_result EQUAL 0)
++      string(STRIP "${git_dir}" git_dir)
++      set(${out_var} "${git_dir}/logs/HEAD")
++      # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
++      if (NOT EXISTS "${git_dir}/logs/HEAD")
++        file(WRITE "${git_dir}/logs/HEAD" "")
++      endif()
++    else()
++      find_first_existing_file(${out_var}
++        "${path}/.svn/wc.db"   # SVN 1.7
++        "${path}/.svn/entries" # SVN 1.6
++      )
+     endif()
+   endif()
+-
+-  find_first_existing_file(${out_var}
+-    "${git_path}/logs/HEAD"  # Git or Git submodule
+-    "${path}/.svn/wc.db"     # SVN 1.7
+-    "${path}/.svn/entries"   # SVN 1.6
+-    )
+ endmacro()
+ 
+ find_first_existing_vc_file(llvm_vc "${LLVM_MAIN_SRC_DIR}")

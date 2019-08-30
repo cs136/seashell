@@ -1,7 +1,7 @@
 language: c++
 compiler: clang
 sudo: required
-dist: trusty
+dist: bionic
 cache: ccache
 env:
 - NODE_PATH=/usr/local/lib/node_modules

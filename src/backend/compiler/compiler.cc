@@ -71,10 +71,15 @@
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/CodeGen/CommandFlags.h>
+#if CLANG_VERSION_MAJOR >= 6
+  #include <llvm/CodeGen/CommandFlags.def>
+#elif CLANG_VERSION_MAJOR == 5
+  #include <llvm/CodeGen/CommandFlags.h>
+#endif
 #include <llvm/CodeGen/LinkAllAsmWriterComponents.h>
 #include <llvm/CodeGen/LinkAllCodegenComponents.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
@@ -99,17 +104,22 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/DiagnosticPrinter.h>
-#include <llvm/Target/TargetSubtargetInfo.h>
+#include <llvm/CodeGen/TargetSubtargetInfo.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 9
+#if   CLANG_VERSION_MAJOR == 7 && CLANG_VERSION_MINOR == 1
+#elif CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
+#define STRING2(x) #x
+#define STRING(x) STRING2(x)
+#pragma message "Clang version is: " STRING(CLANG_VERSION_MAJOR) "." STRING(CLANG_VERSION_MINOR)
 #endif
 
 /** Data structure for compiler diagnostic messages.
@@ -582,7 +592,9 @@ std::string seashell_compiler_object_arch(struct seashell_compiler* compiler) {
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getArch() == llvm::Triple::UnknownArch)
     return NULL;
-  return llvm::Triple::getArchTypeName(TheTriple.getArch());
+  llvm::StringRef stringRef = llvm::Triple::getArchTypeName(TheTriple.getArch());
+  std::string stdString = stringRef.str();
+  return stdString.c_str();
 }
 
 /**
@@ -603,7 +615,9 @@ std::string seashell_compiler_object_os (struct seashell_compiler* compiler) {
   llvm::Triple TheTriple = llvm::Triple(compiler->module.getTargetTriple());
   if (TheTriple.getOS() == llvm::Triple::UnknownOS)
     return NULL;
-  return llvm::Triple::getOSTypeName(TheTriple.getOS());
+  llvm::StringRef stringRef = llvm::Triple::getOSTypeName(TheTriple.getOS());
+  std::string stdString = stringRef.str();
+  return stdString.c_str();
 }
 
 static void printDiagnosticOptions(raw_ostream &OS,
@@ -679,8 +693,11 @@ public:
         clang::FileID FID = SM->getFileID(Loc);
         if( !FID.isInvalid()) {
           const clang::FileEntry * FE = SM->getFileEntryForID(FID);
-          if(FE && FE->getName()) {
-            messages.insert(seashell_diag(error, FE->getName(), OutStr.c_str()));
+          llvm::StringRef stringRef = FE->getName();
+          std::string stdString = stringRef.str();
+          const char * FEName = stdString.c_str();
+          if(FE && FEName) {
+            messages.insert(seashell_diag(error, FEName, OutStr.c_str()));
             return;
           } else {
             messages.insert(seashell_diag(error, "?", OutStr.c_str()));
@@ -758,7 +775,7 @@ static int final_link_step (struct seashell_compiler* compiler, bool gen_bytecod
     llvm::SmallString<128> result;
     llvm::raw_svector_ostream raw(result);
 
-    if (Target.addPassesToEmitFile(PM, raw, llvm::TargetMachine::CGFT_ObjectFile)) {
+    if (Target.addPassesToEmitFile(PM, raw, nullptr, llvm::TargetMachine::CGFT_ObjectFile)) {
       compiler->linker_messages = "libseashell-clang: couldn't emit object code for target: " + TheTriple.getTriple() + ".";
       return 1;
     }
@@ -862,7 +879,7 @@ static int compile_module (seashell_compiler* compiler,
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+    std::shared_ptr<clang::CompilerInvocation> CI = std::make_shared<clang::CompilerInvocation>();
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     if (!Success) {
@@ -873,8 +890,8 @@ static int compile_module (seashell_compiler* compiler,
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
-    Clang.setInvocation(CI.get());
+#if CLANG_VERSION_MAJOR >= 5
+    Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
 #endif
@@ -938,17 +955,17 @@ static int compile_module (seashell_compiler* compiler,
     }
 
 #ifndef __EMSCRIPTEN__
-    LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
-      compiler->context.getDiagnosticHandler();
+    DiagnosticHandler::DiagnosticHandlerTy OldDiagnosticHandler =
+      compiler->context.getDiagnosticHandlerCallBack();
     void *OldDiagnosticContext = compiler->context.getDiagnosticContext();
     std::string Message;
-    compiler->context.setDiagnosticHandler(StringDiagnosticHandler, &Message, true);
+    compiler->context.setDiagnosticHandlerCallBack(StringDiagnosticHandler, &Message, true);
 #else
     std::string Message = "Error linking modules!  Make sure there are no multiply-defined symbols!";
 #endif
     Success = !llvm::Linker::linkModules(*module, std::move(mod));
 #ifndef __EMSCRIPTEN__
-    compiler->context.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
+    compiler->context.setDiagnosticHandlerCallBack(OldDiagnosticHandler, OldDiagnosticContext, true);
 #endif
     if (!Success) {
       PUSH_DIAGNOSTIC(Message);
@@ -1094,7 +1111,7 @@ public:
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &IncludeToken,
     clang::StringRef FileName, bool isAngled, clang::CharSourceRange FilenameRange,
     const clang::FileEntry *File, clang::StringRef SearchPath, clang::StringRef RelativePath,
-    const clang::Module *Imported) {
+    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
 
     // enforce non-standard library includes must use quotes
     if(!isAngled) {
@@ -1105,7 +1122,7 @@ public:
         std::pair<std::set<std::string>::iterator, bool> res = _deps.insert(result.c_str());
         if(result.length() >= 2 && result[result.length()-1] == 'c' && result[result.length()-2] == '.') {
           if(res.second) {
-            //fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
+            fprintf(stderr, "Pushing to wl: %s\n", result.c_str());
             _wl.push_back(result);
           }
         }
@@ -1215,7 +1232,7 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     clang::FileManager CI_FM((clang::FileSystemOptions()));
     clang::SourceManager CI_SM(CI_Diags, CI_FM);
 
-    clang::IntrusiveRefCntPtr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
+    std::shared_ptr<clang::CompilerInvocation> CI(new clang::CompilerInvocation);
 
     Success = clang::CompilerInvocation::CreateFromArgs(*CI, &args[0], &args[0] + args.size(), CI_Diags);
     worklist.pop_front();
@@ -1227,8 +1244,8 @@ static int preprocess_file(struct seashell_compiler *compiler, const char* src_p
     }
 
     clang::CompilerInstance Clang;
-#if CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5
-    Clang.setInvocation(CI.get());
+#if CLANG_VERSION_MAJOR >= 5
+    Clang.setInvocation(CI);
 #elif CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR == 4
     Clang.setInvocation(CI.getPtr());
 #endif

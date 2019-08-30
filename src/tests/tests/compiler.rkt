@@ -48,18 +48,17 @@ EOF
         ))
       (check-false res))
 
-;; Put this test back when clang is upgraded
-;    (test-case "clang-hanger"
-;      (define-values (res hsh) (create-project-with-contents-and-run
-;#<<EOF
-;struct MyStruct { int my_member; };
-;void f(struct MyStruct *a_struct) {
-;    non_existant_function(*astruct->y_member.junk, *astruct.my_);
-;}
-;int main() {}
-;EOF
-;        ))
-;      (check-false res))
+    (test-case "clang-hanger"
+      (define-values (res hsh) (create-project-with-contents-and-run
+#<<EOF
+struct MyStruct { int my_member; };
+void f(struct MyStruct *a_struct) {
+    non_existant_function(*astruct->y_member.junk, *astruct.my_);
+}
+int main() {}
+EOF
+        ))
+      (check-false res))
 
     (test-case "bad-werror-return-type-return-void"
       (define-values (res hsh) (create-project-with-contents-and-run

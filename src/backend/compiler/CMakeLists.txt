@@ -41,8 +41,8 @@ add_definitions( ${LLVM_DEFINITIONS} )
 # Set the required flags
 SET(CMAKE_CXX_FLAGS "${LLVM_CXX_COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
 
-# C++ 11 mode.
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+# C++ 14 mode.
+set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
 
 # Query for multiarch
 execute_process(COMMAND gcc --print-multiarch RESULT_VARIABLE MA_EXIST OUTPUT_VARIABLE MULTIARCH)
