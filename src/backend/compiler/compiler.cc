@@ -71,7 +71,9 @@
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
-#if CLANG_VERSION_MAJOR >= 6
+#if CLANG_VERSION_MAJOR == 7
+  #include <llvm/CodeGen/CommandFlags.inc>
+#elif CLANG_VERSION_MAJOR == 6
   #include <llvm/CodeGen/CommandFlags.def>
 #elif CLANG_VERSION_MAJOR == 5
   #include <llvm/CodeGen/CommandFlags.h>
