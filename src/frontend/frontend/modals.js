@@ -224,6 +224,14 @@ angular.module('frontend-app')
                      $scope.inputError = 'Please avoid uploading a file with a name that exists in the "common/" or question directory. Could not upload: "' + conflicts.join('", "') + '".';
                      return false;
                   }
+                  // Check filenames
+                  var filenames_okay = _.every($scope.new_file_upload, function(file) {
+                    return /^[\w-][\w.-]*$/.test(file.name);
+                  });
+                  if(!filenames_okay) {
+                    $scope.inputError = 'Filenames can only contain letters, numbers, dashes, underscores, periods, and not start with a period.';
+                    return false;
+                  }
                   // Check passes. For each file, upload.
                   _.forEach($scope.new_file_upload, function (file) {
                     var filename = file.name; // NOTE: does not contain path information!
@@ -262,8 +270,10 @@ angular.module('frontend-app')
                      return false;
                   }
                   // Disallow creating a file outside the question 
-                  if (! filename.match(/^[^.\s\/\\][^\s\/\\]*$/)) {
-                     $scope.inputError = 'Illegal filename: "' + filename + '".';
+                  // \w is equivalent to [A-Za-z0-9_]
+                  if (! filename.match(/^[\w-][\w.-]*$/)) {
+                     $scope.inputError = 'Illegal filename: "' + filename + '". '
+                       + 'Filenames can only contain letters, numbers, dashes, underscores, periods, and not start with a period.';
                      return false;
                   }
                   

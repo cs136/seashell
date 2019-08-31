@@ -378,6 +378,12 @@
 ;;  string? - checksum of file
 (define/contract (rename-file project old-file new-file)
   (-> (and/c project-name? is-project?) path-string? path-string? string?)
+  (logf 'info "Renaming ~a file from ~a to ~a~n" project old-file new-file)
+  (define filename (file-name-from-path new-file))
+  ;; [:word:] Contains a-z, A-Z, 0-9, _
+  (when (and filename (not (regexp-match? #px"^[[:word:]-][[:word:].-]*$" (path->string filename))))
+    (raise (exn:project "File could not be renamed. Filenames can only contain letters, numbers, dashes, underscores, periods, and not start with a period."
+                        (current-continuation-marks))))
   (define proj-path (check-and-build-path (build-project-path project)))
   (with-handlers
     [(exn:fail:filesystem? (lambda (e)
