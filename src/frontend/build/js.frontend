@@ -27,7 +27,7 @@
 //cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.12.1/ui-bootstrap-tpls.min.js
 //cdnjs.cloudflare.com/ajax/libs/angular-css/1.0.7/angular-css.min.js
 //cdnjs.cloudflare.com/ajax/libs/dexie/1.4.1/dexie.js
-//cdn.ravenjs.com/3.16.1/raven.min.js
+//cdnjs.cloudflare.com/ajax/libs/raven.js/3.16.1/raven.min.js
 
 # Overrides
 js/lib/ui-codemirror.js
