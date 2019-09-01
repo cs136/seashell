@@ -23,11 +23,11 @@ angular.module('frontend-app')
   // Editor Controller
   .controller("EditorController", ['$state', 'openQuestion', '$scope', 'error-service',
       'openProject', 'NewFileModal', 'NewTestModal', 'SubmitMarmosetModal', '$interval', 'marmoset',
-      'NewQuestionModal', 'MarmosetResultsModal', 'console-service', 'socket',
+      'NewQuestionModal', 'MarmosetResultsModal', 'console-service', 'socket', '$cookies',
       function ($state, openQuestion, $scope, errors,
         openProject, newFileModal, newTestModal,  submitMarmosetModal,
         $interval, marmoset, newQuestionModal,
-        marmosetResultsModal, Console, ws) {
+        marmosetResultsModal, Console, ws, $cookies) {
         var self = this;
         self.question = openQuestion;
         self.project = openProject;
@@ -196,7 +196,21 @@ angular.module('frontend-app')
         };
 
         /** Submits the current question. */
-        self.submit_question = function (){runWhenSaved(function(){
+        self.submit_question = function () {
+
+          // log when the submit question link is clicked
+          console.log("submit question link clicked for", self.project.name, self.question);
+          try {
+            var log_data = { username: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
+                             type: 'submit_question_link_clicked',
+                             project_name: self.project.name,
+                             question: self.question };
+	    jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
+	    }).fail(function() {
+	    });
+	  } catch(err) { }
+
+          runWhenSaved(function() {
           submitMarmosetModal(self.project, self.question, function (success, target) {
             if (!success) {
               self.marmoset_short_results_style = self.marmoset_submission_warning_style;

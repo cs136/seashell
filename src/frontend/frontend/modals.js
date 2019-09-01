@@ -224,6 +224,14 @@ angular.module('frontend-app')
                      $scope.inputError = 'Please avoid uploading a file with a name that exists in the "common/" or question directory. Could not upload: "' + conflicts.join('", "') + '".';
                      return false;
                   }
+                  // Check filenames
+                  var filenames_okay = _.every($scope.new_file_upload, function(file) {
+                    return /^[\w-][\w.-]*$/.test(file.name);
+                  });
+                  if(!filenames_okay) {
+                    $scope.inputError = 'Filenames can only contain letters, numbers, dashes, underscores, periods, and not start with a period.';
+                    return false;
+                  }
                   // Check passes. For each file, upload.
                   _.forEach($scope.new_file_upload, function (file) {
                     var filename = file.name; // NOTE: does not contain path information!
@@ -262,8 +270,10 @@ angular.module('frontend-app')
                      return false;
                   }
                   // Disallow creating a file outside the question 
-                  if (! filename.match(/^[^.\s\/\\][^\s\/\\]*$/)) {
-                     $scope.inputError = 'Illegal filename: "' + filename + '".';
+                  // \w is equivalent to [A-Za-z0-9_]
+                  if (! filename.match(/^[\w-][\w.-]*$/)) {
+                     $scope.inputError = 'Illegal filename: "' + filename + '". '
+                       + 'Filenames can only contain letters, numbers, dashes, underscores, periods, and not start with a period.';
                      return false;
                   }
                   
@@ -378,13 +388,26 @@ angular.module('frontend-app')
           notify = notify || function () {};
           return $modal.open({
             templateUrl: "frontend/templates/marmoset-submit-template.html",
-            controller: ['$scope', '$state', 'error-service', '$q', 'marmoset',
-            function ($scope, $state, errors, $q, marmoset) {
+            controller: ['$scope', '$state', 'error-service', '$q', 'marmoset', '$cookies',
+            function ($scope, $state, errors, $q, marmoset, $cookies) {
               $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
                 .then(function(res) {
                   $scope.marmoset_projects = res[0];
                   $scope.selected_project = res[1];
                   $scope.submit = function() {
+                    // log when the submit button is clicked
+                    console.log("Submit button clicked for", project.name, question, "to", $scope.selected_project);
+                    try {
+                      var log_data = { username: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
+                                       type: 'submit_question_button_clicked',
+                                       project_name: project.name,
+                                       question: question,
+                                       marmoset_project: $scope.selected_project };
+                      jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
+                      }).fail(function() {
+                      });
+                    } catch(err) { }
+
                     $scope.$close();
                     if($scope.selected_project === false) {
                       // No project/question was selected in the drop-down menu

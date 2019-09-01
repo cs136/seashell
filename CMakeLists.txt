@@ -70,7 +70,7 @@ ELSE()
   SET(GIT_DIRTY True)
 ENDIF()
 
-set(SEASHELL_VERSION "3.0.7")
+set(SEASHELL_VERSION "3.0.8")
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()

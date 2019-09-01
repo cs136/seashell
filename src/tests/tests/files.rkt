@@ -27,6 +27,9 @@
       (check-pred file-exists? (check-and-build-path (build-project-path "test") "bad.c"))
       (check-false (file-exists? (check-and-build-path (build-project-path "test") "good.c"))))
 
+    (test-case "Rename a file (failure)"
+      (check-exn exn:project? (lambda () (rename-file "test" "good.c" "#badfilename#.c"))))
+
     (test-case "List files"
       (new-file "test" "good.c" #"" 'raw #f)
       (new-file "test" ".hidden.c" #"" 'raw #f)
