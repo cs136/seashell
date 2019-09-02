@@ -23,6 +23,6 @@ int main(int argc, char **argv)
 
         // Run the racket script to get test results from Marmoset database.
         char *empty_env[] = {};
-        execle("/usr/bin/racket", "/usr/bin/racket", "/u/cs136/marmoset-scripts/get-test-results/get-test-results.rkt", realpwd->pw_name, argv[1], argv[2], NULL, empty_env);
+        execle("/usr/bin/racket", "/usr/bin/racket", "/u/cs145/marmoset-scripts/get-test-results/get-test-results.rkt", realpwd->pw_name, argv[1], argv[2], NULL, empty_env);
         return 0;
 }

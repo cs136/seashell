@@ -611,7 +611,7 @@
         ('assn assn)
         ('type "marmosetSubmit")
         ('subdir subdir))
-        (marmoset-submit "CS136" assn project subdir)
+        (marmoset-submit "CS145" assn project subdir)
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]
@@ -621,7 +621,7 @@
         ('project project)
         ('testtype testtype))
        (define testtype-as-symbol (if (string? testtype) (string->symbol testtype) testtype))
-       (define test-results (marmoset-test-results "CS136" project testtype-as-symbol))
+       (define test-results (marmoset-test-results "CS145" project testtype-as-symbol))
        `#hash((id . ,id)
               (success . #t)
               (result . ,test-results))]

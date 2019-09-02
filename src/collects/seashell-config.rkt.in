@@ -219,9 +219,9 @@
       ;; via SSH.
       (cons 'host                          '("localhost"))
       ;; Location of per-user configuration directory.
-      (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell"))
+      (cons 'seashell                      (build-path (find-system-path 'home-dir) ".seashell-cs145"))
       ;; Location of the runtime-files directory.
-      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell" "runtime-files"))
+      (cons 'runtime-files-path            (build-path (find-system-path 'home-dir) ".seashell-cs145" "runtime-files"))
       ;; Name of credentials file.
       (cons 'seashell-creds-name           (format "seashell~a-creds" @SEASHELL_API_VERSION@))
       ;; Name of credentials cookie
@@ -233,7 +233,7 @@
       ;; Location of the Submit tool
       (cons 'submit-tool                    "/u8/cs_build/bin/marmoset_submit")
       ;; Location of the Marmoset test results script
-      (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
+      (cons 'test-results-tool              "/u/cs145/marmoset-scripts/get-test-results/get-test-results")
       ;; Location of the default project template
       (cons 'default-project-template       "https://github.com/cs136/seashell-default/archive/v1.0.zip")
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive

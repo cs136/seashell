@@ -1,14 +1,14 @@
-#!/u/cs136/seashell-support-files/racket/bin/racket
+#!/usr/bin/racket
 #lang racket
 (require net/cgi
          json
          file/unzip)
 
-(define skel-file "/u/cs136/public_html/assignment_skeletons/skeletons.json")
-(define skel-template "/u/cs136/public_html/assignment_skeletons/~a-seashell.zip")
-(define wl-skel-template "/u/cs136/seashell-support-files/whitelist-skeletons/~a-seashell.zip")
-(define wl-u-file "/u/cs136/public_html/assignment_skeletons/user_whitelist.json")
-(define wl-skel-file "/u/cs136/public_html/assignment_skeletons/project_whitelist.json")
+(define skel-file "/u/cs145/public_html/assignment_skeletons/skeletons.json")
+(define skel-template "/u/cs145/public_html/assignment_skeletons/~a-seashell.zip")
+(define wl-skel-template "/u/cs145/seashell-support-files/whitelist-skeletons/~a-seashell.zip")
+(define wl-u-file "/u/cs145/public_html/assignment_skeletons/user_whitelist.json")
+(define wl-skel-file "/u/cs145/public_html/assignment_skeletons/project_whitelist.json")
 
 (define (report-exn-and-quit exn)
   (write-json

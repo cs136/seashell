@@ -75,7 +75,7 @@ int seashell_signal_detach(void) {
    */ 
   int error = 0;
 
-  char *logfd_path = make_message("%s/.seashell/seashell.log", getenv("HOME"));
+  char *logfd_path = make_message("%s/.seashell-cs145/seashell.log", getenv("HOME"));
   if (logfd_path == NULL) {
     error = 1;
     goto end;

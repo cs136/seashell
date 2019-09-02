@@ -2,7 +2,7 @@
 # This files lists the available assignment skeletons, for seashell. Each entry
 # in the JSON array printed by this file should correspond to a directory (git
 # repository) in ~cs136/public_html/assignment_skeletons/
-TEMPLATE_FILE=/u/cs136/public_html/assignnment_skeletons/skeletons.json
+TEMPLATE_FILE=/u/cs145/public_html/assignnment_skeletons/skeletons.json
 
 echo "Content-Type: text/json"
 echo "Access-Control-Allow-Origin: *"

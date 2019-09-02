@@ -252,13 +252,13 @@
             (cookie:secure
               (cookie:add-path
                 (set-cookie (uri-encode (read-config-string 'seashell-creds-cook)) (uri-encode (jsexpr->string creds)))
-                "/~cs136/seashell")
+                "/~cs145/seashell")
               #t))
 
           ;; Write response back.
           (printf "Status: 303 See Other\r\n")
           (printf "Set-Cookie: ~a\r\n" (print-cookie credentials-cookie))
-          (printf "Location: /~~cs136/seashell/frontend.html\r\n\r\n")))))
+          (printf "Location: /~~cs145/seashell/frontend.html\r\n\r\n")))))
 
   ;; gateway-main
   ;; Main login function.
