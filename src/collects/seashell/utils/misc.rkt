@@ -48,11 +48,9 @@
                               #:overwrite? [overwrite? #f])
   (let loop ([src src] [dest dest])
     (begin
-      (when overwrite?
-        (cond [(or (file-exists? dest) (link-exists? dest))
-               (delete-file dest)]
-              [(directory-exists? dest) (delete-directory/files dest)]))
-      (when (not (or (file-exists? dest) (link-exists? dest) (directory-exists? dest)))
+      (when (and overwrite? (or (file-exists? dest) (link-exists? dest)))
+        (delete-file dest))
+      (when (not (or (file-exists? dest) (link-exists? dest)))
         (cond [(and preserve-links?
                     (link-exists? src))
                (make-file-or-directory-link
