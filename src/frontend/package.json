@@ -50,7 +50,7 @@
     "seashell-clang-js": "https://www.student.cs.uwaterloo.ca/~cs136/seashell-clang-js-B43.tar.gz",
     "typeface-overpass": "0.0.35",
     "webcrypto-shim": "^0.1.1",
-    "ws": "^2.2.1",
+    "ws": "^7.2.0",
     "xterm": "^2.3.2"
   },
   "devDependencies": {
