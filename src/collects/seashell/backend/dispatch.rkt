@@ -344,7 +344,7 @@
         ('id id)
         ('type "sendEOF")
         ('pid pid))
-       (close-output-port (program-stdin pid))
+       (write-byte #x4 (program-stdin pid))
        `#hash((id . ,id)
               (success . #t)
               (result . #t))]

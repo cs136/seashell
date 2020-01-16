@@ -610,7 +610,6 @@ angular.module('frontend-app')
             d.then(function() {
               self.userInput = "";
               self.project.sendEOF(self.console.PIDs[0]).then(function () {
-                self.console.running = false;
               });
             });
           }
