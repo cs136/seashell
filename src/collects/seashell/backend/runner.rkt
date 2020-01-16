@@ -286,12 +286,12 @@
            [(? (lambda (evt) (eq? in-stdin evt))) ;; Received input from user
             (define input (make-bytes (read-config-integer 'io-buffer-size)))
             (define read (read-bytes-avail! input in-stdin))
+            (cond [(eof-object? read)
+                   (logf 'info "Received EOF!")]
+                  [else
+                   (logf 'info "Read ~a bytes as input from user: ~a" read input)])
             (when (integer? read)
               (write-bytes input raw-stdin 0 read))
-            (when (eof-object? read)
-              (close-input-port in-stdin)
-              ;; Send <eof> (#x4) to the PTY, instead of closing the port.
-              (write-byte #x4 raw-stdin))
             (check-signals loop)]
            [(? (lambda (evt) (eq? raw-stdout evt))) ;; Received output from program
             (define output (make-bytes (read-config-integer 'io-buffer-size)))
