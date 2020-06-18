@@ -206,7 +206,7 @@
 
     ;; Install SSL keys.
     (set! ssl-unit
-          (pfs:make-ssl-connect@
+          (make-ssl-connect@
            (read-config 'ssl-cert)
            (read-config 'ssl-key)))
 
