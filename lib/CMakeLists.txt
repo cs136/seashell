@@ -39,19 +39,12 @@ execute_process(COMMAND ln -sf "../../compiler-rt" "${CMAKE_CURRENT_SOURCE_DIR}/
 # ZLIB library (libssh2)
 find_package(ZLIB)
 
-# OpenSSL (libssh2)
-find_package(OpenSSL)
-
 # External projects (not CMake based)
 # libssh2 - libssh2 SSH library
 ExternalProject_Add(
   libssh2
   URL ${CMAKE_CURRENT_SOURCE_DIR}/libssh2
-  PATCH_COMMAND <SOURCE_DIR>/buildconf
-  CONFIGURE_COMMAND <SOURCE_DIR>/configure --with-openssl --enable-static --disable-shared
-                    CFLAGS=-fPIC CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
-  BUILD_COMMAND make -j
-  INSTALL_COMMAND "")
+  CMAKE_ARGS "-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}" "-DENABLE_ZLIB_COMPRESSION=TRUE" "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 
 # External projects (CMake based)
 # Global overrides
@@ -90,12 +83,13 @@ set(LIBSSH2_LIBRARIES
     ${OPENSSL_LIBRARIES}
     ${ZLIB_LIBRARIES})
 set(LIBSSH2_LINK_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/
+    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/
     PARENT_SCOPE)
 set(LIBSSH2_LINK_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/.libs/)
+    ${CMAKE_CURRENT_BINARY_DIR}/libssh2-prefix/src/libssh2-build/src/)
 set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/
     PARENT_SCOPE)
+set(LIBSSH2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libssh2/include/)
 set(LLVM_SOURCE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/llvm/include
     PARENT_SCOPE)

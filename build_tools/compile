@@ -1,0 +1,180 @@
+#!/bin/bash
+
+racket="/usr/bin/racket"
+username="`whoami`"
+
+readonly BUILD_DIR=/u/${username}/build/
+readonly SOURCE_DIR=/u/${username}/seashell/
+readonly INSTALL_DIR=/u/${username}/install/
+readonly ETC_DIR=/u/${username}/etc
+
+readonly OPENSSL_ROOT_DIR=/u/${username}/openssl
+
+readonly TOTAL_CORES="`nproc`"
+readonly CORES_TO_USE=$((TOTAL_CORES/3))
+#readonly CORES_TO_USE=20
+
+
+# Compiler to use to compile Seashell and its libraries
+#export CC=/u/cs136/seashell-clang-files/bin/clang
+#export CXX=/u/cs136/seashell-clang-files/bin/clang++
+
+if [ -f "$INSTALL_DIR/src/frontend/webpack.config.prod.js" ]; then
+    readonly SEASHELL_VERSION="new"
+else
+    readonly SEASHELL_VERSION="old"
+fi
+
+# Default values for build options
+RUN_TESTS="no" # "no" or "yes"
+BUILD_TYPE="Debug" # "Debug" or "Release"
+LIGHTWEIGHT_LAUNCHERS="yes" # "no" or "yes"
+FAST_INSTALL="no" # "no" or "yes"
+RUN_CMAKE="yes" # "no" or "yes"
+
+print_help_quit () {
+    echo "Available arguments:"
+    echo "  tests or notests: Run tests after building? (default $RUN_TESTS)"
+    echo "  debug or release: Which build type to use? (default $BUILD_TYPE)"
+    echo "  light or nolight: Use lightweight launchers? (default $LIGHTWEIGHT_LAUNCHERS)"
+    echo "  fast or nofast: Use install/fast make target? (default $FAST_INSTALL)"
+    echo "  nocmake: Do not run cmake"
+    echo "  help: Display this help page"
+    echo "Note: If building for the first time, use the slowest options possible, ie: $0 nolight"
+    echo "Once built, you can recompile quickly with: $0 nocmake notests"
+    exit 0
+}
+
+
+for arg in "$@"; do
+    case $arg in
+        help | -h | --help)
+            print_help_quit
+            ;;
+    # Run tests?
+        tests | test)
+            RUN_TESTS="yes"
+            ;;
+        notest | notests)
+            RUN_TESTS="no"
+            ;;
+    # Build type
+        debug)
+            BUILD_TYPE="Debug"
+            ;;
+        release)
+            BUILD_TYPE="Release"
+            ;;
+    # Lightweight launchers?
+        light)
+            LIGHTWEIGHT_LAUNCHERS="yes"
+            ;;
+        nolight)
+            LIGHTWEIGHT_LAUNCHERS="no"
+            ;;
+    # Fast install?
+        fast | fast_install | fast-install | fast/install)
+            FAST_INSTALL="yes"
+            ;;
+        nofast | nofast_install | nofast-install | nofast/install)
+            FAST_INSTALL="no"
+            ;;
+    # Run cmake?
+        nocmake)
+            RUN_CMAKE="no"
+            ;;
+
+        *)
+            echo "Unkown argument: $arg"
+            print_help_quit
+            ;;
+    esac
+done
+
+echo "Build options for $SEASHELL_VERSION Seashell:"
+echo "  Source : $SOURCE_DIR"
+echo "  Build  : $BUILD_DIR"
+echo "  Install: $INSTALL_DIR"
+echo "  Cores to use: $CORES_TO_USE"
+echo "  Run cmake: $RUN_CMAKE"
+echo "  Run tests? $RUN_TESTS"
+echo "  Build type: $BUILD_TYPE"
+echo "  Use lightweight launchers? $LIGHTWEIGHT_LAUNCHERS"
+echo "  Use fast/install make target? $FAST_INSTALL"
+
+# Start building!
+set -x
+
+mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+
+cd $BUILD_DIR
+
+# cmaking...
+if [ "$RUN_CMAKE" = "yes" ]; then
+    if [ "$LIGHTWEIGHT_LAUNCHERS" = "yes" ]; then
+        cmake $SOURCE_DIR -DOPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR -DSEASHELL_RACKET=$racket -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_LIGHTWEIGHT_LAUNCHERS=1 -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    else
+        cmake $SOURCE_DIR -DOPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR -DSEASHELL_RACKET=$racket -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    fi
+fi
+
+# compile
+exit_code=0
+if [ "$FAST_INSTALL" = "yes" ]; then
+    make -j${CORES_TO_USE} install/fast
+    exit_code=$?
+else
+    make -j${CORES_TO_USE} install
+    exit_code=$?
+fi
+
+if [ $exit_code -ne 0 ]; then
+  echo
+  echo "make exited with code $exit_code"
+  echo
+  exit "$exit_code"
+fi
+
+# Prepare the front end stuff
+cd ${INSTALL_DIR}/share/frontend 
+
+rm "${INSTALL_DIR}/share/frontend/cgi-bin"
+ln -s ${INSTALL_DIR}/cgi-bin cgi-bin
+
+cd ${INSTALL_DIR}
+cat > cgi-bin/.htaccess <<- EOM
+<Files *.cgi>
+    SetHandler su-cgi-script
+</Files>
+EOM
+
+cat > share/frontend/.htaccess <<- EOM
+<filesMatch "\.(manifest)$">
+FileETag None
+Header unset ETag
+Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+Header set Pragam "no-cache"
+Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+</filesMatch>
+EOM
+
+chmod -R 755 "$INSTALL_DIR"
+chgrp -R "$username" "$INSTALL_DIR"
+chmod 2755 $INSTALL_DIR/bin/seashell-user-backend
+chmod 4700 $INSTALL_DIR/cgi-bin/login2.cgi
+
+rm "$INSTALL_DIR/etc"
+ln -s "$ETC_DIR" "$INSTALL_DIR/etc"
+
+# Run tests?
+if [ "$RUN_TESTS" = "yes" ]; then
+    cd $BUILD_DIR
+    echo "Running tests inside `pwd` at `date`"
+    CTEST_OUTPUT_ON_FAILURE=TRUE time make test
+fi
+
+pkill -9  -u$username -f seashell-racket-test
+
+echo
+echo "Don't forget to clear browser cache and pkill the seashell-main process!"
+echo
