@@ -31,6 +31,7 @@
  * with it.
  *
  */
+#include <openssl/opensslv.h>
 #include <seashell-config.h>
 #include <libssh2.h>
 #include <unistd.h>
@@ -232,6 +233,9 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
       LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW, &hostkey);
 
   if (check != LIBSSH2_KNOWNHOST_CHECK_MATCH) {
+    fprintf(stderr, "libssh2_knownhost_check returned: %d\n", check);
+    fprintf(stderr, "type is: %d\n", type);
+
     int keytype = 0;
 
     switch (type) {
@@ -504,6 +508,10 @@ int main (int argc, char *argv[]) {
   }
 
   FPRINTF_IF_DEBUG(stderr, "%s: Launching tunnel!\n", argv[1]);
+
+  FPRINTF_IF_DEBUG(stderr, "OPENSSL_VERSION_TEXT: %s\n", OPENSSL_VERSION_TEXT);
+  FPRINTF_IF_DEBUG(stderr, "OPENSSL_VERSION_NUMBER: %lx\n", OPENSSL_VERSION_NUMBER);
+  FPRINTF_IF_DEBUG(stderr, "libssh2 version: %s\n", libssh2_version(0));
 
   for (i = 0; i < 4; i++) {
     uint8_t buf;

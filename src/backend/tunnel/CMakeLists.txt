@@ -22,6 +22,6 @@ include_directories(${LIBSSH2_INCLUDE_DIR})
 # Main library: seashell-tunnel
 add_executable(seashell-tunnel tunnel.c)
 add_dependencies(seashell-tunnel libssh2)
-target_link_libraries(seashell-tunnel ${LIBSSH2_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(seashell-tunnel ${LIBSSH2_LIBRARIES} ${CMAKE_DL_LIBS} pthread)
 
 install(TARGETS seashell-tunnel RUNTIME DESTINATION bin)

@@ -83,6 +83,15 @@ else ()
   set(SEASHELL_STATIC_ANALYSIS 0)
 endif (ENABLE_STATIC_ANALYSIS)
 
+# OpenSSL for libssh2 and tunnel
+set(OPENSSL_USE_STATIC_LIBS FALSE CACHE BOOL "OPENSSL_USE_STATIC_LIBS value")
+message("OPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}")
+find_package(OpenSSL)
+message("OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}")
+message("OPENSSL_LIBRARIES=${OPENSSL_LIBRARIES}")
+include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+link_directories(${OPENSSL_LIBRARIES})
+
 # Build our components.
 add_subdirectory(doc)
 add_subdirectory(lib)
