@@ -115,7 +115,8 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if   CLANG_VERSION_MAJOR == 8 && CLANG_VERSION_MINOR == 0
+#if   CLANG_VERSION_MAJOR == 9 && CLANG_VERSION_MINOR == 0
+#elif CLANG_VERSION_MAJOR == 8 && CLANG_VERSION_MINOR == 0
 #elif CLANG_VERSION_MAJOR == 7 && CLANG_VERSION_MINOR == 1
 #elif CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
 #else

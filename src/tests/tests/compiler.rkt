@@ -60,6 +60,23 @@ EOF
         ))
       (check-false res))
 
+    (test-case "clang-7-crasher"
+      (define-values (res hsh) (create-project-with-contents-and-run
+#<<EOF
+// This C code crashes clang 7.
+struct Node {
+  struct Node x;
+};
+
+int main(void) {
+  struct Node n;
+  struct Node t;
+  n = t;
+}
+EOF
+        ))
+      (check-false res))
+
     (test-case "bad-werror-return-type-return-void"
       (define-values (res hsh) (create-project-with-contents-and-run
 #<<EOF
