@@ -6,5 +6,5 @@ cd "$SCRIPT_PATH/../" && git submodule update --init --progress --jobs 4
 # cd "$SCRIPT_PATH/../lib/compiler-rt" && git am < "$SCRIPT_PATH/../lib/compiler-rt-sigalstack.patch"
 
 # Need this for v5.0
-cd "$SCRIPT_PATH/../lib/clang" && git am < "$SCRIPT_PATH/../lib/clang-5.0-SVNVersion.inc.patch"
+# cd "$SCRIPT_PATH/../lib/clang" && git am < "$SCRIPT_PATH/../lib/clang-5.0-SVNVersion.inc.patch"
 
