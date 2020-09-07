@@ -168,12 +168,14 @@ angular.module('seashell-websocket', ['ngCookies', 'seashell-local-files', 'seas
           .then(function() {
             console.log("Seashell socket set up properly.");
             timeout_interval = $interval(function() {
-              if (timeout_count++ === 3) {
+              if(window.ping_debug === true) { console.log("timeout_count = ", timeout_count); }
+              if (timeout_count++ === 45) {
                 self.invoke_cb('timeout');
               }
               $q.when(self._socket.ping())
                 .then(function() {
-                  if (timeout_count >= 3) {
+                  if(window.ping_debug === true) { console.log("ping returned"); }
+                  if (timeout_count >= 45) {
                     self.invoke_cb('timein');
                   }
                   timeout_count = 0;

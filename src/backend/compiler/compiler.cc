@@ -71,7 +71,7 @@
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/Triple.h>
-#if CLANG_VERSION_MAJOR == 7
+#if CLANG_VERSION_MAJOR >= 7
   #include <llvm/CodeGen/CommandFlags.inc>
 #elif CLANG_VERSION_MAJOR == 6
   #include <llvm/CodeGen/CommandFlags.def>
@@ -115,7 +115,9 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
-#if   CLANG_VERSION_MAJOR == 7 && CLANG_VERSION_MINOR == 1
+#if   CLANG_VERSION_MAJOR == 9 && CLANG_VERSION_MINOR == 0
+#elif CLANG_VERSION_MAJOR == 8 && CLANG_VERSION_MINOR == 0
+#elif CLANG_VERSION_MAJOR == 7 && CLANG_VERSION_MINOR == 1
 #elif CLANG_VERSION_MAJOR == 6 && CLANG_VERSION_MINOR == 0
 #else
 #error "Unsupported version of clang."
