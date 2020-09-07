@@ -12,7 +12,8 @@
 	<span class="file-text" style="font-size: 14px">
 	  <span ng-repeat="group in editView.question_files">
 	      <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
-	    <a ng-repeat-start="file in group.files"
+	    <a ng-click="editView.file_opened = true"
+              ng-repeat-start="file in group.files"
 	      ui-sref="edit-project.editor.file({part: 'question', file: '{{file | escapeFilter }}'})"
 	      class="file-link"
 	      ui-sref-active="file-link-active"
@@ -29,7 +30,8 @@
         <span class="file-text" style="font-size: 14px">
           <span ng-repeat="group in editView.common_files">
               <span ng-if="group.isFileToRun" class="glyphicon glyphicon-play-circle runner-icon"></span>
-            <a ng-repeat-start="file in group.files" ng-if="$first"
+            <a ng-click="editView.file_opened = true"
+               ng-repeat-start="file in group.files" ng-if="$first"
                ui-sref="edit-project.editor.file({part: 'common', file: '{{file | escapeFilter}}'})"
                ui-sref-active='file-link-active'
                class='file-link'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
@@ -46,7 +48,8 @@
         <span class="file-text" style="font-style: italic">tests/&nbsp;&nbsp;</span>
         <span class="file-text" style="font-size: 14px">
           <span ng-repeat="group in editView.test_files">
-            <a ng-repeat-start="file in group.files" ng-if="$first"
+            <a ng-click="editView.file_opened = true"
+               ng-repeat-start="file in group.files" ng-if="$first"
                ui-sref="edit-project.editor.file({part: 'tests', file: '{{file | escapeFilter}}'})"
                class='file-link'
                ui-sref-active='file-link-active'>{{file}}</a><span ng-repeat-end ng-if="!$first">,<a
@@ -98,6 +101,10 @@
       </span>
     </div>
 
+  </div>
+
+  <div ng-if="!editView.file_opened">
+    <br/>Click a file to open.
   </div>
 
   <!-- File/Test editor goes here. -->

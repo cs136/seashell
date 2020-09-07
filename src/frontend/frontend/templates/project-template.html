@@ -49,7 +49,7 @@
     <div id="questions-row-container">
        <span class="questions-row">
          <span ng-repeat="question in projectView.project.questions()">
-         <a
+         <a ng-click="projectView.question_opened = true"
             ui-sref="edit-project.editor({question: '{{question}}'})"
             class="question-link"
             ui-sref-active="question-link-active">{{question}}</a> 
@@ -63,5 +63,8 @@
   <div class="col-md-12 col-xs-12" style="padding: 0">
     <hr style="margin-top: 9px; margin-bottom: 8px"/>
   </div>
+</div>
+<div ng-if="!projectView.question_opened">
+  Click a question to open.
 </div>
 <div ui-view></div>

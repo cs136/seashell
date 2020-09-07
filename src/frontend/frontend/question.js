@@ -42,6 +42,7 @@ angular.module('frontend-app')
         self.marmoset_long_results = null;
         self.marmoset_refresh_interval = undefined;
         self.marmoset_timeout = 5000; // Anything less than 2500ms will cause issues.
+        self.file_opened = true;
 
         // Destroy interval when scope goes away.
         function cancelMarmosetRefresh() {
@@ -257,9 +258,12 @@ angular.module('frontend-app')
               .then(function (recent) {
                 if($state.params.question === self.question) {
                   if (recent && $state.is('edit-project.editor')) {
+                    self.file_opened = true;
                     $state.go("edit-project.editor.file",
                               {part: recent.part, file: recent.file},
                               {location: "replace"});
+                  } else if (recent === null) {
+                    self.file_opened = false;
                   }
                 }
               });
