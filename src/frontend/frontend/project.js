@@ -29,6 +29,7 @@ angular.module('frontend-app')
       self.project = openProject;
       self.userid = $cookies.getObject(SEASHELL_CREDS_COOKIE).user;
       self.is_deleteable = ! /^[aA][0-9]+/.test(self.project.name);
+      self.question_opened = true;
       self.download = function(){
         openProject.getDownloadToken().then(function (token){
             var raw = JSON.stringify(token);
@@ -57,9 +58,12 @@ angular.module('frontend-app')
       self.project.mostRecentlyUsed()
         .then(function (recent) {
           if (recent && $state.is('edit-project')) {
+            self.question_opened = true;
             $state.go('edit-project.editor',
                       {question: recent},
                       {location: "replace"});
+          } else if(recent === null) {
+            self.question_opened = false;
           }
           return recent;
         });
