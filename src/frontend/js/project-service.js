@@ -788,16 +788,20 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
           var self = this;
           var open_seashell_question = self.name + question;
           return marmoset.projects().then(function(projects) {
+            function stripAndLowerCase(str, regexp) {
+              if(regexp === undefined) { regexp = /[_-]/g; }
+              return str.replace(regexp, "").toLowerCase();
+            };
             return $q.when(
               // search for extended first
               _.find(projects, function(marmoset_project) {
                 var extended = open_seashell_question + "extended";
                 var extended_with_dash = open_seashell_question + "-extended";
-                return (extended.toLowerCase() == marmoset_project.toLowerCase() || extended_with_dash.toLowerCase() == marmoset_project.toLowerCase());
+                return (stripAndLowerCase(extended) == stripAndLowerCase(marmoset_project) || stripAndLowerCase(extended_with_dash) == stripAndLowerCase(marmoset_project));
               }) ||
               // then search for non-extension
               _.find(projects, function(marmoset_project) {
-                return (open_seashell_question.toLowerCase() == marmoset_project.toLowerCase());
+                return (stripAndLowerCase(open_seashell_question) == stripAndLowerCase(marmoset_project));
               })
             );
           });
