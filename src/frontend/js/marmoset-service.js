@@ -26,12 +26,14 @@ angular.module('marmoset-bindings', ['ngCookies'])
         var test_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt"; 
         var projects_loaded = false;
         var project_list = [];
+        self.show_all_projects = false;
 
         /**
          * Refreshs project list.
          */
         self.refresh = function() {
-          return $http({url: list_url})
+          // If user is white listed, then show all Marmoset projects
+          return $http({url: list_url, params: {show_all: self.show_all_projects}})
             .then(function (results) {
               project_list = results.data;
               projects_loaded = true;

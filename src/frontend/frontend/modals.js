@@ -390,44 +390,42 @@ angular.module('frontend-app')
             templateUrl: "frontend/templates/marmoset-submit-template.html",
             controller: ['$scope', '$state', 'error-service', '$q', 'marmoset', '$cookies',
             function ($scope, $state, errors, $q, marmoset, $cookies) {
-              marmoset.refresh().then(function () {
-                $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
-                  .then(function(res) {
-                    $scope.marmoset_projects = res[0];
-                    $scope.selected_project = res[1];
-                    $scope.submit = function() {
-                      // log when the submit button is clicked
-                      console.log("Submit button clicked for", project.name, question, "to", $scope.selected_project);
-                      try {
-                        var log_data = { username: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
-                                         type: 'submit_question_button_clicked',
-                                         project_name: project.name,
-                                         question: question,
-                                         marmoset_project: $scope.selected_project };
-                        jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
-                        }).fail(function() {
-                        });
-                      } catch(err) { }
+              $q.all([marmoset.projects(), project.currentMarmosetProject(question) || undefined])
+                .then(function(res) {
+                  $scope.marmoset_projects = res[0];
+                  $scope.selected_project = res[1];
+                  $scope.submit = function() {
+                    // log when the submit button is clicked
+                    console.log("Submit button clicked for", project.name, question, "to", $scope.selected_project);
+                    try {
+                      var log_data = { username: $cookies.getObject(SEASHELL_CREDS_COOKIE).user,
+                                       type: 'submit_question_button_clicked',
+                                       project_name: project.name,
+                                       question: question,
+                                       marmoset_project: $scope.selected_project };
+                      jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
+                      }).fail(function() {
+                      });
+                    } catch(err) { }
 
-                      $scope.$close();
-                      if($scope.selected_project === false) {
-                        // No project/question was selected in the drop-down menu
-                        var error_message = 'Please select the question you want to submit to.';
-                        errors.report(error_message, error_message);
-                      } else {
-                        project.submit(question, $scope.selected_project)
-                           .catch(function (error) {
-                             var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
-                             errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
-                             notify(false, $scope.selected_project);
-                             return $q.reject(error);
-                           }).then(function () {
-                             notify(true, $scope.selected_project);
-                           });
-                      }
-                    };
-                  });
-              });
+                    $scope.$close();
+                    if($scope.selected_project === false) {
+                      // No project/question was selected in the drop-down menu
+                      var error_message = 'Please select the question you want to submit to.';
+                      errors.report(error_message, error_message);
+                    } else {
+                      project.submit(question, $scope.selected_project)
+                         .catch(function (error) {
+                           var type = error.error ? (error.error.indexOf("marmoset_submit") === -1 ? "seashell" : "marmoset") : "seashell";
+                           errors.report(error, sprintf("Could not submit project %s!", $scope.selected_project), type);
+                           notify(false, $scope.selected_project);
+                           return $q.reject(error);
+                         }).then(function () {
+                           notify(true, $scope.selected_project);
+                         });
+                    }
+                  };
+                });
             }]}).result;
         };
       }])

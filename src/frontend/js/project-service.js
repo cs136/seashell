@@ -948,6 +948,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
       var userWhitelist = function() {
          if (! self._userWhitelist) {
             self._userWhitelist = $http.get(USER_WHITE_LIST_URL).then(function(result) {
+               marmoset.show_all_projects = result.data.includes(USERNAME);
                return result.data;
             }).catch(function(err) {
                console.warn("Could not access the user whitelist. Assuming it's empty. Received:", err);

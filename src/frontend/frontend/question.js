@@ -212,40 +212,42 @@ angular.module('frontend-app')
 	  } catch(err) { }
 
           runWhenSaved(function() {
-          submitMarmosetModal(self.project, self.question, function (success, target) {
-            if (!success) {
-              self.marmoset_short_results_style = self.marmoset_submission_warning_style;
-              self.marmoset_short_results = "failed to submit!";
-            } else {
-              var submitTime = new Date();
-              cancelMarmosetRefresh();
-              self.marmoset_refresh_interval = $interval(function () {
-                marmoset.results(target).then(function (result) {
-                  self.handleMarmosetResults(result, target);
-                  var data = result.result;
-                  if(data.length > 0 && data[0].status != "complete") {
-                    self.marmoset_short_results_style = "";
-                    self.marmoset_short_results =
-                      sprintf("received %s (waiting on tests)",
-                              $.timeago(data[0].timestamp));
-                  } else if(data.length === 0) {
-                    self.marmoset_short_results_style = "";
-                    self.marmoset_short_results =
-                      sprintf("submitted %s (waiting on receipt)",
-                              $.timeago(submitTime));
-                  }
-                }).catch(function (error) {
-                  errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
+            marmoset.refresh().then(function() {
+              submitMarmosetModal(self.project, self.question, function (success, target) {
+                if (!success) {
                   self.marmoset_short_results_style = self.marmoset_submission_warning_style;
-                  self.marmoset_short_results = "could not fetch results...";
+                  self.marmoset_short_results = "failed to submit!";
+                } else {
+                  var submitTime = new Date();
                   cancelMarmosetRefresh();
-                });
-              }, self.marmoset_timeout);
-            }
-          }).then(function () {
-            self.marmoset_short_results_style = "";
-            self.marmoset_short_results = "submitting...";
-          });
+                  self.marmoset_refresh_interval = $interval(function () {
+                    marmoset.results(target).then(function (result) {
+                      self.handleMarmosetResults(result, target);
+                      var data = result.result;
+                      if(data.length > 0 && data[0].status != "complete") {
+                        self.marmoset_short_results_style = "";
+                        self.marmoset_short_results =
+                          sprintf("received %s (waiting on tests)",
+                                  $.timeago(data[0].timestamp));
+                      } else if(data.length === 0) {
+                        self.marmoset_short_results_style = "";
+                        self.marmoset_short_results =
+                          sprintf("submitted %s (waiting on receipt)",
+                                  $.timeago(submitTime));
+                      }
+                    }).catch(function (error) {
+                      errors.report(error, sprintf("Could not fetch results for %s!", target), "marmoset");
+                      self.marmoset_short_results_style = self.marmoset_submission_warning_style;
+                      self.marmoset_short_results = "could not fetch results...";
+                      cancelMarmosetRefresh();
+                    });
+                  }, self.marmoset_timeout);
+                }
+              }).then(function () {
+                self.marmoset_short_results_style = "";
+                self.marmoset_short_results = "submitting...";
+              });
+            });
         });};
 
         /** Try to load the question, and go back to the project if we can't. */
