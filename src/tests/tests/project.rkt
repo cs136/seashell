@@ -166,7 +166,7 @@ HERE
       (check-equal? (hash-ref settings 'boost) "boost"))
 
     (test-case "Fetch template (from HTTP)"
-      (new-project-from "test-project-template-http" "https://github.com/cs136/seashell-default/archive/v1.0.zip")
+      (new-project-from "test-project-template-http" "https://www.student.cs.uwaterloo.ca/~cs136/seashell-project-template.zip")
       (check-true (file-exists? (build-path (build-project-path "test-project-template-http") "default/main.c"))))
 
     (test-case "Fetch template (from URL, file)"
