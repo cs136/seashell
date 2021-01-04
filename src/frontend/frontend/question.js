@@ -206,7 +206,7 @@ angular.module('frontend-app')
                              type: 'submit_question_link_clicked',
                              project_name: self.project.name,
                              question: self.question };
-	    jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
+	    jQuery.post("https://student.cs.uwaterloo.ca/~seashell/seashell-logger/", log_data, function(data, status) {
 	    }).fail(function() {
 	    });
 	  } catch(err) { }

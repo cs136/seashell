@@ -60,7 +60,7 @@ execute_process(
   COMMAND tr -d '\n'
   OUTPUT_VARIABLE COURSE
 )
-set(COURSE_WEBSITE "https://www.student.cs.uwaterloo.ca/~${COURSE}/" CACHE STRING "URL of the course website")
+set(COURSE_WEBSITE "https://student.cs.uwaterloo.ca/~${COURSE}/" CACHE STRING "URL of the course website")
 set(SEASHELL_URL "${COURSE_WEBSITE}/seashell" CACHE STRING "URL of the Seashell website")
 
 # Check if the tree is clean.

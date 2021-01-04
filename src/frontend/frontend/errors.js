@@ -52,7 +52,7 @@ angular.module('frontend-app')
                                useragent:navigator.appVersion, version: SEASHELL_VERSION + " (" + SEASHELL_BRANCH + " at " + SEASHELL_COMMIT + ")",
                                log: self.dumpLogs() };
           console.log("Sending in error report...");
-          jQuery.post("https://www.student.cs.uwaterloo.ca/~seashell/seashell-logger/", error_report, function(data, status) {
+          jQuery.post("https://student.cs.uwaterloo.ca/~seashell/seashell-logger/", error_report, function(data, status) {
             console.log("Error report sent! status = ", status);
           }).fail(function() {
             console.log("Failed to send error report.");

@@ -22,8 +22,8 @@ angular.module('marmoset-bindings', ['ngCookies'])
       function ($q, $cookies, $http) {
         "use strict";
         var self = this;
-        var list_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
-        var test_url = "https://www.student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt"; 
+        var list_url = "https://student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/project-list.rkt";
+        var test_url = "https://student.cs.uwaterloo.ca/~cs136/cgi-bin/marmoset-utils/public-test-results.rkt";
         var projects_loaded = false;
         var project_list = [];
         self.show_all_projects = false;

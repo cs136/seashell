@@ -28,7 +28,7 @@ angular.module('seashell-projects', ['seashell-websocket', 'marmoset-bindings', 
     function($scope, $q, ws, marmoset, $http, settings, $cookies) {
       "use strict";
       var self = this;
-      var CS136_URL = "https://www.student.cs.uwaterloo.ca/~cs136/";
+      var CS136_URL = "https://student.cs.uwaterloo.ca/~cs136/";
       var CGI_URL = CS136_URL + "cgi-bin/";
       var PROJ_SKEL_URL = CGI_URL + "skeleton_list.cgi";
       var SKEL_ROOT_URL = CS136_URL + "assignment_skeletons/";

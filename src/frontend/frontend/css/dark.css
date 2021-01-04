@@ -243,3 +243,7 @@ label {
 #console-input .input-group-addon {
   background-color: #000;
 }
+
+.page-text {
+  color: white;
+}

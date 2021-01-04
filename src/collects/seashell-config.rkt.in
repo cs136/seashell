@@ -235,7 +235,7 @@
       ;; Location of the Marmoset test results script
       (cons 'test-results-tool              "/u2/cs136/marmoset-scripts/get-test-results/get-test-results")
       ;; Location of the default project template
-      (cons 'default-project-template       "https://www.student.cs.uwaterloo.ca/~cs136/seashell-project-template.zip")
+      (cons 'default-project-template       "https://student.cs.uwaterloo.ca/~cs136/seashell-project-template.zip")
       ;; Ping timeout in seconds for the seashell UDP listener, which verifies the seashell process is still alive
       (cons 'seashell-ping-timeout         4)
       ;; Timeout in milliseconds after which a per-user backend process, having
