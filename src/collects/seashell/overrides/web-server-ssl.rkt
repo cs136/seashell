@@ -24,7 +24,7 @@
 (define (pfs:make-ssl-connect@ server-cert-file server-key-file
          [ciphers "DEFAULT:!aNULL:!eNULL:!LOW:!EXPORT:!SSLv2"]
          [ecdhe-curve 'secp521r1]
-         [dhe-param-path ssl-dh4096-param-path])
+         [dhe-param-path ssl-dh4096-param-bytes])
   (define the-ctxt
     (ssl-make-server-context))
   (ssl-load-certificate-chain! the-ctxt server-cert-file)

@@ -23,7 +23,7 @@
 (define-type Dispatcher (-> Connection Request Void))
 
 (require/typed/provide web-server/http/response
-                       [print-headers (-> Output-Port (Listof Header) Void)])
+                       [print-headers (-> Output-Port (Listof Header) Integer)])
 (require/typed/provide web-server/http/request
                        [read-headers (-> Input-Port (Listof Header))])
 (require/typed/provide web-server/http/request-structs
@@ -31,8 +31,7 @@
 (require/typed/provide web-server/private/timer
                        [#:opaque Timer-Manager timer-manager?]
                        [#:struct timer ([tm : Timer-Manager]
-                                        [evt : (Evtof Any)]
-                                        [expire-seconds : Number]
+                                        [deadline : Number]
                                         [action : (-> Void)])
                                         #:type-name Timer]
                        [cancel-timer! (-> Timer Void)])
