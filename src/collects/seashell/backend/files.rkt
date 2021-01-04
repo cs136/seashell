@@ -199,19 +199,6 @@
                                 (with-input-from-file history-path port->bytes)
                                 #""))
   (define md5-hash (call-with-input-bytes data md5))
-
-  ;; write file contents to a log
-  (with-handlers ([exn:fail? (lambda (exn) (logf 'error "(read-file) Error occurred writing to gzip log: ~a" exn))])
-    (define log-separator (string->bytes/utf-8 (format "\n\n[~a] read-file ~a ~a\n" (date->string (current-date) #t) file-path md5-hash)))
-    (define input-bytes-port (open-input-bytes (bytes-append log-separator data)))
-    (define-values (base name _unused) (split-path file-path))
-    (define output-bytes-port (open-output-file (build-path base (string->path (string-append "." (path->string name) ".log")))
-                                                #:mode 'binary #:exists 'append))
-    (logf 'info "(read-file) Writing gzip log for ~a (md5 hash ~a)" file-path md5-hash)
-    (gzip-through-ports input-bytes-port output-bytes-port (path->string name) (date->seconds (current-date)))
-    (close-input-port input-bytes-port)
-    (close-output-port output-bytes-port))
-
   (values data md5-hash undo-history-data))
 
 ;; (write-file project file contents) -> string?
