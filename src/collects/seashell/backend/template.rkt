@@ -59,9 +59,12 @@
          (call/input-url surl get-pure-port thunk)]
        [(string=? (url-scheme surl) "ssh")
          (match-define (list _ host file) (regexp-match #rx"//(.*@[^:]*):(.*)" source))
-         (logf 'info "Doing subprocess ~a ~a ~a ~a ~a" (read-config 'ssh-binary) "-o" "PasswordAuthentication=no" host (string-append "cat " file))
+         (logf 'info "Doing subprocess ~a ~a ~a ~a ~a ~a ~a ~a ~a ~a"
+               (read-config 'ssh-binary) "-q" "-o" "StrictHostKeyChecking=no" "-o" "UserKnownHostsFile=/dev/null"
+               "-o" "PasswordAuthentication=no" host (string-append "cat " file))
          (define-values (sshproc sshout sshin ssherr)
            (subprocess #f #f #f (read-config 'ssh-binary)
+             "-q" "-o" "StrictHostKeyChecking=no" "-o" "UserKnownHostsFile=/dev/null"
              "-o" "PasswordAuthentication=no" host (string-append "cat " file)))
          (close-output-port sshin)
          (dynamic-wind
