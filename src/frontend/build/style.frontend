@@ -1,43 +1,43 @@
 # CodeMirror CSS files
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/codemirror.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/3024-day.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/3024-night.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/ambiance.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/base16-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/base16-light.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/blackboard.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/cobalt.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/eclipse.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/elegant.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/erlang-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/lesser-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/mbo.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/mdn-like.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/midnight.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/monokai.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/neat.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/night.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/paraiso-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/paraiso-light.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/pastel-on-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/rubyblue.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/solarized.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/the-matrix.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/tomorrow-night-eighties.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/twilight.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/vibrant-ink.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/xq-dark.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/theme/xq-light.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/addon/lint/lint.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/addon/dialog/dialog.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/addon/hint/show-hint.min.css
-//cdnjs.cloudflare.com/ajax/libs/codemirror/5.4.0/addon/scroll/simplescrollbars.min.css
+frontend/css/lib/codemirror/5.4.0/codemirror.min.css
+frontend/css/lib/codemirror/5.4.0/theme/3024-day.min.css
+frontend/css/lib/codemirror/5.4.0/theme/3024-night.min.css
+frontend/css/lib/codemirror/5.4.0/theme/ambiance.min.css
+frontend/css/lib/codemirror/5.4.0/theme/base16-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/base16-light.min.css
+frontend/css/lib/codemirror/5.4.0/theme/blackboard.min.css
+frontend/css/lib/codemirror/5.4.0/theme/cobalt.min.css
+frontend/css/lib/codemirror/5.4.0/theme/eclipse.min.css
+frontend/css/lib/codemirror/5.4.0/theme/elegant.min.css
+frontend/css/lib/codemirror/5.4.0/theme/erlang-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/lesser-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/mbo.min.css
+frontend/css/lib/codemirror/5.4.0/theme/mdn-like.min.css
+frontend/css/lib/codemirror/5.4.0/theme/midnight.min.css
+frontend/css/lib/codemirror/5.4.0/theme/monokai.min.css
+frontend/css/lib/codemirror/5.4.0/theme/neat.min.css
+frontend/css/lib/codemirror/5.4.0/theme/night.min.css
+frontend/css/lib/codemirror/5.4.0/theme/paraiso-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/paraiso-light.min.css
+frontend/css/lib/codemirror/5.4.0/theme/pastel-on-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/rubyblue.min.css
+frontend/css/lib/codemirror/5.4.0/theme/solarized.min.css
+frontend/css/lib/codemirror/5.4.0/theme/the-matrix.min.css
+frontend/css/lib/codemirror/5.4.0/theme/tomorrow-night-eighties.min.css
+frontend/css/lib/codemirror/5.4.0/theme/twilight.min.css
+frontend/css/lib/codemirror/5.4.0/theme/vibrant-ink.min.css
+frontend/css/lib/codemirror/5.4.0/theme/xq-dark.min.css
+frontend/css/lib/codemirror/5.4.0/theme/xq-light.min.css
+frontend/css/lib/codemirror/5.4.0/addon/lint/lint.min.css
+frontend/css/lib/codemirror/5.4.0/addon/dialog/dialog.min.css
+frontend/css/lib/codemirror/5.4.0/addon/hint/show-hint.min.css
+frontend/css/lib/codemirror/5.4.0/addon/scroll/simplescrollbars.min.css
 
 # Bootstrap
-//netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css
+frontend/css/lib/bootstrap/3.3.2/bootstrap.min.css
 
 # Fonts
-//fonts.googleapis.com/css?family=Unkempt:700
+frontend/css/lib/unkempt700.css
 
 # Hotkeys
 frontend/css/lib/hotkeys.min.css

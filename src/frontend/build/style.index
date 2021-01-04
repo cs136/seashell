@@ -1,4 +1,8 @@
 # Bootstrap
-//netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css
+frontend/css/lib/bootstrap/3.3.2/bootstrap.min.css
+
+# Fonts
+frontend/css/lib/unkempt700.css
+
 # Local Styles
 index/signin.css
