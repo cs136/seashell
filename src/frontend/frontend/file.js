@@ -50,6 +50,7 @@ angular.module('frontend-app')
         self.isFileToRun = false; // true if the current file is the runner file
         self.editor = null;
         self.timeout = null;
+        self.isLoading = false;
         self.loaded = false;
         self.editorOptions = {}; // Wait until we grab settings to load this.
         self.consoleEditor = null;
@@ -653,10 +654,10 @@ angular.module('frontend-app')
          *  the socket exists in the first place, this is
          *  fine for now. */
         var connected_key = ws.register_callback('connected', function () {
-          //if (self.editor)
-          //  self.editor.setOption("readOnly", self.editorReadOnly);
+        self.isLoading = true;
         self.project.openFile(self.question, self.folder, self.file)
           .then(function(conts) {
+            self.isLoading = false;
             self.contents = conts.data;
             if((self.ext === 'rkt' && RegExp("\\s*;;\\s*"+SEASHELL_READONLY_STRING).test(self.contents)) || // racket files
                ((self.ext === 'c' || self.ext === 'h') && RegExp("\\s*\/\/\\s*"+SEASHELL_READONLY_STRING).test(self.contents))  || // c files
