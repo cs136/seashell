@@ -213,7 +213,7 @@ mkdir -p "$ROOTDIR" "$BUILD_DIR" "$INSTALL_DIR"
 if [ "$CLONE" = "yes" ]; then
   if [ -n "$SOURCE_DIR" ]; then rm -rf "$SOURCE_DIR"; fi
   cd "$ROOTDIR"
-  git clone --single-branch --branch "$BRANCH" INSTALL_DIR_EXISTS_MSG 'https://github.com/cs136/seashell.git' "$SOURCE_DIR"
+  git clone --single-branch --branch "$BRANCH" 'https://github.com/cs136/seashell.git' "$SOURCE_DIR"
   cd "$SOURCE_DIR"
   if [ "$COMMIT" != "latest" ]; then git checkout "$COMMIT"; fi
   git submodule update --init --progress --jobs 4
