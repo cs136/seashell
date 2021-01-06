@@ -103,7 +103,7 @@ while (( "$#" )); do
       COMMIT="$(checkarg commit "$2")"
       ;;
     --root)
-      ROOT="$(checkarg root "$2")"
+      ROOTDIR="$(checkarg root "$2")"
       ;;
     --openssl)
       OPENSSL_ROOT_DIR="$(checkarg openssl "$2")"
