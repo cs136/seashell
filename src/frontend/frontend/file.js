@@ -184,33 +184,6 @@ angular.module('frontend-app')
               self.line = self.editor.getCursor().line + 1;
             }, 0);
           }
-          // check and set a css class to the line if over 80 chars
-          function warnLineLength(lineNum) {
-               var lineStr = self.editor.getLine(lineNum);
-               var len = lineStr.length;
-               self.editor.findMarksAt(
-                  {line: lineNum, ch: 0}
-               ).forEach(function (m) {m.clear();});
-               if (len > 80) {
-                  self.editor.markText(
-                     {line: lineNum, ch: 0},
-                     {line: lineNum, ch: len},
-                     {className: "cm-line-too-long"}
-                  );
-               }
-          }
-          // check and set a css class to each line over 80 chars
-          function warnAllLength() {
-            self.editor.eachLine(function(line) {
-               var lineNum = self.editor.getLineNumber(line);
-               warnLineLength(lineNum);
-            });
-          }
-          // check and set a css class to cursor line if over 80 chars
-          function warnCurrentLength() {
-            var lineNum = self.editor.getCursor().line;
-            warnLineLength(lineNum);
-          }
           // check all lines only when initially loaded
           self.editor.on("change", function(editor, changeObj) {
             if (changeObj.origin === "setValue" || changeObj.origin === "paste") {
@@ -223,9 +196,39 @@ angular.module('frontend-app')
           self.editor.on("blur", updateColNums);
         };
 
+        // check and set a css class to the line if over 80 chars
+        function warnLineLength(lineNum) {
+             var lineStr = self.editor.getLine(lineNum);
+             var len = lineStr.length;
+             self.editor.findMarks(
+                {line: lineNum, ch: 0},
+                {line: lineNum, ch: len}
+             ).forEach(function (m) {m.clear();});
+             if (len > 80) {
+                self.editor.markText(
+                   {line: lineNum, ch: 0},
+                   {line: lineNum, ch: len},
+                   {className: "cm-line-too-long"}
+                );
+             }
+        }
+        // check and set a css class to each line over 80 chars
+        function warnAllLength() {
+          self.editor.eachLine(function(line) {
+             var lineNum = self.editor.getLineNumber(line);
+             warnLineLength(lineNum);
+          });
+        }
+        // check and set a css class to cursor line if over 80 chars
+        function warnCurrentLength() {
+          var lineNum = self.editor.getCursor().line;
+          warnLineLength(lineNum);
+        }
+
         function betterTab(){
           if(self.editor.somethingSelected()){
             self.editor.indentSelection("add");
+            warnAllLength();
           } else {
             self.editor.replaceSelection(Array(self.editor.getOption("indentUnit") + 1).join(" "), "end", "+input");
           }
@@ -234,6 +237,7 @@ angular.module('frontend-app')
         function negTab(){
           if(self.editor.somethingSelected()){
             self.editor.indentSelection("subtract");
+            warnAllLength();
           }
         }
 
@@ -578,6 +582,7 @@ angular.module('frontend-app')
             var lineCount = self.editor.lineCount();
             for (var i = 0; i < lineCount; i++) { self.editor.indentLine(i); }
           });
+          warnAllLength();
         };
 
         self.userInput = "";
