@@ -1,154 +1,264 @@
 #!/bin/bash
 
-racket="/usr/bin/racket"
-username="`whoami`"
-
-readonly BUILD_DIR=/u/${username}/build/
-readonly SOURCE_DIR=/u/${username}/seashell/
-readonly INSTALL_DIR=/u/${username}/install/
-readonly ETC_DIR=/u/${username}/etc
-
-readonly OPENSSL_ROOT_DIR=/u/${username}/openssl
-
-readonly TOTAL_CORES="`nproc`"
-readonly CORES_TO_USE=$((TOTAL_CORES/3))
-#readonly CORES_TO_USE=20
+readonly racket="/usr/bin/racket"
+readonly username="`whoami`"
+readonly TOTAL_CORES="`egrep 'processor\s+:' /proc/cpuinfo  | wc -l`"
 
 
-# Compiler to use to compile Seashell and its libraries
-#export CC=/u/cs136/seashell-clang-files/bin/clang
-#export CXX=/u/cs136/seashell-clang-files/bin/clang++
-
-if [ -f "$INSTALL_DIR/src/frontend/webpack.config.prod.js" ]; then
-    readonly SEASHELL_VERSION="new"
-else
-    readonly SEASHELL_VERSION="old"
-fi
+#####################################################################
+#
+#  Command line options parsing and build settings
+#
 
 # Default values for build options
+CLONE="no"
+BRANCH="v3.x-master"
+COMMIT="latest"
+ROOTDIR="/u/${username}/"
+OPENSSL_ROOT_DIR=""
+ETCDIR="/u/${username}/etc/"
+ETCLINK=""
+PUBLISHDIR=""
+CORES_TO_USE=$((TOTAL_CORES/4))
 RUN_TESTS="no" # "no" or "yes"
 BUILD_TYPE="Debug" # "Debug" or "Release"
 LIGHTWEIGHT_LAUNCHERS="yes" # "no" or "yes"
 FAST_INSTALL="no" # "no" or "yes"
 RUN_CMAKE="yes" # "no" or "yes"
 
+
 print_help_quit () {
-    echo "Available arguments:"
-    echo "  tests or notests: Run tests after building? (default $RUN_TESTS)"
-    echo "  debug or release: Which build type to use? (default $BUILD_TYPE)"
-    echo "  light or nolight: Use lightweight launchers? (default $LIGHTWEIGHT_LAUNCHERS)"
-    echo "  fast or nofast: Use install/fast make target? (default $FAST_INSTALL)"
-    echo "  nocmake: Do not run cmake"
-    echo "  help: Display this help page"
-    echo "Note: If building for the first time, use the slowest options possible, ie: $0 nolight"
-    echo "Once built, you can recompile quickly with: $0 nocmake notests"
-    exit 0
+  echo "This script is used to build Seashell"
+  echo
+  echo "  --clone [yes|no]: Clone from github? (default $CLONE)"
+  echo "  --branch BRANCH: Set branch to use (default $BRANCH)"
+  echo "  --commit COMMIT: Specify a commit tag (default $COMMIT)"
+  echo "  --root ROOTDIR: Specify a root directory where build, install, seashell directories are stored (default $ROOTDIR)"
+  echo "  --openssl OPENSSL_ROOT_DIR: Specify OPENSSL_ROOT_DIR cmake option (default is system)"
+  echo "  --etcdir ETCDIR | --etclink ETCDIR: Specify etc folder to get config and hosts from, or link to it (default ETCDIR=$ETCDIR)"
+  echo "  --publish PUBLISHDIR: Directory to copy the frontend files to (default $PUBLISHDIR)"
+  echo "  --cores N: Specify number of cores to use when make'ing (default $CORES_TO_USE)"
+  echo "  --tests [yes|no]: Run tests after building? (default $RUN_TESTS)"
+  echo "  --type [debug|release]: Which build type to use? (default $BUILD_TYPE)"
+  echo "  --light [yes|no]: Use lightweight launchers? (default $LIGHTWEIGHT_LAUNCHERS)"
+  echo "  --fast [yes|no]: Use install/fast with make? (default $FAST_INSTALL)"
+  echo "  --cmake [yes|no]: Run cmake? (default $RUN_CMAKE)"
+  echo "  -h|--help: Display this help page"
+  echo
+  echo "Note: If building for the first time, use the slowest options possible, ie: $0 --light no"
+  echo "Once built, you can recompile quickly with: $0 --cmake no --tests no"
+  exit 0
 }
 
+# Check that a directory exists
+checkdirexists () {
+  if [ -n "$1" -a ! -d "$1" ]; then
+    >&2 echo "Error: Directory does not exist: $1"
+    exit 1
+  fi
+}
 
-for arg in "$@"; do
-    case $arg in
-        help | -h | --help)
-            print_help_quit
-            ;;
-    # Run tests?
-        tests | test)
-            RUN_TESTS="yes"
-            ;;
-        notest | notests)
-            RUN_TESTS="no"
-            ;;
-    # Build type
-        debug)
-            BUILD_TYPE="Debug"
-            ;;
-        release)
-            BUILD_TYPE="Release"
-            ;;
-    # Lightweight launchers?
-        light)
-            LIGHTWEIGHT_LAUNCHERS="yes"
-            ;;
-        nolight)
-            LIGHTWEIGHT_LAUNCHERS="no"
-            ;;
-    # Fast install?
-        fast | fast_install | fast-install | fast/install)
-            FAST_INSTALL="yes"
-            ;;
-        nofast | nofast_install | nofast-install | nofast/install)
-            FAST_INSTALL="no"
-            ;;
-    # Run cmake?
-        nocmake)
-            RUN_CMAKE="no"
-            ;;
+# This function checks that $2 is one of the other arguments, and if so,
+# prints it. Otherwise exists with an error. If no valid args are provided,
+# just checks that $2 is non-empty
+checkarg () {
+  varname="$1" 
+  tobechecked="$2"
+  shift 2
 
-        *)
-            echo "Unkown argument: $arg"
-            print_help_quit
-            ;;
-    esac
-done
+  if [ "${tobechecked:0:1}" = "-" ]; then
+    >&2 echo "Error: $varname can't be '$tobechecked'"
+    exit 1
+  fi
 
-echo "Build options for $SEASHELL_VERSION Seashell:"
-echo "  Source : $SOURCE_DIR"
-echo "  Build  : $BUILD_DIR"
-echo "  Install: $INSTALL_DIR"
-echo "  Cores to use: $CORES_TO_USE"
-echo "  Run cmake: $RUN_CMAKE"
-echo "  Run tests? $RUN_TESTS"
-echo "  Build type: $BUILD_TYPE"
-echo "  Use lightweight launchers? $LIGHTWEIGHT_LAUNCHERS"
-echo "  Use fast/install make target? $FAST_INSTALL"
-
-# Start building!
-set -x
-
-mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
-
-cd $BUILD_DIR
-
-# cmaking...
-if [ "$RUN_CMAKE" = "yes" ]; then
-    if [ "$LIGHTWEIGHT_LAUNCHERS" = "yes" ]; then
-        cmake $SOURCE_DIR -DOPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR -DSEASHELL_RACKET=$racket -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_LIGHTWEIGHT_LAUNCHERS=1 -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+  # No other args provided
+  if [ $# -eq 0 ]; then
+    if [ -n "$tobechecked" ]; then
+      echo -n "$tobechecked"; return
     else
-        cmake $SOURCE_DIR -DOPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR -DSEASHELL_RACKET=$racket -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      >&2 echo "Error: $varname was empty."; exit 1
     fi
+  fi
+
+  for arg in $@; do
+    if [ "$tobechecked" = "$arg" ]; then echo -n "$tobechecked"; return; fi
+  done
+
+  # Was not found
+  >&2 echo "Error: $varname was '$tobechecked' but should be one of: $@"
+  exit 1
+}
+
+# Parse arguments
+set -e # exits if a command exits with a non-zero status:
+while (( "$#" )); do
+  case "$1" in
+    --clone)
+      CLONE="$(checkarg clone "$2" yes no)"
+      ;; 
+    --branch)
+      BRANCH="$(checkarg branch "$2")"
+      ;; 
+    --commit)
+      COMMIT="$(checkarg commit "$2")"
+      ;;
+    --root)
+      ROOT="$(checkarg root "$2")"
+      ;;
+    --openssl)
+      OPENSSL_ROOT_DIR="$(checkarg openssl "$2")"
+      ;;
+    --etcdir)
+      ETCDIR="$(checkarg etcdir "$2")"
+      ;;
+    --etclink)
+      ETCLINK="$(checkarg etclink "$2")"
+      ;;
+    --publish)
+      PUBLISHDIR="$(checkarg publish "$2")"
+      ;;
+    --cores)
+      CORES_TO_USE="$(checkarg cores "$2")"
+      ;;
+    --tests)
+      RUN_TESTS="$(checkarg tests "$2" yes no)"
+      ;;
+    --type)
+      BUILD_TYPE="$(checkarg 'type' "$2" debug release)"
+      ;;
+    --light)
+      LIGHTWEIGHT_LAUNCHERS="$(checkarg light "$2" yes no)"
+      ;;
+    --fast)
+      FAST_INSTALL="$(checkarg fast "$2" yes no)"
+      ;;
+    --cmake)
+      RUN_CMAKE="$(checkarg cmake "$2" yes no)"
+      ;;
+    -h|--help)
+      print_help_quit
+      exit 0
+      ;;
+    *)
+      >&2 echo "Unknown option $1 found."
+      exit 1
+      ;;
+  esac
+  shift 2
+done
+set +e
+
+# Check that directories exist
+if [ -n "$ETCDIR" -a -n "$ETCLINK" ]; then
+  >&2 echo "Error: etcdir and etclink cannot both be specified"
+  exit 1
+fi
+checkdirexists "$ETCDIR"
+checkdirexists "$ETCLINK"
+checkdirexists "$OPENSSL_ROOT_DIR"
+
+readonly SOURCE_DIR="$ROOTDIR/seashell"
+readonly BUILD_DIR="$ROOTDIR/build/"
+readonly INSTALL_DIR="$ROOTDIR/install"
+
+if [ -d "$SOURCE_DIR" -a "$CLONE" = "yes" ]; then
+  readonly SOURCE_DIR_EXISTS_MSG="(Exists! Will be deleted before cloning.)"
+fi
+if [ -d "$BUILD_DIR" ]; then readonly BUILD_DIR_EXISTS_MSG="(Note: already exists)"; fi
+if [ -d "$INSTALL_DIR" ]; then readonly INSTALL_DIR_EXISTS_MSG="(Note: already exists)"; fi
+if [ -d "$PUBLISHDIR" ]; then readonly PUBLISHDIR_EXISTS_MSG="(Exists! Will be deleted)"; fi
+
+echo "Build options for Seashell:"
+echo
+echo "  Clone: $CLONE"
+echo "  Branch: $BRANCH"
+echo "  Commit: $COMMIT"
+echo "  OpenSSL root dir: $OPENSSL_ROOT_DIR"
+echo "  Etc dir: $ETCDIR"
+echo "  Etc link: $ETCLINK"
+echo "  Cores to use: $CORES_TO_USE"
+echo
+echo "  Root dir:    $ROOTDIR"
+echo "  Source dir:  $SOURCE_DIR   $SOURCE_DIR_EXISTS_MSG"
+echo "  Build dir:   $BUILD_DIR   $BUILD_DIR_EXISTS_MSG"
+echo "  Install dir: $INSTALL_DIR   $INSTALL_DIR_EXISTS_MSG"
+echo "  Publish dir: $PUBLISHDIR   $PUBLISHDIR_EXISTS_MSG"
+echo
+echo "  Run tests: $RUN_TESTS"
+echo "  Build type: $BUILD_TYPE"
+echo "  Use lightweight launchers: $LIGHTWEIGHT_LAUNCHERS"
+echo "  Use fast/install make target: $FAST_INSTALL"
+echo "  Run cmake: $RUN_CMAKE"
+echo
+
+read -p "Continue building (y/n)? "
+if [ "$REPLY" != "y" ]; then
+  echo "Quitting..."
+  exit 0
+fi
+
+#####################################################################
+#
+#  Start building!
+#
+
+set -x
+set -e
+
+# Create build, install, and seashell source directories
+#if [ -n "$BUILD_DIR_EXISTS_MSG" ]; then rm -rf "$BUILD_DIR"; fi
+#if [ -n "$INSTALL_DIR_EXISTS_MSG" ]; then rm -rf "$INSTALL_DIR"; fi
+mkdir -p "$ROOTDIR" "$BUILD_DIR" "$INSTALL_DIR"
+
+if [ "$CLONE" = "yes" ]; then
+  if [ -n "$SOURCE_DIR" ]; then rm -rf "$SOURCE_DIR"; fi
+  cd "$ROOTDIR"
+  git clone --single-branch --branch "$BRANCH" INSTALL_DIR_EXISTS_MSG 'https://github.com/cs136/seashell.git' "$SOURCE_DIR"
+  cd "$SOURCE_DIR"
+  if [ "$COMMIT" != "latest" ]; then git checkout "$COMMIT"; fi
+  git submodule update --init --progress --jobs 4
+fi
+
+# Running cmake
+cd $BUILD_DIR
+if [ "$RUN_CMAKE" = "yes" ]; then
+  if [ -n "$OPENSSL_ROOT_DIR" ]; then
+    readonly cmake_openssl_arg="-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}/"
+  fi
+
+  if [ "$LIGHTWEIGHT_LAUNCHERS" = "yes" ]; then
+    cmake $SOURCE_DIR \
+          $cmake_openssl_arg \
+          -DSEASHELL_RACKET=$racket \
+          -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+          -DENABLE_LIGHTWEIGHT_LAUNCHERS=1 \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    exitcode=$?
+  else
+    cmake $SOURCE_DIR \
+          $cmake_openssl_arg \
+          -DSEASHELL_RACKET=$racket \
+          -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    exitcode=$?
+  fi
 fi
 
 # compile
-exit_code=0
 if [ "$FAST_INSTALL" = "yes" ]; then
-    make -j${CORES_TO_USE} install/fast
-    exit_code=$?
+  make -j${CORES_TO_USE} install/fast
 else
-    make -j${CORES_TO_USE} install
-    exit_code=$?
+  make -j${CORES_TO_USE} install
 fi
 
-if [ $exit_code -ne 0 ]; then
-  echo
-  echo "make exited with code $exit_code"
-  echo
-  exit "$exit_code"
-fi
-
-# Prepare the front end stuff
-cd ${INSTALL_DIR}/share/frontend 
-
-rm "${INSTALL_DIR}/share/frontend/cgi-bin"
-ln -s ${INSTALL_DIR}/cgi-bin cgi-bin
-
+# Prepare .htaccess files
 cd ${INSTALL_DIR}
-cat > cgi-bin/.htaccess <<- EOM
+cat > "${INSTALL_DIR}/cgi-bin/.htaccess" <<- EOM
 <Files *.cgi>
-    SetHandler su-cgi-script
+    SetHandler cgi-script
 </Files>
 EOM
-
-cat > share/frontend/.htaccess <<- EOM
+cat > "${INSTALL_DIR}/share/frontend/.htaccess" <<- EOM
 <filesMatch "\.(manifest)$">
 FileETag None
 Header unset ETag
@@ -158,22 +268,47 @@ Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
 </filesMatch>
 EOM
 
+# Fix permissions
+cd "$ROOTDIR"
+chmod -R 755 "$BUILD_DIR"
+chgrp -R "$username" "$BUILD_DIR"
 chmod -R 755 "$INSTALL_DIR"
 chgrp -R "$username" "$INSTALL_DIR"
-chmod 2755 $INSTALL_DIR/bin/seashell-user-backend
-chmod 4700 $INSTALL_DIR/cgi-bin/login2.cgi
+chmod 2755 "$INSTALL_DIR/bin/seashell-user-backend"
+chmod 700 "$INSTALL_DIR/cgi-bin/login2.cgi"
 
-rm "$INSTALL_DIR/etc"
-ln -s "$ETC_DIR" "$INSTALL_DIR/etc"
+# Copy over cgi-bin
+cd ${INSTALL_DIR}/share/frontend 
+rm -rf "${INSTALL_DIR}/share/frontend/cgi-bin"
+cp -rp "${INSTALL_DIR}/cgi-bin" cgi-bin
+
+# Set up etc
+cd ${INSTALL_DIR}
+if [ -n "$ETCDIR" ]; then
+  rm -rf "$INSTALL_DIR/etc"
+  mkdir "$INSTALL_DIR/etc"
+  cp "$ETCDIR/seashell_config.rkt" "$INSTALL_DIR/etc/"
+  cp "$ETCDIR/seashell_hosts" "$INSTALL_DIR/etc/"
+  chmod -R 755 "$INSTALL_DIR/etc"
+elif [ -n "$ETCLINK" ]; then
+  rm -rf "$INSTALL_DIR/etc"
+  ln -s "$ETCLINK" "$INSTALL_DIR/etc"
+fi
+
+# Publish if needed
+if [ -n "$PUBLISHDIR" ]; then
+  rm -rf "$PUBLISHDIR"
+  cp -rp "${INSTALL_DIR}/share/frontend" "$PUBLISHDIR"
+fi
 
 # Run tests?
 if [ "$RUN_TESTS" = "yes" ]; then
-    cd $BUILD_DIR
-    echo "Running tests inside `pwd` at `date`"
-    CTEST_OUTPUT_ON_FAILURE=TRUE time make test
+  cd $BUILD_DIR
+  echo "Running tests inside `pwd` at `date`"
+  CTEST_OUTPUT_ON_FAILURE=TRUE time make test
+  pkill -9  -u$username -f seashell-racket-test
 fi
 
-pkill -9  -u$username -f seashell-racket-test
 
 echo
 echo "Don't forget to clear browser cache and pkill the seashell-main process!"
