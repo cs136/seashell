@@ -43,6 +43,25 @@
             }
           </script>
         </div>
+        <div>
+          <p><a id='login-issues-toggle' href='#'>Have login issues?</a></p>
+          <ul id="login-issues-help" style='display:none;'>
+            <li>Make sure you've set your <a href="https://student.cs.uwaterloo.ca/password/" target="_blank">student.cs password</a>.</li>
+            <li>Students in China can try using the <a href="https://uwaterloo.atlassian.net/wiki/spaces/ISTKB/pages/288817820/Accessing+Waterloo+learning+technologies+from+China" target="_blank">UW Alibaba VPN</a> and turn off other VPNs.</li>
+            <li>Students not in China can try using the <a href="https://uwaterloo.ca/information-systems-technology/services/virtual-private-network-vpn" target="_blank">UW Cisco AnyConnect VPN</a>.</li>
+          </ul>
+          <script type='text/javascript'>
+            var loginIssuesHelpElement = document.getElementById('login-issues-help');
+            document.getElementById('login-issues-toggle').addEventListener('click', function(event) {
+              event.preventDefault();
+              if(loginIssuesHelpElement.style.display == "") {
+                loginIssuesHelpElement.style.display = "none";
+              } else {
+                loginIssuesHelpElement.style.display = "";
+              }
+            });
+          </script>
+        </div>
 
         <input type="text" class="form-control" placeholder="Username" ng-model="login.user" id="user"
           ng-disabled="login.busy" />
