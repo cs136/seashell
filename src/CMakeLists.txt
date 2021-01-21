@@ -56,6 +56,14 @@ if(NOT DEFINED PROCESSOR_COUNT)
   endif()
 endif()
 
+# Option for minifying JS and CSS files.
+option(ENABLE_MINIFY "Minify Javascript and CSS files" OFF)
+if (ENABLE_MINIFY)
+  set(SEASHELL_MINIFY 1)
+else ()
+  set(SEASHELL_MINIFY 0)
+endif ()
+
 # Option for controlling how the binaries are built
 option(ENABLE_LIGHTWEIGHT_LAUNCHERS "Enable lightweight launcher binaries" OFF)
 if (ENABLE_LIGHTWEIGHT_LAUNCHERS)

@@ -1,8 +1,6 @@
 # Dynamically Loaded CSS/JS files.
 C:frontend/css/dark.css
 C:frontend/css/light.css
-C:js/offline-compile.js
-C:js/offline-run.js
 # Resources for the C compiler.
 js/crt-headers.data
 js/seashell-clang.js.mem

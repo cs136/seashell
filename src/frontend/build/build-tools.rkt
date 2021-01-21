@@ -39,12 +39,11 @@
     [(not uglifyjs-path) resources]
     [else
       (define target-js (string-append target ".min.js"))
-      (define target-js-map (string-append target ".js.map"))
+      (define target-js-map (string-append target-js ".map"))
       (apply system* (list* uglifyjs-path
                             "-o" target-js
-                            "--source-map" target-js-map
+                            "--source-map" (format "filename='~a',url='~a'" target-js target-js-map)
                             "--compress"
-                            "--mangle"
                             "--keep-fnames"
                             "--"
                             local-resources))
@@ -58,10 +57,11 @@
     [(not minify?) resources]
     [(not uglifycss-path) resources]
     [else
-      (define target-css (string-append target ".min.css"))
+      (define target-css (string-append "frontend/css/" target ".min.css"))
       (with-output-to-file target-css #:exists 'truncate
         (thunk
           (apply system* (list* uglifycss-path
+                                "--output" target-css
                                 local-resources))))
       (list* target-css other-resources)]))
 

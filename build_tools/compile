@@ -25,6 +25,7 @@ BUILD_TYPE="Debug" # "Debug" or "Release"
 LIGHTWEIGHT_LAUNCHERS="yes" # "no" or "yes"
 FAST_INSTALL="no" # "no" or "yes"
 RUN_CMAKE="yes" # "no" or "yes"
+MINIFY="no" # "no" or "yes"
 
 
 print_help_quit () {
@@ -38,6 +39,7 @@ print_help_quit () {
   echo "  --etcdir ETCDIR | --etclink ETCDIR: Specify etc folder to get config and hosts from, or link to it (default ETCDIR=$ETCDIR)"
   echo "  --publish PUBLISHDIR: Directory to copy the frontend files to (default $PUBLISHDIR)"
   echo "  --cores N: Specify number of cores to use when make'ing (default $CORES_TO_USE)"
+  echo "  --minify [yes|no]: Minify Javascript (uglifyjs) and CSS (uglifycss) files? (default $MINIFY)"
   echo "  --tests [yes|no]: Run tests after building? (default $RUN_TESTS)"
   echo "  --type [debug|release]: Which build type to use? (default $BUILD_TYPE)"
   echo "  --light [yes|no]: Use lightweight launchers? (default $LIGHTWEIGHT_LAUNCHERS)"
@@ -120,6 +122,9 @@ while (( "$#" )); do
     --cores)
       CORES_TO_USE="$(checkarg cores "$2")"
       ;;
+    --minify)
+      MINIFY="$(checkarg minify "$2" yes no)"
+      ;;
     --tests)
       RUN_TESTS="$(checkarg tests "$2" yes no)"
       ;;
@@ -177,6 +182,7 @@ echo "  OpenSSL root dir: $OPENSSL_ROOT_DIR"
 echo "  Etc dir: $ETCDIR"
 echo "  Etc link: $ETCLINK"
 echo "  Cores to use: $CORES_TO_USE"
+echo "  Minify: $MINIFY"
 echo
 echo "  Root dir:    $ROOTDIR"
 echo "  Source dir:  $SOURCE_DIR   $SOURCE_DIR_EXISTS_MSG"
@@ -222,26 +228,31 @@ fi
 # Running cmake
 cd $BUILD_DIR
 if [ "$RUN_CMAKE" = "yes" ]; then
+
+  # Massage this script's arguments into cmake arguments as needed
   if [ -n "$OPENSSL_ROOT_DIR" ]; then
     readonly cmake_openssl_arg="-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}/"
   fi
 
+  cmake_lightweight_launchers_arg="-DENABLE_LIGHTWEIGHT_LAUNCHERS=0"
   if [ "$LIGHTWEIGHT_LAUNCHERS" = "yes" ]; then
-    cmake $SOURCE_DIR \
-          $cmake_openssl_arg \
-          -DSEASHELL_RACKET=$racket \
-          -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-          -DENABLE_LIGHTWEIGHT_LAUNCHERS=1 \
-          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-    exitcode=$?
-  else
-    cmake $SOURCE_DIR \
-          $cmake_openssl_arg \
-          -DSEASHELL_RACKET=$racket \
-          -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-    exitcode=$?
+    cmake_lightweight_launchers_arg="-DENABLE_LIGHTWEIGHT_LAUNCHERS=1"
   fi
+
+  cmake_minify="-DENABLE_MINIFY=0"
+  if [ "$MINIFY" = "yes" ]; then
+    cmake_minify="-DENABLE_MINIFY=1"
+  fi
+
+  # Run cmake
+  cmake $SOURCE_DIR \
+        $cmake_openssl_arg \
+        $cmake_lightweight_launchers_arg \
+        $cmake_minify \
+        -DSEASHELL_RACKET=$racket \
+        -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+  exitcode=$?
 fi
 
 # compile
