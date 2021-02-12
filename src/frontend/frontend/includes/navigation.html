@@ -1,12 +1,16 @@
+<!-- Here begins the header. -->
 <header>
   <div class="container-fluid" style="text-align: center">
-    <div id="seashell-logo" class="col-md-6 col-xs-6 text-left" style="padding: 0">
+    <div id="seashell-logo" class="col-md-8 col-xs-8 text-left" style="padding: 0">
       <a ui-sref="list-projects">
         <span id="logoSeashell">seashell</span>
         <span id="versionSeashell">@(values SEASHELL_VERSION)</span>
       </a>
+      <a ng-click="frontend.webpingmodal()" href="" style="color:#888;">
+        {{frontend.host.split('.')[0]}}:{{frontend.port}}
+      </a>
     </div>
-    <div class="col-md-6 col-xs-6 text-right" style="padding: 0">
+    <div class="col-md-4 col-xs-4 text-right" style="padding: 0">
       <ul class="navbar-icons" style="padding-top: 8px;">
         <li tooltip-placement="bottom" tooltip="you have local changes" style="display: inline"
           ng-show="frontend.hasOfflineChanges()">

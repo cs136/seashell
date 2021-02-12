@@ -8,6 +8,7 @@
     font-size: 14px;
     font-variant: small-caps;
     position: absolute;
+    top: -5px;
 }
 
 /* Fixed height tags. */

@@ -33,7 +33,7 @@ angular.module('frontend-app')
       }])
   .factory('LoginModal', ['$modal',
       function($modal) {
-        return function(reset) { return $modal.open({
+        return function(reset, updateCookie) { return $modal.open({
           templateUrl: "frontend/templates/login-template.html",
           controller: ['$scope', '$window', '$cookies', 'socket',
             function($scope, $window, $cookies, ws) {
@@ -68,6 +68,7 @@ angular.module('frontend-app')
                       } else if(data.port !== undefined) {
                         $cookies.putObject(SEASHELL_CREDS_COOKIE, data, {secure:true});
                         console.log("All done login!");
+                        updateCookie();
                         ws.connect().then(function() {
                           $scope.$dismiss();
                         })

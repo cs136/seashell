@@ -37,13 +37,50 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         self.errors = errors;
         self.oldsafari = !bowser.check({safari: '10'}, false, window.navigator.userAgent);
         $scope.navigator = navigator;
-        var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
-        if(cookie) {
-          self.host = cookie.host;
+        self.updateHostPort = function () {
+          var cookie = $cookies.getObject(SEASHELL_CREDS_COOKIE);
+          if(cookie) {
+            self.host = cookie.host;
+            self.port = cookie.port;
+            return {host: cookie.host, port: cookie.port}
+          } else {
+            return {host: "", port: 0}
+          }
         }
+        self.updateHostPort();
         // Refresh function
         self.refresh = function () {
           $rootScope.$broadcast('projects-refreshed');
+        };
+	// This modal is displayed when user clicks the connection
+        // info link beside the Seashell logo
+        self.webpingmodal = function () {
+          var modal_footer = '<div class="modal-footer"><button type="button" class="btn btn-primary" ng-click="$close()">Close</button></div>';
+          $modal.open({
+            template: "<span class='page-text' ng-bind-html=\"vm.trustAsHtml(vm.message)\"></span>" + modal_footer,
+            controllerAs: 'vm',
+            controller: ['$scope', '$sce', '$cookies', '$http', function ($scope, $sce, $cookies, $http) {
+              var self = this;
+              self.trustAsHtml = $sce.trustAsHtml;
+              self.message = "Loading...";
+              var host = $cookies.getObject(SEASHELL_CREDS_COOKIE).host;
+              var port = $cookies.getObject(SEASHELL_CREDS_COOKIE).port;
+              var seashell_websocket_url = "https://"+host+":"+port;
+              $http.get(seashell_websocket_url, { timeout: 5000, method: 'GET', params: {type: 'webping' } })
+                .then(function (response) {
+                  // success
+                  console.log('success', response);
+                  self.message =  response.data;//"Your Seashell session is set to connect to:<br/>"
+                    //+ seashell_websocket_url;
+                }, function (response) {
+                  // error
+                  console.log('error', response);
+                  self.message = "Could not access Seashell connection (status: "
+                    + (response.status == 0 ? "no response" : response.status) + "):<br/>"
+		    + seashell_websocket_url;
+                });
+            }],
+          });
         };
         // Help function
         self.help = function () {
@@ -124,14 +161,14 @@ angular.module('frontend-app', ['seashell-websocket', 'seashell-projects', 'ngCo
         };
         // Open login dialog window after disconnection
         self.login = function(reset) {
-          new LoginModal(reset).then(function() {
-          });
+          new LoginModal(reset, self.updateHostPort).then(function() { });
         };
 
         // This won't leak memory, as FrontendController stays in scope all the time.
         ws.register_callback('timein', function () {self.timeout = false;});
         ws.register_callback('timeout', function () {self.timeout = true;});
         ws.register_callback('connected', function(offline_mode) {
+          self.updateHostPort();
           self.disconnected = false; self.timeout = false;
           self.failed = false; self.offline_mode = offline_mode;
         }, true);

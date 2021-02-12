@@ -37,6 +37,7 @@
 
 (provide request-logging-dispatcher
          standard-error-dispatcher
+         make-index-http-dispatcher
          project-export-dispatcher
          upload-file-dispatcher)
 
@@ -106,6 +107,28 @@
     #:message #"Not Found"
     #:preamble #"<!DOCTYPE HTML>"))
 (define standard-error-dispatcher (lift:make standard-error-page))
+
+(define (make-index-http-dispatcher get-host get-port)
+  ;; (index-http-dispatcher request?) -> response?
+  ;; Index page when you go to the websocket server & port
+  (define/contract (index-http-page request)
+    (-> request? response?)
+    (define host (get-host))
+    (define port (get-port))
+    (logf 'debug "Got request for ~a:~a index page: ~a" host port request)
+    ;; Get the user's IP address. If it's an IPv4, remove the ::ffff: prefix
+    ;; which may confuse users.
+    (define ip
+      (let* ([raw-ip (request-client-ip request)]
+             [raw-ip-downcase (string-downcase raw-ip)])
+        (string-trim raw-ip-downcase "::ffff:" #:right? #f)))
+    (response/full
+      200 #"OK" (current-seconds) #"text/html"
+      (make-headers)
+      (map string->bytes/utf-8
+        (list (format "Your Seashell session is connected to:<br/>~a:~a<br/>" (get-host) (get-port))
+              (format "Your IP address is: ~a" ip)))))
+  (lift:make index-http-page))
 
 ;; (standard-unauthenticated-page exn request?) -> response?
 ;; Sends the standard Seashell unauthenticated page.

@@ -298,6 +298,12 @@
                     (sleep (expt 2 tries))
                     (loop (add1 tries))))))
 
+          ;;
+          (define seashell-port 0)
+          (define (get-port) seashell-port)
+          (define seashell-host "")
+          (define (get-host) seashell-host)
+
           ;; Global dispatcher.
           (define seashell-dispatch
             (sequence:make
@@ -309,6 +315,7 @@
                                                      (values #t '() #t))))
              (filter:make #rx"^/export/" project-export-dispatcher)
              (filter:make #rx"^/upload$" upload-file-dispatcher)
+             (filter:make #rx"^/$" (make-index-http-dispatcher get-host get-port))
              standard-error-dispatcher))
 
           ;; Start the server.
@@ -345,6 +352,8 @@
                    (pid . ,(getpid))
                    (ping-port . ,ping-port)
                    (user . ,username)))
+          (set! seashell-host host)
+          (set! seashell-port start-result)
 
           ;; Write credentials back to file and to tunnel.
           (write (serialize creds))
