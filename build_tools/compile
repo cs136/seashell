@@ -1,6 +1,5 @@
 #!/bin/bash
 
-readonly racket="/usr/bin/racket"
 readonly username="`whoami`"
 readonly TOTAL_CORES="`egrep 'processor\s+:' /proc/cpuinfo  | wc -l`"
 
@@ -27,6 +26,8 @@ FAST_INSTALL="no" # "no" or "yes"
 RUN_CMAKE="yes" # "no" or "yes"
 MINIFY="no" # "no" or "yes"
 
+RACKET_PATH="/usr/bin/racket"
+CMAKE_PATH="/usr/bin/cmake"
 
 print_help_quit () {
   echo "This script is used to build Seashell"
@@ -45,6 +46,8 @@ print_help_quit () {
   echo "  --light [yes|no]: Use lightweight launchers? (default $LIGHTWEIGHT_LAUNCHERS)"
   echo "  --fast [yes|no]: Use install/fast with make? (default $FAST_INSTALL)"
   echo "  --cmake [yes|no]: Run cmake? (default $RUN_CMAKE)"
+  echo "  --racket-path RACKET: Specify path to racket to use when building Seashell"
+  echo "  --cmake-path CMAKE: Specify path to cmake to use when building Seashell"
   echo "  -h|--help: Display this help page"
   echo
   echo "Note: If building for the first time, use the slowest options possible, ie: $0 --light no"
@@ -140,6 +143,12 @@ while (( "$#" )); do
     --cmake)
       RUN_CMAKE="$(checkarg cmake "$2" yes no)"
       ;;
+    --racket-path)
+      RACKET_PATH="$(checkarg racket-path "$2")"
+      ;;
+    --cmake-path)
+      CMAKE_PATH="$(checkarg cmake-path "$2")"
+      ;;
     -h|--help)
       print_help_quit
       exit 0
@@ -196,6 +205,9 @@ echo "  Use lightweight launchers: $LIGHTWEIGHT_LAUNCHERS"
 echo "  Use fast/install make target: $FAST_INSTALL"
 echo "  Run cmake: $RUN_CMAKE"
 echo
+echo "  Racket used for buliding Seashell: $RACKET_PATH"
+echo "  cmake used for building: $CMAKE_PATH"
+echo
 
 read -p "Continue building (y/n)? "
 if [ "$REPLY" != "y" ]; then
@@ -245,13 +257,13 @@ if [ "$RUN_CMAKE" = "yes" ]; then
   fi
 
   # Run cmake
-  cmake $SOURCE_DIR \
-        $cmake_openssl_arg \
-        $cmake_lightweight_launchers_arg \
-        $cmake_minify \
-        -DSEASHELL_RACKET=$racket \
-        -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-        -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+  $CMAKE_PATH $SOURCE_DIR \
+              $cmake_openssl_arg \
+              $cmake_lightweight_launchers_arg \
+              $cmake_minify \
+              -DSEASHELL_RACKET=$RACKET_PATH \
+              -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE
   exitcode=$?
 fi
 
