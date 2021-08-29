@@ -76,6 +76,32 @@ struct seashell_connection {
   LIBSSH2_CHANNEL* channel;
 };
 
+
+/**
+ * Callback for libssh2_userauth_keyboard_interactive
+ * password_for_kbd_callback must be set before this is called.
+ */
+char *password_for_kbd_callback = NULL;
+static void kbd_callback(const char *name, int name_len,
+                         const char *instruction, int instruction_len,
+                         int num_prompts,
+                         const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
+                         LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
+                         void **abstract)
+{
+    (void)name;
+    (void)name_len;
+    (void)instruction;
+    (void)instruction_len;
+    if(num_prompts == 1) {
+        responses[0].text = strdup(password_for_kbd_callback);
+        responses[0].length = strlen(password_for_kbd_callback);
+    }
+    (void)prompts;
+    (void)abstract;
+} /* kbd_callback */
+
+
 /**
  * seashell_tunnel_{startup/teardown} (void)
  * Sets up/tears down the operating environment for the tunneling code.
@@ -274,7 +300,21 @@ struct seashell_connection* seashell_tunnel_connect_password (const char* host,
   }
   FPRINTF_IF_DEBUG(stderr, "\n");
 
-  e = libssh2_userauth_password(session, user, password);
+  // SSH in using keyboard-interactive method
+  password_for_kbd_callback = strdup(password);
+  if(password_for_kbd_callback) {
+    FPRINTF_IF_DEBUG(stderr, "%s: Trying keyboard interactive SSH authentication\n", user);
+    while((e = libssh2_userauth_keyboard_interactive(session, user, &kbd_callback)) == LIBSSH2_ERROR_EAGAIN);
+    if(password_for_kbd_callback) {
+      free(password_for_kbd_callback);
+      password_for_kbd_callback = NULL;
+    }
+  } else {
+    FPRINTF_IF_DEBUG(stderr, "%s: Error connecting: No more memory!\n", user);
+    SET_ERROR(TUNNEL_ERROR_CONNECT);
+    goto session_teardown;
+  }
+
   if (e) {
     FPRINTF_IF_DEBUG(stderr, "%s: Error authenticating: %d\n", user, e);
     SET_ERROR(TUNNEL_ERROR_CREDS);
