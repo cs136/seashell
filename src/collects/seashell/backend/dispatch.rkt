@@ -745,6 +745,7 @@
        ;; CLOSE frame.  Default control function handles this automatically,
        ;; so just quit.
        (logf 'info (format "Client connection closed gracefully."))
+       (unlock-projects-by-thread thread-to-lock-on)
        (void)]
       [(var data)
        ;; Plain old data.

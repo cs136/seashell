@@ -43,7 +43,6 @@
       (apply system* (list* uglifyjs-path
                             "-o" target-js
                             "--source-map" (format "filename='~a',url='~a'" target-js target-js-map)
-                            "--compress"
                             "--keep-fnames"
                             "--"
                             local-resources))

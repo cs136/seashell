@@ -28,6 +28,7 @@
          lock-project
          force-lock-project
          unlock-project
+         unlock-projects-by-thread
          (struct-out exn:project)
          check-path
          init-projects
@@ -302,6 +303,26 @@
         [(hash-has-key? locked-projects name)
           (hash-remove! locked-projects name) #t]
         [else (raise (exn:project (format "Could not unlock ~a!" name) (current-continuation-marks)))]))))
+
+;; (unlock-projects-by-thread athread)
+;; Unlocks projects associated with the given given
+;;
+;; Arguments:
+;;  athread - Thread that has died. Projects associated with this thread
+;;            should be unlocked.
+;;
+;; Returns:
+;;  void
+(define/contract (unlock-projects-by-thread athread)
+  (-> thread? void?)
+  (call-with-semaphore
+    lock-semaphore
+    (lambda ()
+      (define matches (memf (lambda (pair) (equal? (cdr pair) athread))
+                            (hash->list locked-projects)))
+      (when matches
+        (for-each (lambda (pair) (hash-remove! locked-projects (car pair)))
+                  matches)))))
 
 ;; (compile-and-run-project name file question-name tests full-path test-location)
 ;; Compiles and runs a project.
