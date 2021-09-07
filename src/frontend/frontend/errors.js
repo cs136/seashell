@@ -111,7 +111,7 @@ angular.module('frontend-app')
     }
 
     // bug report email format
-    self.reportTo = "seashell@cs.uwaterloo.ca";
+    self.reportTo = "cscfhelp@uwaterloo.ca";
     self.reportSubject = encodeURIComponent("Seashell issue report");
     self.reportBody = function() {
         return encodeURIComponent("[Tell us what you were doing when this error showed up.]\n\n" + self.dumpLogs());

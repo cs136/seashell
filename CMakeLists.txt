@@ -70,11 +70,15 @@ ELSE()
   SET(GIT_DIRTY True)
 ENDIF()
 
-set(SEASHELL_VERSION "3.0.11")
+# To release a new version of seashell, increment SEASHELL_VERSION.
+# If the backend API has changed, increment SEASHELL_API_VERSION also, which will
+# force users to have to login again.
+set(SEASHELL_VERSION "3.0.12")
+set(SEASHELL_API_VERSION "7")
+
 if(GIT_DIRTY)
   set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH}-dirty")
 endif()
-set(SEASHELL_API_VERSION "7")
 
 option(ENABLE_STATIC_ANALYSIS "Enable static analysis" OFF)
 if (ENABLE_STATIC_ANALYSIS)

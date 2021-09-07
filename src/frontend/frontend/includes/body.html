@@ -45,7 +45,7 @@
     <p><b>An error has occurred: </b>{{error.shorthand}}
     <span ng-if="error.type == 'marmoset'">Make sure you can still access Marmoset's web interface, and try again in a few minutes.</span>
     <span ng-if="error.type == 'webserver'">Make sure you can access other websites located on the student.cs.uwaterloo.ca subdomain and try again in a few minutes.</span>
-    <span ng-if="error.type == 'seashell' || ! error.type">Try refreshing the page or <a href="" ng-click="frontend.login(true)">resetting Seashell</a>. If the error persists, please email <a href="" ng-click="frontend.errors.dumpLogsNewWindow()">this log</a> to <a href='mailto:{{frontend.errors.reportTo}}?subject={{frontend.errors.reportSubject}}&body={{frontend.errors.reportBody()}}'>{{frontend.errors.reportTo}}</a> and tell us what you are doing.</span>
+    <span ng-if="error.type == 'seashell' || ! error.type">Try refreshing the page or <a href="" ng-click="frontend.login(true)">resetting Seashell</a>. If the error persists, please contact the course staff and tell them what you are trying to do but can't.</span>
     </p>
     <pre ng-cloak>
     error:       {{error.error}}
