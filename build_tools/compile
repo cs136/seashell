@@ -282,6 +282,7 @@ cat > "${INSTALL_DIR}/cgi-bin/.htaccess" <<- EOM
 </Files>
 EOM
 cat > "${INSTALL_DIR}/share/frontend/.htaccess" <<- EOM
+header set x-frame-options DENY
 <filesMatch "\.(manifest)$">
 FileETag None
 Header unset ETag
