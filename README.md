@@ -1,6 +1,8 @@
 # Seashell
 An online editor and evaluator for C programs.
 
+**This repository is neither maintained, nor is Seashell still being used at the University of Waterloo.**
+
 master: [![Build Status](https://travis-ci.org/cs136/seashell.svg?branch=master)](https://travis-ci.org/cs136/seashell)
 staging: [![Build Status](https://travis-ci.org/cs136/seashell.svg?branch=staging)](https://travis-ci.org/cs136/seashell)
 stable: [![Build Status](https://travis-ci.org/cs136/seashell.svg?branch=stable)](https://travis-ci.org/cs136/seashell)
